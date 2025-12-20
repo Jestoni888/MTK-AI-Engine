@@ -1,0 +1,10 @@
+#!/system/bin/sh
+OUTFD=$2
+ZIP=$3
+ui_print() { echo -e "ui_print $1
+" >$OUTFD; }
+ui_print "Installing MTK AI Engine..."
+unzip -o "$ZIP" -d $MODPATH >&2
+ui_print "Done."
+exit 0
+            
