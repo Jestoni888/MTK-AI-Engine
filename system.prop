@@ -1,0 +1,142 @@
+# Project Raco Prop
+
+# Disable Limit 60FPS while Gaming on AOSP 15.0
+debug.graphics.game_default_frame_rate.disabled=true
+
+# Disable FPS Drop when low battery
+sys.surfaceflinger.idle_reduce_framerate_enable=no
+
+###############################
+# Celestial Flinger Flux (@Kzuyoo)
+# Version: 1.8 Essential
+# Note: Remove egl.hw & sf.hw, SurfaceFlinger Optimized (Safe Essentials) Removed
+###############################
+
+# HWUI Optimized (Essential)
+debug.hwui.render_ahead=1
+debug.hwui.use_hint_manager=true
+debug.hwui.use_gpu_pixel_buffers=true
+
+###############################
+# Celestial Render FlowX (@Kzuyoo)
+# Version: 1.5G
+###############################
+
+#!/system/bin/sh
+# This file will be read by resetprop
+# Example: Change dpi
+# ro.sf.lcd_density=320
+
+# Rendering Engine
+debug.hwui.render_ahead=1
+debug.hwui.render_dirty_regions=true
+debug.hwui.use_gpu_pixel_buffers=true
+debug.hwui.trace_gpu_resources=false
+debug.egl.buffcount=2
+debug.egl.callstack=0
+debug.egl.finish=0
+debug.egl.force_msaa=0
+debug.egl.trace=0
+debug.egl.traceGpuCompletion=0
+debug.gr.swapinterval=1
+debug.gr.numframebuffers=2
+debug.graphics.gpu.profiler.perfetto=0
+debug.egl.force_msaa=false
+
+# MAKES APPS LOAD FASTER AND FREES MORE RAM / use only one of them
+dalvik.vm.dexopt-flags=m=y,o=v,u=y
+
+# Hypertheading & Multithread
+persist.sys.dalvik.hyperthreading=true
+persist.sys.dalvik.multithread=true
+
+# vendor perf
+ro.vendor.perf.scroll_opt=1
+vendor.perf.framepacing.enable=1
+
+# HWUI
+debug.hwui.disable_draw_defer=false
+debug.hwui.use_hint_manager=true
+debug.hwui.skip_empty_damage=true
+debug.hwui.use_buffer_age=true
+debug.hwui.use_partial_updates=true
+debug.hwui.skip_eglmanager_telemetry=true
+ro.hwui.disable_scissor_opt=false
+ro.zygote.disable_gl_preload=false
+
+# HWUI properties (https://github.com/pytorch/cpuinfo/blob/main/test/build.prop/xiaomi-redmi-note-4.log)
+ro.hwui.texture_cache_size=72
+ro.hwui.layer_cache_size=48
+ro.hwui.r_buffer_cache_size=8
+ro.hwui.path_cache_size=32
+ro.hwui.gradient_cache_size=1
+ro.hwui.drop_shadow_cache_size=6
+ro.hwui.texture_cache_flushrate=0.4
+ro.hwui.text_small_cache_width=1024
+ro.hwui.text_small_cache_height=1024
+ro.hwui.text_large_cache_width=2048
+ro.hwui.text_large_cache_height=1024
+
+# for qcom
+sys.hwc.gpu_perf_mode=1
+
+# Camera tweaks
+persist.vendor.camera.jpeg.quality=100
+persist.camera.jpeg.override=100
+persist.vendor.camera.cpu.boost=1
+persist.vendor.camera.gpu.boost=1
+persist.vendor.camera.expose.aux=1
+persist.vendor.camera.enable.multicam=1
+persist.camera.eis.enabled=1
+persist.camera.maxzoom=10
+persist.vendor.camera.eis.enable=1
+persist.vendor.camera.gyro.enable=1
+persist.vendor.camera.lowlight=1
+persist.vendor.camera.llnoise=0
+persist.vendor.camera.llnight=1
+persist.vendor.camera.imglib.fusion=1
+persist.vendor.camera.stats.test=1
+persist.vendor.camera.denoise.process=1
+persist.vendor.camera.set.afd=1
+persist.vendor.camera.hdr.enable=1
+persist.vendor.camera.hdr.denoise=1
+persist.vendor.camera.hdr.plus=1
+persist.vendor.camera.af.debug.enable=0
+persist.vendor.camera.af.useCAF=1
+camera.disable_zsl_mode=0
+persist.vendor.camera.enableZSL=1
+persist.camera.HAL3.enabled=1
+persist.vendor.camera.HAL3.enabled=1
+
+# Force 120Hz display
+persist.sys.display.min_refresh_rate=120
+persist.sys.display.peak_refresh_rate=120
+persist.sys.display.user_refresh_rate=120
+persist.sys.display.refresh_rate_mode=2   # disable dynamic switching
+
+# SurfaceFlinger / high FPS tuning
+persist.sys.sf.high_fps=1
+persist.sys.sf.latch_unsignaled=1
+persist.sys.sf.disable_backpressure=1
+persist.sys.sf.frame_rate_multiple_threshold=0
+
+# Media / screen recording hints
+persist.vendor.media.fps.disable=1
+persist.media.screenrecord.fps=120
+persist.vendor.powerhal.fps.max=120
+
+# ----------------------------------------
+# NETWORK & PING STABILIZATION (New Feature)
+# ----------------------------------------
+# Enable BBR Congestion Control (Reduces lag spikes)
+net.ipv4.tcp_congestion_control=bbr
+# Disable TCP timestamps (Reduces packet overhead)
+net.ipv4.tcp_timestamps=0
+# Enable TCP Fast Open (Reduces latency)
+net.ipv4.tcp_fastopen=3
+# Increase buffer sizes for stable gaming data stream
+net.core.rmem_max=16777216
+net.core.wmem_max=16777216
+net.ipv4.tcp_rmem=4096 87380 6291456
+net.ipv4.tcp_wmem=4096 16384 4194304
+# Disable IPv6 (Optional, often reduces latency in older routers)
