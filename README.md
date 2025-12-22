@@ -50,3 +50,9 @@ Previous features
 
 ✅ADDED 720P DOWNSCALE WHEN GAMING (DEPENDS ON USER IF THEY ALLOW IT IN EARLY INSTALLATION)
 RESTORE TO DEFAULT IN NORMAL USAGE
+
+0.0.0.07
+
+✅added 120fps & 144fps booster
+✅ automatic 4X msaa & disable hw overlay in gaming but disabled during normal use
+✅Users can choose many options upon installing modules
