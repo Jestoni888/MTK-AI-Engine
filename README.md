@@ -21,4 +21,8 @@ CPUSETS OPTIMIZE
 
 ⚠️Latest
 
-✅ Re-align & refactor choices for users request during installing module
+-Added Auto CPU frequency to 30% if no touch or swipe events depending on app
+-Added CPU6 , if temperature reaches to 45°C it will turn OFF , if temperature cools down to 42°C it will be turn ON
+CURRENTLY: 
+CPU7 39°C - 41°C
+CPU6 42°C - 45°C
