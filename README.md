@@ -23,4 +23,5 @@ Previous features
   
   ----LATEST-----
 
-  -
+  - Logcat & touch detection are now in choices if users wants it or not 
+  -  Fully optimized touch detection smoothness experience that works across all roms & brand as long as its Mediatek
