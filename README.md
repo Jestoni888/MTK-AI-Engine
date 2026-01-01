@@ -18,8 +18,9 @@ Previous features
 - DOWN TO 30% CPU FREQUENCY IF NO ACTIVITIES/EVENTS
 - SHUTDOWN CPU6 IN 45°C & CPU7 IN 41°C 
 - ADDED ACTION BUTTON OF MODULE
+- Added surflinger optimization (VSYNC)
+- hide developer option or enable developer options without tapping 5-7 times in instant way
+  
+  ----LATEST-----
 
- - LATEST -
- - Added BETA version WEBUI
- - Added surflinger optimization (VSYNC)
- - hide developer option or enable developer options without tapping 5-7 times in instant way
+  -
