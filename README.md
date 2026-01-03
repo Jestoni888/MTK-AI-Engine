@@ -25,7 +25,7 @@ Previous features
   ----LATEST-----
 
 - New Webui with friendly features & easy to toggle unlike action button
-- Added Custom gameprops (Redmagic 11 pro+ )
+- Added Custom gameprops (Oneplus 15)
 - Added High framerate mode during gaming
 - Added Game Booster Engine to faster loading resources during gaming
 - Added ram cleaner every 1 minute
