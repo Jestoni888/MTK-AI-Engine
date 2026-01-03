@@ -20,8 +20,13 @@ Previous features
 - ADDED ACTION BUTTON OF MODULE
 - Added surflinger optimization (VSYNC)
 - hide developer option or enable developer options without tapping 5-7 times in instant way
-  
+- Touch Detection boosters while lowered frequencies in idle (ideal for average users)
+
   ----LATEST-----
 
-  - Logcat & touch detection are now in choices if users wants it or not 
-  -  Fully optimized touch detection smoothness experience that works across all roms & brand as long as its Mediatek
+- New Webui with friendly features & easy to toggle unlike action button
+- Added Custom gameprops (Redmagic 11 pro+ )
+- Added High framerate mode during gaming
+- Added Game Booster Engine to faster loading resources during gaming
+- Added ram cleaner every 1 minute
+- Some faster resources tweaks
