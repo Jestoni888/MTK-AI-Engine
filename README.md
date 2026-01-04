@@ -20,13 +20,15 @@ Previous features
 - ADDED ACTION BUTTON OF MODULE
 - Added surflinger optimization (VSYNC)
 - hide developer option or enable developer options without tapping 5-7 times in instant way
-- Touch Detection boosters while lowered frequencies in idle (ideal for average users)
-
-  ----LATEST-----
-
+- Touch Detection boosters while lowered frequencies in idle (ideal for average users
 - New Webui with friendly features & easy to toggle unlike action button
 - Added Custom gameprops (Oneplus 15)
 - Added High framerate mode during gaming
 - Added Game Booster Engine to faster loading resources during gaming
 - Added ram cleaner every 1 minute
-- Some faster resources tweaks
+
+  LAST UPDATE 👋
+
+  If no users given me a feedback then it means this is the last update
+
+- Added shell status in notifications 
