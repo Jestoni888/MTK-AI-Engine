@@ -27,8 +27,5 @@ Previous features
 - Added Game Booster Engine to faster loading resources during gaming
 - Added ram cleaner every 1 minute
 
-  LAST UPDATE 👋
-
-  If no users given me a feedback then it means this is the last update
-
-- Added shell status in notifications 
+ Updates*****
+ -Fix Ui logic , it can now directly activate in Gaming performance section for the users who don't want automatic trigger detection like logcat & touch
