@@ -28,4 +28,5 @@ Previous features
 - Added ram cleaner every 1 minute
 
  Updates*****
+ 
  -Fix Ui logic , it can now directly activate in Gaming performance section for the users who don't want automatic trigger detection like logcat & touch
