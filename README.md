@@ -29,4 +29,5 @@ Previous features
 
  Updates*****
  
- -Fix Ui logic , it can now directly activate in Gaming performance section for the users who don't want automatic trigger detection like logcat & touch
+ - Logcat now use as default trigger remove from selection/toggle lists
+ - Instant activate upon clicking toggles
