@@ -28,6 +28,8 @@ Previous features
 - Added ram cleaner every 1 minute
 
  Updates*****
- 
+ ![Screenshot 1](./screenshots/Screenshot_2026-01-06-17-30-46-24_bec4adb6b20c589d5040f3ab7aa12302.jpg)
+![Screenshot 2](./screenshots/Screenshot_2026-01-06-17-30-54-41_bec4adb6b20c589d5040f3ab7aa12302.jpg)
+
  - Logcat now use as default trigger remove from selection/toggle lists
  - Instant activate upon clicking toggles
