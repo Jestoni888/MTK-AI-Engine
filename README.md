@@ -31,5 +31,5 @@ Previous features
  ![Screenshot 1](./screenshots/Screenshot_2026-01-06-17-30-46-24_bec4adb6b20c589d5040f3ab7aa12302.jpg)
 ![Screenshot 2](./screenshots/Screenshot_2026-01-06-17-30-54-41_bec4adb6b20c589d5040f3ab7aa12302.jpg)
 
- - Logcat now use as default trigger remove from selection/toggle lists
- - Instant activate upon clicking toggles
+- Now logcat & touch detection in default trigger of this module because of many bugs, this is the only way to fix.
+- ⚠️Note: App trimming it will trim all apps one by one that can cause heating on device, see the logs in sdcard/MTK_AI_Engine.logs. Only use this if you feel lag or heavy of your current OS.
