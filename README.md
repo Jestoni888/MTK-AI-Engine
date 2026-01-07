@@ -29,7 +29,4 @@ Previous features
 
  Updates*****
 
-- Now logcat & touch detection in default trigger of this module because of many bugs, this is the only way to fix.
-- ⚠️Note: App trimming it will trim all apps one by one that can cause heating on device, see the logs in sdcard/MTK_AI_Engine.logs. Only use this if you feel lag or heavy of your current OS.
-- Added Auto frequency options in WebUI
-- More monitoring info
+ - Added bypass charging
