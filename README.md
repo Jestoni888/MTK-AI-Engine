@@ -31,4 +31,5 @@ Previous features
  ******* Updates **********
 
  - Added ZRAM manager can apply swappiness value , zram size & algorithm on your choice
-- All settings can survive after reboot
+ - Added disable toggle for zram
+ - All settings can survive after reboot
