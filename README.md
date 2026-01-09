@@ -34,4 +34,4 @@ Previous features
  - Added disable toggle for zram
  - All settings can survive after reboot
  - Surfaceflinger now in active state
- - added temperature in shell notifications 
+ - added temperature status in shell notifications 
