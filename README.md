@@ -26,7 +26,9 @@ Previous features
 - Added High framerate mode during gaming
 - Added Game Booster Engine to faster loading resources during gaming
 - Added ram cleaner every 1 minute
+- Added bypass charging
+  
+ ******* Updates **********
 
- Updates*****
-
- - Added bypass charging
+ - Added ZRAM manager can apply swappiness value , zram size & algorithm on your choice
+- All settings can survive after reboot
