@@ -33,3 +33,4 @@ Previous features
  - Added ZRAM manager can apply swappiness value , zram size & algorithm on your choice
  - Added disable toggle for zram
  - All settings can survive after reboot
+ - Surflinger now in active state
