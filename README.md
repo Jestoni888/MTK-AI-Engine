@@ -27,11 +27,12 @@ Previous features
 - Added Game Booster Engine to faster loading resources during gaming
 - Added ram cleaner every 1 minute
 - Added bypass charging
-  
+- Added ZRAM manager can apply swappiness value , zram size & algorithm on your choice
+- Added disable toggle for zram
+- Surfaceflinger now in active state
+- added temperature status in shell notifications
+
  ******* Updates **********
 
- - Added ZRAM manager can apply swappiness value , zram size & algorithm on your choice
- - Added disable toggle for zram
- - All settings can survive after reboot
- - Surfaceflinger now in active state
- - added temperature status in shell notifications 
+ - Optimized bypass charging status (instant trigger during gaming)
+
