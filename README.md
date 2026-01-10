@@ -35,4 +35,5 @@ Previous features
 
  - Optimized bypass charging status (instant trigger during gaming)
  - Fast charging injected on default
+ - added tab for gamelists, we can now directly adds them
 
