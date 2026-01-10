@@ -34,4 +34,5 @@ Previous features
  ******* Updates **********
 
  - Optimized bypass charging status (instant trigger during gaming)
+ - Fast charging injected on default
 
