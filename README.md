@@ -29,7 +29,6 @@ Previous features
 - Added bypass charging
 - Added ZRAM manager can apply swappiness value , zram size & algorithm on your choice
 - Added disable toggle for zram
-- Surfaceflinger now in active state
 - added temperature status in shell notifications
 
  ******* Updates **********
