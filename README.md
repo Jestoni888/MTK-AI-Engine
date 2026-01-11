@@ -30,10 +30,12 @@ Previous features
 - Added ZRAM manager can apply swappiness value , zram size & algorithm on your choice
 - Added disable toggle for zram
 - added temperature status in shell notifications
+- Optimized bypass charging status (instant trigger during gaming)
+- Fast charging injected on default
+- added tab for gamelists, we can now directly adds them
 
- ******* Updates **********
+UPDATE
 
- - Optimized bypass charging status (instant trigger during gaming)
- - Fast charging injected on default
- - added tab for gamelists, we can now directly adds them
-
+- added per-app renderer
+- added per-app vSync latency 
+- remodel webui & app arrangements 
