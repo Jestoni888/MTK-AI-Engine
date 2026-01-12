@@ -38,4 +38,5 @@ UPDATE
 
 - added per-app renderer
 - added per-app vSync latency 
-- remodel webui & app arrangements 
+- remodel webui & app arrangements
+- fixed refresh rate locker per-app with overlay toggle on top
