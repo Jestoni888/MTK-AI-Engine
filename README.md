@@ -40,3 +40,5 @@ UPDATE
 - added per-app vSync latency 
 - remodel webui & app arrangements
 - fixed refresh rate locker per-app with overlay toggle on top
+- Powersaving mode are now using system OS
+- added animation speed
