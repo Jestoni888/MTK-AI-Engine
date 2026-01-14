@@ -42,4 +42,6 @@ Previous features
 
 UPDATES
 
--
+- added display scaling per-app & manual method
+- added cpu governor per-app & manual method
+- added renderer Vulkan/Opengl in manual method
