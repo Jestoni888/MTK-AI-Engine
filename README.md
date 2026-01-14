@@ -33,12 +33,13 @@ Previous features
 - Optimized bypass charging status (instant trigger during gaming)
 - Fast charging injected on default
 - added tab for gamelists, we can now directly adds them
-
-UPDATE
-
 - added per-app renderer
 - added per-app vSync latency 
 - remodel webui & app arrangements
 - fixed refresh rate locker per-app with overlay toggle on top
 - Powersaving mode are now using system OS
 - added animation speed
+
+UPDATES
+
+-
