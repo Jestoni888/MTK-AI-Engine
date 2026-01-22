@@ -39,10 +39,11 @@ Previous features
 - fixed refresh rate locker per-app with overlay toggle on top
 - Powersaving mode are now using system OS
 - added animation speed
-
-UPDATES
-
 - added display scaling per-app & manual method
 - added cpu governor per-app & manual method
 - added renderer Vulkan/Opengl in manual method
 - explore whats new i'm lazy
+
+ ------ UPDATES-------
+ - ✅ Universal version for all devices (fixed bootloop) 
+ - ✅ Added autokill apps during gaming, you can manually select apps to be killed or toggle select all if you dont mind multitask 
