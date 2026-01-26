@@ -45,5 +45,6 @@ Previous features
 - explore whats new i'm lazy
 
  ------ UPDATES-------
- - ✅ Universal version for all devices (fixed bootloop) 
- - ✅ Added autokill apps during gaming, you can manually select apps to be killed or toggle select all if you dont mind multitask 
+ - ✅ Added GPU frequency slider in Webui
+ - GPU frequency rises when touched if limiter is enabled GPU frequencies will go down to lowest frequencies
+ - ❌ Removed Experimental UCLAMP
