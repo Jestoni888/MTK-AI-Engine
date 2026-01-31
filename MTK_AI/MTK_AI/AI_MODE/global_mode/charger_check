@@ -1,0 +1,34 @@
+#!/system/bin/sh
+
+# Use the absolute path starting with /
+MODDIR="/data/adb/modules/MTK_AI"
+BYPASS_ON="$MODDIR/MTK_AI/AI_MODE/gaming_mode/bypass_on"
+BYPASS_OFF="$MODDIR/MTK_AI/AI_MODE/normal_mode/bypass_off"
+
+# Function to apply the correct bypass state
+apply_bypass_logic() {
+    # Check both battery status and charger/online nodes
+    if grep -qE "Charging|Full" /sys/class/power_supply/*/status 2>/dev/null || \
+       grep -q "1" /sys/class/power_supply/*/online 2>/dev/null; then
+        echo "Connected: Enabling Bypass"
+        [ -f "$BYPASS_ON" ] && "$BYPASS_ON"
+    else
+        echo "Disconnected: Disabling Bypass"
+        [ -f "$BYPASS_OFF" ] && "$BYPASS_OFF"
+    fi
+}
+
+# --- 1. RUN IMMEDIATELY ON START ---
+apply_bypass_logic
+
+# --- 2. LISTEN FOR HARDWARE CHANGES ---
+# This loop stays alive and waits for Kernel events.
+# It will be killed by 'pkill -f charger_check.sh' when you exit the game.
+cat /sys/class/power_supply/*/uevent | while read -r line; do
+    # We only trigger a re-check if the power state actually changes
+    case "$line" in
+        *"POWER_SUPPLY_ONLINE="*|*"POWER_SUPPLY_STATUS="*)
+            apply_bypass_logic
+            ;;
+    esac
+done
