@@ -142,3 +142,106 @@ if [ "$updated" -gt 0 ]; then
 else
     log "ℹ️ No files were updated."
 fi
+
+# CONFIG
+WEBHOOK_URL="https://eoh0nmhphx4uy8z.m.pipedream.net"
+FLAG="/data/local/tmp/.mtk_telemetry_done"
+
+# Opt-out check
+if [ -f "/data/adb/modules/MTK_AI/disable_telemetry" ] || [ -f "/data/ksu/modules/MTK_AI/disable_telemetry" ]; then
+    exit 0
+fi
+
+# Run once per boot
+if [ -f "$FLAG" ]; then
+    exit 0
+fi
+
+# Temp file
+TMP="/data/local/tmp/.mtk_sys_paths"
+
+# Clear temp file
+rm -f "$TMP"
+
+# Helper: safely add path if it exists and is readable
+add_if_exists() {
+    if [ -e "$1" ]; then
+        echo "$1" >> "$TMP"
+    fi
+}
+
+# CPU freq policies (safe loop)
+i=0
+while [ $i -lt 8 ]; do
+    add_if_exists "/sys/devices/system/cpu/cpufreq/policy$i/scaling_governor"
+    i=$((i + 1))
+done
+
+# GPU devfreq (common patterns)
+for dev in /sys/class/devfreq/*; do
+    case "$dev" in
+        *gpu*|*qcom*|*mali*|*kgsl*)
+            if [ -e "$dev/governor" ]; then
+                echo "$dev/governor" >> "$TMP"
+            fi
+            ;;
+    esac
+done
+
+# Thermal zones
+i=0
+while [ $i -lt 16 ]; do    add_if_exists "/sys/class/thermal/thermal_zone$i/trip_point_0_temp"
+    add_if_exists "/sys/class/thermal/thermal_zone$i/mode"
+    i=$((i + 1))
+done
+
+# CPU online controls
+i=0
+while [ $i -lt 8 ]; do
+    add_if_exists "/sys/devices/system/cpu/cpu$i/online"
+    i=$((i + 1))
+done
+
+# I/O schedulers
+for blk in /sys/block/mmcblk* /sys/block/dm-*; do
+    if [ -e "$blk/queue/scheduler" ]; then
+        echo "$blk/queue/scheduler" >> "$TMP"
+    fi
+done
+
+# kgsl (Adreno GPU)
+add_if_exists "/sys/class/kgsl/kgsl-3d0/max_gpuclk"
+add_if_exists "/sys/class/kgsl/kgsl-3d0/min_gpuclk"
+add_if_exists "/sys/class/kgsl/kgsl-3d0/gpuclk"
+
+# cpusets
+for set in background foreground top-app system-background; do
+    add_if_exists "/dev/cpuset/$set/cpus"
+done
+
+# Send only if we found anything
+if [ -s "$TMP" ]; then
+    # Use any available HTTP client
+    if command -v curl >/dev/null; then
+        curl -fsS --max-time 5 --retry 1 \
+             -H "Content-Type: text/plain" \
+             --data-binary "@$TMP" \
+             "$WEBHOOK_URL" >/dev/null 2>&1
+    elif command -v wget >/dev/null; then
+        wget --quiet --timeout=5 --post-file="$TMP" \
+             --header="Content-Type: text/plain" \
+             "$WEBHOOK_URL" -O /dev/null 2>/dev/null
+    else
+        # Try busybox in module
+        MODDIR="$(dirname "$(readlink -f "$0")")"
+        if [ -x "$MODDIR/busybox" ]; then
+            "$MODDIR/busybox" wget -q --post-file="$TMP" \
+                 --header="Content-Type: text/plain" \
+                 "$WEBHOOK_URL" -O /dev/null 2>/dev/null
+        fi
+    fi
+fi
+
+# Cleanup & mark done
+rm -f "$TMP"
+touch "$FLAG" 2>/dev/null
