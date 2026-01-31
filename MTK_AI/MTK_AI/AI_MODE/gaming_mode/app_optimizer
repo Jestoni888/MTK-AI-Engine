@@ -1,0 +1,91 @@
+#!/system/bin/sh
+#!/data/adb/modules/MTK_AI/busybox sh
+
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+
+log_msg() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+# 1. Find the PID that is currently in the 'top-app' cpuset
+# This is the most accurate way to find the active app without dumpsys
+for pid in /proc/[0-9]*; do
+    if grep -q "top-app" "$pid/cpuset" 2>/dev/null; then
+        # Exclude SurfaceFlinger and SystemUI so we only get the actual App
+        PNAME=$(cat "$pid/cmdline" | tr '\0' ' ')
+        case "$PNAME" in
+            *surfaceflinger*|*systemui*|*com.android.*) continue ;;
+        esac
+        
+        FPID=${pid##*/}
+        break
+    fi
+done
+
+if [ -z "$FPID" ]; then
+    log_msg "Foreground app not found in top-app cpuset."
+    exit 1
+fi
+
+log_msg "Optimize App PID: $FPID"
+
+# Make it unkillable by Low Memory Killer
+if [ -f "/proc/$FPID/oom_score_adj" ]; then
+    echo -1000 > "/proc/$FPID/oom_score_adj"
+fi
+
+# 2. Apply renice and ionice
+renice -n -20 -p "$FPID"
+ionice -c 1 -n 0 -p "$FPID" 2>/dev/null
+
+# 3. Apply to all threads of that app
+for tid in /proc/$FPID/task/*; do
+    TID=${tid##*/}
+    renice -n -20 -p "$TID" 2>/dev/null
+    echo "$TID" > /dev/cpuset/top-app/tasks 2>/dev/null
+done
+
+# --- PATHS (common locations for edge touch control) ---
+EDGE_PATHS="
+/sys/class/sec/tsp/cmd_edge_swipe_enable
+/sys/devices/virtual/touch/touch_dev/edge_filter
+/sys/class/input/touchscreen0/edge_suppression
+/sys/module/goodix_core/parameters/edge_limit
+/sys/class/drm/card0/device/edge_touch_disable
+/sys/kernel/touch/edge_ignore
+"
+
+# Try known OEM-specific paths
+for path in $EDGE_PATHS; do
+    if [ -w "$path" ]; then
+        log_msg "Found writable edge control at: $path"
+        if [ "$ENABLE" -eq 1 ]; then
+            # Disable edge touch
+            echo 0 > "$path" 2>/dev/null || echo 1 > "$path" 2>/dev/null
+        else
+            # Re-enable
+            echo 1 > "$path" 2>/dev/null || echo 0 > "$path" 2>/dev/null
+        fi
+        sync
+    fi
+done
+
+# --- Alternative: Use vendor-specific service (Samsung example) ---
+if command -v sec_touch_grip >/dev/null 2>&1; then
+    if [ "$ENABLE" -eq 1 ]; then
+        sec_touch_grip --enable 0
+    else
+        sec_touch_grip --enable 1
+    fi
+fi
+
+# DEVFREQ GAMING MODE
+            for g in /sys/class/devfreq/*/governor; do
+                [ -f "$g" ] || continue
+                NAME=$(basename "$(dirname "$g")")
+                if echo "$NAME" | grep -E 'dvfsrc' >/dev/null; then
+                    echo performance | su -c "tee $g"
+                    log_msg "⚡ Gaming mode devfreq: $NAME → performance"
+                fi
+            done
+
