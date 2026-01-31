@@ -6,7 +6,7 @@ ui_print "- Capturing original system files..."
 # 1. Create the dummy system structure so the Meta Overlay has 'slots'
 mkdir -p "$MODPATH/system/etc"
 mkdir -p "$MODPATH/vendor/etc"
-
+su -c 'mkdir -p /sdcard/MTK_AI_Engine && :> /sdcard/MTK_AI_Engine/enable_notifications'
 # 2. Back up Stock files from the phone
 [ -f "/system/etc/gameprops.json" ] && cp "/system/etc/gameprops.json" "$MODPATH/Extras/gameprops_stock.json"
 [ -f "/vendor/etc/gbe.cfg" ] && cp "/vendor/etc/gbe.cfg" "$MODPATH/Extras/gbe_stock.cfg"
