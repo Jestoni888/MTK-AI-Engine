@@ -45,4 +45,4 @@ Previous features
 - explore whats new i'm lazy
 
  ------ UPDATES-------
- - ✅ Added action button for the users who encountered not working scenarios in this module, just click action button of this module in root manager & reboot after.
+ - ✅ Added action button for the users who encountered not working scenarios in this module, just click action button of this module in root manager to update all working scripts & reboot after.
