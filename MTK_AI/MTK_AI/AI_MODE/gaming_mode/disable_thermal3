@@ -1,0 +1,170 @@
+#!/system/bin/sh
+#!/data/adb/modules/MTK_AI/busybox sh
+
+# Maximum Performance Script (v2) — for mt6989 / Dimensity with gpufreqv2
+# Uses ONLY the functions and paths you provided
+
+# --- Detect DVFSRC path ---
+dvfsrc_a=/sys/devices/platform/soc/1c00f000.dvfsrc
+dvfsrc_b=/sys/devices/platform/1c00f000.dvfsrc
+dvfsrc_c=/sys/devices/platform/1c013000.dvfsrc
+dvfsrc_d=/sys/class/devfreq/mtk-dvfsrc-devfreq
+dvfsrc_dir=''
+if [[ -d $dvfsrc_a ]]; then
+  dvfsrc_dir=$dvfsrc_a
+elif [[ -d $dvfsrc_b ]]; then
+  dvfsrc_dir=$dvfsrc_b
+elif [[ -d $dvfsrc_c ]]; then
+  dvfsrc_dir=$dvfsrc_c
+else
+  dvfsrc_dir=$dvfsrc_d
+fi
+dvfsrc_dir_name=$(basename $dvfsrc_dir)
+dvfsrc2=${dvfsrc_dir}/${dvfsrc_dir_name}:dvfsrc-helper
+
+# --- Paths ---
+perfmgr=/sys/module/mtk_fpsgo/parameters/perfmgr_enable
+pandora_feas=/sys/module/perfmgr_mtk/parameters/perfmgr_enable
+ged_kpi=/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled
+fpsgo=/sys/kernel/fpsgo/common/fpsgo_enable
+fbt_ceiling=/sys/kernel/fpsgo/fbt/enable_ceiling
+
+if [[ -f $pandora_feas ]]; then
+  perfmgr=$pandora_feas
+fi
+
+# --- Helper: lock_value ---
+lock_value () {
+  chmod 644 "$2" 2>/dev/null
+  echo "$1" > "$2"
+  chmod 444 "$2" 2>/dev/null
+}
+
+# --- GPU Functions (gpufreqv2) ---
+gpu_freq(){
+  if [[ "$state" == "-1" ]]; then
+    echo -1 > /proc/gpufreqv2/fix_target_opp_index
+    echo 0 0 > /proc/gpufreqv2/fix_custom_freq_volt
+  else
+    if [[ "$voltage" == "" || "$voltage" = "-1" ]]; then
+      freq_row=$(grep "$state," /proc/gpufreqv2/stack_signed_opp_table)
+      opp=${freq_row:1:2}
+      echo 0 0 > /proc/gpufreqv2/fix_custom_freq_volt
+      if [[ $(getprop ro.hardware) == "mt6989" ]]; then
+        echo "$opp $opp" > /proc/gpufreqv2/fix_target_opp_index
+      else
+        echo "$opp" > /proc/gpufreqv2/fix_target_opp_index
+      fi
+      if [[ -f /sys/kernel/thermal/gpt ]]; then
+        echo disable > /sys/kernel/thermal/gpt
+      fi
+    else
+      echo -1 > /proc/gpufreqv2/fix_target_opp_index
+      echo "$state $voltage" > /proc/gpufreqv2/fix_custom_freq_volt
+    fi
+  fi
+}
+
+gpu_freq_max_freq() {
+  lock_value "$state" /sys/kernel/ged/hal/custom_upbound_gpu_freq
+  state=-1
+  gpu_freq
+}
+
+# --- DDR Functions ---
+ddr_freq () {
+  chmod 664 "$dvfsrc/min_freq" 2>/dev/null
+  echo "$state" > "$dvfsrc/min_freq"
+  chmod 444 "$dvfsrc/min_freq" 2>/dev/null
+}
+
+ddr_freq_fixed () {
+  echo "$state" > "$dvfsrc2/dvfsrc_force_vcore_dvfs_opp"
+}
+
+# --- PerfMgr / FPSGO ---
+set_perfmgr() {
+  if [[ $(cat "$fpsgo" 2>/dev/null) != "1" ]]; then
+    lock_value 1 "$fpsgo"
+  fi
+  if [[ $(cat "$ged_kpi" 2>/dev/null) != "1" ]] && [[ ! -d /data/adb/modules/dimensity_hybrid_governor ]]; then
+    lock_value 1 "$ged_kpi"
+  fi
+  lock_value "$state" "$perfmgr"
+}
+
+set_fpsgo() { lock_value "$state" "$fpsgo"; }
+set_fbt_ceiling() { lock_value "$state" "$fbt_ceiling"; }
+
+# ==============================
+# 🔥 START MAX PERFORMANCE SETUP
+# ==============================
+
+echo "[+] Applying MAX PERFORMANCE CONFIG (gpufreqv2 / DVFSRC v2)..."
+
+# 1. ENABLE PERF MANAGER (FEAS/Pandora)
+if [[ -f "$perfmgr" ]]; then
+  echo "[+] Enabling PerfMgr (FEAS)..."
+  state=1
+  set_perfmgr
+fi
+
+# 2. ENABLE FPSGO & FBT CEILING
+if [[ -f "$fpsgo" ]]; then
+  echo "[+] Enabling FPSGO..."
+  state=1
+  set_fpsgo
+fi
+if [[ -f "$fbt_ceiling" ]]; then
+  echo "[+] Enabling FBT Ceiling..."
+  state=1
+  set_fbt_ceiling
+fi
+
+# 3. LOCK GPU TO MAX FREQUENCY
+if [[ -f /proc/gpufreqv2/stack_signed_opp_table ]]; then
+  MAX_FREQ=$(head -n1 /proc/gpufreqv2/stack_signed_opp_table | awk '{print $4}' | cut -d',' -f1)
+  if [[ -n "$MAX_FREQ" && "$MAX_FREQ" != "0" ]]; then
+    echo "[+] Locking GPU to max: ${MAX_FREQ}KHz"
+    state="$MAX_FREQ"
+    voltage="-1"
+    gpu_freq_max_freq
+  fi
+fi
+
+# 4. LOCK DDR TO MAX
+if [[ -f "$dvfsrc/min_freq" ]] && [[ -f "$dvfsrc/max_freq" ]]; then
+  MAX_DDR=$(cat "$dvfsrc/max_freq")
+  if [[ -n "$MAX_DDR" ]]; then
+    echo "[+] Locking DDR min freq to max: $MAX_DDR"
+    state="$MAX_DDR"
+    ddr_freq
+  fi
+fi
+
+# 5. (Optional) Force VCORE OPP if helper exists
+if [[ -f "$dvfsrc2/dvfsrc_force_vcore_dvfs_opp" ]]; then
+  # Get max OPP index from table (if available)
+  if [[ -f "$dvfsrc2/dvfsrc_opp_table" ]]; then
+    OPP_COUNT=$(wc -l < "$dvfsrc2/dvfsrc_opp_table")
+    MAX_OPP=$((OPP_COUNT - 1))
+    echo "[+] Forcing VCORE OPP to: $MAX_OPP"
+    state="$MAX_OPP"
+    ddr_freq_fixed
+  fi
+fi
+
+# 6. DISABLE THERMAL THROTTLING (GPT)
+if [[ -f /sys/kernel/thermal/gpt ]]; then
+  echo "[+] Disabling GPT thermal throttle..."
+  echo disable > /sys/kernel/thermal/gpt
+fi
+
+echo ""
+echo "✅ MAX PERFORMANCE ACTIVE!"
+echo "   - PerfMgr / FPSGO: enabled"
+echo "   - GPU: locked to max frequency"
+echo "   - DDR: min freq = max"
+echo "   - Thermal GPT: disabled"
+echo ""
+echo "⚠️  Monitor temps! Reboot to restore defaults."

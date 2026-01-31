@@ -1,0 +1,61 @@
+#!/system/bin/sh
+# --- LITE GAMING DAEMON ---
+
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+
+log_msg() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
+
+# 60FPS Cap
+setprop debug.graphics.game_default_frame_rate.disabled false
+setprop persist.sys.performance_level 0 
+
+set -e
+
+wm size 720x1600
+
+# --- CONFIG ---
+BASE_DENSITY_720P=260        # Standard 720p ~320 DPI (adjust if needed)
+DOWNSCALE_PERCENT=50         # Final render at 50% of that
+
+# --- STEP 1: Calculate target density ---
+TARGET_DENSITY=$(( (BASE_DENSITY_720P * DOWNSCALE_PERCENT) / 100 ))  # e.g., 320 * 0.5 = 160
+
+su -c "wm density $TARGET_DENSITY"
+
+while true; do
+    # Get Temp
+    RAW=$(cat /sys/class/power_supply/battery/temp 2>/dev/null)
+    T=$((RAW / 10))
+    
+    # Simple Logic: Cap at 1.8GHz if hot, 2.0GHz if warm
+    if [ "$T" -gt 42 ]; then
+        LIMIT=1500000 # 1.5GHz
+    elif [ "$T" -gt 38 ]; then
+        LIMIT=2000000 # 2.0GHz
+    else
+        LIMIT=9999999 # Max
+    fi
+    
+    # 1. Switch all CPU cores with a fallback logic
+for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+    if grep -q "schedutil" "$cpu/cpufreq/scaling_available_governors"; then
+        echo "schedutil" > "$cpu/cpufreq/scaling_governor"
+    elif grep -q "userspace" "$cpu/cpufreq/scaling_available_governors"; then
+        echo "userspace" > "$cpu/cpufreq/scaling_governor"
+    fi
+done
+
+    # Apply limits without changing governors
+    for p in /sys/devices/system/cpu/cpufreq/policy*; do
+        MAX=$(cat "$p/cpuinfo_max_freq")
+        if [ "$LIMIT" -lt "$MAX" ]; then
+            echo "$LIMIT" > "$p/scaling_max_freq"
+        else
+            echo "$MAX" > "$p/scaling_max_freq"
+        fi
+    done
+
+    sleep 30
+done

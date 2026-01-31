@@ -1,0 +1,13 @@
+
+# 1. Focus on Throughput (Performance)
+setprop debug.hwui.render_ahead 2
+setprop debug.egl.hw 1
+setprop debug.cpurendering false
+setprop debug.egl.force_msaa false
+setprop persist.sys.ui.hw 1
+setprop persist.sys.use_dithering 0
+setprop core_ctl_isolated 1
+
+# Disable some sync delays to let frames fly
+setprop debug.sf.latch_unsignaled 1
+setprop debug.sf.disable_backpressure 1

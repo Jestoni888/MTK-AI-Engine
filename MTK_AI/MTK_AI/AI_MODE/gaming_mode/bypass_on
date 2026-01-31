@@ -1,0 +1,171 @@
+#!/system/bin/sh
+# MTK_AI Engine – BYPASS ON (Enable Bypass / Stop Charging)
+
+BASE_DIR="/sdcard/MTK_AI_Engine"
+LOG_FILE="$BASE_DIR/MTK_AI_Engine.log"
+ICON_PATH="/data/adb/modules/MTK_AI/icon.png"
+
+mkdir -p "$BASE_DIR"
+
+log_msg() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+notify_status() {
+    su -lp 2000 -c \
+    "cmd notification post -I $ICON_PATH -S bigtext \
+     -t 'Bypass Mode' tag 'ON | Bypass / Charge stopped'" \
+     >/dev/null 2>&1
+}
+
+write_try() {
+    node="$1"
+    value="$2"
+    [ -f "$node" ] || return 1
+    echo "$value" > "$node" 2>/dev/null && return 0
+    return 1
+}
+
+log_msg "Bypass ON started"
+
+# --------------------------------------------------
+# 1️⃣ REAL HARDWARE BYPASS (1 = ON)
+# --------------------------------------------------
+REAL_BYPASS_ON="
+/sys/devices/platform/charger/bypass_charger
+/sys/class/power_supply/battery/bypass_charger
+/sys/kernel/nubia_charge/charger_bypass
+"
+
+for n in $REAL_BYPASS_ON; do
+    if write_try "$n" 1; then
+        log_msg "✅ REAL BYPASS enabled via $n"
+        notify_status
+        exit 0
+    fi
+done
+
+# --------------------------------------------------
+# 2️⃣ MEDIATEK POWER PATH (TRY 1 THEN 2)
+# --------------------------------------------------
+MTK_POWER="/proc/mtk_battery_cmd/en_power_path"
+
+if [ -f "$MTK_POWER" ]; then
+    if write_try "$MTK_POWER" 1; then
+        log_msg "⚡ MTK power path set to 1"
+        notify_status
+        exit 0
+    fi
+    if write_try "$MTK_POWER" 2; then
+        log_msg "⚡ MTK power path set to 2"
+        notify_status
+        exit 0
+    fi
+fi
+
+# --------------------------------------------------
+# 3️⃣ DISABLE CHARGING (0 = OFF)
+# --------------------------------------------------
+CHARGE_OFF_ZERO="
+/sys/class/oplus_chg/battery/mmi_charging_enable
+/sys/class/power_supply/battery/mmi_charging_enable
+/sys/devices/virtual/oplus_chg/battery/mmi_charging_enable
+/sys/devices/platform/soc/soc:oplus,chg_intf/oplus_chg/battery/mmi_charging_enable
+/sys/devices/platform/soc/soc:oplus,chg_intf/oplus_chg/battery/chg_enable
+/sys/class/power_supply/battery/charging_enabled
+/sys/class/power_supply/battery/charge_enabled
+/sys/class/power_supply/battery/battery_charging_enabled
+/sys/class/power_supply/ac/charging_enabled
+/sys/class/power_supply/dc/charging_enabled
+/sys/class/qcom-battery/charging_enabled
+/sys/devices/platform/omap/omap_i2c.3/i2c-3/3-005f/charge_enable
+/sys/class/power_supply/bq2589x_charger/enable_charging
+/sys/devices/virtual/power_supply/manta-battery/charge_enabled
+/sys/devices/platform/huawei_charger/enable_charger
+/sys/class/hw_power/charger/charge_data/enable_charger
+/sys/devices/platform/lge-unified-nodes/charging_enable
+"
+
+for n in $CHARGE_OFF_ZERO; do
+    if write_try "$n" 0; then
+        log_msg "🛑 Charging disabled via $n"
+        notify_status
+        exit 0
+    fi
+done
+
+# --------------------------------------------------
+# 4️⃣ INPUT SUSPEND (1 = SUSPEND)
+# --------------------------------------------------
+INPUT_SUSPEND_ONE="
+/sys/class/power_supply/battery/input_suspend
+/sys/class/power_supply/battery/battery_input_suspend
+/sys/class/qcom-battery/input_suspend
+/sys/kernel/debug/google_charger/input_suspend
+"
+
+for n in $INPUT_SUSPEND_ONE; do
+    if write_try "$n" 1; then
+        log_msg "🔌 Charger input suspended via $n"
+        notify_status
+        exit 0
+    fi
+done
+
+# --------------------------------------------------
+# 5️⃣ DISABLE / LIMIT FLAGS (1 = DISABLE)
+# --------------------------------------------------
+DISABLE_ON_ONE="
+/proc/smb1357_disable_chrg
+/proc/driver/charger_limit_enable
+/sys/devices/platform/charger/tran_aichg_disable_charger
+/sys/class/power_supply/battery/charge_disable
+/sys/class/power_supply/battery/op_disable_charge
+/sys/class/power_supply/chargalg/disable_charging
+/sys/class/power_supply/battery/connect_disable
+/sys/class/power_supply/battery/stop_charge
+/sys/devices/platform/soc/soc:qcom,pmic_glink/soc:qcom,pmic_glink:qcom,battery_charger/force_charger_suspend
+/sys/class/power_supply/battery_ext/smart_charging_interruption
+/sys/class/qcom-battery/batt_protect_en
+/sys/class/asuslib/charging_suspend_en
+/sys/class/asuslib/charger_limit_en
+/sys/class/power_supply/battery/store_mode
+/sys/class/power_supply/battery/test_mode
+/sys/class/power_supply/battery/batt_slate_mode
+/sys/class/power_supply/battery/restricted_charging
+/sys/class/power_supply/wireless/restricted_charging
+/sys/module/qpnp_adaptive_charge/parameters/blocking
+"
+
+for n in $DISABLE_ON_ONE; do
+    if write_try "$n" 1; then
+        log_msg "⚠️ Charging limited/disabled via $n"
+        notify_status
+        exit 0
+    fi
+done
+
+# --------------------------------------------------
+# 6️⃣ HARD CHARGER DISABLE (1 = OFF)
+# --------------------------------------------------
+HARD_DISABLE_ON="
+/sys/devices/platform/mt-battery/disable_charger
+/sys/module/pmic8058_charger/parameters/disabled
+/sys/module/pm8921_charger/parameters/disabled
+/sys/module/smb137b/parameters/disabled
+"
+
+for n in $HARD_DISABLE_ON; do
+    if write_try "$n" 1; then
+        log_msg "⛔ Charger HARD disabled via $n"
+        notify_status
+        exit 0
+    fi
+done
+
+# --------------------------------------------------
+# ❌ FAILURE
+# --------------------------------------------------
+log_msg "❌ No bypass/charge-disable node found"
+notify_status
+exit 1

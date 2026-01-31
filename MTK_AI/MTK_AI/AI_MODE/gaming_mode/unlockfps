@@ -1,0 +1,67 @@
+#!/system/bin/sh
+#!/data/adb/modules/MTK_AI/busybox sh
+
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+
+log_msg() {
+    # Removed 'tee' to save CPU cycles; direct append is faster
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
+
+setprop debug.graphics.game_default_frame_rate.disabled true
+
+su -c '
+FSTB_PATH="/sys/pnpmgr/fpsgo_boost/fstb"
+
+# Force stable high FPS
+echo "1" > "$FSTB_PATH/fstb_fix_fps"
+echo "1" > "$FSTB_PATH/fstb_fix_fps_comm"
+echo "1" > /sys/pnpmgr/fpsgo_boost/boost_mode
+
+# Disable power-saving FPS drops
+echo "0" > "$FSTB_PATH/fstb_self_ctrl_fps_enable"
+echo "0" > "$FSTB_PATH/fstb_soft_level"
+
+# Optimize margin and error thresholds
+echo "1" > "$FSTB_PATH/margin_mode"
+echo "0" > "$FSTB_PATH/fstb_tune_error_threshold"
+echo "0" > "$FSTB_PATH/fstb_tune_quantile"
+
+echo "FSTB Gaming Optimization Applied "
+
+# --- 1. Path Definition ---
+FBT_PATH="/sys/pnpmgr/fpsgo_boost/fbt"
+
+# --- 2. Ultra-Responsive Boosts (Image 812/814) ---
+# bhr (Between-frame Hardware Response) & bhr_opp
+# Lower latency by optimizing the hardware response time between frames.
+echo "1" > "$FBT_PATH/bhr_opp"
+echo "1" > "$FBT_PATH/boost_affinity"
+
+# Adjust loading & floor bounds
+# Keeps the CPU/GPU from dropping to idle speeds during frame transitions.
+echo "1" > "$FBT_PATH/adjust_loading"
+echo "1" > "$FBT_PATH/floor_bound"
+echo "1" > "$FBT_PATH/floor_opp"
+
+# --- 3. Rescue & Recovery Enhancements (Image 814) ---
+# rescue_enhance_f & ultra_rescue
+# Prevents the "stutter" that occurs when the phone tries to recover from a frame drop.
+echo "1" > "$FBT_PATH/rescue_enhance_f"
+echo "1" > "$FBT_PATH/rescue_second_enable"
+echo "1" > "$FBT_PATH/ultra_rescue"
+
+# --- 4. System Optimization Flags (Image 812/814) ---
+# gbe (Game Boost Engine) & gcc (Game Control Center)
+echo "1" > "$FBT_PATH/gbe_enable1"
+echo "1" > "$FBT_PATH/gbe_enable2"
+echo "1" > "$FBT_PATH/gcc_enable"
+
+# --- 5. Loading Threshold & Policy ---
+# Ensures the phone prioritizes loading game assets instantly.
+echo "1" > "$FBT_PATH/loading_th"
+echo "0" > "$FBT_PATH/light_loading_policy"
+
+echo "FBT Nodes optimized for performance."
+'
+log_msg "High Framerate for games activates "
