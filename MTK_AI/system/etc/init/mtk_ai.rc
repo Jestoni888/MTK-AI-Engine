@@ -1,0 +1,23 @@
+# Service 1: Web server
+service mtk_ai_httpd /data/adb/modules/MTK_AI/busybox httpd -f -p 8080 -h /data/adb/modules/MTK_AI/webroot/webroot
+    class main
+    user root
+    group root
+    seclabel u:r:magisk:s0
+    restart
+
+# Service 2: Logcat monitor
+service mtk_ai_logcat /system/bin/sh /data/adb/modules/MTK_AI/logcat_detection/logcat.sh
+    class main
+    user root
+    group log
+    seclabel u:r:magisk:s0
+    restart
+
+# Service 3: Controller
+service mtk_ai_controller /system/bin/sh /data/adb/modules/MTK_AI/script_runner/sf_controller.sh
+    class main
+    user root
+    group root
+    seclabel u:r:magisk:s0
+    restart
