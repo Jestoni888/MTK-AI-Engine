@@ -45,6 +45,4 @@ Previous features
 - explore whats new i'm lazy
 
  ------ UPDATES-------
- - ✅ Added GPU frequency slider in Webui
- - GPU frequency rises when touched if limiter is enabled GPU frequencies will go down to lowest frequencies
- - ❌ Removed Experimental UCLAMP
+ - ✅ Added action button for the users who encountered not working scenarios in this module, just click action button of this module in root manager & reboot after.
