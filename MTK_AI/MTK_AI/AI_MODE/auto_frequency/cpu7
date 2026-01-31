@@ -1,0 +1,91 @@
+#!/system/bin/sh
+#!/data/adb/modules/MTK_AI/busybox sh
+### ==== FLOOD GUARD BEGIN ==== ###
+
+SCRIPT_NAME="$(basename "$0")"
+STATE_DIR="/data/adb/modules/MTK_AI/.guard"
+mkdir -p "$STATE_DIR"
+
+RUN_TS_FILE="$STATE_DIR/${SCRIPT_NAME}.last"
+COUNT_FILE="$STATE_DIR/${SCRIPT_NAME}.count"
+
+NOW=$(date +%s)
+LAST=$(cat "$RUN_TS_FILE" 2>/dev/null || echo 0)
+COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)
+
+# --- rate limits ---
+MIN_INTERVAL=5      # seconds between runs
+MAX_RUNS=5          # max runs per minute
+WINDOW=60
+
+# Too soon? exit silently
+[ $((NOW - LAST)) -lt $MIN_INTERVAL ] && exit 0
+
+# Count runs in window
+if [ $((NOW - LAST)) -lt $WINDOW ]; then
+  COUNT=$((COUNT + 1))
+else
+  COUNT=1
+fi
+
+# Too many executions? hard stop
+if [ "$COUNT" -gt "$MAX_RUNS" ]; then
+  exit 0
+fi
+
+echo "$NOW" > "$RUN_TS_FILE"
+echo "$COUNT" > "$COUNT_FILE"
+
+### ==== FLOOD GUARD END ==== ###
+
+# --- CONFIGURATION (Celsius) ---
+OFF_LOW=41
+OFF_HIGH=50
+ON_LOW=30
+ON_HIGH=39
+
+CPU7_ONLINE="/sys/devices/system/cpu/cpu7/online"
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+
+# --- GET BATTERY TEMPERATURE ---
+# Reads from sysfs. If 365, it converts to 36 for integer comparison.
+if [ -f "/sys/class/power_supply/battery/temp" ]; then
+    TEMP_RAW=$(cat /sys/class/power_supply/battery/temp)
+    # Convert decidegrees to whole numbers (e.g., 365 -> 36)
+    TEMP_INT=$((TEMP_RAW / 10))
+else
+    # Fallback to internal thermal zone if battery node is missing
+    TEMP_INT=$(cat /sys/class/thermal/thermal_zone0/temp | grep -oE '[0-9]{2}' | head -n 1)
+fi
+
+log_msg() {
+    echo "[$(date '+%m-%d %H:%M:%S')] [battery_thermal] $1" >> "$LOG_FILE"
+}
+
+# Ensure the CPU path exists
+[ ! -f "$CPU7_ONLINE" ] && exit 0
+
+# --- THERMAL CONTROL LOGIC ---
+
+# 1. DISABLE ZONE (41°C - 50°C)
+if [ "$TEMP_INT" -ge $OFF_LOW ] && [ "$TEMP_INT" -le $OFF_HIGH ]; then
+    # Only act if it's currently ON (1)
+    if [ "$(cat $CPU7_ONLINE)" = "1" ]; then
+        log_msg "🔥 Battery: ${TEMP_INT}°C. Locking CPU7 OFF."
+        
+        chmod 644 $CPU7_ONLINE
+        echo 0 > $CPU7_ONLINE
+        # Lock permissions to prevent Kernel/Thermal-Engine from turning it back on
+        chmod 444 $CPU7_ONLINE 
+    fi
+
+# 2. RESTORE ZONE (30°C - 39°C)
+elif [ "$TEMP_INT" -ge $ON_LOW ] && [ "$TEMP_INT" -le $ON_HIGH ]; then
+    # Only act if it's currently LOCKED/OFF (0)
+    if [ "$(cat $CPU7_ONLINE)" = "0" ]; then
+        log_msg "❄️ Battery: ${TEMP_INT}°C. Unlocking CPU7 ON."
+        
+        chmod 644 $CPU7_ONLINE
+        echo 1 > $CPU7_ONLINE
+    fi
+fi
