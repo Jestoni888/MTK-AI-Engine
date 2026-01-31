@@ -34,4 +34,4 @@ script_runner/mtk_ai_eem_boot
 logcat_detection/logcat
 touch_detection/touch2
 touch_detection/dumpsys
-action.sh
+action.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/action.sh
