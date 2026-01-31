@@ -1,0 +1,132 @@
+#!/system/bin/sh
+
+# Enable aggressive GPU rasterization & zero-copy
+settings put global hardware_accelerated_drawing_enabled 1
+settings put global force_hw_ui 1
+
+# WebView-specific Chromium flags (via system properties)
+resetprop persist.sys.webview.v8_flags "--jitless --no-opt --lite-mode"
+resetprop persist.sys.webview.extra_flags "--enable-gpu-rasterization --enable-zero-copy --ignore-gpu-blocklist --enable-oop-rasterization --disable-partial-raster --disable-threaded-animation"
+
+# Increase V8's optimization budget (faster JS execution)
+resetprop persist.sys.webview.v8_flags "--turbo-instruction-scheduling --predictable --always-compact --max-old-space-size=256"
+
+resetprop persist.sys.webview.extra_flags "\
+--disable-background-timer-throttling \
+--disable-renderer-backgrounding \
+--disable-features=TranslateUI,SafetyCheck,OptimizationGuide"
+
+# ==================================================
+# MTK SMOOTHNESS TUNER (STATIC OPTIMIZATIONS)
+# Applies VSync, buffering, GPU, and input tweaks ONCE at boot.
+# Does NOT handle dynamic SurfaceFlinger hints.
+# ==================================================
+
+DEBUG=${MTK_SMOOTH_DEBUG:-0}
+
+log() {
+  [ "$DEBUG" = "1" ] && echo "[SMOOTH_TUNE] $*" >&2
+}
+
+if [ "$(id -u)" != "0" ]; then
+  log "Error: Must run as root"
+  exit 1
+fi
+
+# ---------- DISPLAY & VSYNC ----------
+for vsync_node in \
+  /sys/kernel/debug/dri/0/vsync_mode \
+  /sys/class/drm/card0/device/vsync_align \
+  /sys/devices/platform/mtk_disp_mgr.0/vsync_enable; do
+  [ -w "$vsync_node" ] && echo 1 > "$vsync_node" && log "VSync enabled: $vsync_node"
+done
+
+for early_vsync in \
+  /sys/class/drm/card0/device/early_vsync \
+  /sys/devices/platform/mtk_disp_mgr.0/early_vsync; do
+  [ -w "$early_vsync" ] && echo 1 > "$early_vsync" && log "Early VSync enabled"
+done
+
+# ---------- BUFFERING ----------
+for buf_node in \
+  /sys/class/graphics/fb0/buffer_count \
+  /sys/devices/virtual/graphics/fb0/buffer_count \
+  /sys/module/mtk_disp_mgr/parameters/buffer_count; do
+  [ -w "$buf_node" ] && echo 3 > "$buf_node" && log "Triple buffering: $buf_node"
+done
+
+resetprop persist.sys.media.triple.buffers 1 2>/dev/null
+resetprop debug.egl.swapinterval 0 2>/dev/null
+
+# ---------- RENDER PIPELINE ----------
+for comp_node in \
+  /sys/module/mtk_disp_session/parameters/low_latency_mode \
+  /sys/kernel/debug/dri/0/composition_mode; do
+  [ -w "$comp_node" ] && echo 1 > "$comp_node" && log "Low-latency composition"
+done
+
+for idle_pc in \
+  /sys/kernel/debug/dri/0/idle_pc_enabled \
+  /sys/devices/platform/mtk_disp_mgr.0/idle_pc; do
+  [ -w "$idle_pc" ] && echo 0 > "$idle_pc" && log "Disabled display idle PC"
+done
+
+# ---------- GPU ----------
+for preempt in \
+  /sys/class/kgsl/kgsl-3d0/preempt_level \
+  /sys/class/misc/mali0/device/preempt; do
+  [ -w "$preempt" ] && echo 2 > "$preempt" && log "GPU preemption enabled"
+done
+
+# ---------- INPUT BOOST ----------
+resetprop vendor.perf.input.enable 1 2>/dev/null
+resetprop vendor.perf.gestureflingboost.enable 1 2>/dev/null
+
+log "✅ Static smoothness tweaks applied"
+
+# =============================================
+# DAILY CPU OPTIMIZATION (ROOTED ANDROID)
+# - Pins SystemUI + core OS to little cores
+# - Caps big-core frequency to avoid thermal throttling
+# - Keeps foreground apps free to use big cores
+# =============================================
+
+# Identify little cores (usually 0-3 on octa-core MTK/Qualcomm)
+LITTLE_CORES="0-3"
+BIG_CORES="4-7"
+
+# Function to safely pin a process by name
+pin_to_little_cores() {
+  local proc_name="$1"
+  local pid=$(pidof "$proc_name" 2>/dev/null)
+  if [ -n "$pid" ]; then
+    taskset -pc $LITTLE_CORES $pid 2>/dev/null && \
+      echo "Pinned $proc_name (PID $pid) to little cores"
+  fi
+}
+
+echo "0" > /proc/sys/kernel/panic
+
+# System UI (status bar, launcher, etc.)
+pin_to_little_cores com.android.systemui
+
+# Core Android framework
+pin_to_little_cores system_server
+
+# Input & sensor services (often heavy)
+pin_to_little_cores android.hardware.sensors@*
+pin_to_little_cores vendor.qti.hardware.sensorscalibrate@*
+pin_to_little_cores android.hardware.input@*
+
+# Audio & media (unless gaming with high-fidelity audio)
+pin_to_little_cores audioserver
+pin_to_little_cores mediaserver
+
+# Thermal & power HAL (should not need big cores)
+pin_to_little_cores thermal-engine
+pin_to_little_cores powerhal
+
+# Optional: Google Play Services (can be heavy)
+pin_to_little_cores com.google.android.gms
+
+echo "✅ OS + SystemUI pinned to little cores | Big cores reserved for apps"

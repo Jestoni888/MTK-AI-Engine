@@ -1,0 +1,78 @@
+#!/system/bin/sh
+# --- Master Performance Script ---
+### ==== FLOOD GUARD BEGIN ==== ###
+
+SCRIPT_NAME="$(basename "$0")"
+STATE_DIR="/data/adb/modules/MTK_AI/.guard"
+mkdir -p "$STATE_DIR"
+
+RUN_TS_FILE="$STATE_DIR/${SCRIPT_NAME}.last"
+COUNT_FILE="$STATE_DIR/${SCRIPT_NAME}.count"
+
+NOW=$(date +%s)
+LAST=$(cat "$RUN_TS_FILE" 2>/dev/null || echo 0)
+COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)
+
+# --- rate limits ---
+MIN_INTERVAL=5      # seconds between runs
+MAX_RUNS=5          # max runs per minute
+WINDOW=60
+
+# Too soon? exit silently
+[ $((NOW - LAST)) -lt $MIN_INTERVAL ] && exit 0
+
+# Count runs in window
+if [ $((NOW - LAST)) -lt $WINDOW ]; then
+  COUNT=$((COUNT + 1))
+else
+  COUNT=1
+fi
+
+# Too many executions? hard stop
+if [ "$COUNT" -gt "$MAX_RUNS" ]; then
+  echo "[FLOOD-GUARD] $SCRIPT_NAME blocked" \
+    >> /sdcard/MTK_AI_Engine/flood_guard.log
+  exit 0
+fi
+
+echo "$NOW" > "$RUN_TS_FILE"
+echo "$COUNT" > "$COUNT_FILE"
+
+### ==== FLOOD GUARD END ==== ###
+
+su -c '
+# --- Resource Limits ---
+echo 16384 > /proc/sys/user/max_user_namespaces
+echo 1024 > /proc/sys/user/max_net_namespaces
+echo 1024 > /proc/sys/user/max_inotify_instances
+echo 100000 > /proc/sys/user/max_inotify_watches
+
+# --- Kernel & Stability ---
+echo 512000 > /proc/sys/kernel/threads-max
+echo 0 > /proc/sys/kernel/printk_devkmsg
+echo 0 > /proc/sys/kernel/panic
+echo 10 > /proc/sys/fs/lease-break-time
+
+# --- Storage I/O (The "Instant Load" Tweaks) ---
+for i in /sys/block/sd*/queue/read_ahead_kb /sys/block/mmc*/queue/read_ahead_kb; do
+    [ -e "$i" ] && echo "2048" > "$i"
+done
+
+# Disable I/O Stats to save CPU overhead
+for i in /sys/block/sd*/queue/iostats; do
+    [ -e "$i" ] && echo "0" > "$i"
+done
+
+# Set Scheduler (Handles deadline, mq-deadline, or noop)
+for i in /sys/block/sd*/queue/scheduler; do
+    if grep -q "mq-deadline" "$i"; then
+        echo "mq-deadline" > "$i"
+    elif grep -q "deadline" "$i"; then
+        echo "deadline" > "$i"
+    else
+        echo "noop" > "$i"
+    fi
+done
+
+echo "--- Tweaks Applied Successfully ---"
+'

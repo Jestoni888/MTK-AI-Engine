@@ -1,0 +1,90 @@
+#!/system/bin/sh
+### ==== FLOOD GUARD BEGIN ==== ###
+
+SCRIPT_NAME="$(basename "$0")"
+STATE_DIR="/data/adb/modules/MTK_AI/.guard"
+mkdir -p "$STATE_DIR"
+
+RUN_TS_FILE="$STATE_DIR/${SCRIPT_NAME}.last"
+COUNT_FILE="$STATE_DIR/${SCRIPT_NAME}.count"
+
+NOW=$(date +%s)
+LAST=$(cat "$RUN_TS_FILE" 2>/dev/null || echo 0)
+COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)
+
+# --- rate limits ---
+MIN_INTERVAL=5      # seconds between runs
+MAX_RUNS=5          # max runs per minute
+WINDOW=60
+
+# Too soon? exit silently
+[ $((NOW - LAST)) -lt $MIN_INTERVAL ] && exit 0
+
+# Count runs in window
+if [ $((NOW - LAST)) -lt $WINDOW ]; then
+  COUNT=$((COUNT + 1))
+else
+  COUNT=1
+fi
+
+# Too many executions? hard stop
+if [ "$COUNT" -gt "$MAX_RUNS" ]; then
+  echo "[FLOOD-GUARD] $SCRIPT_NAME blocked" \
+    >> /sdcard/MTK_AI_Engine/flood_guard.log
+  exit 0
+fi
+
+echo "$NOW" > "$RUN_TS_FILE"
+echo "$COUNT" > "$COUNT_FILE"
+
+### ==== FLOOD GUARD END ==== ###
+
+# -------------------------
+# RAM AUTO-CLEANER
+# -------------------------
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+RAM_THRESHOLD=50
+
+log_msg() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+    [ "$(wc -l < $LOG_FILE)" -gt 200 ] &&
+        tail -n 200 "$LOG_FILE" > "$LOG_FILE.tmp" &&
+        mv "$LOG_FILE.tmp" "$LOG_FILE"
+}
+
+auto_focus_ram() {
+    # 1. Get Memory Stats
+    local MEM_TOTAL=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+    local MEM_AVAIL_START=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
+    local MEM_USED_PCT=$(((MEM_TOTAL - MEM_AVAIL_START) * 100 / MEM_TOTAL))
+
+    # Always log status to verify the script is running
+    log_msg "ℹ️ RAM Check: ${MEM_USED_PCT}% usage."
+
+    if [ "$MEM_USED_PCT" -gt "$RAM_THRESHOLD" ]; then
+        log_msg "🚨 High RAM usage! Prioritizing Foreground/Top-App..."
+
+            # 4. Kernel Level Cleanup
+        sync
+        echo 3 > /proc/sys/vm/drop_caches
+        echo 1 > /proc/sys/vm/compact_memory
+
+        # 5. Verify Results
+        local MEM_AVAIL_END=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
+        local FREED=$(((MEM_AVAIL_END - MEM_AVAIL_START) / 1024))
+        log_msg "✅ RAM Focused. Freed ${FREED}MB. Foreground protected."
+    fi
+}
+
+# -------------------------
+# MAIN EXECUTION LOOP
+# -------------------------
+log_msg "🚀 RAM Focus Service Started (Path: $LOG_FILE)"
+
+while true; do
+    # Execute the focus logic
+    auto_focus_ram
+    
+    # Wait 60 seconds before the next check
+    sleep 60
+done

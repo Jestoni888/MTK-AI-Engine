@@ -1,0 +1,75 @@
+#!/system/bin/sh
+### ==== FLOOD GUARD BEGIN ==== ###
+
+SCRIPT_NAME="$(basename "$0")"
+STATE_DIR="/data/adb/modules/MTK_AI/.guard"
+mkdir -p "$STATE_DIR"
+
+RUN_TS_FILE="$STATE_DIR/${SCRIPT_NAME}.last"
+COUNT_FILE="$STATE_DIR/${SCRIPT_NAME}.count"
+
+NOW=$(date +%s)
+LAST=$(cat "$RUN_TS_FILE" 2>/dev/null || echo 0)
+COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)
+
+# --- rate limits ---
+MIN_INTERVAL=5      # seconds between runs
+MAX_RUNS=5          # max runs per minute
+WINDOW=60
+
+# Too soon? exit silently
+[ $((NOW - LAST)) -lt $MIN_INTERVAL ] && exit 0
+
+# Count runs in window
+if [ $((NOW - LAST)) -lt $WINDOW ]; then
+  COUNT=$((COUNT + 1))
+else
+  COUNT=1
+fi
+
+# Too many executions? hard stop
+if [ "$COUNT" -gt "$MAX_RUNS" ]; then
+  echo "[FLOOD-GUARD] $SCRIPT_NAME blocked" \
+    >> /sdcard/MTK_AI_Engine/flood_guard.log
+  exit 0
+fi
+
+echo "$NOW" > "$RUN_TS_FILE"
+echo "$COUNT" > "$COUNT_FILE"
+
+### ==== FLOOD GUARD END ==== ###
+
+#!/system/bin/sh
+
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+mkdir -p "$(dirname "$LOG_FILE")"
+
+log_msg() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
+
+# --- 1. fstrim on /data (only if fstrim exists) ---
+if [ -x /system/bin/fstrim ]; then
+    log_msg "Starting fstrim on /data"
+    /system/bin/fstrim -v /data 2>&1 | while IFS= read -r line; do
+        log_msg "fstrim: $line"
+    done
+else
+    log_msg "WARNING: /system/bin/fstrim not found — skipping storage TRIM"
+fi
+
+# --- 2. Trim app memory ---
+log_msg "Sending trim memory signals to running apps"
+RUNNING_PKGS=$(pm list packages -s -3 2>/dev/null | cut -f2 -d:)  # safer than parsing ps
+
+for pkg in $RUNNING_PKGS; do
+    case "$pkg" in
+        com.android.systemui|com.android.launcher*)
+            continue
+            ;;
+    esac
+    log_msg "Trimming Running App: $pkg"
+    am send-trim-memory "$pkg" RUNNING_CRITICAL 2>/dev/null
+done
+
+log_msg "Trim cycle completed"
