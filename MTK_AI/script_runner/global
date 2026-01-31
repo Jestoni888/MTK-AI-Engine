@@ -1,0 +1,84 @@
+#!/system/bin/sh
+### ==== FLOOD GUARD BEGIN ==== ###
+
+SCRIPT_NAME="$(basename "$0")"
+STATE_DIR="/data/adb/modules/MTK_AI/.guard"
+mkdir -p "$STATE_DIR"
+
+RUN_TS_FILE="$STATE_DIR/${SCRIPT_NAME}.last"
+COUNT_FILE="$STATE_DIR/${SCRIPT_NAME}.count"
+
+NOW=$(date +%s)
+LAST=$(cat "$RUN_TS_FILE" 2>/dev/null || echo 0)
+COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)
+
+# --- rate limits ---
+MIN_INTERVAL=5      # seconds between runs
+MAX_RUNS=5          # max runs per minute
+WINDOW=60
+
+# Too soon? exit silently
+[ $((NOW - LAST)) -lt $MIN_INTERVAL ] && exit 0
+
+# Count runs in window
+if [ $((NOW - LAST)) -lt $WINDOW ]; then
+  COUNT=$((COUNT + 1))
+else
+  COUNT=1
+fi
+LOG="/sdcard/MTK_AI_Engine/flood_guard.log"
+MAX_SIZE=10240
+# Too many executions? hard stop
+if [ "$COUNT" -gt "$MAX_RUNS" ]; then
+  echo "[FLOOD-GUARD] $SCRIPT_NAME blocked" \
+    >> /sdcard/MTK_AI_Engine/flood_guard.log
+  exit 0
+fi
+
+MOD_DIR="/data/adb/modules/MTK_AI"
+EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
+TRIMMING_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/trim_memory"
+RAM_CLEANER_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/ram_cleaner"
+LOGIC_CPU7_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu7"
+LOGIC_CPU6_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu6"
+RAM_CLEANER_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/ram_cleaner"
+
+# Ensure permissions
+chmod +x "$TRIMMING_PATH"
+chmod +x "$RAM_CLEANER_PATH"
+chmod +x "$LOGIC_CPU6_PATH"
+chmod +x "$LOGIC_CPU7_PATH"
+chmod +x "$RESOURCES_PATH"
+
+while true; do
+    # Logic for Trim Memory
+    if [ -f "$EXTERNAL_CFG/enable_trim" ]; then
+        pgrep -f "trim_memory" > /dev/null || "$TRIMMING_PATH" &
+    else
+        pkill -f "trim_memory"
+    fi
+
+    # Logic for RAM Cleaner
+    if [ -f "$EXTERNAL_CFG/enable_cleaner" ]; then
+        pgrep -f "ram_cleaner" > /dev/null || "$RAM_CLEANER_PATH" &
+    else
+        pkill -f "ram_cleaner"
+    fi
+
+    # Logic for CPU6
+    if [ -f "$EXTERNAL_CFG/enable_cpu" ]; then
+        pgrep -f "cpu6" > /dev/null || "$LOGIC_CPU6_PATH" &
+    else
+        pkill -f "cpu6"
+    fi
+
+    # Logic for CPU7
+    if [ -f "$EXTERNAL_CFG/enable_cpu" ]; then
+        pgrep -f "cpu7" > /dev/null || "$LOGIC_CPU7_PATH" &
+    else
+        pkill -f "cpu7"
+    fi
+
+    # Wait for 60 seconds before running again
+    sleep 60
+done

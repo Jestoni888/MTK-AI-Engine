@@ -1,0 +1,153 @@
+#!/system/bin/sh
+# MTK AI ENGINE - Manual Overrides (Fixed Version)
+# Place in: /data/adb/service.d/mtk_ai_manual
+# chmod 755 /data/adb/service.d/mtk_ai_manual
+
+CONFIG_DIR="/sdcard/MTK_AI_Engine"
+
+log "=== MTK AI MANUAL OVERRIDES STARTING ==="
+
+# --- 1. RESOLUTION SCALING ---
+if [ -f "$CONFIG_DIR/manual_scaling.txt" ]; then
+    PERCENT=$(cat "$CONFIG_DIR/manual_scaling.txt" 2>/dev/null | tr -d '\r\n\t ')
+    if [ -n "$PERCENT" ] && [ "$PERCENT" -ge 50 ] 2>/dev/null && [ "$PERCENT" -le 200 ] 2>/dev/null; then
+        # Get current density properly
+        CURRENT_DENSITY=$(dumpsys display 2>/dev/null | grep "mBaseDisplayInfo" | head -n1 | awk '{print $6}' | cut -d',' -f1)
+        if [ -z "$CURRENT_DENSITY" ] || ! [ "$CURRENT_DENSITY" -gt 0 ] 2>/dev/null; then
+            CURRENT_DENSITY=480  # Fallback
+        fi
+        
+        NEW_DENSITY=$((CURRENT_DENSITY * PERCENT / 100))
+        log "Applying scaling: ${PERCENT}% → ${NEW_DENSITY} DPI"
+        
+        # Apply with proper context
+        su -c "wm density $NEW_DENSITY" 2>/dev/null
+        if [ $? -eq 0 ]; then
+            log "✓ Scaling applied successfully"
+        else
+            log "✗ Failed to apply scaling"
+        fi
+    else
+        log "Invalid scaling value: '$PERCENT'"
+    fi
+else
+    log "No scaling config found"
+fi
+
+# --- 2. CPU GOVERNOR ---
+if [ -f "$CONFIG_DIR/manual_governor.txt" ]; then
+    GOVERNOR=$(cat "$CONFIG_DIR/manual_governor.txt" 2>/dev/null | tr -d '\r\n\t ')
+    if [ -n "$GOVERNOR" ]; then
+        log "Applying governor: $GOVERNOR"
+        for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+            if [ -f "$cpu/cpufreq/scaling_available_governors" ]; then
+                if grep -q "$GOVERNOR" "$cpu/cpufreq/scaling_available_governors"; then
+                    su -c "echo '$GOVERNOR' > '$cpu/cpufreq/scaling_governor'" 2>/dev/null
+                    if [ $? -eq 0 ]; then
+                        log "✓ Governor applied to $cpu"
+                    else
+                        log "✗ Failed to apply governor to $cpu"
+                    fi
+                else
+                    log "Governor '$GOVERNOR' not available for $cpu"
+                fi
+            fi
+        done
+    else
+        log "Empty governor config"
+    fi
+else
+    log "No governor config found"
+fi
+
+# --- 3. RENDERER ---
+if [ -f "$CONFIG_DIR/manual_renderer.txt" ]; then
+    RENDERER=$(cat "$CONFIG_DIR/manual_renderer.txt" 2>/dev/null | tr -d '\r\n\t ')
+    if [ -n "$RENDERER" ]; then
+        log "Applying renderer: $RENDERER"
+        su -c "setprop debug.hwui.renderer '$RENDERER'" 2>/dev/null
+        if [ $? -eq 0 ]; then
+            log "✓ Renderer applied"
+        else
+            log "✗ Failed to apply renderer"
+        fi
+    else
+        log "Empty renderer config"
+    fi
+else
+    log "No renderer config found"
+fi
+
+# --- 4. REFRESH RATE ---
+if [ -f "$CONFIG_DIR/manual_refresh_lock.txt" ]; then
+    MODE_ID=$(cat "$CONFIG_DIR/manual_refresh_lock.txt" 2>/dev/null | tr -d '\r\n\t ')
+    if [ -n "$MODE_ID" ]; then
+        log "Applying refresh rate mode: $MODE_ID"
+        su -c "service call SurfaceFlinger 1035 i32 $MODE_ID" 2>/dev/null
+        if [ $? -eq 0 ]; then
+            log "✓ Refresh rate applied"
+        else
+            log "✗ Failed to apply refresh rate"
+        fi
+    else
+        log "Empty refresh rate config"
+    fi
+else
+    log "No refresh rate config found"
+fi
+
+# --- 5. TOUCH ACTIVE CPU FREQUENCY ---
+if [ -f "$CONFIG_DIR/manual_touch_active_freq.txt" ]; then
+    ACTIVE_PERCENT=$(cat "$CONFIG_DIR/manual_touch_active_freq.txt" 2>/dev/null | tr -d '\r\n\t ')
+    if [ -n "$ACTIVE_PERCENT" ] && [ "$ACTIVE_PERCENT" -ge 50 ] 2>/dev/null && [ "$ACTIVE_PERCENT" -le 100 ] 2>/dev/null; then
+        log "Applying Touch Active CPU: ${ACTIVE_PERCENT}%"
+        for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+            if [ -f "$cpu/cpufreq/cpuinfo_max_freq" ]; then
+                MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
+                MIN_FREQ=$(cat "$cpu/cpufreq/cpuinfo_min_freq")
+                TARGET_MAX=$((MAX_FREQ * ACTIVE_PERCENT / 100))
+                echo "$MIN_FREQ" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null
+                echo "$TARGET_MAX" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+                if [ $? -eq 0 ]; then
+                    log "✓ Touch Active CPU applied to $cpu"
+                else
+                    log "✗ Failed to apply Touch Active CPU to $cpu"
+                fi
+            fi
+        done
+    else
+        log "Invalid Touch Active CPU value: '$ACTIVE_PERCENT'"
+    fi
+else
+    log "No Touch Active CPU config found"
+fi
+
+# --- 6. INACTIVE CPU FREQUENCY ---
+if [ -f "$CONFIG_DIR/cpu_freq_scaling.txt" ]; then
+    INACTIVE_PERCENT=$(cat "$CONFIG_DIR/cpu_freq_scaling.txt" 2>/dev/null | tr -d '\r\n\t ')
+    if [ -n "$INACTIVE_PERCENT" ] && [ "$INACTIVE_PERCENT" -ge 30 ] 2>/dev/null && [ "$INACTIVE_PERCENT" -le 100 ] 2>/dev/null; then
+        log "Applying Inactive CPU: ${INACTIVE_PERCENT}%"
+        for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+            if [ -f "$cpu/cpufreq/cpuinfo_max_freq" ]; then
+                MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
+                TARGET_MAX=$((MAX_FREQ * INACTIVE_PERCENT / 100))
+                echo "$TARGET_MAX" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+                if [ $? -eq 0 ]; then
+                    log "✓ Inactive CPU applied to $cpu"
+                else
+                    log "✗ Failed to apply Inactive CPU to $cpu"
+                fi
+            fi
+        done
+    else
+        log "Invalid Inactive CPU value: '$INACTIVE_PERCENT'"
+    fi
+else
+    log "No Inactive CPU config found"
+fi
+
+settings put global low_power 0
+settings put global low_power_sticky 0
+echo "0" > /proc/sys/kernel/panic
+
+log "=== MTK AI MANUAL OVERRIDES COMPLETED ==="

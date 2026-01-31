@@ -1,0 +1,28 @@
+#!/system/bin/sh
+
+. /data/adb/modules/MTK_AI/MTK_AI/auto_frequency/surfaceflinger
+
+T_ON="/dev/.sf_touch_on"
+T_OFF="/dev/.sf_touch_off"
+G_ON="/dev/.sf_game_on"
+G_OFF="/dev/.sf_game_off"
+
+T_STATE="/dev/.sf_touch_state"
+G_STATE="/dev/.sf_game_state"
+SF_STATE="/dev/.sf_state"
+
+while true; do
+  [ -f "$T_ON" ]  && touch "$T_STATE"  && rm -f "$T_ON"
+  [ -f "$T_OFF" ] && rm -f "$T_STATE" && rm -f "$T_OFF"
+
+  [ -f "$G_ON" ]  && touch "$G_STATE"  && rm -f "$G_ON"
+  [ -f "$G_OFF" ] && rm -f "$G_STATE" && rm -f "$G_OFF"
+
+  if [ -f "$T_STATE" ] || [ -f "$G_STATE" ]; then
+    [ ! -f "$SF_STATE" ] && sf_enable && touch "$SF_STATE"
+  else
+    [ -f "$SF_STATE" ] && sf_disable && rm -f "$SF_STATE"
+  fi
+
+  sleep 1
+done

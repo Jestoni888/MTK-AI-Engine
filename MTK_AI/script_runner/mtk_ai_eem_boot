@@ -1,0 +1,78 @@
+#!/system/bin/sh
+# MTK AI EEM Voltage Offset Boot Script
+CONFIG_FILE="/sdcard/MTK_AI_Engine/eem_voltage_offset.txt"
+
+if [ -f "$CONFIG_FILE" ]; then
+    OFFSET=$(cat "$CONFIG_FILE" | tr -d '\r\n ')
+    
+    # Universal EEM paths
+    EEM_PATHS="
+    /proc/eem/EEM_DET_B/eem_offset
+    /proc/eem/EEM_DET_L/eem_offset
+    /proc/eem/EEM_DET_CCI/eem_offset
+    /proc/eem/EEM_DET_BL/eem_offset
+    /proc/eemg/EEMG_DET_GPU/eemg_offset
+    /proc/eemg/EEMG_DET_GPU_HI/eemg_offset
+    "
+    
+    for path in $EEM_PATHS; do
+        if [ -f "$path" ]; then
+            echo "$OFFSET" > "$path" 2>/dev/null
+        fi
+    done
+fi
+
+[ "$(id -u)" -ne 0 ] && { echo "Root required!"; exit 1; }
+
+log_msg() {
+    echo "[$(date '+%H:%M:%S')] $1"
+}
+
+APPLY_DIR="/sdcard/MTK_AI_Engine"
+
+log_msg "🚀 Applying saved CPU & uclamp settings from WebUI..."
+
+# Apply CPU shares
+if [ -d "$APPLY_DIR" ]; then
+    # Find all cpu_*_share.txt files
+    find "$APPLY_DIR" -name "cpu_*_share.txt" 2>/dev/null | while read shares_file; do
+        # Extract cgroup name from filename
+        cgroup_name=$(basename "$shares_file" | sed 's/cpu_\(.*\)_share\.txt/\1/')
+        
+        # Get the actual cgroup path
+        if [ -f "/dev/cpuctl/$cgroup_name/cpu.shares" ]; then
+            shares_value=$(cat "$shares_file" | tr -d '\r\n ')
+            if [ -n "$shares_value" ] && [ "$shares_value" -ge 10 ] && [ "$shares_value" -le 16384 ] 2>/dev/null; then
+                echo "$shares_value" > "/dev/cpuctl/$cgroup_name/cpu.shares" 2>/dev/null
+                log_msg "✅ CPU shares: $cgroup_name = $shares_value"
+            fi
+        fi
+    done
+    
+    # Apply uclamp settings
+    find "$APPLY_DIR" -name "uclamp_*_min.txt" 2>/dev/null | while read min_file; do
+        cgroup_name=$(basename "$min_file" | sed 's/uclamp_\(.*\)_min\.txt/\1/')
+        max_file="$APPLY_DIR/uclamp_${cgroup_name}_max.txt"
+        
+        if [ -f "/dev/cpuctl/$cgroup_name/cpu.uclamp.min" ] && [ -f "/dev/cpuctl/$cgroup_name/cpu.uclamp.max" ]; then
+            min_value=$(cat "$min_file" | tr -d '\r\n ')
+            max_value=$(cat "$max_file" 2>/dev/null | tr -d '\r\n ')
+            
+            # Validate and apply min
+            if [ -n "$min_value" ]; then
+                echo "$min_value" > "/dev/cpuctl/$cgroup_name/cpu.uclamp.min" 2>/dev/null
+                log_msg "✅ uclamp.min: $cgroup_name = $min_value"
+            fi
+            
+            # Validate and apply max
+            if [ -n "$max_value" ]; then
+                echo "$max_value" > "/dev/cpuctl/$cgroup_name/cpu.uclamp.max" 2>/dev/null
+                log_msg "✅ uclamp.max: $cgroup_name = $max_value"
+            fi
+        fi
+    done
+else
+    log_msg "⚠️ No saved settings found in $APPLY_DIR"
+fi
+
+log_msg "✅ Boot CPU & uclamp tuning completed!"
