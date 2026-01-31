@@ -1,0 +1,121 @@
+#!/system/bin/sh
+
+# Immediately detect screen state and run corresponding actions
+# One-shot: no loop, no sleep, exits after execution
+
+MOD_DIR="/data/adb/modules/MTK_AI"
+SCREEN_OFF_PATH="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/powersave"
+EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
+NOTIFY_ENABLED_FILE="$MOD_DIR/enable_notifications"
+
+cpu_governor() {
+# --- 2. CPU GOVERNOR ---
+if [ -f "$EXTERNAL_CFG/manual_governor.txt" ]; then
+    GOVERNOR=$(cat "$EXTERNAL_CFG/manual_governor.txt" 2>/dev/null | tr -d '\r\n\t ')
+    if [ -n "$GOVERNOR" ]; then
+        log "Applying governor: $GOVERNOR"
+        for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+            if [ -f "$cpu/cpufreq/scaling_available_governors" ]; then
+                if grep -q "$GOVERNOR" "$cpu/cpufreq/scaling_available_governors"; then
+                    su -c "echo '$GOVERNOR' > '$cpu/cpufreq/scaling_governor'" 2>/dev/null
+                    if [ $? -eq 0 ]; then
+                        log "✓ Governor applied to $cpu"
+                    else
+                        log "✗ Failed to apply governor to $cpu"
+                    fi
+                else
+                    log "Governor '$GOVERNOR' not available for $cpu"
+                fi
+            fi
+        done
+    else
+        log "Empty governor config"
+    fi
+else
+    log "No governor config found"
+fi
+
+LOG_TAG="[RESTORE]"
+log() { echo "$LOG_TAG $*"; }
+
+log "Restoring system to normal performance state..."
+
+# 2. Disable low_power mode
+settings put global low_power 0
+settings put global low_power_sticky 0
+
+# 3. Re-enable app management (disable forced restrictions)
+settings put global app_auto_restriction_enabled 0
+settings put global forced_app_standby_enabled 0
+settings put global app_standby_enabled 0
+settings put global forced_app_standby_for_small_battery_enabled 0
+
+# 5. Exit forced Doze
+dumpsys deviceidle disable 2>/dev/null
+dumpsys deviceidle unforce 2>/dev/null
+
+# 7. Re-enable MIUI AI Preload (if it exists)
+if settings get system ai_preload_user_state >/dev/null 2>&1; then
+    settings put system ai_preload_user_state 1
+fi
+}
+
+# --- NOTIFICATION UTILITY ---
+notify_engine() {
+    [ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
+    RAW_TEMP=$(cat /sys/class/power_supply/battery/temp 2>/dev/null)
+    B_TEMP="$((RAW_TEMP / 10)).$((RAW_TEMP % 10))°C"
+    local title="$1"
+    local msg="$2"
+    su -lp 2000 -c "cmd notification post -S bigtext -t '$title' tag '$msg | temp: $B_TEMP'" >/dev/null 2>&1
+}
+
+run_external_binary() {
+    SCRIPT_PATH="$1"
+    if [ ! -x "$SCRIPT_PATH" ]; then
+        return 1
+    fi
+    "$SCRIPT_PATH" >/dev/null 2>&1 &
+}
+
+# Works whether script is root or not
+get_screen_state() {
+    # Try without su first (if already root)
+    local state
+    state=$(dumpsys power 2>/dev/null | grep -m1 'mScreenOn=' | cut -d= -f2) && [ -n "$state" ] && {
+        echo "$state"
+        return
+    }
+
+    # Fallback: use su
+    state=$(su -c "dumpsys power" 2>/dev/null | grep -m1 'mScreenOn=' | cut -d= -f2) && [ -n "$state" ] && {
+        echo "$state"
+        return
+    }
+
+    # Ultimate fallback: brightness
+    local bright
+    bright=$(cat /sys/class/leds/lcd-backlight/brightness 2>/dev/null)
+    if [ -n "$bright" ] && [ "$bright" -eq 0 ]; then
+        echo "false"
+    else
+        echo "true"
+    fi
+}
+
+STATE=$(get_screen_state)
+
+if [ "$STATE" = "true" ]; then
+    echo "ON"     
+        cpu_governor
+        settings put global low_power 0
+        settings put global low_power_sticky 0
+        echo "0" > /proc/sys/kernel/panic
+elif [ "$STATE" = "false" ]; then
+    echo "OFF"
+            if [ -f "$EXTERNAL_CFG/low_power_mode" ]; then       
+        run_external_binary "$SCREEN_OFF_PATH"
+            fi         
+else
+    echo "UNKNOWN"
+fi
