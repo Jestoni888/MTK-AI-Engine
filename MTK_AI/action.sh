@@ -1,12 +1,14 @@
 #!/system/bin/sh
-# action.sh - Universal & MT Manager compatible
-# Works on Magisk / KSU / APatch / Sukisu + MT Manager shell
+# action.sh - Shows logs in ALL root manager UIs (MT Manager, KSU, APatch, etc.)
 
 LOG_TAG="[MTK_AI UPDATE]"
 MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"
 TMP="/data/local/tmp/mtk_update"
 
-log() { echo "$LOG_TAG $*" >&2; }
+# ✅ LOG TO STDOUT (not stderr) so UI can show it
+log() {
+    echo "$LOG_TAG $*"
+}
 
 # === 1. Detect module dir ===
 detect_moddir() {
@@ -47,7 +49,8 @@ MTK_AI/AI_MODE/gaming_mode/app_optimizer
 MTK_AI/AI_MODE/gaming_mode/bypass_on
 MTK_AI/AI_MODE/gaming_mode/disable_thermal
 MTK_AI/AI_MODE/gaming_mode/disable_thermal2
-MTK_AI/AI_MODE/gaming_mode/disable_thermal3MTK_AI/AI_MODE/gaming_mode/gaming_cpuset
+MTK_AI/AI_MODE/gaming_mode/disable_thermal3
+MTK_AI/AI_MODE/gaming_mode/gaming_cpuset
 MTK_AI/AI_MODE/gaming_mode/gaming_prop
 MTK_AI/AI_MODE/gaming_mode/gaming_prop_2
 MTK_AI/AI_MODE/gaming_mode/limit
@@ -83,11 +86,11 @@ download() {
     case "$TOOL" in
         curl)   "$TOOL" -fsSL --max-time 10 --retry 3 "$url" -o "$out" ;;
         wget)   "$TOOL" -q --timeout=10 --tries=3 --no-check-certificate -O "$out" "$url" ;;
-        *)      "$TOOL" wget -q -O "$out" "$url" ;;  # busybox/toybox
+        *)      "$TOOL" wget -q -O "$out" "$url" ;;
     esac
 }
 
-# === 5. Check if path is in required list (POSIX safe) ===
+# === 5. Check if required ===
 is_required() {
     target="$1"
     for f in $required_files; do
@@ -95,8 +98,8 @@ is_required() {
     done
     return 1
 }
-
-# === 6. Main ===log "🔄 Updating scripts..."
+# === 6. Main ===
+log "🔄 Updating scripts..."
 
 mkdir -p "$TMP"
 
@@ -106,8 +109,9 @@ if ! download "$MANIFEST_URL" "$TMP/manifest.txt"; then
     exit 1
 fi
 
-[ -s "$TMP/manifest.txt" ] || { log "❌ Manifest empty."; rm -rf "$TMP"; exit 1; }
+[ -s "$TMP/manifest.txt" ] || { log "❌ Manifest is empty."; rm -rf "$TMP"; exit 1; }
 
+updated=0
 while IFS= read -r line; do
     [ -z "$line" ] && continue
     case "$line" in
@@ -124,11 +128,17 @@ while IFS= read -r line; do
             cp "$TMP/file" "$target"
             chmod 755 "$target" 2>/dev/null
             log "✅ Updated: $rel_path"
+            updated=$((updated + 1))
         else
-            log "⚠️  Failed: $rel_path"
+            log "⚠️ FAILED: $rel_path"
         fi
     fi
 done < "$TMP/manifest.txt"
 
 rm -rf "$TMP"
-log "✅ Update complete. Reboot to apply."
+
+if [ "$updated" -gt 0 ]; then
+    log "✅ Update complete! Reboot to apply changes."
+else
+    log "ℹ️ No files were updated."
+fi
