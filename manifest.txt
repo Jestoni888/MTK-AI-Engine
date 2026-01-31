@@ -1,37 +1,144 @@
-MTK_AI/AI_MODE/auto_frequency/auto_frequency https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/auto_frequency
-MTK_AI/AI_MODE/auto_frequency/cpu6 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/cpu6
-MTK_AI/AI_MODE/auto_frequency/cpu7 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/cpu7
-MTK_AI/AI_MODE/auto_frequency/surfaceflinger https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/surfaceflinger
-MTK_AI/AI_MODE/gaming_mode/app_optimizer https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer
-MTK_AI/AI_MODE/gaming_mode/bypass_on https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/bypass_on
-MTK_AI/AI_MODE/gaming_mode/disable_thermal https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal
-MTK_AI/AI_MODE/gaming_mode/disable_thermal2 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal2
-MTK_AI/AI_MODE/gaming_mode/disable_thermal3 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal3
-MTK_AI/AI_MODE/gaming_mode/gaming_cpuset https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_cpuset
-MTK_AI/AI_MODE/gaming_mode/gaming_prop https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop
-MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2
-MTK_AI/AI_MODE/gaming_mode/limit https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/limit
-MTK_AI/AI_MODE/gaming_mode/lite_gaming https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/lite_gaming
-MTK_AI/AI_MODE/gaming_mode/performance https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/performance
-MTK_AI/AI_MODE/gaming_mode/unlock https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/unlock
-MTK_AI/AI_MODE/gaming_mode/unlockfps https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/unlockfps
-MTK_AI/AI_MODE/normal_mode/bypass_off https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off
-MTK_AI/AI_MODE/normal_mode/normal_cpuset https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_cpuset
-MTK_AI/AI_MODE/normal_mode/normal_prop https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_prop
-MTK_AI/AI_MODE/normal_mode/powersave https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/normal_mode/powersave
-MTK_AI/AI_MODE/global_mode/charger_check https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/charger_check
-MTK_AI/AI_MODE/global_mode/perf_disp https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/perf_disp
-MTK_AI/AI_MODE/global_mode/ram_cleaner https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner
-MTK_AI/AI_MODE/global_mode/resources_tweaks https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/resources_tweaks
-MTK_AI/AI_MODE/global_mode/trim_memory https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/trim_memory
-MTK_AI/AI_MODE/global_mode/webview_tweaks https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/webview_tweaks
-script_runner/display_mode https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/display_mode
-script_runner/global https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/global
-script_runner/mtk_ai_manual https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/mtk_ai_manual
-script_runner/refresh_rate_locker https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/refresh_rate_locker
-script_runner/sf_controller https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/sf_controller
-script_runner/mtk_ai_eem_boot https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/mtk_ai_eem_boot
-logcat_detection/logcat https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/logcat_detection/logcat
-touch_detection/touch2 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/touch_detection/touch2
-touch_detection/dumpsys https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/touch_detection/dumpsys
-action.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/action.sh
+#!/system/bin/sh
+# action.sh - Shows logs in ALL root manager UIs (MT Manager, KSU, APatch, etc.)
+
+LOG_TAG="[MTK_AI UPDATE]"
+MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"
+TMP="/data/local/tmp/mtk_update"
+
+# ✅ LOG TO STDOUT (not stderr) so UI can show it
+log() {
+    echo "$LOG_TAG $*"
+}
+
+# === 1. Detect module dir ===
+detect_moddir() {
+    [ -d "/data/adb/modules/MTK_AI" ] && { echo "/data/adb/modules/MTK_AI"; return; }
+    [ -d "/data/ksu/modules/MTK_AI" ] && { echo "/data/ksu/modules/MTK_AI"; return; }
+    SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+    [ -f "$SCRIPT_DIR/module.prop" ] && { echo "$SCRIPT_DIR"; return; }
+    log "❌ Module dir not found."
+    exit 1
+}
+
+MODDIR="$(detect_moddir)"
+log "📁 Module dir: $MODDIR"
+
+# === 2. Find download tool ===
+find_tool() {
+    for cmd in curl wget toybox busybox; do
+        if command -v "$cmd" >/dev/null 2>&1; then
+            echo "$cmd"
+            return
+        fi
+    done
+    [ -x "$MODDIR/busybox" ] && { echo "$MODDIR/busybox"; return; }
+    log "❌ No download tool found."
+    exit 1
+}
+
+TOOL="$(find_tool)"
+log "🔧 Using: $TOOL"
+
+# === 3. Required files ===
+required_files="
+MTK_AI/AI_MODE/auto_frequency/auto_frequency
+MTK_AI/AI_MODE/auto_frequency/cpu6
+MTK_AI/AI_MODE/auto_frequency/cpu7
+MTK_AI/AI_MODE/auto_frequency/surfaceflinger
+MTK_AI/AI_MODE/gaming_mode/app_optimizer
+MTK_AI/AI_MODE/gaming_mode/bypass_on
+MTK_AI/AI_MODE/gaming_mode/disable_thermal
+MTK_AI/AI_MODE/gaming_mode/disable_thermal2
+MTK_AI/AI_MODE/gaming_mode/disable_thermal3
+MTK_AI/AI_MODE/gaming_mode/gaming_cpuset
+MTK_AI/AI_MODE/gaming_mode/gaming_prop
+MTK_AI/AI_MODE/gaming_mode/gaming_prop_2
+MTK_AI/AI_MODE/gaming_mode/limit
+MTK_AI/AI_MODE/gaming_mode/lite_gaming
+MTK_AI/AI_MODE/gaming_mode/performance
+MTK_AI/AI_MODE/gaming_mode/unlock
+MTK_AI/AI_MODE/gaming_mode/unlockfps
+MTK_AI/AI_MODE/normal_mode/bypass_off
+MTK_AI/AI_MODE/normal_mode/normal_cpuset
+MTK_AI/AI_MODE/normal_mode/normal_prop
+MTK_AI/AI_MODE/normal_mode/powersave
+MTK_AI/AI_MODE/global_mode/charger_check
+MTK_AI/AI_MODE/global_mode/perf_disp
+MTK_AI/AI_MODE/global_mode/ram_cleaner
+MTK_AI/AI_MODE/global_mode/resources_tweaks
+MTK_AI/AI_MODE/global_mode/trim_memory
+MTK_AI/AI_MODE/global_mode/webview_tweaks
+script_runner/display_mode
+script_runner/global
+script_runner/mtk_ai_manual
+script_runner/refresh_rate_locker
+script_runner/sf_controller
+script_runner/mtk_ai_eem_boot
+logcat_detection/logcat
+touch_detection/touch2
+touch_detection/dumpsys
+action.sh
+"
+
+# === 4. Download helper ===
+download() {
+    url="$1"; out="$2"
+    case "$TOOL" in
+        curl)   "$TOOL" -fsSL --max-time 10 --retry 3 "$url" -o "$out" ;;
+        wget)   "$TOOL" -q --timeout=10 --tries=3 --no-check-certificate -O "$out" "$url" ;;
+        *)      "$TOOL" wget -q -O "$out" "$url" ;;
+    esac
+}
+
+# === 5. Check if required ===
+is_required() {
+    target="$1"
+    for f in $required_files; do
+        [ "$f" = "$target" ] && return 0
+    done
+    return 1
+}
+# === 6. Main ===
+log "🔄 Updating scripts..."
+
+mkdir -p "$TMP"
+
+if ! download "$MANIFEST_URL" "$TMP/manifest.txt"; then
+    log "❌ Manifest download failed."
+    rm -rf "$TMP"
+    exit 1
+fi
+
+[ -s "$TMP/manifest.txt" ] || { log "❌ Manifest is empty."; rm -rf "$TMP"; exit 1; }
+
+updated=0
+while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    case "$line" in
+        \#*) continue ;;
+    esac
+
+    rel_path=$(echo "$line" | cut -d' ' -f1)
+    url=$(echo "$line" | cut -d' ' -f2- | xargs)
+
+    if is_required "$rel_path"; then
+        target="$MODDIR/$rel_path"
+        mkdir -p "$(dirname "$target")"
+        if download "$url" "$TMP/file" && [ -s "$TMP/file" ]; then
+            cp "$TMP/file" "$target"
+            chmod 755 "$target" 2>/dev/null
+            log "✅ Updated: $rel_path"
+            updated=$((updated + 1))
+        else
+            log "⚠️ FAILED: $rel_path"
+        fi
+    fi
+done < "$TMP/manifest.txt"
+
+rm -rf "$TMP"
+
+if [ "$updated" -gt 0 ]; then
+    log "✅ Update complete! Reboot to apply changes."
+else
+    log "ℹ️ No files were updated."
+fi
