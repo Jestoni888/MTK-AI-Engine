@@ -1,17 +1,43 @@
 #!/system/bin/sh
-# action.sh - Replace all MTK_AI core scripts from Pastebin on every run
-# Place in: /data/adb/modules/MTK_AI/action.sh
+# action.sh - Universal & MT Manager compatible
+# Works on Magisk / KSU / APatch / Sukisu + MT Manager shell
 
 LOG_TAG="[MTK_AI UPDATE]"
-MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"  # 🔴 REPLACE THIS!
-MODDIR="/data/adb/modules/MTK_AI"
+MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"
 TMP="/data/local/tmp/mtk_update"
 
 log() { echo "$LOG_TAG $*" >&2; }
 
-log "🔄 Updating all MTK_AI scripts..."
+# === 1. Detect module dir ===
+detect_moddir() {
+    [ -d "/data/adb/modules/MTK_AI" ] && { echo "/data/adb/modules/MTK_AI"; return; }
+    [ -d "/data/ksu/modules/MTK_AI" ] && { echo "/data/ksu/modules/MTK_AI"; return; }
+    SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+    [ -f "$SCRIPT_DIR/module.prop" ] && { echo "$SCRIPT_DIR"; return; }
+    log "❌ Module dir not found."
+    exit 1
+}
 
-# Full list of paths (exactly as used in your post-fs-data.sh)
+MODDIR="$(detect_moddir)"
+log "📁 Module dir: $MODDIR"
+
+# === 2. Find download tool ===
+find_tool() {
+    for cmd in curl wget toybox busybox; do
+        if command -v "$cmd" >/dev/null 2>&1; then
+            echo "$cmd"
+            return
+        fi
+    done
+    [ -x "$MODDIR/busybox" ] && { echo "$MODDIR/busybox"; return; }
+    log "❌ No download tool found."
+    exit 1
+}
+
+TOOL="$(find_tool)"
+log "🔧 Using: $TOOL"
+
+# === 3. Required files ===
 required_files="
 MTK_AI/AI_MODE/auto_frequency/auto_frequency
 MTK_AI/AI_MODE/auto_frequency/cpu6
@@ -21,8 +47,7 @@ MTK_AI/AI_MODE/gaming_mode/app_optimizer
 MTK_AI/AI_MODE/gaming_mode/bypass_on
 MTK_AI/AI_MODE/gaming_mode/disable_thermal
 MTK_AI/AI_MODE/gaming_mode/disable_thermal2
-MTK_AI/AI_MODE/gaming_mode/disable_thermal3
-MTK_AI/AI_MODE/gaming_mode/gaming_cpuset
+MTK_AI/AI_MODE/gaming_mode/disable_thermal3MTK_AI/AI_MODE/gaming_mode/gaming_cpuset
 MTK_AI/AI_MODE/gaming_mode/gaming_prop
 MTK_AI/AI_MODE/gaming_mode/gaming_prop_2
 MTK_AI/AI_MODE/gaming_mode/limit
@@ -52,22 +77,37 @@ touch_detection/dumpsys
 action.sh
 "
 
+# === 4. Download helper ===
+download() {
+    url="$1"; out="$2"
+    case "$TOOL" in
+        curl)   "$TOOL" -fsSL --max-time 10 --retry 3 "$url" -o "$out" ;;
+        wget)   "$TOOL" -q --timeout=10 --tries=3 --no-check-certificate -O "$out" "$url" ;;
+        *)      "$TOOL" wget -q -O "$out" "$url" ;;  # busybox/toybox
+    esac
+}
+
+# === 5. Check if path is in required list (POSIX safe) ===
+is_required() {
+    target="$1"
+    for f in $required_files; do
+        [ "$f" = "$target" ] && return 0
+    done
+    return 1
+}
+
+# === 6. Main ===log "🔄 Updating scripts..."
+
 mkdir -p "$TMP"
 
-# Download manifest
-if ! "$MODDIR/busybox" wget -q --timeout=10 --tries=3 --no-check-certificate -O "$TMP/manifest.txt" "$MANIFEST_URL"; then
-    log "❌ Failed to download manifest."
+if ! download "$MANIFEST_URL" "$TMP/manifest.txt"; then
+    log "❌ Manifest download failed."
     rm -rf "$TMP"
     exit 1
 fi
 
-if [ ! -s "$TMP/manifest.txt" ]; then
-    log "❌ Manifest is empty."
-    rm -rf "$TMP"
-    exit 1
-fi
+[ -s "$TMP/manifest.txt" ] || { log "❌ Manifest empty."; rm -rf "$TMP"; exit 1; }
 
-# Replace ONLY the files in required_files (for safety)
 while IFS= read -r line; do
     [ -z "$line" ] && continue
     case "$line" in
@@ -77,21 +117,18 @@ while IFS= read -r line; do
     rel_path=$(echo "$line" | cut -d' ' -f1)
     url=$(echo "$line" | cut -d' ' -f2- | xargs)
 
-    # Only process if it's in our known list
-    case " $required_files " in
-        *" $rel_path "*)
-            target="$MODDIR/$rel_path"
-            mkdir - p "$(dirname "$target")" 2>/dev/null
-            if "$MODDIR/busybox" wget -q --timeout=8 --tries=2 --no-check-certificate -O "$TMP/file" "$url" && [ -s "$TMP/file" ]; then
-                cp "$TMP/file" "$target"
-                chmod 755 "$target" 2>/dev/null
-                log "✅ Updated: $rel_path"
-            else
-                log "⚠️  Failed: $rel_path"
-            fi
-            ;;
-    esac
+    if is_required "$rel_path"; then
+        target="$MODDIR/$rel_path"
+        mkdir -p "$(dirname "$target")"
+        if download "$url" "$TMP/file" && [ -s "$TMP/file" ]; then
+            cp "$TMP/file" "$target"
+            chmod 755 "$target" 2>/dev/null
+            log "✅ Updated: $rel_path"
+        else
+            log "⚠️  Failed: $rel_path"
+        fi
+    fi
 done < "$TMP/manifest.txt"
 
 rm -rf "$TMP"
-log "✅ All scripts updated. Reboot to apply changes."
+log "✅ Update complete. Reboot to apply."
