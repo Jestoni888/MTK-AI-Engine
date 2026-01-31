@@ -1,0 +1,86 @@
+#!/system/bin/sh
+# MTK AI ENGINE - Unified CPU Frequency Scaling with Continuous Monitoring
+# Loops every 60 seconds to adjust based on real-time temperature
+# -5% frequency per 1°C above 38°C baseline
+
+CONFIG_FILE="/sdcard/MTK_AI_Engine/cpu_freq_scaling.txt"
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+CPU_SYS="/sys/devices/system/cpu"
+PID_FILE="/data/adb/modules/MTK_AI/cpu_scaling.pid"
+
+# Cleanup old process if exists
+if [ -f "$PID_FILE" ]; then
+    OLD_PID=$(cat "$PID_FILE")
+    kill -9 "$OLD_PID" 2>/dev/null
+    rm -f "$PID_FILE"
+fi
+
+# Save current PID
+echo $$ > "$PID_FILE"
+
+log_msg() {
+    echo "[$(date '+%m-%d %H:%M:%S')] [cpu_scaling] $1" >> "$LOG_FILE"
+}
+
+# Wait for system to be ready
+for i in $(seq 1 30); do
+    if [ -d "$CPU_SYS/cpu0" ]; then
+        log_msg "CPU sysfs ready after $i seconds"
+        break
+    fi
+    sleep 1
+done
+
+# Continuous monitoring loop
+while true; do
+    # Get current battery temperature
+    if [ -f "/sys/class/power_supply/battery/temp" ]; then
+        TEMP_RAW=$(cat "/sys/class/power_supply/battery/temp")
+        TEMP_INT=$((TEMP_RAW / 10))
+    else
+        TEMP_INT=38  # Safe default
+    fi
+    
+    # Load user setting (default: 100%)
+    if [ -f "$CONFIG_FILE" ]; then
+        USER_PERCENT=$(cat "$CONFIG_FILE" | tr -d '\r\n ')
+        # Validate range
+        if ! [ "$USER_PERCENT" -ge 30 ] 2>/dev/null || ! [ "$USER_PERCENT" -le 100 ] 2>/dev/null; then
+            USER_PERCENT=100
+        fi
+    else
+        USER_PERCENT=100
+    fi
+    
+    # Temperature-based scaling logic
+    BASE_TEMP=38  # Reference temperature
+    TEMP_DIFF=$((TEMP_INT - BASE_TEMP))
+    
+    if [ "$TEMP_DIFF" -gt 0 ]; then
+        REDUCTION=$((TEMP_DIFF * 5))  # -5% per °C above 38°C
+        CURRENT_PERCENT=$((USER_PERCENT - REDUCTION))
+        [ "$CURRENT_PERCENT" -lt 30 ] && CURRENT_PERCENT=30
+    else
+        CURRENT_PERCENT=$USER_PERCENT
+    fi
+    
+    # Apply to all CPUs
+    for cpu in $CPU_SYS/cpu[0-9]*; do
+        [ -d "$cpu" ] || continue
+        
+        if [ -f "$cpu/cpufreq/cpuinfo_max_freq" ]; then
+            MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
+            MIN_FREQ=$(cat "$cpu/cpufreq/cpuinfo_min_freq")
+            TARGET_FREQ=$((MAX_FREQ * CURRENT_PERCENT / 100))
+            
+            # Apply frequencies (same as your touch_active logic)
+            echo "$MIN_FREQ" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null
+            echo "$TARGET_FREQ" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+        fi
+    done
+    
+    log_msg "Applied ${CURRENT_PERCENT}% @ ${TEMP_INT}°C"
+    
+    # Sleep for 60 seconds
+    sleep 60
+done
