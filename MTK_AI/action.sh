@@ -3,7 +3,7 @@
 # Place in: /data/adb/modules/MTK_AI/action.sh
 
 LOG_TAG="[MTK_AI UPDATE]"
-MANIFEST_URL="https://pastebin.com/raw/YOUR_MANIFEST_ID"  # 🔴 REPLACE THIS!
+MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"  # 🔴 REPLACE THIS!
 MODDIR="/data/adb/modules/MTK_AI"
 TMP="/data/local/tmp/mtk_update"
 
