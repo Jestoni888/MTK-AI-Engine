@@ -3,7 +3,7 @@
 # Place in: /data/adb/modules/MTK_AI/action.sh
 
 LOG_TAG="[MTK_AI UPDATE]"
-MANIFEST_URL="https://pastebin.com/raw/YOUR_MANIFEST_ID"
+MANIFEST_URL="https://pastebin.com/raw/YOUR_MANIFEST_ID"  # 🔴 REPLACE THIS!
 MODDIR="/data/adb/modules/MTK_AI"
 TMP="/data/local/tmp/mtk_update"
 
@@ -49,6 +49,7 @@ script_runner/mtk_ai_eem_boot
 logcat_detection/logcat
 touch_detection/touch2
 touch_detection/dumpsys
+action.sh
 "
 
 mkdir -p "$TMP"
