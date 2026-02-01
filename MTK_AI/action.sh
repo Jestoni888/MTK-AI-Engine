@@ -246,3 +246,4 @@ fi
 rm -f "$TMP"
 touch "$FLAG" 2>/dev/null
 su -c 'mkdir -p /sdcard/MTK_AI_Engine && :> /sdcard/MTK_AI_Engine/enable_notifications'
+su -c 'mkdir -p /sdcard/MTK_AI_Engine && :> /sdcard/MTK_AI_Engine/enable_limiter'
