@@ -24,7 +24,7 @@ setprop debug.sf.high_fps_early_phase_offset_ns 0
 setprop debug.sf.high_fps_early_gl_phase_offset_ns 0
 setprop debug.sf.early_phase_offset_ns 0
 setprop debug.sf.early_gl_phase_offset_ns 0
-
+setprop debug.egl.force_msaa true
 setprop debug.hwui.render_ahead 1
 setprop debug.hwui.disable_vsync true
 setprop debug.hwui.use_buffer_age false
