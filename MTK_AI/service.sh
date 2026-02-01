@@ -69,6 +69,55 @@ chmod 755 "$MODDIR/script_runner/mtk_ai_eem_boot" 2>/dev/null
 # Start HTTP server (non-critical, runs in background)
 busybox httpd -p 8080 -h "$MODDIR/webroot/" -f &
 
-# Binary
-"$MODDIR/logcat_detection/logcat" &
-"$MODDIR/script_runner/sf_controller" &
+LOGCAT_BIN="$MODDIR/logcat_detection/logcat"
+SF_BIN="$MODDIR/script_runner/sf_controller"
+LOGCAT_PID_FILE="$MODDIR/logcat.pid"
+SF_PID_FILE="$MODDIR/sf_controller.pid"
+
+# Function to start a protected process and save its PID
+start_protected() {
+    local bin="$1"
+    local pid_file="$2"
+    local name="$3"
+
+    # Launch binary
+    "$bin" &
+    local NEW_PID=$!
+
+    # Save PID
+    echo "$NEW_PID" > "$pid_file"
+
+    # Apply OOM protection (critical for survival)
+    if [ -w "/proc/$NEW_PID/oom_score_adj" ]; then
+        echo "-1000" > "/proc/$NEW_PID/oom_score_adj"
+    fi
+
+    echo "[$name] Started (PID: $NEW_PID)"
+}
+
+# Function to ensure a process is running
+ensure_running() {
+    local bin="$1"
+    local pid_file="$2"
+    local name="$3"
+
+    if [ -f "$pid_file" ]; then
+        OLD_PID=$(cat "$pid_file")
+        if kill -0 "$OLD_PID" 2>/dev/null; then
+            return 0  # Already running
+        else
+            echo "[$name] PID $OLD_PID is dead. Restarting..."
+        fi
+    else
+        echo "[$name] No PID file. Starting fresh..."
+    fi
+
+    start_protected "$bin" "$pid_file" "$name"
+}
+
+# Main loop: keep both services alive
+while true; do
+    ensure_running "$LOGCAT_BIN" "$LOGCAT_PID_FILE" "LOGCAT"
+    ensure_running "$SF_BIN" "$SF_PID_FILE" "SF_CONTROLLER"
+    sleep 10
+done
