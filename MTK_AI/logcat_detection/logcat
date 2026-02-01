@@ -27,11 +27,8 @@ EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
 MOD_DIR="/data/adb/modules/MTK_AI"
 SCRIPT_RUNNER="$MOD_DIR/script_runner/global"
 DISABLE_THERMAL_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/disable_thermal"
-DISABLE_THERMAL2_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/disable_thermal2"
-DISABLE_THERMAL3_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/disable_thermal3"
 PERFORMANCE_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/performance"
 SCREEN_OFF_PATH="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/powersave"
-CPUSET_GAMING_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/gaming_cpuset"
 CPUSET_NORMAL_PATH="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/normal_cpuset"
 NORMAL_PROP_PATH="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/normal_prop"
 BYPASS_OFF_PATH="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/bypass_off"
@@ -166,17 +163,10 @@ done
 apply_gaming_logic() {
     local pkg_name="$1"
     touch "$G_STATE"
-    
-    run_external_binary "$CPUSET_GAMING_PATH"  
+      
     run_external_binary "$SCRIPT_RUNNER"              
     if [ -f "$EXTERNAL_CFG/enable_auto_freq" ] && [ -f "$AUTOFREQ_PATH" ]; then
         run_external_binary "$AUTOFREQ_PATH"
-    fi
-    if [ -f "$EXTERNAL_CFG/enable_disable_thermal2" ] && [ -f "$DISABLE_THERMAL2_PATH" ]; then     
-        run_external_binary "$DISABLE_THERMAL2_PATH"
-    fi
-    if [ -f "$EXTERNAL_CFG/enable_disable_thermal3" ] && [ -f "$DISABLE_THERMAL3_PATH" ]; then     
-        run_external_binary "$DISABLE_THERMAL3_PATH"
     fi
     if [ -f "$EXTERNAL_CFG/enable_performance" ] && [ -f "$PERFORMANCE_PATH" ]; then     
         run_external_binary "$PERFORMANCE_PATH"
@@ -216,16 +206,9 @@ apply_non_gaming_logic() {
     if [ -f "$EXTERNAL_CFG/enable_disable_thermal" ] && [ -f "$DISABLE_THERMAL_PATH" ]; then      
         run_external_binary "$DISABLE_THERMAL_PATH"
     fi
-    if [ -f "$EXTERNAL_CFG/enable_disable_thermal3" ] && [ -f "$DISABLE_THERMAL3_PATH" ]; then     
-        run_external_binary "$DISABLE_THERMAL3_PATH"
-    fi
     if [ -f "$EXTERNAL_CFG/enable_performance" ] && [ -f "$PERFORMANCE_PATH" ]; then     
         run_external_binary "$PERFORMANCE_PATH"
-    fi
-    if [ -f "$EXTERNAL_CFG/enable_disable_thermal2" ] && [ -f "$DISABLE_THERMAL2_PATH" ]; then       
-        run_external_binary "$DISABLE_THERMAL2_PATH"
-    fi
-    
+    fi   
     if [ -f "$EXTERNAL_CFG/enable_highframerate" ] && [ -f "$UNLOCK_PATH" ]; then       
         run_external_binary "$UNLOCK_PATH"
     fi
