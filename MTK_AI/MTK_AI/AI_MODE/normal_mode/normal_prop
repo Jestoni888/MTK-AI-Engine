@@ -20,6 +20,7 @@ setprop persist.sys.force_vivid 0
 setprop persist.sys.framepredict.enable false
 setprop debug.sf.latch_unsignaled false
 setprop debug.cpurendering false
+setprop debug.egl.force_msaa false
 setprop persist.sys.ui.hw true
 setprop persist.sys.use_dithering 0
 setprop debug.sf.early_phase_offset_ns 0
