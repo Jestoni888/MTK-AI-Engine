@@ -172,9 +172,7 @@ apply_gaming_logic() {
     if [ -f "$EXTERNAL_CFG/enable_auto_freq" ] && [ -f "$AUTOFREQ_PATH" ]; then
         run_external_binary "$AUTOFREQ_PATH"
     fi
-        run_external_binary "$DISABLE_THERMAL2_PATH"
-        run_external_binary "$DISABLE_THERMAL3_PATH"
-        
+                
     if [ -f "$EXTERNAL_CFG/enable_performance" ] && [ -f "$PERFORMANCE_PATH" ]; then     
         run_external_binary "$PERFORMANCE_PATH"
     fi
@@ -492,7 +490,10 @@ EEM_FILE="$PER_APP_DIR/${PKG}.eem_offset"
                 enable_zram
                 apply_non_gaming_logic
                 rm -f "$GAME_STATE_FILE"          # Clear game state
-                echo "1" > "$NORMAL_STATE_FILE"   # Mark normal state active
+                echo "1" > "$NORMAL_STATE_FILE" # Mark normal state active
+                run_external_binary "$DISABLE_THERMAL2_PATH"
+                run_external_binary "$DISABLE_THERMAL3_PATH
+
         fi
         ;;
 esac
