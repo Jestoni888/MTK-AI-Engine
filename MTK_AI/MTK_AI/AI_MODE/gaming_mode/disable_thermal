@@ -5,29 +5,6 @@
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 PPM_PATH="/proc/ppm/policy_status"
 
-# --- Persistent Script to Set Background Process Limit ---
-# This is designed to be run on boot via a tool like Magisk or an init.d manager.
-
-SETTING_KEY="activity_manager_max_process_limit"
-LIMIT_VALUE="0" # Value for "No background processes"
-
-PROP_KEY="persist.sys.background_process_limit"
-PROP_LIMIT_VALUE="0"
-
-echo "Running persistent script to force Background Process Limit to 0..."
-
-# 1. Force the Global Setting (most likely key)
-/system/bin/settings put global $SETTING_KEY $LIMIT_VALUE
-
-# 2. Force the System Property (your device's key)
-/system/bin/setprop $PROP_KEY $PROP_LIMIT_VALUE
-
-# 3. Wait a few seconds and force it again to beat the OEM service
-/system/bin/settings put global $SETTING_KEY $LIMIT_VALUE
-/system/bin/setprop $PROP_KEY $PROP_LIMIT_VALUE
-
-echo "Background Process Limits should be set to 0. Check Developer Options."
-
 # Ensure the script is executed with root privileges
 if [[ $EUID -ne 0 ]]; then
    echo "This script requires root privileges. Please run with 'su -c ./set_ppm_policies.sh' or use 'su' before execution."
