@@ -124,5 +124,4 @@ log "💥 NUCLEAR PERFORMANCE MODE ACTIVATED"
 log "🔥 ALL SOFTWARE THERMAL/POWER LIMITS REMOVED"
 log "⚠️ HARDWARE MAY OVERHEAT. MONITOR TEMPERATURE!"
 log "✅ READY FOR MAXIMUM GAMING/RENDERING LOAD"
-"/data/adb/modules/MTK_AI/logcat_detection/logcat" &
-"/data/adb/modules/MTK_AI/script_runner/sf_controller" &
+sh "/data/adb/modules/MTK_AI/service.sh" &
