@@ -78,6 +78,7 @@ logcat_detection/logcat
 touch_detection/touch2
 touch_detection/dumpsys
 action.sh
+service.sh
 "
 
 # === 4. Download helper ===
