@@ -5,9 +5,6 @@ MTK_AI/AI_MODE/auto_frequency/surfaceflinger https://raw.githubusercontent.com/J
 MTK_AI/AI_MODE/gaming_mode/app_optimizer https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer
 MTK_AI/AI_MODE/gaming_mode/bypass_on https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/bypass_on
 MTK_AI/AI_MODE/gaming_mode/disable_thermal https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal
-MTK_AI/AI_MODE/gaming_mode/disable_thermal2 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal2
-MTK_AI/AI_MODE/gaming_mode/disable_thermal3 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal3
-MTK_AI/AI_MODE/gaming_mode/gaming_cpuset https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_cpuset
 MTK_AI/AI_MODE/gaming_mode/gaming_prop https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop
 MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2
 MTK_AI/AI_MODE/gaming_mode/limit https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/limit
