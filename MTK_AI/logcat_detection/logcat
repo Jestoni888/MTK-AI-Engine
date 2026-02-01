@@ -1,4 +1,4 @@
-#!/data/adb/modules/MTK_AI/busybox sh
+#!/system/bin/sh
 
 PIDFILE="/data/adb/modules/MTK_AI/logcat.pid"
 
@@ -172,7 +172,12 @@ apply_gaming_logic() {
     if [ -f "$EXTERNAL_CFG/enable_auto_freq" ] && [ -f "$AUTOFREQ_PATH" ]; then
         run_external_binary "$AUTOFREQ_PATH"
     fi
-                
+    if [ -f "$EXTERNAL_CFG/enable_disable_thermal2" ] && [ -f "$DISABLE_THERMAL2_PATH" ]; then     
+        run_external_binary "$DISABLE_THERMAL2_PATH"
+    fi
+    if [ -f "$EXTERNAL_CFG/enable_disable_thermal3" ] && [ -f "$DISABLE_THERMAL3_PATH" ]; then     
+        run_external_binary "$DISABLE_THERMAL3_PATH"
+    fi
     if [ -f "$EXTERNAL_CFG/enable_performance" ] && [ -f "$PERFORMANCE_PATH" ]; then     
         run_external_binary "$PERFORMANCE_PATH"
     fi
@@ -211,11 +216,16 @@ apply_non_gaming_logic() {
     if [ -f "$EXTERNAL_CFG/enable_disable_thermal" ] && [ -f "$DISABLE_THERMAL_PATH" ]; then      
         run_external_binary "$DISABLE_THERMAL_PATH"
     fi
-        
+    if [ -f "$EXTERNAL_CFG/enable_disable_thermal3" ] && [ -f "$DISABLE_THERMAL3_PATH" ]; then     
+        run_external_binary "$DISABLE_THERMAL3_PATH"
+    fi
     if [ -f "$EXTERNAL_CFG/enable_performance" ] && [ -f "$PERFORMANCE_PATH" ]; then     
         run_external_binary "$PERFORMANCE_PATH"
     fi
-        
+    if [ -f "$EXTERNAL_CFG/enable_disable_thermal2" ] && [ -f "$DISABLE_THERMAL2_PATH" ]; then       
+        run_external_binary "$DISABLE_THERMAL2_PATH"
+    fi
+    
     if [ -f "$EXTERNAL_CFG/enable_highframerate" ] && [ -f "$UNLOCK_PATH" ]; then       
         run_external_binary "$UNLOCK_PATH"
     fi
@@ -490,8 +500,7 @@ EEM_FILE="$PER_APP_DIR/${PKG}.eem_offset"
                 enable_zram
                 apply_non_gaming_logic
                 rm -f "$GAME_STATE_FILE"          # Clear game state
-                echo "1" > "$NORMAL_STATE_FILE" # Mark normal state active
-                
+                echo "1" > "$NORMAL_STATE_FILE"   # Mark normal state active
         fi
         ;;
 esac
