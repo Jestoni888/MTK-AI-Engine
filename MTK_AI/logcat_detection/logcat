@@ -217,9 +217,7 @@ apply_non_gaming_logic() {
     if [ -f "$EXTERNAL_CFG/enable_performance" ] && [ -f "$PERFORMANCE_PATH" ]; then     
         run_external_binary "$PERFORMANCE_PATH"
     fi
-        run_external_binary "$DISABLE_THERMAL2_PATH"
-        run_external_binary "$DISABLE_THERMAL3_PATH"
-    
+        
     if [ -f "$EXTERNAL_CFG/enable_highframerate" ] && [ -f "$UNLOCK_PATH" ]; then       
         run_external_binary "$UNLOCK_PATH"
     fi
