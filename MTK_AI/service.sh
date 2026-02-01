@@ -1,5 +1,20 @@
 #!/system/bin/sh
 
+PIDFILE="/data/adb/modules/MTK_AI/engine.pid"
+
+echo $$ > "$PIDFILE"
+
+# Set highest CPU priority
+renice -n -20 -p $$
+
+# Prevent Low Memory Killer (LMK) from targeting this process
+if [ -f /proc/$$/oom_score_adj ]; then
+    echo -1000 > /proc/$$/oom_score_adj
+fi
+
+# Move to top-app cpuset to ensure the script isn't throttled
+echo $$ > /dev/cpuset/top-app/tasks 2>/dev/null
+
 MODDIR="/data/adb/modules/MTK_AI"
 BB="$MODDIR/busybox"
 LOG="$MODDIR/service.log"
