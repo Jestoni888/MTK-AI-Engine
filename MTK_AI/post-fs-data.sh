@@ -63,7 +63,7 @@ chmod 755 "$MODDIR/script_runner/refresh_rate_locker" 2>/dev/null
 chmod 755 "$MODDIR/script_runner/sf_controller" 2>/dev/null
 chmod 755 "$MODDIR/script_runner/mtk_ai_eem_boot" 2>/dev/null
 
-            if [ -f "$EXTERNAL_CFG/enable_disable_thermal" ]; then
+            if [ -f "$CFG_DIR/enable_disable_thermal" ]; then
                 "$MODDIR/MTK_AI/AI_MODE/gaming_mode/disable_thermal2"
                 "$MODDIR/MTK_AI/AI_MODE/gaming_mode/disable_thermal3"
             fi
