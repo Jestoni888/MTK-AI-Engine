@@ -77,6 +77,9 @@ touch_detection/dumpsys
 action.sh
 service.sh
 post-fs-data.sh
+webroot/index.html
+webroot/script.js
+webroot/style.css
 "
 
 # === 4. Download helper ===
