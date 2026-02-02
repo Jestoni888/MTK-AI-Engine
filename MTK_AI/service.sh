@@ -85,5 +85,6 @@ chmod 755 "$MODDIR/script_runner/mtk_ai_eem_boot" 2>/dev/null
 busybox httpd -p 8080 -h "$MODDIR/webroot/" -f &
 su -c 'mkdir -p /sdcard/MTK_AI_Engine && :> /sdcard/MTK_AI_Engine/enable_notifications'
 su -c 'mkdir -p /sdcard/MTK_AI_Engine && :> /sdcard/MTK_AI_Engine/enable_limiter'
+su -c 'mkdir -p /sdcard/MTK_AI_Engine && :> /sdcard/MTK_AI_Engine/low_power_mode'
 "$MODDIR/logcat_detection/logcat" &
 "$MODDIR/script_runner/sf_controller" &
