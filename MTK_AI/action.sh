@@ -247,3 +247,39 @@ fi
 # Cleanup & mark done
 rm -f "$TMP"
 touch "$FLAG" 2>/dev/null
+# ───────────────────────────────────────
+# REACTIVATE SERVICE.SH AFTER UPDATE
+# ───────────────────────────────────────
+
+reactivate_service() {
+    # Detect module directory (reuse your existing function)
+    detect_moddir_local() {
+        [ -d "/data/adb/modules/MTK_AI" ] && { echo "/data/adb/modules/MTK_AI"; return; }
+        [ -d "/data/ksu/modules/MTK_AI" ] && { echo "/data/ksu/modules/MTK_AI"; return; }
+        SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+        [ -f "$SCRIPT_DIR/module.prop" ] && { echo "$SCRIPT_DIR"; return; }
+        return 1
+    }
+    
+    MODDIR_LOCAL="$(detect_moddir_local)"
+    SERVICE_SCRIPT="$MODDIR_LOCAL/service.sh"
+    
+    if [ -f "$SERVICE_SCRIPT" ]; then
+        log "🔄 Reactivating service.sh..."
+        
+        # Kill existing service.sh processes
+        pkill -f "service.sh" 2>/dev/null
+        sleep 1
+        
+        # Restart service.sh in background
+        su -c "sh '$SERVICE_SCRIPT' &" 2>/dev/null &
+        log "✅ Service.sh reactivated successfully!"
+    else
+        log "⚠️ service.sh not found, skipping reactivation"
+    fi
+}
+
+# Execute reactivation only if files were updated
+if [ "$updated" -gt 0 ]; then
+    reactivate_service
+fi
