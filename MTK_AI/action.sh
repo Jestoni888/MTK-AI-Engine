@@ -247,39 +247,52 @@ fi
 # Cleanup & mark done
 rm -f "$TMP"
 touch "$FLAG" 2>/dev/null
-# ───────────────────────────────────────
-# REACTIVATE SERVICE.SH AFTER UPDATE
-# ───────────────────────────────────────
 
-reactivate_service() {
-    # Detect module directory (reuse your existing function)
-    detect_moddir_local() {
-        [ -d "/data/adb/modules/MTK_AI" ] && { echo "/data/adb/modules/MTK_AI"; return; }
-        [ -d "/data/ksu/modules/MTK_AI" ] && { echo "/data/ksu/modules/MTK_AI"; return; }
-        SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-        [ -f "$SCRIPT_DIR/module.prop" ] && { echo "$SCRIPT_DIR"; return; }
-        return 1
-    }
-    
-    MODDIR_LOCAL="$(detect_moddir_local)"
-    SERVICE_SCRIPT="$MODDIR_LOCAL/service.sh"
-    
-    if [ -f "$SERVICE_SCRIPT" ]; then
-        log "🔄 Reactivating service.sh..."
-        
-        # Kill existing service.sh processes
-        pkill -f "service.sh" 2>/dev/null
-        sleep 1
-        
-        # Restart service.sh in background
-        su -c "sh '$SERVICE_SCRIPT' &" 2>/dev/null &
-        log "✅ Service.sh reactivated successfully!"
-    else
-        log "⚠️ service.sh not found, skipping reactivation"
-    fi
-}
+# Test service restart
+log "🧪 Starting service.sh restart..."
 
-# Execute reactivation only if files were updated
-if [ "$updated" -gt 0 ]; then
-    reactivate_service
+# Set module directory
+MODDIR_LOCAL="/data/adb/modules/MTK_AI"
+SERVICE_SCRIPT="$MODDIR_LOCAL/service.sh"
+
+# Check if service.sh exists
+if [ ! -f "$SERVICE_SCRIPT" ]; then
+    log "❌ service.sh not found at $SERVICE_SCRIPT"
+    exit 1
 fi
+
+log "✅ Found service.sh at $SERVICE_SCRIPT"
+
+# Show current running processes
+log "📊 Current service.sh processes:"
+ps | grep service.sh | grep -v grep
+
+# Kill existing processes
+log "⏹️ Killing existing service.sh processes..."
+pkill -f "service.sh" 2>/dev/null
+killall service.sh 2>/dev/null
+
+# Wait for cleanup
+sleep 2
+
+# Verify processes are killed
+log "📊 After kill - should be empty:"
+ps | grep service.sh | grep -v grep
+
+# Restart with proper environment (MT Manager method)
+log "▶️ Restarting service.sh..."
+su -c "sh '$SERVICE_SCRIPT' &" 2>/dev/null
+
+# Wait a moment
+sleep 3
+
+# Check if it's running
+log "📊 Checking if service.sh is running:"
+if pgrep -f "service.sh" > /dev/null 2>&1; then
+    log "✅ SUCCESS: service.sh is running!"
+    ps | grep service.sh | grep -v grep
+else
+    log "❌ FAILED: service.sh is not running"
+fi
+
+log "🧪 completed!"
