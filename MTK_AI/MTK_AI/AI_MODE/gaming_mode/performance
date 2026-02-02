@@ -129,18 +129,6 @@ if [ -f "$ged_kpi" ] && [ ! -d /data/adb/modules/dimensity_hybrid_governor ]; th
   lock_value 1 "$ged_kpi"
 fi
 
-list_thermal_services() {
-	for rc in $(find /system/etc/init /vendor/etc/init /odm/etc/init -type f); do
-		grep -r "^service" "$rc" | awk '{print $2}'
-	done | grep thermal
-}
-
-for svc in $(list_thermal_services); do
-	echo "Stopping $svc"
-	start "$svc"
-	stop "$svc"
-done
-
 # ==============================
 # ✅ Done
 # ==============================
