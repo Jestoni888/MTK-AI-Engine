@@ -271,18 +271,6 @@ lock_val() {
 	done
 }
 
-list_thermal_services() {
-	for rc in $(find /system/etc/init /vendor/etc/init /odm/etc/init -type f); do
-		grep -r "^service" "$rc" | awk '{print $2}'
-	done | grep thermal
-}
-
-for svc in $(list_thermal_services); do
-	echo "Stopping $svc"
-	start "$svc"
-	stop "$svc"
-done
-
 if [ "$BOOSTER_MODE" -eq 1 ]; then
 	for pid in $(pgrep thermal); do
 		echo "Freeze $pid"
