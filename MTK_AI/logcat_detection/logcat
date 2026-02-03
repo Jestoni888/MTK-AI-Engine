@@ -1,4 +1,15 @@
 #!/system/bin/sh
+MOD_DIR="/data/adb/modules/MTK_AI"
+# --- BUSYBOX INTEGRATION ---
+BB="$MOD_DIR/busybox"
+[ ! -x "$BB" ] && { echo "FATAL: BusyBox missing"; exit 1; }
+
+# Wrap essential tools
+grep() { "$BB" grep "$@"; }; sed() { "$BB" sed "$@"; }; awk() { "$BB" awk "$@"; }
+cut() { "$BB" cut "$@"; }; head() { "$BB" head "$@"; }; tail() { "$BB" tail "$@"; }
+wc() { "$BB" wc "$@"; }; date() { "$BB" date "$@"; }; ionice() { "$BB" ionice "$@"; }
+renice() { "$BB" renice "$@"; }; mkswap() { "$BB" mkswap "$@"; }; swapon() { "$BB" swapon "$@"; }
+swapoff() { "$BB" swapoff "$@"; }; free() { "$BB" free "$@"; }
 
 PIDFILE="/data/adb/modules/MTK_AI/logcat.pid"
 
@@ -24,7 +35,6 @@ G_STATE="/dev/.sf_game_state"
 
 # External Script Paths
 EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
-MOD_DIR="/data/adb/modules/MTK_AI"
 SCRIPT_RUNNER="$MOD_DIR/script_runner/global"
 DISABLE_THERMAL_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/disable_thermal"
 PERFORMANCE_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/performance"
