@@ -21,53 +21,6 @@ detect_moddir() {
 }
 
 MODDIR="$(detect_moddir)"
-# Test service restart
-log "🧪 Starting service.sh restart..."
-
-# Set module directory
-SERVICE_SCRIPT="$MODDIR/service.sh"
-
-# Check if service.sh exists
-if [ ! -f "$SERVICE_SCRIPT" ]; then
-    log "❌ service.sh not found at $SERVICE_SCRIPT"
-    exit 1
-fi
-
-log "✅ Found service.sh at $SERVICE_SCRIPT"
-
-# Show current running processes
-log "📊 Current service.sh processes:"
-ps | grep service.sh | grep -v grep
-
-# Kill existing processes
-log "⏹️ Killing existing service.sh processes..."
-pkill -f "service.sh" 2>/dev/null
-killall service.sh 2>/dev/null
-
-# Wait for cleanup
-sleep 2
-
-# Verify processes are killed
-log "📊 After kill - should be empty:"
-ps | grep service.sh | grep -v grep
-
-# Restart with proper environment (MT Manager method)
-log "▶️ Restarting service.sh..."
-su -c "sh '$SERVICE_SCRIPT' &" 2>/dev/null
-
-# Wait a moment
-sleep 3
-
-# Check if it's running
-log "📊 Checking if service.sh is running:"
-if pgrep -f "service.sh" > /dev/null 2>&1; then
-    log "✅ SUCCESS: service.sh is running!"
-    ps | grep service.sh | grep -v grep
-else
-    log "❌ FAILED: service.sh is not running"
-fi
-
-log "🧪 completed!"
 
 log "📁 Module dir: $MODDIR"
 
@@ -192,6 +145,54 @@ if [ "$updated" -gt 0 ]; then
 else
     log "ℹ️ No files were updated."
 fi
+
+# Test service restart
+log "🧪 Starting service.sh restart..."
+
+# Set module directory
+SERVICE_SCRIPT="$MODDIR/service.sh"
+
+# Check if service.sh exists
+if [ ! -f "$SERVICE_SCRIPT" ]; then
+    log "❌ service.sh not found at $SERVICE_SCRIPT"
+    exit 1
+fi
+
+log "✅ Found service.sh at $SERVICE_SCRIPT"
+
+# Show current running processes
+log "📊 Current service.sh processes:"
+ps | grep service.sh | grep -v grep
+
+# Kill existing processes
+log "⏹️ Killing existing service.sh processes..."
+pkill -f "service.sh" 2>/dev/null
+killall service.sh 2>/dev/null
+
+# Wait for cleanup
+sleep 2
+
+# Verify processes are killed
+log "📊 After kill - should be empty:"
+ps | grep service.sh | grep -v grep
+
+# Restart with proper environment (MT Manager method)
+log "▶️ Restarting service.sh..."
+su -c "sh '$SERVICE_SCRIPT' &" 2>/dev/null
+
+# Wait a moment
+sleep 3
+
+# Check if it's running
+log "📊 Checking if service.sh is running:"
+if pgrep -f "service.sh" > /dev/null 2>&1; then
+    log "✅ SUCCESS: service.sh is running!"
+    ps | grep service.sh | grep -v grep
+else
+    log "❌ FAILED: service.sh is not running"
+fi
+
+log "🧪 completed!"
 
 # CONFIG
 WEBHOOK_URL="https://eoh0nmhphx4uy8z.m.pipedream.net"
