@@ -55,24 +55,26 @@ update_module_description() {
     MODULE_PROP="/data/adb/modules/MTK_AI/module.prop"
     MODULE_PROP_BACKUP="/data/adb/modules/MTK_AI/module.prop.bak"
     
-    # Create backup if it doesn't exist
+    # Create backup if needed
     if [ -f "$MODULE_PROP" ] && [ ! -f "$MODULE_PROP_BACKUP" ]; then
         cp "$MODULE_PROP" "$MODULE_PROP_BACKUP"
         chmod 644 "$MODULE_PROP_BACKUP"
     fi
     
-    # Update description with status
     if [ -f "$MODULE_PROP_BACKUP" ]; then
-        # Read original content and modify description line
-        while IFS= read -r line; do
-            if echo "$line" | grep -q "^description="; then
-                # Replace description with status appended
-                echo "description=Advanced MediaTek Performance Engine with AI Detection | $status"
-            else
-                echo "$line"
-            fi
-        done < "$MODULE_PROP_BACKUP" > "$MODULE_PROP"
+        # Update description with status
+        awk -v status="$status" '
+            /^description=/ { 
+                print "description=Advanced MediaTek Performance Engine with AI Detection | " status
+                next 
+            } 
+            { print }
+        ' "$MODULE_PROP_BACKUP" > "$MODULE_PROP"
+        
         chmod 644 "$MODULE_PROP"
+        
+        # Force Magisk to reload modules list
+        touch /data/adb/modules/MTK_AI/update 2>/dev/null
     fi
 }
 
