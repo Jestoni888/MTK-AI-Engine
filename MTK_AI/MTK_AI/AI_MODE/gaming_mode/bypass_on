@@ -12,6 +12,7 @@ log_msg() {
 }
 
 notify_status() {
+[ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
     su -lp 2000 -c \
     "cmd notification post -I $ICON_PATH -S bigtext \
      -t 'Bypass Mode' tag 'ON | Bypass / Charge stopped'" \
