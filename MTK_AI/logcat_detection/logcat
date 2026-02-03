@@ -322,6 +322,7 @@ case "$line" in
         # 🔒 WHITELIST CHECK - COMPLETE SKIP (NO LOGIC AT ALL)
         if [ -f "$WHITELIST_FILE" ] && grep -Fxq "$DETECTED_PKG" "$WHITELIST_FILE" 2>/dev/null; then
             log_msg "⏭️ Whitelisted app detected: $DETECTED_PKG - Skipping all processing"
+            update_module_status "⏭️ Whitelisted app detected: $DETECTED_PKG - Skipping all processing"
             continue  # ← COMPLETELY IGNORE, NO MODE CHANGES
         fi
 
