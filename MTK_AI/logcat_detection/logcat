@@ -49,8 +49,8 @@ MANUAL_GLOBAL_FILE="$MOD_DIR/script_runner/mtk_ai_manual"
 NOTIFY_ENABLED_FILE="$EXTERNAL_CFG/enable_notifications"
 VOLTAGE_OFFSET="$MOD_DIR/script_runner/mtk_ai_eem_boot"
 
-# --- MODULE STATUS UPDATE ---
-update_module_status() {
+# --- UPDATE MODULE DESCRIPTION WITH STATUS ---
+update_module_description() {
     local status="$1"
     MODULE_PROP="/data/adb/modules/MTK_AI/module.prop"
     MODULE_PROP_BACKUP="/data/adb/modules/MTK_AI/module.prop.bak"
@@ -61,17 +61,17 @@ update_module_status() {
         chmod 644 "$MODULE_PROP_BACKUP"
     fi
     
-    # Update module.prop with status
+    # Update description with status
     if [ -f "$MODULE_PROP_BACKUP" ]; then
-        original_content=$(cat "$MODULE_PROP_BACKUP")
-        if echo "$original_content" | grep -q "^status="; then
-            # Replace existing status line
-            echo "$original_content" | sed "s/^status=.*/status=$status/" > "$MODULE_PROP"
-        else
-            # Add status line at the end
-            echo "$original_content" > "$MODULE_PROP"
-            echo "status=$status" >> "$MODULE_PROP"
-        fi
+        # Read original content and modify description line
+        while IFS= read -r line; do
+            if echo "$line" | grep -q "^description="; then
+                # Replace description with status appended
+                echo "description=Advanced MediaTek Performance Engine with AI Detection | $status"
+            else
+                echo "$line"
+            fi
+        done < "$MODULE_PROP_BACKUP" > "$MODULE_PROP"
         chmod 644 "$MODULE_PROP"
     fi
 }
