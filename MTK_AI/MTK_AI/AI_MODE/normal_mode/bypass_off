@@ -4,6 +4,7 @@
 BASE_DIR="/sdcard/MTK_AI_Engine"
 LOG_FILE="$BASE_DIR/MTK_AI_Engine.log"
 ICON_PATH="/data/adb/modules/MTK_AI/icon.png"
+NOTIFY_ENABLED_FILE="$BASE_DIR/enable_notifications"
 
 mkdir -p "$BASE_DIR"
 
