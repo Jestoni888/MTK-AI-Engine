@@ -49,6 +49,33 @@ MANUAL_GLOBAL_FILE="$MOD_DIR/script_runner/mtk_ai_manual"
 NOTIFY_ENABLED_FILE="$EXTERNAL_CFG/enable_notifications"
 VOLTAGE_OFFSET="$MOD_DIR/script_runner/mtk_ai_eem_boot"
 
+# --- MODULE STATUS UPDATE ---
+update_module_status() {
+    local status="$1"
+    MODULE_PROP="/data/adb/modules/MTK_AI/module.prop"
+    MODULE_PROP_BACKUP="/data/adb/modules/MTK_AI/module.prop.bak"
+    
+    # Create backup if it doesn't exist
+    if [ -f "$MODULE_PROP" ] && [ ! -f "$MODULE_PROP_BACKUP" ]; then
+        cp "$MODULE_PROP" "$MODULE_PROP_BACKUP"
+        chmod 644 "$MODULE_PROP_BACKUP"
+    fi
+    
+    # Update module.prop with status
+    if [ -f "$MODULE_PROP_BACKUP" ]; then
+        original_content=$(cat "$MODULE_PROP_BACKUP")
+        if echo "$original_content" | grep -q "^status="; then
+            # Replace existing status line
+            echo "$original_content" | sed "s/^status=.*/status=$status/" > "$MODULE_PROP"
+        else
+            # Add status line at the end
+            echo "$original_content" > "$MODULE_PROP"
+            echo "status=$status" >> "$MODULE_PROP"
+        fi
+        chmod 644 "$MODULE_PROP"
+    fi
+}
+
 # --- NOTIFICATION UTILITY ---
 notify_engine() {
     # Skip if notification toggle is OFF
@@ -190,6 +217,7 @@ apply_gaming_logic() {
     CURRENT_MODE="GAMING"
     log_msg "✅ Gaming Mode: $pkg_name"
     notify_engine "🎮 Gaming Mode Active" "App: $pkg_name | Cores Locked"
+    update_module_status "🎮 GAMING - $pkg_name"
 }
 
 apply_non_gaming_logic() {
@@ -215,6 +243,7 @@ apply_non_gaming_logic() {
     
     # Notify immediately when leaving gaming mode
     notify_engine "🔋 Normal Mode" "Optimization Balanced | Cooling Active"
+    update_module_status "🔋 NORMAL - Balanced Performance"
 
     for policy in /sys/devices/system/cpu/cpufreq/policy*; do
         MIN_VAL=$(cat "$policy/cpuinfo_min_freq")
@@ -248,6 +277,7 @@ NORMAL_STATE_FILE="/dev/.mtk_ai_normal_mode"
 
 log_msg "🚀 Universal Engine: MediaTek | Active"
 notify_engine "MediaTek Optimizer" "Engine Started Successfully"
+update_module_status "✅ ACTIVE - Engine Running"
 
 # Main event loop — runs forever
 logcat -b events -T 1 -v threadtime | while IFS= read -r line; do
