@@ -36,4 +36,4 @@ service.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads
 post-fs-data.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/post-fs-data.sh
 webroot/index.html https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot/index.html
 webroot/script.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot/script.js
-webroot/styles.css https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot/style.css
+webroot/style.css https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot/style.css
