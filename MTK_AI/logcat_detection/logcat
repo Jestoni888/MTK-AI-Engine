@@ -58,6 +58,7 @@ TOUCH="$MOD_DIR/touch_detection/touch2"
 MANUAL_GLOBAL_FILE="$MOD_DIR/script_runner/mtk_ai_manual"
 NOTIFY_ENABLED_FILE="$EXTERNAL_CFG/enable_notifications"
 VOLTAGE_OFFSET="$MOD_DIR/script_runner/mtk_ai_eem_boot"
+LIMITER_FILE="$EXTERNAL_CFG/enable_limiter"
 
 # --- NOTIFICATION UTILITY ---
 notify_engine() {
@@ -255,6 +256,7 @@ apply_non_gaming_logic() {
 # State tracking file
 GAME_STATE_FILE="/dev/.mtk_ai_active_game"
 NORMAL_STATE_FILE="/dev/.mtk_ai_normal_mode"
+CAMERA_STATE_FILE="/dev/.mtk_ai_camera_active"
 
 log_msg "🚀 Universal Engine: MediaTek | Active"
 notify_engine "MediaTek Optimizer" "Engine Started Successfully"
@@ -298,15 +300,54 @@ case "$line" in
         if [ -z "$DETECTED_PKG" ] || ! echo "$DETECTED_PKG" | grep -q '\.'; then
             continue
         fi
-        
+                
         # 🔒 WHITELIST CHECK - COMPLETE SKIP (NO LOGIC AT ALL)
         if [ -f "$WHITELIST_FILE" ] && grep -Fxq "$DETECTED_PKG" "$WHITELIST_FILE" 2>/dev/null; then
             log_msg "⏭️ Whitelisted app detected: $DETECTED_PKG - Skipping all processing"
             continue  # ← COMPLETELY IGNORE, NO MODE CHANGES
         fi
-
+        
+        # 📸 CAMERA DETECTION
+IS_CAMERA=0
+case "$DETECTED_PKG" in
+    *camera*|*Camera*|*snapdragon*|*halo*|*opencamera*|*fovcam*|*mediatek.camera*|\
+    com.android.camera|com.sec.android.app.camera|com.google.android.camera|\
+    com.huawei.camera|com.oppo.camera|com.vivo.camera|com.oneplus.camera|\
+    com.sonyericsson.android.camera|com.motorola.camera|com.zte.camera*)
+        IS_CAMERA=1
+        ;;
+esac
+        
+        if [ "$IS_CAMERA" = 1 ]; then
+            log_msg "📸 Camera detected: $DETECTED_PKG"
+            
+            # Activate camera mode: rename limiter to .exec
+            if [ -f "$LIMITER_FILE" ] && [ ! -f "${LIMITER_FILE}.exec" ]; then
+                mv "$LIMITER_FILE" "${LIMITER_FILE}.exec"
+                log_msg "✅ Limiter disabled for camera (renamed to .exec)"
+            fi
+            
+            # Mark camera as active
+            echo "1" > "$CAMERA_STATE_FILE"
+            
+            # Apply safe tuning (optional but recommended)
+            apply_non_gaming_logic
+            enable_zram
+            rm -f "$GAME_STATE_FILE"
+                        
+            continue  # ←←← THIS IS THE KEY LINE
+        fi
         case "$DETECTED_PKG" in
             *launcher*|*systemui*|*settings*|*google*|*transsion*|android)
+            if [ -f "$CAMERA_STATE_FILE" ]; then
+                log_msg "🚪 Exiting camera app"
+                # Restore limiter
+                if [ -f "${LIMITER_FILE}.exec" ] && [ ! -f "$LIMITER_FILE" ]; then
+                    mv "${LIMITER_FILE}.exec" "$LIMITER_FILE"
+                    log_msg "✅ Limiter re-enabled after camera exit"
+                fi
+                rm -f "$CAMERA_STATE_FILE"
+            fi
                 apply_non_gaming_logic
                 enable_zram
                 rm -f "$GAME_STATE_FILE"  # Clear game state
@@ -487,9 +528,21 @@ EEM_FILE="$PER_APP_DIR/${PKG}.eem_offset"
                 disable_zram
             else
                 enable_zram
+                apply_non_gaming_logic
+                rm -f "$GAME_STATE_FILE"          # Clear game state
+                echo "1" > "$NORMAL_STATE_FILE"
             fi               
         else
             # 🔋 NORMAL MODE
+            if [ -f "$CAMERA_STATE_FILE" ]; then
+                log_msg "🚪 Exiting camera app"
+                # Restore limiter
+                if [ -f "${LIMITER_FILE}.exec" ] && [ ! -f "$LIMITER_FILE" ]; then
+                    mv "${LIMITER_FILE}.exec" "$LIMITER_FILE"
+                    log_msg "✅ Limiter re-enabled after camera exit"
+                fi
+                rm -f "$CAMERA_STATE_FILE"
+            fi
                 enable_zram
                 apply_non_gaming_logic
                 rm -f "$GAME_STATE_FILE"          # Clear game state
