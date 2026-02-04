@@ -166,6 +166,8 @@ ps | grep service.sh | grep -v grep
 
 # Kill existing processes
 log "⏹️ Killing existing service.sh processes..."
+pkill -f "logcat" 2>/dev/null
+pkill -f "touch2" 2>/dev/null
 pkill -f "service.sh" 2>/dev/null
 killall service.sh 2>/dev/null
 
