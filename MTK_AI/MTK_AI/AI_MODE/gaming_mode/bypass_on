@@ -4,20 +4,11 @@
 BASE_DIR="/sdcard/MTK_AI_Engine"
 LOG_FILE="$BASE_DIR/MTK_AI_Engine.log"
 ICON_PATH="/data/adb/modules/MTK_AI/icon.png"
-NOTIFY_ENABLED_FILE="$BASE_DIR/enable_notifications"
 
 mkdir -p "$BASE_DIR"
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
-}
-
-notify_status() {
-[ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
-    su -lp 2000 -c \
-    "cmd notification post -I $ICON_PATH -S bigtext \
-     -t 'Bypass Mode' tag 'ON | Bypass / Charge stopped'" \
-     >/dev/null 2>&1
 }
 
 write_try() {
@@ -42,7 +33,6 @@ REAL_BYPASS_ON="
 for n in $REAL_BYPASS_ON; do
     if write_try "$n" 1; then
         log_msg "✅ REAL BYPASS enabled via $n"
-        notify_status
         exit 0
     fi
 done
@@ -55,12 +45,10 @@ MTK_POWER="/proc/mtk_battery_cmd/en_power_path"
 if [ -f "$MTK_POWER" ]; then
     if write_try "$MTK_POWER" 1; then
         log_msg "⚡ MTK power path set to 1"
-        notify_status
         exit 0
     fi
     if write_try "$MTK_POWER" 2; then
         log_msg "⚡ MTK power path set to 2"
-        notify_status
         exit 0
     fi
 fi
@@ -91,7 +79,6 @@ CHARGE_OFF_ZERO="
 for n in $CHARGE_OFF_ZERO; do
     if write_try "$n" 0; then
         log_msg "🛑 Charging disabled via $n"
-        notify_status
         exit 0
     fi
 done
@@ -109,7 +96,6 @@ INPUT_SUSPEND_ONE="
 for n in $INPUT_SUSPEND_ONE; do
     if write_try "$n" 1; then
         log_msg "🔌 Charger input suspended via $n"
-        notify_status
         exit 0
     fi
 done
@@ -142,7 +128,6 @@ DISABLE_ON_ONE="
 for n in $DISABLE_ON_ONE; do
     if write_try "$n" 1; then
         log_msg "⚠️ Charging limited/disabled via $n"
-        notify_status
         exit 0
     fi
 done
@@ -160,7 +145,6 @@ HARD_DISABLE_ON="
 for n in $HARD_DISABLE_ON; do
     if write_try "$n" 1; then
         log_msg "⛔ Charger HARD disabled via $n"
-        notify_status
         exit 0
     fi
 done
@@ -169,5 +153,4 @@ done
 # ❌ FAILURE
 # --------------------------------------------------
 log_msg "❌ No bypass/charge-disable node found"
-notify_status
 exit 1
