@@ -4,20 +4,11 @@
 BASE_DIR="/sdcard/MTK_AI_Engine"
 LOG_FILE="$BASE_DIR/MTK_AI_Engine.log"
 ICON_PATH="/data/adb/modules/MTK_AI/icon.png"
-NOTIFY_ENABLED_FILE="$BASE_DIR/enable_notifications"
 
 mkdir -p "$BASE_DIR"
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
-}
-
-notify_status() {
-[ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
-    su -lp 2000 -c \
-    "cmd notification post -I $ICON_PATH -S bigtext \
-     -t 'Bypass Mode' tag 'OFF | Normal charging restored'" \
-     >/dev/null 2>&1
 }
 
 write_try() {
@@ -42,7 +33,6 @@ BYPASS_OFF="
 for n in $BYPASS_OFF; do
     if write_try "$n" 0; then
         log_msg "Bypass OFF via $n"
-        notify_status
         exit 0
     fi
 done
@@ -52,7 +42,6 @@ done
 # --------------------------------------------------
 if write_try "/proc/mtk_battery_cmd/en_power_path" 0; then
     log_msg "MTK power path restored"
-    notify_status
     exit 0
 fi
 
@@ -82,7 +71,6 @@ ENABLE_CHARGING_ONE="
 for n in $ENABLE_CHARGING_ONE; do
     if write_try "$n" 1; then
         log_msg "Charging ENABLED via $n"
-        notify_status
         exit 0
     fi
 done
@@ -100,7 +88,6 @@ INPUT_RESUME_ZERO="
 for n in $INPUT_RESUME_ZERO; do
     if write_try "$n" 0; then
         log_msg "Input resumed via $n"
-        notify_status
         exit 0
     fi
 done
@@ -133,7 +120,6 @@ DISABLE_OFF_ZERO="
 for n in $DISABLE_OFF_ZERO; do
     if write_try "$n" 0; then
         log_msg "Disable flag cleared via $n"
-        notify_status
         exit 0
     fi
 done
@@ -151,7 +137,6 @@ HARD_DISABLE_OFF="
 for n in $HARD_DISABLE_OFF; do
     if write_try "$n" 0; then
         log_msg "Hard charger re-enabled via $n"
-        notify_status
         exit 0
     fi
 done
@@ -160,5 +145,4 @@ done
 # ❌ FAILURE
 # --------------------------------------------------
 log_msg "No bypass-related node restored (already normal?)"
-notify_status
 exit 1
