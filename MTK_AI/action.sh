@@ -170,6 +170,8 @@ pkill -f "logcat" 2>/dev/null
 pkill -f "touch2" 2>/dev/null
 pkill -f "service.sh" 2>/dev/null
 killall service.sh 2>/dev/null
+killall logcat 2>/dev/null
+killall touch2 2>/dev/null
 
 # Wait for cleanup
 sleep 2
