@@ -7,6 +7,7 @@ MOD_DIR="/data/adb/modules/MTK_AI"
 SCREEN_OFF_PATH="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/powersave"
 EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
 NOTIFY_ENABLED_FILE="$MOD_DIR/enable_notifications"
+ACTION="$MOD_DIR/action.sh"
 
 cpu_governor() {
 # --- 2. CPU GOVERNOR ---
@@ -107,6 +108,7 @@ STATE=$(get_screen_state)
 
 if [ "$STATE" = "true" ]; then
     echo "ON"     
+        run_external_binary "$ACTION"
         cpu_governor
         settings put global low_power 0
         settings put global low_power_sticky 0
