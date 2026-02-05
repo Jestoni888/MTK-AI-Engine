@@ -149,10 +149,9 @@ if [ ! -f "$SERVICE_SCRIPT" ]; then
     log "❌ service.sh not found at $SERVICE_SCRIPT"    exit 1
 fi
 
-pkill -f "MTK_AI.*logcat" 2>/dev/null
 pkill -f "touch2" 2>/dev/null
 pkill -f "service.sh" 2>/dev/null
-killall service.sh logcat touch2 2>/dev/null
+killall service.sh touch2 2>/dev/null
 
 sleep 2
 
