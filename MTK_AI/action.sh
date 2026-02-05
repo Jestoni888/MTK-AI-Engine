@@ -1,10 +1,11 @@
 #!/system/bin/sh
-# action.sh - Internet-aware updater + service restarter for MTK AI Engine
+# action.sh - Shows logs in ALL root manager UIs (MT Manager, KSU, APatch, etc.)
 
 LOG_TAG="[MTK_AI UPDATE]"
 MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"
 TMP="/data/local/tmp/mtk_update"
 
+# ✅ LOG TO STDOUT (not stderr) so UI can show it
 log() {
     echo "$LOG_TAG $*"
 }
@@ -20,19 +21,10 @@ detect_moddir() {
 }
 
 MODDIR="$(detect_moddir)"
+
 log "📁 Module dir: $MODDIR"
 
-# === 2. Check internet connectivity ===
-has_internet() {
-    for host in 8.8.8.8 1.1.1.1; do
-        if timeout 3 sh -c "echo > /dev/tcp/$host/53" 2>/dev/null; then
-            return 0
-        fi
-    done
-    return 1
-}
-
-# === 3. Find download tool ===
+# === 2. Find download tool ===
 find_tool() {
     for cmd in curl wget toybox busybox; do
         if command -v "$cmd" >/dev/null 2>&1; then
@@ -41,10 +33,14 @@ find_tool() {
         fi
     done
     [ -x "$MODDIR/busybox" ] && { echo "$MODDIR/busybox"; return; }
-    return 1
+    log "❌ No download tool found."
+    exit 1
 }
 
-# === 4. Required files list ===
+TOOL="$(find_tool)"
+log "🔧 Using: $TOOL"
+
+# === 3. Required files ===
 required_files="
 MTK_AI/AI_MODE/auto_frequency/auto_frequency
 MTK_AI/AI_MODE/auto_frequency/cpu6
@@ -87,163 +83,220 @@ webroot/script.js
 webroot/style.css
 "
 
-# === 5. Download helper ===
+# === 4. Download helper ===
 download() {
-    url="$1"; out="$2"; tool="$3"
-    case "$tool" in
-        curl)   "$tool" -fsSL --max-time 10 --retry 3 "$url" -o "$out" ;;
-        wget)   "$tool" -q --timeout=10 --tries=3 --no-check-certificate -O "$out" "$url" ;;
-        *)      "$tool" wget -q -O "$out" "$url" ;;
+    url="$1"; out="$2"
+    case "$TOOL" in
+        curl)   "$TOOL" -fsSL --max-time 10 --retry 3 "$url" -o "$out" ;;
+        wget)   "$TOOL" -q --timeout=10 --tries=3 --no-check-certificate -O "$out" "$url" ;;
+        *)      "$TOOL" wget -q -O "$out" "$url" ;;
     esac
 }
 
-is_required() {    target="$1"
+# === 5. Check if required ===
+is_required() {
+    target="$1"
     for f in $required_files; do
         [ "$f" = "$target" ] && return 0
     done
     return 1
 }
+# === 6. Main ===
+log "🔄 Updating scripts..."
 
-# === 6. MAIN LOGIC ===
+mkdir -p "$TMP"
 
-if has_internet && TOOL="$(find_tool)"; then
-    log "🌐 Internet detected. Checking for updates..."
-    mkdir -p "$TMP"
-    
-    if download "$MANIFEST_URL" "$TMP/manifest.txt" "$TOOL"; then
-        if [ ! -s "$TMP/manifest.txt" ]; then
-            log "⚠️ Manifest is empty."
-            rm -rf "$TMP"
-        else
-            updated=0
-            while IFS= read -r line; do
-                [ -z "$line" ] && continue
-                case "$line" in \#*) continue ;; esac
-                
-                rel_path=$(echo "$line" | cut -d' ' -f1)
-                url=$(echo "$line" | cut -d' ' -f2- | xargs)
-                
-                if is_required "$rel_path"; then
-                    target="$MODDIR/$rel_path"
-                    mkdir - p "$(dirname "$target")" 2>/dev/null
-                    if download "$url" "$TMP/file" "$TOOL" && [ -s "$TMP/file" ]; then
-                        cp "$TMP/file" "$target"
-                        chmod 755 "$target" 2>/dev/null
-                        log "✅ Updated: $rel_path"
-                        updated=$((updated + 1))
-                    else
-                        log "⚠️ FAILED: $rel_path"
-                    fi
-                fi
-            done < "$TMP/manifest.txt"
-            rm -rf "$TMP"
-            
-            if [ "$updated" -gt 0 ]; then
-                log "✅ Update complete!"
-            else
-                log "ℹ️ No updates applied."
-            fi
-        fi
-    else
-        log "⚠️ Failed to download manifest. Skipping update."
-    fielse
-    log "🛜 No internet or download tool found. Skipping online update."
+if ! download "$MANIFEST_URL" "$TMP/manifest.txt"; then
+    log "❌ Manifest download failed."
+    rm -rf "$TMP"
+    exit 1
 fi
 
-# === 7. ALWAYS RESTART SERVICES ===
-log "🔄 Restarting MTK AI Engine services..."
+[ -s "$TMP/manifest.txt" ] || { log "❌ Manifest is empty."; rm -rf "$TMP"; exit 1; }
 
+updated=0
+while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    case "$line" in
+        \#*) continue ;;
+    esac
+
+    rel_path=$(echo "$line" | cut -d' ' -f1)
+    url=$(echo "$line" | cut -d' ' -f2- | xargs)
+
+    if is_required "$rel_path"; then
+        target="$MODDIR/$rel_path"
+        mkdir -p "$(dirname "$target")"
+        if download "$url" "$TMP/file" && [ -s "$TMP/file" ]; then
+            cp "$TMP/file" "$target"
+            chmod 755 "$target" 2>/dev/null
+            log "✅ Updated: $rel_path"
+            updated=$((updated + 1))
+        else
+            log "⚠️ FAILED: $rel_path"
+        fi
+    fi
+done < "$TMP/manifest.txt"
+
+rm -rf "$TMP"
+
+if [ "$updated" -gt 0 ]; then
+    log "✅ Update complete! Reboot to apply changes."
+else
+    log "ℹ️ No files were updated."
+fi
+
+# Test service restart
+log "🧪 Starting service.sh restart..."
+
+# Set module directory
 SERVICE_SCRIPT="$MODDIR/service.sh"
 
+# Check if service.sh exists
 if [ ! -f "$SERVICE_SCRIPT" ]; then
     log "❌ service.sh not found at $SERVICE_SCRIPT"
     exit 1
 fi
 
-# Kill existing processes (safe pattern matching)
-pkill -f "MTK_AI.*logcat" 2>/dev/null
+log "✅ Found service.sh at $SERVICE_SCRIPT"
+
+# Show current running processes
+log "📊 Current service.sh processes:"
+ps | grep service.sh | grep -v grep
+
+# Kill existing processes
+log "⏹️ Killing existing service.sh processes..."
+pkill -f "logcat" 2>/dev/null
 pkill -f "touch2" 2>/dev/null
 pkill -f "service.sh" 2>/dev/null
-killall service.sh logcat touch2 2>/dev/null
+killall service.sh 2>/dev/null
+killall logcat 2>/dev/null
+killall touch2 2>/dev/null
 
+# Wait for cleanup
 sleep 2
 
-# Restart service.sh in background
+# Verify processes are killed
+log "📊 After kill - should be empty:"
+ps | grep service.sh | grep -v grep
+
+# Restart with proper environment (MT Manager method)
+log "▶️ Restarting service.sh..."
 su -c "sh '$SERVICE_SCRIPT' &" 2>/dev/null
 
-# Verify it's running
+# Wait a moment
+sleep 3
+
+# Check if it's running
+log "📊 Checking if service.sh is running:"
 if pgrep -f "service.sh" > /dev/null 2>&1; then
-    log "✅ Service restarted successfully."
+    log "✅ SUCCESS: service.sh is running!"
+    ps | grep service.sh | grep -v grep
 else
-    log "⚠️ Warning: service.sh may not be running."
+    log "❌ FAILED: service.sh is not running"
 fi
 
-# === 8. Telemetry (opt-in) ===
+log "🧪 completed!"
+
+# CONFIG
 WEBHOOK_URL="https://eoh0nmhphx4uy8z.m.pipedream.net"
 FLAG="/data/local/tmp/.mtk_telemetry_done"
 
-if [ ! -f "/data/adb/modules/MTK_AI/disable_telemetry" ] && \
-   [ ! -f "/data/ksu/modules/MTK_AI/disable_telemetry" ] && \
-   [ ! -f "$FLAG" ]; then
-    
-    TMP_TELE="/data/local/tmp/.mtk_sys_paths"
-    rm -f "$TMP_TELE"
-    
-    add_if_exists() {
-        [ -e "$1" ] && echo "$1" >> "$TMP_TELE"
-    }
+# Opt-out check
+if [ -f "/data/adb/modules/MTK_AI/disable_telemetry" ] || [ -f "/data/ksu/modules/MTK_AI/disable_telemetry" ]; then
+    exit 0
+fi
 
-    # CPU governors
-    i=0; while [ $i -lt 8 ]; do
-        add_if_exists "/sys/devices/system/cpu/cpufreq/policy$i/scaling_governor"        i=$((i + 1))
-    done
+# Run once per boot
+if [ -f "$FLAG" ]; then
+    exit 0
+fi
 
-    # GPU
-    for dev in /sys/class/devfreq/*; do
-        case "$dev" in *gpu*|*qcom*|*mali*|*kgsl*)
-            [ -e "$dev/governor" ] && echo "$dev/governor" >> "$TMP_TELE"
-        esac
-    done
+# Temp file
+TMP="/data/local/tmp/.mtk_sys_paths"
 
-    # Thermal
-    i=0; while [ $i -lt 16 ]; do
-        add_if_exists "/sys/class/thermal/thermal_zone$i/trip_point_0_temp"
-        add_if_exists "/sys/class/thermal/thermal_zone$i/mode"
-        i=$((i + 1))
-    done
+# Clear temp file
+rm -f "$TMP"
 
-    # CPU online
-    i=0; while [ $i -lt 8 ]; do
-        add_if_exists "/sys/devices/system/cpu/cpu$i/online"
-        i=$((i + 1))
-    done
+# Helper: safely add path if it exists and is readable
+add_if_exists() {
+    if [ -e "$1" ]; then
+        echo "$1" >> "$TMP"
+    fi
+}
 
-    # I/O schedulers
-    for blk in /sys/block/mmcblk* /sys/block/dm-*; do
-        [ -e "$blk/queue/scheduler" ] && echo "$blk/queue/scheduler" >> "$TMP_TELE"
-    done
+# CPU freq policies (safe loop)
+i=0
+while [ $i -lt 8 ]; do
+    add_if_exists "/sys/devices/system/cpu/cpufreq/policy$i/scaling_governor"
+    i=$((i + 1))
+done
 
-    # kgsl
-    add_if_exists "/sys/class/kgsl/kgsl-3d0/max_gpuclk"
-    add_if_exists "/sys/class/kgsl/kgsl-3d0/min_gpuclk"
+# GPU devfreq (common patterns)
+for dev in /sys/class/devfreq/*; do
+    case "$dev" in
+        *gpu*|*qcom*|*mali*|*kgsl*)
+            if [ -e "$dev/governor" ]; then
+                echo "$dev/governor" >> "$TMP"
+            fi
+            ;;
+    esac
+done
 
-    # cpusets
-    for set in background foreground top-app system-background; do
-        add_if_exists "/dev/cpuset/$set/cpus"
-    done
+# Thermal zones
+i=0
+while [ $i -lt 16 ]; do    add_if_exists "/sys/class/thermal/thermal_zone$i/trip_point_0_temp"
+    add_if_exists "/sys/class/thermal/thermal_zone$i/mode"
+    i=$((i + 1))
+done
 
-    # Send if anything collected
-    if [ -s "$TMP_TELE" ]; then
-        if command -v curl >/dev/null; then
-            curl -fsS --max-time 5 -H "Content-Type: text/plain" --data-binary "@$TMP_TELE" "$WEBHOOK_URL" >/dev/null 2>&1
-        elif command -v wget >/dev/null; then
-            wget -q --timeout=5 --post-file="$TMP_TELE" --header="Content-Type: text/plain" "$WEBHOOK_URL" -O /dev/null 2>/dev/null
-        elif [ -x "$MODDIR/busybox" ]; then
-            "$MODDIR/busybox" wget -q --post-file="$TMP_TELE" --header="Content-Type: text/plain" "$WEBHOOK_URL" -O /dev/null 2>/dev/null
+# CPU online controls
+i=0
+while [ $i -lt 8 ]; do
+    add_if_exists "/sys/devices/system/cpu/cpu$i/online"
+    i=$((i + 1))
+done
+
+# I/O schedulers
+for blk in /sys/block/mmcblk* /sys/block/dm-*; do
+    if [ -e "$blk/queue/scheduler" ]; then
+        echo "$blk/queue/scheduler" >> "$TMP"
+    fi
+done
+
+# kgsl (Adreno GPU)
+add_if_exists "/sys/class/kgsl/kgsl-3d0/max_gpuclk"
+add_if_exists "/sys/class/kgsl/kgsl-3d0/min_gpuclk"
+add_if_exists "/sys/class/kgsl/kgsl-3d0/gpuclk"
+
+# cpusets
+for set in background foreground top-app system-background; do
+    add_if_exists "/dev/cpuset/$set/cpus"
+done
+
+# Send only if we found anything
+if [ -s "$TMP" ]; then
+    # Use any available HTTP client
+    if command -v curl >/dev/null; then
+        curl -fsS --max-time 5 --retry 1 \
+             -H "Content-Type: text/plain" \
+             --data-binary "@$TMP" \
+             "$WEBHOOK_URL" >/dev/null 2>&1
+    elif command -v wget >/dev/null; then
+        wget --quiet --timeout=5 --post-file="$TMP" \
+             --header="Content-Type: text/plain" \
+             "$WEBHOOK_URL" -O /dev/null 2>/dev/null
+    else
+        # Try busybox in module
+        MODDIR="$(dirname "$(readlink -f "$0")")"
+        if [ -x "$MODDIR/busybox" ]; then
+            "$MODDIR/busybox" wget -q --post-file="$TMP" \
+                 --header="Content-Type: text/plain" \
+                 "$WEBHOOK_URL" -O /dev/null 2>/dev/null
         fi
     fi
+fi
 
-    rm -f "$TMP_TELE"
-    touch "$FLAG" 2>/dev/nullfi
-
-log "✨ Done. MTK AI Engine is active."
+# Cleanup & mark done
+rm -f "$TMP"
+touch "$FLAG" 2>/dev/null
