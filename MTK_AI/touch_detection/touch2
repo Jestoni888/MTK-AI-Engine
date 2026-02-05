@@ -23,6 +23,7 @@ MOD_DIR="/data/adb/modules/MTK_AI"
 BB="$MOD_DIR/busybox"
 EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
 NOTIFY_ENABLED_FILE="$EXTERNAL_CFG/enable_notifications"
+LOGCAT="$MOD_DIR/logcat_detection/logcat"
 DUMPSYS="$MOD_DIR/touch_detection/dumpsys"
 # Read custom timeout from SD card (default: 5 seconds)
 TIMEOUT=5
@@ -75,9 +76,12 @@ done
 OPP=$(cat /sdcard/MTK_AI_Engine/global_gpu_opp_index.txt 2>/dev/null) || OPP=0
 [ "$OPP" -lt 0 ] || [ "$OPP" -gt 32 ] && OPP=0
 echo $OPP > /proc/gpufreqv2/fix_target_opp_index
+su -c " '$LOGCAT' &" 2>/dev/null
 }
 
 touch_inactive() {
+pkill -f "MTK_AI.*logcat" 2>/dev/null
+killall logcat 2>/dev/null
 "$DUMPSYS" power >/dev/null 2>&1 &
 echo 32 > /proc/gpufreqv2/fix_target_opp_index
     # Enable power saving
