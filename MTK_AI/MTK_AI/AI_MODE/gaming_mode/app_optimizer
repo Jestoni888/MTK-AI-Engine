@@ -1,7 +1,9 @@
 #!/system/bin/sh
 #!/data/adb/modules/MTK_AI/busybox sh
 
-LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+CONFIG_DIR="/sdcard/MTK_AI_Engine"
+CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
+LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -78,3 +80,46 @@ if command -v sec_touch_grip >/dev/null 2>&1; then
         sec_touch_grip --enable 1
     fi
 fi
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Config file not found"
+    exit 1
+fi
+
+echo "Loading devfreq settings..."
+
+# Process each line
+while IFS= read -r line; do
+    # Skip comments and empty lines
+    case "$line" in
+        \#*|"") continue ;;
+    esac
+    
+    # Extract device and governor from "device"="governor" format
+    if echo "$line" | grep -q '=".*"$'; then
+        # Remove quotes and split
+        clean_line=$(echo "$line" | sed 's/"//g')
+        DEVICE=$(echo "$clean_line" | cut -d'=' -f1)
+        GOVERNOR=$(echo "$clean_line" | cut -d'=' -f2)
+        
+        if [ -n "$DEVICE" ] && [ -n "$GOVERNOR" ]; then
+            GOV_PATH="/sys/class/devfreq/$DEVICE/governor"
+            if [ -f "$GOV_PATH" ]; then
+                echo "$GOVERNOR" > "$GOV_PATH" 2>/dev/null
+                if [ $? -eq 0 ]; then
+                    echo "✅ Applied $GOVERNOR to $DEVICE"
+                else
+                    echo "❌ Failed to apply $GOVERNOR to $DEVICE"
+                fi
+            else
+                echo "⚠️ Device not found: $DEVICE"
+            fi
+        fi
+    fi
+done < "$CONFIG_FILE"
+
+echo "✅ Devfreq settings loaded successfully!"
+
+settings put global low_power 0
+settings put global low_power_sticky 0
+echo "0" > /proc/sys/kernel/panic
