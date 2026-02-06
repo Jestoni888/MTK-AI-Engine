@@ -53,27 +53,3 @@ fi
         stop "$svc" 2>/dev/null
         killall -9 "$svc" 2>/dev/null
     done
-
-# DEVFREQ STRICT POWERSAVE MODE
-# This removes the performance filters and forces all nodes to save energy
-for g in /sys/class/devfreq/*/governor; do
-    [ -f "$g" ] || continue
-    NAME=$(basename "$(dirname "$g")")
-    
-    # Check supported governors for the current node
-    SUP=$(cat "$(dirname "$g")/available_governors" 2>/dev/null)
-
-    # Force powersave if supported, otherwise fallback to simple_ondemand
-    if echo "$SUP" | grep -q "powersave"; then
-        chmod 644 "$g" 2>/dev/null
-        echo powersave | su -c "tee $g"
-        log_msg "🔋 Powersave mode: $NAME → powersave"
-    else
-        # If powersave isn't a valid option for this kernel node, 
-        # use the most efficient alternative available.
-        chmod 644 "$g" 2>/dev/null
-        echo simple_ondemand | su -c "tee $g" 2>/dev/null
-        log_msg "🔋 Powersave mode: $NAME → simple_ondemand (fallback)"
-    fi
-done
-
