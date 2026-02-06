@@ -78,14 +78,3 @@ if command -v sec_touch_grip >/dev/null 2>&1; then
         sec_touch_grip --enable 1
     fi
 fi
-
-# DEVFREQ GAMING MODE
-            for g in /sys/class/devfreq/*/governor; do
-                [ -f "$g" ] || continue
-                NAME=$(basename "$(dirname "$g")")
-                if echo "$NAME" | grep -E 'dvfsrc' >/dev/null; then
-                    echo performance | su -c "tee $g"
-                    log_msg "⚡ Gaming mode devfreq: $NAME → performance"
-                fi
-            done
-
