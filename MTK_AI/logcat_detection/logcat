@@ -311,6 +311,7 @@ while true; do
                         run_external_binary "$SCREEN_OFF_PATH"                    
                         fi         
                     notify_engine "🌙 Screen Off" "Entering Power Saver Mode"
+                    continue
                     ;;
             esac
 
@@ -320,6 +321,7 @@ while true; do
                     log_msg "☀️ Screen On Detected."
                     run_external_binary "$MANUAL_GLOBAL_FILE"
                     notify_engine "☀️ Screen On" "Restoring Balanced Performance"
+                    continue
                     ;;
             esac
      
