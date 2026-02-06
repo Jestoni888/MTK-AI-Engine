@@ -4,8 +4,9 @@
 # chmod 755 /data/adb/service.d/mtk_ai_manual
 
 CONFIG_DIR="/sdcard/MTK_AI_Engine"
+CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
 
-log "=== MTK AI MANUAL OVERRIDES STARTING ==="
+echo "=== MTK AI MANUAL OVERRIDES STARTING ==="
 
 # --- 1. RESOLUTION SCALING ---
 if [ -f "$CONFIG_DIR/manual_scaling.txt" ]; then
@@ -18,89 +19,89 @@ if [ -f "$CONFIG_DIR/manual_scaling.txt" ]; then
         fi
         
         NEW_DENSITY=$((CURRENT_DENSITY * PERCENT / 100))
-        log "Applying scaling: ${PERCENT}% → ${NEW_DENSITY} DPI"
+        echo "Applying scaling: ${PERCENT}% → ${NEW_DENSITY} DPI"
         
         # Apply with proper context
         su -c "wm density $NEW_DENSITY" 2>/dev/null
         if [ $? -eq 0 ]; then
-            log "✓ Scaling applied successfully"
+            echo "✓ Scaling applied successfully"
         else
-            log "✗ Failed to apply scaling"
+            echo "✗ Failed to apply scaling"
         fi
     else
-        log "Invalid scaling value: '$PERCENT'"
+        echo "Invalid scaling value: '$PERCENT'"
     fi
 else
-    log "No scaling config found"
+    echo "No scaling config found"
 fi
 
 # --- 2. CPU GOVERNOR ---
 if [ -f "$CONFIG_DIR/manual_governor.txt" ]; then
     GOVERNOR=$(cat "$CONFIG_DIR/manual_governor.txt" 2>/dev/null | tr -d '\r\n\t ')
     if [ -n "$GOVERNOR" ]; then
-        log "Applying governor: $GOVERNOR"
+        echo "Applying governor: $GOVERNOR"
         for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
             if [ -f "$cpu/cpufreq/scaling_available_governors" ]; then
                 if grep -q "$GOVERNOR" "$cpu/cpufreq/scaling_available_governors"; then
                     su -c "echo '$GOVERNOR' > '$cpu/cpufreq/scaling_governor'" 2>/dev/null
                     if [ $? -eq 0 ]; then
-                        log "✓ Governor applied to $cpu"
+                        echo "✓ Governor applied to $cpu"
                     else
-                        log "✗ Failed to apply governor to $cpu"
+                        echo "✗ Failed to apply governor to $cpu"
                     fi
                 else
-                    log "Governor '$GOVERNOR' not available for $cpu"
+                    echo "Governor '$GOVERNOR' not available for $cpu"
                 fi
             fi
         done
     else
-        log "Empty governor config"
+        echo "Empty governor config"
     fi
 else
-    log "No governor config found"
+    echo "No governor config found"
 fi
 
 # --- 3. RENDERER ---
 if [ -f "$CONFIG_DIR/manual_renderer.txt" ]; then
     RENDERER=$(cat "$CONFIG_DIR/manual_renderer.txt" 2>/dev/null | tr -d '\r\n\t ')
     if [ -n "$RENDERER" ]; then
-        log "Applying renderer: $RENDERER"
+        echo "Applying renderer: $RENDERER"
         su -c "setprop debug.hwui.renderer '$RENDERER'" 2>/dev/null
         if [ $? -eq 0 ]; then
-            log "✓ Renderer applied"
+            echo "✓ Renderer applied"
         else
-            log "✗ Failed to apply renderer"
+            echo "✗ Failed to apply renderer"
         fi
     else
-        log "Empty renderer config"
+        echo "Empty renderer config"
     fi
 else
-    log "No renderer config found"
+    echo "No renderer config found"
 fi
 
 # --- 4. REFRESH RATE ---
 if [ -f "$CONFIG_DIR/manual_refresh_lock.txt" ]; then
     MODE_ID=$(cat "$CONFIG_DIR/manual_refresh_lock.txt" 2>/dev/null | tr -d '\r\n\t ')
     if [ -n "$MODE_ID" ]; then
-        log "Applying refresh rate mode: $MODE_ID"
+        echo "Applying refresh rate mode: $MODE_ID"
         su -c "service call SurfaceFlinger 1035 i32 $MODE_ID" 2>/dev/null
         if [ $? -eq 0 ]; then
-            log "✓ Refresh rate applied"
+            echo "✓ Refresh rate applied"
         else
-            log "✗ Failed to apply refresh rate"
+            echo "✗ Failed to apply refresh rate"
         fi
     else
-        log "Empty refresh rate config"
+        echo "Empty refresh rate config"
     fi
 else
-    log "No refresh rate config found"
+    echo "No refresh rate config found"
 fi
 
 # --- 5. TOUCH ACTIVE CPU FREQUENCY ---
 if [ -f "$CONFIG_DIR/manual_touch_active_freq.txt" ]; then
     ACTIVE_PERCENT=$(cat "$CONFIG_DIR/manual_touch_active_freq.txt" 2>/dev/null | tr -d '\r\n\t ')
     if [ -n "$ACTIVE_PERCENT" ] && [ "$ACTIVE_PERCENT" -ge 50 ] 2>/dev/null && [ "$ACTIVE_PERCENT" -le 100 ] 2>/dev/null; then
-        log "Applying Touch Active CPU: ${ACTIVE_PERCENT}%"
+        echo "Applying Touch Active CPU: ${ACTIVE_PERCENT}%"
         for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
             if [ -f "$cpu/cpufreq/cpuinfo_max_freq" ]; then
                 MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
@@ -109,45 +110,84 @@ if [ -f "$CONFIG_DIR/manual_touch_active_freq.txt" ]; then
                 echo "$MIN_FREQ" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null
                 echo "$TARGET_MAX" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
                 if [ $? -eq 0 ]; then
-                    log "✓ Touch Active CPU applied to $cpu"
+                    echo "✓ Touch Active CPU applied to $cpu"
                 else
-                    log "✗ Failed to apply Touch Active CPU to $cpu"
+                    echo "✗ Failed to apply Touch Active CPU to $cpu"
                 fi
             fi
         done
     else
-        log "Invalid Touch Active CPU value: '$ACTIVE_PERCENT'"
+        echo "Invalid Touch Active CPU value: '$ACTIVE_PERCENT'"
     fi
 else
-    log "No Touch Active CPU config found"
+    echo "No Touch Active CPU config found"
 fi
 
 # --- 6. INACTIVE CPU FREQUENCY ---
 if [ -f "$CONFIG_DIR/cpu_freq_scaling.txt" ]; then
     INACTIVE_PERCENT=$(cat "$CONFIG_DIR/cpu_freq_scaling.txt" 2>/dev/null | tr -d '\r\n\t ')
     if [ -n "$INACTIVE_PERCENT" ] && [ "$INACTIVE_PERCENT" -ge 30 ] 2>/dev/null && [ "$INACTIVE_PERCENT" -le 100 ] 2>/dev/null; then
-        log "Applying Inactive CPU: ${INACTIVE_PERCENT}%"
+        echo "Applying Inactive CPU: ${INACTIVE_PERCENT}%"
         for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
             if [ -f "$cpu/cpufreq/cpuinfo_max_freq" ]; then
                 MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
                 TARGET_MAX=$((MAX_FREQ * INACTIVE_PERCENT / 100))
                 echo "$TARGET_MAX" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
                 if [ $? -eq 0 ]; then
-                    log "✓ Inactive CPU applied to $cpu"
+                    echo "✓ Inactive CPU applied to $cpu"
                 else
-                    log "✗ Failed to apply Inactive CPU to $cpu"
+                    echo "✗ Failed to apply Inactive CPU to $cpu"
                 fi
             fi
         done
     else
-        log "Invalid Inactive CPU value: '$INACTIVE_PERCENT'"
+        echo "Invalid Inactive CPU value: '$INACTIVE_PERCENT'"
     fi
 else
-    log "No Inactive CPU config found"
+    echo "No Inactive CPU config found"
 fi
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Config file not found"
+    exit 1
+fi
+
+echo "Loading devfreq settings..."
+
+# Process each line
+while IFS= read -r line; do
+    # Skip comments and empty lines
+    case "$line" in
+        \#*|"") continue ;;
+    esac
+    
+    # Extract device and governor from "device"="governor" format
+    if echo "$line" | grep -q '=".*"$'; then
+        # Remove quotes and split
+        clean_line=$(echo "$line" | sed 's/"//g')
+        DEVICE=$(echo "$clean_line" | cut -d'=' -f1)
+        GOVERNOR=$(echo "$clean_line" | cut -d'=' -f2)
+        
+        if [ -n "$DEVICE" ] && [ -n "$GOVERNOR" ]; then
+            GOV_PATH="/sys/class/devfreq/$DEVICE/governor"
+            if [ -f "$GOV_PATH" ]; then
+                echo "$GOVERNOR" > "$GOV_PATH" 2>/dev/null
+                if [ $? -eq 0 ]; then
+                    echo "✅ Applied $GOVERNOR to $DEVICE"
+                else
+                    echo "❌ Failed to apply $GOVERNOR to $DEVICE"
+                fi
+            else
+                echo "⚠️ Device not found: $DEVICE"
+            fi
+        fi
+    fi
+done < "$CONFIG_FILE"
+
+echo "✅ Devfreq settings loaded successfully!"
 
 settings put global low_power 0
 settings put global low_power_sticky 0
 echo "0" > /proc/sys/kernel/panic
 
-log "=== MTK AI MANUAL OVERRIDES COMPLETED ==="
+echo "=== MTK AI MANUAL OVERRIDES COMPLETED ==="
