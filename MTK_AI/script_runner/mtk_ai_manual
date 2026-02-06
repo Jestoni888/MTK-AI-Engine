@@ -97,56 +97,6 @@ else
     echo "No refresh rate config found"
 fi
 
-# --- 5. TOUCH ACTIVE CPU FREQUENCY ---
-if [ -f "$CONFIG_DIR/manual_touch_active_freq.txt" ]; then
-    ACTIVE_PERCENT=$(cat "$CONFIG_DIR/manual_touch_active_freq.txt" 2>/dev/null | tr -d '\r\n\t ')
-    if [ -n "$ACTIVE_PERCENT" ] && [ "$ACTIVE_PERCENT" -ge 50 ] 2>/dev/null && [ "$ACTIVE_PERCENT" -le 100 ] 2>/dev/null; then
-        echo "Applying Touch Active CPU: ${ACTIVE_PERCENT}%"
-        for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
-            if [ -f "$cpu/cpufreq/cpuinfo_max_freq" ]; then
-                MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
-                MIN_FREQ=$(cat "$cpu/cpufreq/cpuinfo_min_freq")
-                TARGET_MAX=$((MAX_FREQ * ACTIVE_PERCENT / 100))
-                echo "$MIN_FREQ" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null
-                echo "$TARGET_MAX" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-                if [ $? -eq 0 ]; then
-                    echo "✓ Touch Active CPU applied to $cpu"
-                else
-                    echo "✗ Failed to apply Touch Active CPU to $cpu"
-                fi
-            fi
-        done
-    else
-        echo "Invalid Touch Active CPU value: '$ACTIVE_PERCENT'"
-    fi
-else
-    echo "No Touch Active CPU config found"
-fi
-
-# --- 6. INACTIVE CPU FREQUENCY ---
-if [ -f "$CONFIG_DIR/cpu_freq_scaling.txt" ]; then
-    INACTIVE_PERCENT=$(cat "$CONFIG_DIR/cpu_freq_scaling.txt" 2>/dev/null | tr -d '\r\n\t ')
-    if [ -n "$INACTIVE_PERCENT" ] && [ "$INACTIVE_PERCENT" -ge 30 ] 2>/dev/null && [ "$INACTIVE_PERCENT" -le 100 ] 2>/dev/null; then
-        echo "Applying Inactive CPU: ${INACTIVE_PERCENT}%"
-        for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
-            if [ -f "$cpu/cpufreq/cpuinfo_max_freq" ]; then
-                MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
-                TARGET_MAX=$((MAX_FREQ * INACTIVE_PERCENT / 100))
-                echo "$TARGET_MAX" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-                if [ $? -eq 0 ]; then
-                    echo "✓ Inactive CPU applied to $cpu"
-                else
-                    echo "✗ Failed to apply Inactive CPU to $cpu"
-                fi
-            fi
-        done
-    else
-        echo "Invalid Inactive CPU value: '$INACTIVE_PERCENT'"
-    fi
-else
-    echo "No Inactive CPU config found"
-fi
-
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "Config file not found"
     exit 1
