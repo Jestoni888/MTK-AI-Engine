@@ -451,6 +451,163 @@ logcat -b events -T 100 -v threadtime | while IFS= read -r line; do
 
                         # --- 1. RESOLUTION SCALING ---
                         SCALE_FILE="$PER_APP_DIR/${PKG}.scale"
+# ➤ APP ACTIVITY RESUME — GAME OR NORMAL MODE
+            case "$line" in
+                *"input_focus"*|*"wm_on_resume_called"*|*"top_resumed_app_focus"*|*"am_on_resume_called"*|*"monitor_focus_event"*|*"am_resume_activity"*)
+                    # Extract package name
+                    DETECTED_PKG=$(echo "$line" | grep -oE '[a-zA-Z0-9._]+\/[a-zA-Z0-9._]+' | cut -d'/' -f1 | tail -n 1)
+                    if [ -z "$DETECTED_PKG" ]; then
+                        DETECTED_PKG=$(echo "$line" | sed -n 's/.* \([^/ ]*\)\/[^/ ]*.*/\1/p' | grep -oE '[a-zA-Z0-9._]' | head -n 1)
+                    fi
+
+                    # Skip invalid or system packages
+                    if [ -z "$DETECTED_PKG" ] || ! echo "$DETECTED_PKG" | grep -q '\.'; then
+                        continue
+                    fi
+                
+                    # 🔒 WHITELIST CHECK - COMPLETE SKIP (NO LOGIC AT ALL)
+                    if [ -f "$WHITELIST_FILE" ] && grep -Fxq "$DETECTED_PKG" "$WHITELIST_FILE" 2>/dev/null; then
+                        log_msg "⏭️ Whitelisted app detected: $DETECTED_PKG - Skipping all processing"
+                        continue
+                    fi
+        
+                    # 📸 CAMERA DETECTION
+                    IS_CAMERA=0
+                    case "$DETECTED_PKG" in
+                        *camera*|*Camera*|*snapdragon*|*halo*|*opencamera*|*fovcam*|*mediatek.camera*|\
+                        com.android.camera|com.sec.android.app.camera|com.google.android.camera|\
+                        com.huawei.camera|com.oppo.camera|com.vivo.camera|com.oneplus.camera|\
+                        com.sonyericsson.android.camera|com.motorola.camera|com.zte.camera*)
+                            IS_CAMERA=1
+                            ;;
+                    esac
+        
+                    if [ "$IS_CAMERA" = 1 ]; then
+                        log_msg "📸 Camera detected: $DETECTED_PKG"
+            
+                        # Activate camera mode: rename limiter to .exec
+                        if [ -f "$LIMITER_FILE" ] && [ ! -f "${LIMITER_FILE}.exec" ]; then                            mv "$LIMITER_FILE" "${LIMITER_FILE}.exec"
+                            log_msg "✅ Limiter disabled for camera (renamed to .exec)"
+                        fi
+            
+                        # Mark camera as active
+                        echo "1" > "$CAMERA_STATE_FILE"
+            
+                        # Apply safe tuning (optional but recommended)
+                        apply_non_gaming_logic
+                        enable_zram
+                        rm -f "$GAME_STATE_FILE"
+                        rm -f "$NORMAL_STATE_FILE"
+                        rm -f "$CPUSET_STATE_FILE"
+                        
+                        continue
+                    fi
+                    
+                    case "$DETECTED_PKG" in
+                        *launcher*|*systemui*|*settings*|*google*|*transsion*|android)
+                        if [ -f "$CAMERA_STATE_FILE" ]; then
+                            log_msg "🚪 Exiting camera app"
+                            # Restore limiter
+                            if [ -f "${LIMITER_FILE}.exec" ] && [ ! -f "$LIMITER_FILE" ]; then
+                                mv "${LIMITER_FILE}.exec" "$LIMITER_FILE"
+                                log_msg "✅ Limiter re-enabled after camera exit"
+                            fi
+                            rm -f "$CAMERA_STATE_FILE"
+                        fi
+                            apply_non_gaming_logic
+                            enable_zram
+                            rm -f "$GAME_STATE_FILE"  # Clear game state
+                            continue
+                            ;;
+                    esac
+
+                    # Check if it's a game
+                    if [ -f "$GAME_LIST_FILE" ] && grep -Fxq "$DETECTED_PKG" "$GAME_LIST_FILE"; then
+                        # 🎮 GAME MODE
+                        # Check if already active
+                        if [ -f "$GAME_STATE_FILE" ]; then
+                            ACTIVE_GAME=$(cat "$GAME_STATE_FILE" 2>/dev/null)
+                            if [ "$ACTIVE_GAME" = "$DETECTED_PKG" ]; then
+                                # Already applied — skip
+                                continue
+                            fi
+                        fi
+                       
+                        # Save state
+                        echo "$DETECTED_PKG" > "$GAME_STATE_FILE"
+                        rm -f "$NORMAL_STATE_FILE"        # Exit normal mode
+                        # Apply gaming logic
+                        apply_gaming_logic "$DETECTED_PKG"                        log_msg "🎮 Gaming mode triggered for: $DETECTED_PKG"
+                        notify_engine "🎮 Gaming mode" "Target: $DETECTED_PKG"
+                        
+                        # 🧠 APPLY CPUSETS (only if not already applied)
+                        CPUSET_RULES="/sdcard/MTK_AI_Engine/gaming_cpuset_rules.json"
+                        if [ -f "$CPUSET_RULES" ]; then
+                            # Generate a hash of current game + rules to detect changes
+                            CURRENT_STATE="$DETECTED_PKG:$(md5sum "$CPUSET_RULES" 2>/dev/null | cut -d' ' -f1)"
+                            LAST_STATE=$(cat "$CPUSET_STATE_FILE" 2>/dev/null)
+    
+                            if [ "$CURRENT_STATE" != "$LAST_STATE" ]; then
+                                log_msg "🧠 Applying cpusets (jq-free)..."
+        
+                                # Enforce top-app = all cores
+                                echo "0-7" > /dev/cpuset/top-app/cpus 2>/dev/null
+
+                                QUOTED=$(grep -o '"[^"]*"' "$CPUSET_RULES" 2>/dev/null | tr -d '"')
+                                set -- $QUOTED
+
+                                while [ $# -ge 2 ]; do
+                                    pkg="$1"
+                                    cpuset="$2"
+                                    shift 2
+
+                                    case "$cpuset" in
+                                        background|system-background|top-app) ;;
+                                        *) continue ;;
+                                    esac
+
+                                    case "$pkg" in
+                                        android|com.android.systemui|com.android.phone|com.android.shell|com.topjohnwu.magisk|io.github.kernelsu.manager)
+                                            continue
+                                            ;;
+                                    esac
+
+                                    # Skip current game
+                                    if [ "$pkg" = "$DETECTED_PKG" ]; then
+                                        continue
+                                    fi
+
+                                    for pid in $(pidof "$pkg" 2>/dev/null); do
+                                        if [ -n "$pid" ] && [ -w "/dev/cpuset/$cpuset/cgroup.procs" ]; then
+                                            echo "$pid" > "/dev/cpuset/$cpuset/cgroup.procs" 2>/dev/null
+                                            log_msg "→ $pkg ($pid) → $cpuset"
+                                        fi
+                                    done
+                                done
+
+                                echo "$CURRENT_STATE" > "$CPUSET_STATE_FILE"
+                                log_msg "✅ Cpuset assignment completed!"                            else
+                                log_msg "ℹ️ Cpusets already applied — skipping"
+                            fi
+                        fi
+                        
+                        # 🍃 LITE GAMING
+                        if [ -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "$LITE_GAMING_PATH" ]; then
+                            log_msg "🍃 Lite Gaming triggered for: $DETECTED_PKG"
+                            run_external_binary "$LITE_GAMING_PATH"
+                            notify_engine "🍃 Lite Gaming Mode" "Target: $DETECTED_PKG"
+                        fi
+                        
+                        # 🎯 PER-APP AUTO-TUNING TRIGGER
+                        PER_APP_DIR="/sdcard/MTK_AI_Engine/per_app"
+                        VSYNC_DIR="/sdcard/MTK_AI_Engine/vsync_configs"
+                        REFRESH_LOCK_DIR="/sdcard/MTK_AI_Engine/refresh_locks"
+                        RENDERER_DIR="/sdcard/MTK_AI_Engine/threading_configs"
+                        PKG="$DETECTED_PKG"
+                        : ${BASE_DENSITY:=480}
+
+                        # --- 1. RESOLUTION SCALING ---
+                        SCALE_FILE="$PER_APP_DIR/${PKG}.scale"
                         if [ -f "$SCALE_FILE" ]; then
                             SCALE_PCT=$(tr -d '\r\n\t ' < "$SCALE_FILE")
                             if [ -n "$SCALE_PCT" ] && [ "$SCALE_PCT" -eq "$SCALE_PCT" ] 2>/dev/null; then
@@ -551,6 +708,7 @@ logcat -b events -T 100 -v threadtime | while IFS= read -r line; do
                             enable_zram
                             apply_non_gaming_logic
                             rm -f "$GAME_STATE_FILE"          # Clear game state
+                            rm -f "$CPUSET_STATE_FILE"
                             echo "1" > "$NORMAL_STATE_FILE"   # Mark normal state active
                     fi
                     ;;
