@@ -28,6 +28,7 @@ log() {
     echo "[$($DATE '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"
 }
 
+rm -f "$MODDIR/.running.lock"
 log "MTK_AI daemon started"
 
 # Fix permissions
