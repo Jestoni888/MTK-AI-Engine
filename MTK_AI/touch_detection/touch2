@@ -36,7 +36,7 @@ if [ -f "/sdcard/MTK_AI_Engine/touch_timeout.txt" ]; then
 fi
  
 touch_active() {
-rm -f "$CPUSET_STATE_FILE"
+su -c rm -f "$CPUSET_STATE_FILE"
 "$DUMPSYS" power >/dev/null 2>&1 &
     CPU_SYS="/sys/devices/system/cpu"
     
