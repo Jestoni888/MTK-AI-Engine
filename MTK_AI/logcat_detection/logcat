@@ -274,28 +274,6 @@ log_msg "🚀 Starting logcat monitor (pipelined)..."
 logcat -b events -T 100 -v threadtime | while IFS= read -r line; do
     [ -z "$line" ] && continue
            
-            # ➤ SCREEN OFF TRIGGER
-            case "$line" in
-                *"screen_off"*|*"sys_screen_off"*|*"screen_toggled=0"*|*"lcd_power: 0"*|*"power_screen_state: [0,"*)
-                    log_msg "🌙 Screen Off Detected."
-                    if [ -f "$EXTERNAL_CFG/low_power_mode" ] && [ -f "$UNLOCK_PATH" ]; then       
-                        run_external_binary "$SCREEN_OFF_PATH"                    
-                        fi         
-                    notify_engine "🌙 Screen Off" "Entering Power Saver Mode"
-                    continue
-                    ;;
-            esac
-
-            # ➤ SCREEN ON TRIGGER
-            case "$line" in
-                *"screen_on"*|*"sys_screen_on"*|*"screen_toggled=1"*|*"lcd_power: 1"*|*"power_screen_state: [1,"*)
-                    log_msg "☀️ Screen On Detected."
-                    run_external_binary "$MANUAL_GLOBAL_FILE"
-                    notify_engine "☀️ Screen On" "Restoring Balanced Performance"
-                    continue
-                    ;;
-            esac
-     
             # ➤ APP ACTIVITY RESUME — GAME OR NORMAL MODE
             case "$line" in
                 *"input_focus"*|*"wm_on_resume_called"*|*"top_resumed_app_focus"*|*"am_on_resume_called"*|*"monitor_focus_event"*|*"am_resume_activity"*)
