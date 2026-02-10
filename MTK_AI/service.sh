@@ -98,7 +98,7 @@ pkill -f "MTK_AI.*dumpsys2" 2>/dev/null
 killall logcat 2>/dev/null
 killall dumpsys2 2>/dev/null
 
-# Default to dumpsys (safer fallback)
+# Default to logcat (safer fallback)
 DETECTION_METHOD="logcat"
 
 # Check config files (logcat takes priority if both exist)
