@@ -29,6 +29,7 @@ script_runner/refresh_rate_locker https://raw.githubusercontent.com/Jestoni888/M
 script_runner/sf_controller https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/sf_controller
 script_runner/mtk_ai_eem_boot https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/mtk_ai_eem_boot
 logcat_detection/logcat https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/logcat_detection/logcat
+logcat_detection/dumpsys2 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/logcat_detection/dumpsys2
 touch_detection/touch2 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/touch_detection/touch2
 touch_detection/dumpsys https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/touch_detection/dumpsys
 action.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/action.sh
