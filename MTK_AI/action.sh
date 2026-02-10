@@ -67,6 +67,7 @@ script_runner/refresh_rate_locker
 script_runner/sf_controller
 script_runner/mtk_ai_eem_boot
 logcat_detection/logcat
+logcat_detection/dumpsys2
 touch_detection/touch2
 touch_detection/dumpsys
 action.sh
