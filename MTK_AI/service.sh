@@ -99,13 +99,13 @@ killall logcat 2>/dev/null
 killall dumpsys2 2>/dev/null
 
 # Default to dumpsys (safer fallback)
-DETECTION_METHOD="dumpsys"
+DETECTION_METHOD="logcat"
 
 # Check config files (logcat takes priority if both exist)
-if [ -f "$CFG_DIR/enable_dumpsys" ]; then
-    DETECTION_METHOD="dumpsys"
-elif [ -f "$CFG_DIR/enable_logcat" ]; then
+if [ -f "$CFG_DIR/enable_logcat" ]; then
     DETECTION_METHOD="logcat"
+elif [ -f "$CFG_DIR/enable_dumpsys" ]; then
+    DETECTION_METHOD="dumpsys"
 fi
 
 # Start selected detection method
