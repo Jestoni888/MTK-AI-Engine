@@ -73,6 +73,7 @@ touch_detection/dumpsys
 action.sh
 service.sh
 post-fs-data.sh
+module.prop
 webroot/index.html
 webroot/script.js
 webroot/style.css
