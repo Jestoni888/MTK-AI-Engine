@@ -28,7 +28,7 @@ log "📁 Module dir: $MODDIR"
 has_internet() {
     if [ -x "$MODDIR/busybox" ]; then
         "$MODDIR/busybox" wget -q --timeout=5 -O /dev/null \
-            "https://www.google.com" 2>/dev/null
+            "1.1.1.1" 2>/dev/null
         return $?
     fi
     return 1
