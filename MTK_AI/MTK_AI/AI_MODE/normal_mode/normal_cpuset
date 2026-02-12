@@ -1,0 +1,55 @@
+#!/system/bin/sh
+
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+CPUSET_PATH="/dev/cpuset"
+
+log_msg() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+safe_write() {
+    local value="$1"
+    local target="$2"
+    if [ -f "$target" ]; then
+        chmod 666 "$target" 2>/dev/null
+        if echo "$value" > "$target" 2>/dev/null; then
+            return 0
+        else
+            su -c "echo '$value' > '$target'" 2>/dev/null && return 0
+        fi
+    fi
+    return 1
+}
+
+log_msg "STARTING CUSTOM CPUSET CONFIGURATION..."
+
+# Helper function to apply cpuset mask
+apply_cpuset() {
+    local group="$1"
+    local mask="$2"
+    local node="$CPUSET_PATH/$group/cpus"
+    if [ -f "$node" ]; then
+        if safe_write "$mask" "$node"; then
+            log_msg "✅ $group -> $mask"
+        else
+            log_msg "❌ Failed to set $group -> $mask"
+        fi
+    else
+        log_msg "⚠️  $group not found (skipped)"
+    fi
+}
+
+# Apply your exact desired configuration
+apply_cpuset audio-app          "0-1"
+apply_cpuset background         "0-1"
+apply_cpuset camera-daemon      "0-7"
+apply_cpuset dex2oat            "0-1"
+apply_cpuset foreground         "0-7"
+apply_cpuset foreground_window  "0-7"
+apply_cpuset nt_foreground      "0-7"
+apply_cpuset restricted         "0-7"
+apply_cpuset svp                "4-7"
+apply_cpuset system-background  "0-1"
+apply_cpuset top-app            "0-7"
+
+log_msg "✅ CUSTOM CPUSET CONFIGURATION FINISHED"
