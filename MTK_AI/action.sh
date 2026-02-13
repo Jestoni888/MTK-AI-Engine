@@ -39,7 +39,6 @@ required_files="
 MTK_AI/AI_MODE/auto_frequency/auto_frequency
 MTK_AI/AI_MODE/auto_frequency/cpu6
 MTK_AI/AI_MODE/auto_frequency/cpu7
-MTK_AI/AI_MODE/auto_frequency/surfaceflinger
 MTK_AI/AI_MODE/gaming_mode/app_optimizer
 MTK_AI/AI_MODE/gaming_mode/bypass_on
 MTK_AI/AI_MODE/gaming_mode/disable_thermal
