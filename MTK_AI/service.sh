@@ -119,4 +119,3 @@ case "$DETECTION_METHOD" in
         [ -f "$DUMPSYS_SCRIPT" ] && "$DUMPSYS_SCRIPT" &
         ;;
 esac
-"$MODDIR/script_runner/sf_controller" &
