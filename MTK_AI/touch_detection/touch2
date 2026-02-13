@@ -17,8 +17,6 @@ fi
 echo $$ > /dev/cpuset/top-app/tasks 2>/dev/null
 
 # --- PATHS ---
-T_STATE="/dev/.sf_touch_state"
-T_OFF="/dev/.sf_touch_off"
 MOD_DIR="/data/adb/modules/MTK_AI"
 BB="$MOD_DIR/busybox"
 EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
@@ -181,14 +179,12 @@ while true; do
             STATE="SAVE"            
             if [ -f "$EXTERNAL_CFG/enable_limiter" ]; then
                 touch_inactive
-                touch "$T_OFF"
                 notify_status "powersave 🔋"
             fi
         fi
     else
         if [ "$STATE" = "SAVE" ]; then
             STATE="PERF"
-            touch "$T_STATE"
             notify_status "active 🔥"
             touch_active
         fi
