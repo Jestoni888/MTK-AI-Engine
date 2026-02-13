@@ -31,7 +31,6 @@ GAME_LIST_FILE="/sdcard/MTK_AI_Engine/game_list.txt"
 WHITELIST_FILE="/sdcard/MTK_AI_Engine/whitelist.txt"
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 CURRENT_MODE="NONE"
-G_STATE="/dev/.sf_game_state"
 
 # External Script Paths
 EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
