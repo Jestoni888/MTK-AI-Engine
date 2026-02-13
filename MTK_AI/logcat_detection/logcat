@@ -31,7 +31,6 @@ GAME_LIST_FILE="/sdcard/MTK_AI_Engine/game_list.txt"
 WHITELIST_FILE="/sdcard/MTK_AI_Engine/whitelist.txt"
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 CURRENT_MODE="NONE"
-G_STATE="/dev/.sf_game_state"
 
 # External Script Paths
 EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
@@ -173,7 +172,6 @@ done
 
 apply_gaming_logic() {
     local pkg_name="$1"
-    touch "$G_STATE"
       
     run_external_binary "$SCRIPT_RUNNER"              
     if [ -f "$EXTERNAL_CFG/enable_auto_freq" ] && [ -f "$AUTOFREQ_PATH" ]; then
