@@ -1,0 +1,551 @@
+#!/system/bin/sh
+MOD_DIR="/data/adb/modules/MTK_AI"
+# --- BUSYBOX INTEGRATION ---
+BB="$MOD_DIR/busybox"
+[ ! -x "$BB" ] && { echo "FATAL: BusyBox missing"; exit 1; }
+
+# Wrap essential tools
+grep() { "$BB" grep "$@"; }; sed() { "$BB" sed "$@"; }; awk() { "$BB" awk "$@"; }
+cut() { "$BB" cut "$@"; }; head() { "$BB" head "$@"; }; tail() { "$BB" tail "$@"; }
+wc() { "$BB" wc "$@"; }; date() { "$BB" date "$@"; }; ionice() { "$BB" ionice "$@"; }
+renice() { "$BB" renice "$@"; }; mkswap() { "$BB" mkswap "$@"; }; swapon() { "$BB" swapon "$@"; }
+swapoff() { "$BB" swapoff "$@"; }; free() { "$BB" free "$@"; }
+
+PIDFILE="/data/adb/modules/MTK_AI/logcat.pid"
+
+echo $$ > "$PIDFILE"
+
+# Set highest CPU priority
+renice -n -20 -p $$
+
+# Prevent Low Memory Killer (LMK) from targeting this process
+if [ -f /proc/$$/oom_score_adj ]; then
+    echo -1000 > /proc/$$/oom_score_adj
+fi
+
+# Move to top-app cpuset to ensure the script isn't throttled
+echo $$ > /dev/cpuset/top-app/tasks 2>/dev/null
+
+# --- CONFIGURATION ---
+GAME_LIST_FILE="/sdcard/MTK_AI_Engine/game_list.txt"
+WHITELIST_FILE="/sdcard/MTK_AI_Engine/whitelist.txt"
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+CURRENT_MODE="NONE"
+
+# External Script Paths
+EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
+SCRIPT_RUNNER="$MOD_DIR/script_runner/global"
+DISABLE_THERMAL_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/disable_thermal"
+PERFORMANCE_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/performance"
+SCREEN_OFF_PATH="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/powersave"
+CPUSET_NORMAL_PATH="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/normal_cpuset"
+NORMAL_PROP_PATH="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/normal_prop"
+BYPASS_OFF_PATH="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/bypass_off"
+CHARGER_CHECK_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/charger_check"
+GAMING_PROP_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/gaming_prop"
+GAMING_PROP2_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2"
+AUTOFREQ_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/auto_frequency"
+LIMITER_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpulimiter"
+LITE_GAMING_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/lite_gaming"
+UNLOCK_FPS_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/unlockfps"
+LIMIT_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/limit"
+UNLOCK_PATH="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/unlock"
+SF_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/surfaceflinger"
+RESOURCES_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/resources_tweaks"
+WEBVIEW_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/webview_tweaks"
+TOUCH="$MOD_DIR/touch_detection/touch2"
+MANUAL_GLOBAL_FILE="$MOD_DIR/script_runner/mtk_ai_manual"
+NOTIFY_ENABLED_FILE="$EXTERNAL_CFG/enable_notifications"
+VOLTAGE_OFFSET="$MOD_DIR/script_runner/mtk_ai_eem_boot"
+LIMITER_FILE="$EXTERNAL_CFG/enable_limiter"
+APP_OPTIMIZE="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/app_optimizer"
+
+# --- NOTIFICATION UTILITY ---
+notify_engine() {
+    # Skip if notification toggle is OFF
+    [ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
+
+    RAW_TEMP=$(cat /sys/class/power_supply/battery/temp 2>/dev/null)
+    B_TEMP="$((RAW_TEMP / 10)).$((RAW_TEMP % 10))°C"
+    local title="$1"
+    local msg="$2"
+    su -lp 2000 -c "cmd notification post -S bigtext -t '$title' tag '$msg | temp: $B_TEMP'" >/dev/null 2>&1
+}
+
+log_msg() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+    [ "$(wc -l < $LOG_FILE)" -gt 200 ] &&
+        tail -n 200 "$LOG_FILE" > "$LOG_FILE.tmp" &&
+        mv "$LOG_FILE.tmp" "$LOG_FILE"
+}
+
+run_external_binary() {
+    SCRIPT_PATH="$1"
+    if [ ! -x "$SCRIPT_PATH" ]; then
+        log_msg "❌ Binary not executable: $SCRIPT_PATH"
+        return 1
+    fi
+
+    # Simple: just run it (assume main logic prevents duplicates)
+    "$SCRIPT_PATH" >/dev/null 2>&1 &
+}
+
+disable_zram() {
+echo "Stopping zram..."
+# Turn off the swap device
+swapoff /dev/block/zram0
+
+# Reset the zram device to free the memory it was holding
+echo 1 > /sys/block/zram0/reset
+
+echo "zram disabled. Check stats below:"
+free -m
+}
+
+enable_zram() {
+# Load saved settings
+CONF="/data/adb/zram_config/settings.conf"
+if [ -f "$CONF" ]; then
+    . "$CONF"
+else
+    # Defaults if no config exists
+    SIZE="2048M"
+    ALGO="lz4"
+    SWAP="100"
+fi
+
+# V4 UNIVERSAL ENGINE
+ZDEV=$(grep "/zram" /proc/swaps | awk '{print $1}')
+[ -z "$ZDEV" ] && ZDEV="/dev/block/zram0"
+ZNAME=$(basename "$ZDEV")
+
+swapoff "$ZDEV" 2>/dev/null
+echo 1 > "/sys/block/"$ZNAME"/reset"
+echo "$ALGO" > "/sys/block/"$ZNAME"/comp_algorithm"
+echo "$SIZE" > "/sys/block/"$ZNAME"/disksize"
+mkswap "$ZDEV" > /dev/null
+swapon -p 100 "$ZDEV" 2>/dev/null || swapon "$ZDEV"
+
+# Apply Swappiness
+echo "$SWAP" > /proc/sys/vm/swappiness
+}
+
+apply_gaming_logic() {
+    local pkg_name="$1"
+      
+    run_external_binary "$SCRIPT_RUNNER"  
+    run_external_binary "$APP_OPTIMIZE" 
+                            
+    if [ -f "$EXTERNAL_CFG/enable_auto_freq" ] && [ -f "$AUTOFREQ_PATH" ]; then
+        run_external_binary "$AUTOFREQ_PATH"
+    fi
+    if [ -f "$EXTERNAL_CFG/enable_performance" ] && [ -f "$PERFORMANCE_PATH" ]; then     
+        run_external_binary "$PERFORMANCE_PATH"
+    fi
+    if [ -f "$EXTERNAL_CFG/enable_gaming_prop" ] && [ -f "$GAMING_PROP_PATH" ]; then
+        run_external_binary "$GAMING_PROP_PATH"
+    fi        
+    if [ -f "$EXTERNAL_CFG/enable_highframerate" ] && [ -f "$UNLOCK_FPS_PATH" ]; then       
+        run_external_binary "$UNLOCK_FPS_PATH"
+    fi
+    if [ -f "$EXTERNAL_CFG/enable_gaming_prop2" ] && [ -f "$GAMING_PROP2_PATH" ]; then
+        run_external_binary "$GAMING_PROP2_PATH"
+    fi
+    if [ -f "$EXTERNAL_CFG/enable_bypass" ] && [ -f "$CHARGER_CHECK_PATH" ]; then
+        run_external_binary "$CHARGER_CHECK_PATH"
+    fi                
+        pkill -f touch2
+      
+    for c in /sys/devices/system/cpu/cpu*/core_ctl; do echo 0 > "$c/enable"; done
+    
+    CURRENT_MODE="GAMING"
+    log_msg "✅ Gaming Mode: $pkg_name"
+    notify_engine "🎮 Gaming Mode Active" "App: $pkg_name | Cores Locked"
+}
+
+apply_non_gaming_logic() {
+    [ "$CURRENT_MODE" = "NORMAL" ] && return
+    log_msg "🔋 [MODE] NORMAL: Releasing frequency locks..."
+    
+    pkill -f charger_check
+    pkill -f bypass_on
+    
+    if [ -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "$LIMIT_PATH" ]; then       
+        run_external_binary "$LIMIT_PATH"
+    fi
+    
+    if [ -f "$EXTERNAL_CFG/enable_disable_thermal" ] && [ -f "$DISABLE_THERMAL_PATH" ]; then      
+        run_external_binary "$DISABLE_THERMAL_PATH"
+    fi
+    if [ -f "$EXTERNAL_CFG/enable_performance" ] && [ -f "$PERFORMANCE_PATH" ]; then     
+        run_external_binary "$PERFORMANCE_PATH"
+    fi   
+    if [ -f "$EXTERNAL_CFG/enable_highframerate" ] && [ -f "$UNLOCK_PATH" ]; then       
+        run_external_binary "$UNLOCK_PATH"
+    fi
+    
+    # Notify immediately when leaving gaming mode
+    notify_engine "🔋 Normal Mode" "Optimization Balanced | Cooling Active"
+
+    for policy in /sys/devices/system/cpu/cpufreq/policy*; do
+        MIN_VAL=$(cat "$policy/cpuinfo_min_freq")
+        MAX_VAL=$(cat "$policy/cpuinfo_max_freq")
+        echo "schedutil" > "$policy/scaling_governor"
+        echo "$MIN_VAL" > "$policy/scaling_min_freq"
+        echo "$MAX_VAL" > "$policy/scaling_max_freq"
+    done
+
+    GPU_PATH=$(ls -d /sys/class/devfreq/*mali* 2>/dev/null | head -n 1)
+    [ -n "$GPU_PATH" ] && echo "powersave" > "$GPU_PATH/governor"             
+    run_external_binary "$SCREEN_ON_PATH"     
+    run_external_binary "$WEBVIEW_PATH"    
+    run_external_binary "$CPUSET_NORMAL_PATH"
+    run_external_binary "$NORMAL_PROP_PATH"
+    run_external_binary "$SCRIPT_RUNNER"
+    run_external_binary "$RESOURCES_PATH" 
+    run_external_binary "$TOUCH"
+    run_external_binary "$BYPASS_OFF_PATH"
+    run_external_binary "$VOLTAGE_OFFSET"
+    run_external_binary "$MANUAL_GLOBAL_FILE"   
+    pkill -f lite_gaming
+    pkill -f auto_frequency
+    su -c am broadcast -a com.coloros.phonemanager.action.CLEAN_UP
+    su -c "am broadcast -a com.transsion.phonemaster.action.CLEAN_MEMORY"
+    CURRENT_MODE="NORMAL"
+}
+# State tracking file
+GAME_STATE_FILE="/dev/.mtk_ai_active_game"
+NORMAL_STATE_FILE="/dev/.mtk_ai_normal_mode"
+CAMERA_STATE_FILE="/dev/.mtk_ai_camera_active"
+CPUSET_STATE_FILE="/dev/.mtk_ai_cpuset_state"
+
+# === ROBUST LOGCAT MONITOR (Touch Script Style) ===
+LOGCAT_PID_FILE="/data/adb/modules/MTK_AI/logcat_monitor.pid"
+LOGCAT_STATE_FILE="/data/local/tmp/logcat_state"
+
+# Cleanup old processes
+pkill -f "logcat.*events" 2>/dev/null
+
+# Start logcat in background (like your touch heartbeat)
+(
+    while true; do
+        logcat -b events -T 1 -v threadtime > /data/local/tmp/logcat_events &
+        LOGCAT_PID=$!
+        echo $LOGCAT_PID > "$LOGCAT_PID_FILE"
+        
+        # Wait for logcat to die or be killed
+        wait $LOGCAT_PID 2>/dev/null
+        
+        # If we get here, logcat died - restart after short delay
+        sleep 2
+    done
+) &
+
+# Main monitoring loop (like your touch script)
+log_msg "🚀 Starting robust logcat monitor..."
+echo "ACTIVE" > "$LOGCAT_STATE_FILE"
+
+while true; do
+    # Check if logcat process is still running
+    if [ -f "$LOGCAT_PID_FILE" ]; then
+        LOGCAT_PID=$(cat "$LOGCAT_PID_FILE")
+        if ! kill -0 "$LOGCAT_PID" 2>/dev/null; then
+            # Logcat died, restart it
+            log_msg "🔄 Logcat process died, restarting..."
+            pkill -f "logcat.*events" 2>/dev/null
+            # The background loop above will automatically restart it
+        fi
+    fi
+    
+    # Read from logcat output file (not direct pipeline)
+    if [ -f "/data/local/tmp/logcat_events" ]; then
+        # Process new lines only (like your touch timestamp approach)
+        while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            
+            # ➤ SCREEN OFF TRIGGER
+            case "$line" in
+                *"screen_off"*|*"sys_screen_off"*|*"screen_toggled=0"*|*"lcd_power: 0"*|*"power_screen_state: [0,"*)
+                    log_msg "🌙 Screen Off Detected."
+                    if [ -f "$EXTERNAL_CFG/low_power_mode" ] && [ -f "$UNLOCK_PATH" ]; then       
+                        run_external_binary "$SCREEN_OFF_PATH"                    
+                        fi         
+                    notify_engine "🌙 Screen Off" "Entering Power Saver Mode"
+                    ;;
+            esac
+
+            # ➤ SCREEN ON TRIGGER
+            case "$line" in
+                *"screen_on"*|*"sys_screen_on"*|*"screen_toggled=1"*|*"lcd_power: 1"*|*"power_screen_state: [1,"*)
+                    log_msg "☀️ Screen On Detected."
+                    run_external_binary "$MANUAL_GLOBAL_FILE"
+                    notify_engine "☀️ Screen On" "Restoring Balanced Performance"
+                    ;;
+            esac
+     
+            # ➤ APP ACTIVITY RESUME — GAME OR NORMAL MODE
+            case "$line" in
+                *"input_focus"*|*"wm_on_resume_called"*|*"top_resumed_app_focus"*|*"am_on_resume_called"*|*"monitor_focus_event"*|*"am_resume_activity"*)
+                    # Extract package name
+                    DETECTED_PKG=$(echo "$line" | grep -oE '[a-zA-Z0-9._]+\/[a-zA-Z0-9._]+' | cut -d'/' -f1 | tail -n 1)
+                    if [ -z "$DETECTED_PKG" ]; then
+                        DETECTED_PKG=$(echo "$line" | sed -n 's/.* \([^/ ]*\)\/[^/ ]*.*/\1/p' | grep -oE '[a-zA-Z0-9._]' | head -n 1)
+                    fi
+
+                    # Skip invalid or system packages
+                    if [ -z "$DETECTED_PKG" ] || ! echo "$DETECTED_PKG" | grep -q '\.'; then
+                        continue
+                    fi
+                
+                    # 🔒 WHITELIST CHECK - COMPLETE SKIP (NO LOGIC AT ALL)
+                    if [ -f "$WHITELIST_FILE" ] && grep -Fxq "$DETECTED_PKG" "$WHITELIST_FILE" 2>/dev/null; then
+                        log_msg "⏭️ Whitelisted app detected: $DETECTED_PKG - Skipping all processing"
+                        continue
+                    fi
+        
+                    # 📸 CAMERA DETECTION
+                    IS_CAMERA=0
+                    case "$DETECTED_PKG" in
+                        *camera*|*Camera*|*snapdragon*|*halo*|*opencamera*|*fovcam*|*mediatek.camera*|\
+                        com.android.camera|com.sec.android.app.camera|com.google.android.camera|\
+                        com.huawei.camera|com.oppo.camera|com.vivo.camera|com.oneplus.camera|\
+                        com.sonyericsson.android.camera|com.motorola.camera|com.zte.camera*)
+                            IS_CAMERA=1
+                            ;;
+                    esac
+        
+                    if [ "$IS_CAMERA" = 1 ]; then
+                        log_msg "📸 Camera detected: $DETECTED_PKG"
+            
+                        # Activate camera mode: rename limiter to .exec
+                        if [ -f "$LIMITER_FILE" ] && [ ! -f "${LIMITER_FILE}.exec" ]; then                            mv "$LIMITER_FILE" "${LIMITER_FILE}.exec"
+                            log_msg "✅ Limiter disabled for camera (renamed to .exec)"
+                        fi
+            
+                        # Mark camera as active
+                        echo "1" > "$CAMERA_STATE_FILE"
+            
+                        # Apply safe tuning (optional but recommended)
+                        apply_non_gaming_logic
+                        enable_zram
+                        rm -f "$GAME_STATE_FILE"
+                        
+                        continue
+                    fi
+                    
+                    case "$DETECTED_PKG" in
+                        *launcher*|*systemui*|*settings*|*google*|*transsion*|android)
+                        if [ -f "$CAMERA_STATE_FILE" ]; then
+                            log_msg "🚪 Exiting camera app"
+                            # Restore limiter
+                            if [ -f "${LIMITER_FILE}.exec" ] && [ ! -f "$LIMITER_FILE" ]; then
+                                mv "${LIMITER_FILE}.exec" "$LIMITER_FILE"
+                                log_msg "✅ Limiter re-enabled after camera exit"
+                            fi
+                            rm -f "$CAMERA_STATE_FILE"
+                        fi
+                            apply_non_gaming_logic
+                            enable_zram
+                            rm -f "$GAME_STATE_FILE"  # Clear game state
+                            continue
+                            ;;
+                    esac
+
+                    # Check if it's a game
+                    if [ -f "$GAME_LIST_FILE" ] && grep -Fxq "$DETECTED_PKG" "$GAME_LIST_FILE"; then
+                        # 🎮 GAME MODE
+                        # Check if already active
+                        if [ -f "$GAME_STATE_FILE" ]; then
+                            ACTIVE_GAME=$(cat "$GAME_STATE_FILE" 2>/dev/null)
+                            if [ "$ACTIVE_GAME" = "$DETECTED_PKG" ]; then
+                                # Already applied — skip
+                                continue
+                            fi
+                        fi
+                       
+                        # Save state
+                        echo "$DETECTED_PKG" > "$GAME_STATE_FILE"
+                        rm -f "$NORMAL_STATE_FILE"        # Exit normal mode
+                        # Apply gaming logic
+                        apply_gaming_logic "$DETECTED_PKG"                        log_msg "🎮 Gaming mode triggered for: $DETECTED_PKG"
+                        notify_engine "🎮 Gaming mode" "Target: $DETECTED_PKG"
+                        
+                        # 🧠 APPLY CPUSETS (only if not already applied)
+                        CPUSET_RULES="/sdcard/MTK_AI_Engine/gaming_cpuset_rules.json"
+                        if [ -f "$CPUSET_RULES" ]; then
+                            # Generate a hash of current game + rules to detect changes
+                            CURRENT_STATE="$DETECTED_PKG:$(md5sum "$CPUSET_RULES" 2>/dev/null | cut -d' ' -f1)"
+                            LAST_STATE=$(cat "$CPUSET_STATE_FILE" 2>/dev/null)
+    
+                            if [ "$CURRENT_STATE" != "$LAST_STATE" ]; then
+                                log_msg "🧠 Applying cpusets (jq-free)..."
+        
+                                # Enforce top-app = all cores
+                                echo "0-7" > /dev/cpuset/top-app/cpus 2>/dev/null
+
+                                QUOTED=$(grep -o '"[^"]*"' "$CPUSET_RULES" 2>/dev/null | tr -d '"')
+                                set -- $QUOTED
+
+                                while [ $# -ge 2 ]; do
+                                    pkg="$1"
+                                    cpuset="$2"
+                                    shift 2
+
+                                    case "$cpuset" in
+                                        background|system-background|top-app) ;;
+                                        *) continue ;;
+                                    esac
+
+                                    case "$pkg" in
+                                        android|com.android.systemui|com.android.phone|com.android.shell|com.topjohnwu.magisk|io.github.kernelsu.manager|logcat|dumpsys2|sh)
+                                            continue
+                                            ;;
+                                    esac
+
+                                    # Skip current game
+                                    if [ "$pkg" = "$DETECTED_PKG" ]; then
+                                        continue
+                                    fi
+
+                                    for pid in $(pidof "$pkg" 2>/dev/null); do
+                                        if [ -n "$pid" ] && [ -w "/dev/cpuset/$cpuset/cgroup.procs" ]; then
+                                            echo "$pid" > "/dev/cpuset/$cpuset/cgroup.procs" 2>/dev/null
+                                            log_msg "→ $pkg ($pid) → $cpuset"
+                                        fi
+                                    done
+                                done
+
+                                echo "$CURRENT_STATE" > "$CPUSET_STATE_FILE"
+                                log_msg "✅ Cpuset assignment completed!"                            else
+                                log_msg "ℹ️ Cpusets already applied — skipping"
+                            fi
+                        fi
+                        
+                        # 🍃 LITE GAMING
+                        if [ -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "$LITE_GAMING_PATH" ]; then
+                            log_msg "🍃 Lite Gaming triggered for: $DETECTED_PKG"
+                            run_external_binary "$LITE_GAMING_PATH"
+                            notify_engine "🍃 Lite Gaming Mode" "Target: $DETECTED_PKG"
+                        fi
+                        
+                        # 🎯 PER-APP AUTO-TUNING TRIGGER
+                        PER_APP_DIR="/sdcard/MTK_AI_Engine/per_app"
+                        VSYNC_DIR="/sdcard/MTK_AI_Engine/vsync_configs"
+                        REFRESH_LOCK_DIR="/sdcard/MTK_AI_Engine/refresh_locks"
+                        RENDERER_DIR="/sdcard/MTK_AI_Engine/threading_configs"
+                        PKG="$DETECTED_PKG"
+                        : ${BASE_DENSITY:=480}
+
+                        # --- 1. RESOLUTION SCALING ---
+                        SCALE_FILE="$PER_APP_DIR/${PKG}.scale"
+                        if [ -f "$SCALE_FILE" ]; then
+                            SCALE_PCT=$(tr -d '\r\n\t ' < "$SCALE_FILE")
+                            if [ -n "$SCALE_PCT" ] && [ "$SCALE_PCT" -eq "$SCALE_PCT" ] 2>/dev/null; then
+                                NEW_DENSITY=$(( (BASE_DENSITY * SCALE_PCT) / 100 ))
+                                wm density "$NEW_DENSITY" 2>/dev/null && \
+                                    log_msg "📱 Scaling: ${SCALE_PCT}% → $PKG"
+                            fi
+                        fi
+
+                        # --- 2. CPU GOVERNOR ---
+                        GOV_FILE="$PER_APP_DIR/${PKG}.governor"
+                        if [ -f "$GOV_FILE" ]; then
+                            GOVERNOR=$(tr -d '\r\n\t ' < "$GOV_FILE")
+                            if [ -n "$GOVERNOR" ]; then
+                                for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+                                    gov_path="$cpu/cpufreq/scaling_governor"
+                                    [ -w "$gov_path" ] && echo "$GOVERNOR" > "$gov_path" 2>/dev/null
+                                done
+                                log_msg "⚡ Governor: $GOVERNOR → $PKG"
+                            fi
+                        fi
+
+                        # --- 3. RENDERER ---
+                        RENDERER_FILE="$RENDERER_DIR/${PKG}.conf"
+                        if [ -f "$RENDERER_FILE" ]; then
+                            RENDERER=$(tr -d '\r\n\t ' < "$RENDERER_FILE")
+                            case "$RENDERER" in
+                                skiavk|skiagl)                                    setprop debug.hwui.renderer "$RENDERER" 2>/dev/null
+                                    log_msg "🎨 Renderer: $RENDERER → $PKG"
+                                    ;;
+                                *)
+                                    log_msg "⚠️ Invalid renderer: '$RENDERER' in .conf"
+                                    ;;
+                            esac
+                        fi
+
+                        # --- 4. VSYNC ---
+                        VSYNC_FILE="$VSYNC_DIR/${PKG}.vsync"
+                        if [ -f "$VSYNC_FILE" ]; then
+                            VSYNC_NS=$(tr -d '\r\n\t ' < "$VSYNC_FILE")
+                            if [ -n "$VSYNC_NS" ] && [ "$VSYNC_NS" -eq "$VSYNC_NS" ] 2>/dev/null; then
+                                setprop debug.sf.early_phase_offset_ns "$VSYNC_NS"
+                                setprop debug.sf.early_gl_phase_offset_ns "$VSYNC_NS"
+                                setprop debug.sf.high_fps_early_phase_offset_ns "$VSYNC_NS"
+                                setprop debug.sf.high_fps_early_gl_phase_offset_ns "$VSYNC_NS"
+                                setprop debug.sf.high_fps_late_app_phase_offset_ns "$VSYNC_NS"
+                                log_msg "⏱️ VSync: ${VSYNC_NS}ns → $PKG"
+                            fi
+                        fi
+
+                        # --- 5. REFRESH RATE ---
+                        REFRESH_FILE="$REFRESH_LOCK_DIR/${PKG}.mode"
+                        if [ -f "$REFRESH_FILE" ]; then
+                            MODE_ID=$(tr -d '\r\n\t ' < "$REFRESH_FILE")
+                            if [ -n "$MODE_ID" ] && [ "$MODE_ID" -eq "$MODE_ID" ] 2>/dev/null; then
+                                service call SurfaceFlinger 1035 i32 "$MODE_ID" >/dev/null 2>&1 && \
+                                    log_msg "🖥️ Refresh Rate: mode $MODE_ID → $PKG"
+                            fi
+                        fi
+            
+                        # --- 6. EEM VOLTAGE OFFSET ---
+                        EEM_FILE="$PER_APP_DIR/${PKG}.eem_offset"
+                        if [ -f "$EEM_FILE" ]; then
+                            EEM_OFFSET=$(tr -d '\r\n\t ' < "$EEM_FILE")
+                            if [ -n "$EEM_OFFSET" ] && [ "$EEM_OFFSET" -eq "$EEM_OFFSET" ] 2>/dev/null; then
+                                # Apply to all universal EEM paths
+                                for eem_path in \
+                                    /proc/eem/EEM_DET_B/eem_offset \
+                                    /proc/eem/EEM_DET_L/eem_offset \
+                                    /proc/eem/EEM_DET_CCI/eem_offset \
+                                    /proc/eem/EEM_DET_BL/eem_offset \
+                                    /proc/eemg/EEMG_DET_GPU/eemg_offset \
+                                    /proc/eemg/EEMG_DET_GPU_HI/eemg_offset; do
+                                         if [ -f "$eem_path" ]; then
+                                    echo "$EEM_OFFSET" > "$eem_path" 2>/dev/null && \
+                                        log_msg "⚡ EEM Offset: ${EEM_OFFSET} → $PKG"
+                                         fi                                    done
+                            fi
+                        fi            
+                        
+                        if [ -f "$EXTERNAL_CFG/disable_zram" ]; then 
+                            disable_zram
+                        else
+                            enable_zram
+                        fi               
+                    else
+                        # 🔋 NORMAL MODE
+                        if [ -f "$CAMERA_STATE_FILE" ]; then
+                            log_msg "🚪 Exiting camera app"
+                            # Restore limiter
+                            if [ -f "${LIMITER_FILE}.exec" ] && [ ! -f "$LIMITER_FILE" ]; then
+                                mv "${LIMITER_FILE}.exec" "$LIMITER_FILE"
+                                log_msg "✅ Limiter re-enabled after camera exit"
+                            fi
+                            rm -f "$CAMERA_STATE_FILE"
+                        fi
+                            enable_zram
+                            apply_non_gaming_logic
+                            rm -f "$GAME_STATE_FILE"          # Clear game state
+                            echo "1" > "$NORMAL_STATE_FILE"   # Mark normal state active
+                    fi
+                    ;;
+            esac
+        done < /data/local/tmp/logcat_events
+        
+        # Clear the file after processing (like your touch timestamp reset)
+        > /data/local/tmp/logcat_events
+    fi
+    
+    sleep 1
+done
