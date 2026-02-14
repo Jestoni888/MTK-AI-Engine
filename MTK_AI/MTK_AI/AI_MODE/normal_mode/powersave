@@ -35,14 +35,6 @@ fi
         echo "✅ Disabled MIUI AI preload"
     fi
 
-    # --- Aggressively idle all 3rd-party apps ---
-    echo "🧹 Forcing all user apps into standby..."
-    for pkg in $(pm list packages -3 | cut -f2 -d':'); do
-        am set-inactive "$pkg" true 2>/dev/null
-        am set-idle "$pkg" true 2>/dev/null
-        am make-uid-idle --user current "$pkg" 2>/dev/null
-    done
-
     # Trigger Doze immediately
     dumpsys deviceidle enable 2>/dev/null
     dumpsys deviceidle force-idle 2>/dev/null
