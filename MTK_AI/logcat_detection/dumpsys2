@@ -287,7 +287,7 @@ while true; do
         LAST_SCREEN_STATE="on"
     elif [ "$SCREEN_ON" = 0 ] && [ "$LAST_SCREEN_STATE" != "off" ]; then
         log_msg "🌙 Screen Off Detected (dumpsys)."
-        if [ -f "$EXTERNAL_CFG/low_power_mode" ] && [ -f "$UNLOCK_PATH" ]; then       
+        if [ -f "$EXTERNAL_CFG/low_power_mode" ]; then       
             run_external_binary "$SCREEN_OFF_PATH"                    
         fi         
         notify_engine "🌙 Screen Off" "Entering Power Saver Mode"
