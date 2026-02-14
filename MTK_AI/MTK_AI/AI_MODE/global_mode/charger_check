@@ -1,0 +1,72 @@
+#!/system/bin/sh
+
+### ==== FLOOD GUARD BEGIN ==== ###
+
+SCRIPT_NAME="$(basename "$0")"
+STATE_DIR="/data/adb/modules/MTK_AI/.guard"
+mkdir -p "$STATE_DIR"
+
+RUN_TS_FILE="$STATE_DIR/${SCRIPT_NAME}.last"
+COUNT_FILE="$STATE_DIR/${SCRIPT_NAME}.count"
+
+NOW=$(date +%s)
+LAST=$(cat "$RUN_TS_FILE" 2>/dev/null || echo 0)
+COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)
+
+# --- rate limits ---
+MIN_INTERVAL=5      # seconds between runs
+MAX_RUNS=5          # max runs per minute
+WINDOW=60
+
+# Too soon? exit silently
+[ $((NOW - LAST)) -lt $MIN_INTERVAL ] && exit 0
+
+# Count runs in window
+if [ $((NOW - LAST)) -lt $WINDOW ]; then
+  COUNT=$((COUNT + 1))
+else
+  COUNT=1
+fi
+
+# Too many executions? hard stop
+if [ "$COUNT" -gt "$MAX_RUNS" ]; then
+  exit 0
+fi
+
+echo "$NOW" > "$RUN_TS_FILE"
+echo "$COUNT" > "$COUNT_FILE"
+
+### ==== FLOOD GUARD END ==== ###
+
+# Use the absolute path starting with /
+MODDIR="/data/adb/modules/MTK_AI"
+BYPASS_ON="$MODDIR/MTK_AI/AI_MODE/gaming_mode/bypass_on"
+BYPASS_OFF="$MODDIR/MTK_AI/AI_MODE/normal_mode/bypass_off"
+
+# Function to apply the correct bypass state
+apply_bypass_logic() {
+    # Check both battery status and charger/online nodes
+    if grep -qE "Charging|Full" /sys/class/power_supply/*/status 2>/dev/null || \
+       grep -q "1" /sys/class/power_supply/*/online 2>/dev/null; then
+        echo "Connected: Enabling Bypass"
+        [ -f "$BYPASS_ON" ] && "$BYPASS_ON"
+    else
+        echo "Disconnected: Disabling Bypass"
+        [ -f "$BYPASS_OFF" ] && "$BYPASS_OFF"
+    fi
+}
+
+# --- 1. RUN IMMEDIATELY ON START ---
+apply_bypass_logic
+
+# --- 2. LISTEN FOR HARDWARE CHANGES ---
+# This loop stays alive and waits for Kernel events.
+# It will be killed by 'pkill -f charger_check.sh' when you exit the game.
+cat /sys/class/power_supply/*/uevent | while read -r line; do
+    # We only trigger a re-check if the power state actually changes
+    case "$line" in
+        *"POWER_SUPPLY_ONLINE="*|*"POWER_SUPPLY_STATUS="*)
+            apply_bypass_logic
+            ;;
+    esac
+done
