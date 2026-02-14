@@ -267,7 +267,7 @@ while true; do
             case "$line" in
                 *"screen_off"*|*"sys_screen_off"*|*"screen_toggled=0"*|*"lcd_power: 0"*|*"power_screen_state: [0,"*)
                     log_msg "🌙 Screen Off Detected."
-                    if [ -f "$EXTERNAL_CFG/low_power_mode" ] && [ -f "$UNLOCK_PATH" ]; then       
+                    if [ -f "$EXTERNAL_CFG/low_power_mode" ]; then       
                         run_external_binary "$SCREEN_OFF_PATH"                    
                         fi         
                     notify_engine "🌙 Screen Off" "Entering Power Saver Mode"
