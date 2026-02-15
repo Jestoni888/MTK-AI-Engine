@@ -1,0 +1,43 @@
+#!/system/bin/sh
+
+# CPUSet Auto-Apply Boot Script
+# Reads /sdcard/cpuset_auto.json and applies masks to all groups
+# Place in /data/adb/service.d/ (Magisk) or /system/etc/init.d/ (init.d)
+
+JSON="/sdcard/MTK_AI_Engine/cpuset_auto.json"
+LOG="/dev/null"  # change to "/data/media/0/MTK_AI_Engine/MTK_AI_Engine.log" for debugging
+
+[ -f "$JSON" ] || exit 0
+
+# Wait for /dev/cpuset to be ready (up to 10 sec)
+i=0
+while [ ! -d "/dev/cpuset/foreground" ] && [ $i -lt 20 ]; do
+    sleep 0.5
+    i=$((i + 1))
+done
+
+# Parse JSON and apply each group
+while IFS= read -r line; do
+    # Extract "path": "/dev/cpuset/..."
+    if echo "$line" | grep -q '"path"'; then
+        # Extract path value (2nd quoted string)
+        path=$(echo "$line" | grep -o '"[^"]*"' | sed -n '2p' | tr -d '"')
+        # Extract mask from next lines (look for "mask": "...")
+        mask=""
+        while IFS= read -r next; do
+            if echo "$next" | grep -q '"mask"'; then
+                mask=$(echo "$next" | grep -o '"[^"]*"' | sed -n '2p' | tr -d '"')
+                break
+            fi
+            # Stop if we hit next object
+            echo "$next" | grep -q '{' && break
+        done
+        # Apply if valid
+        if [ -n "$mask" ] && [ -w "$path" ]; then
+            echo "$mask" > "$path" 2>>"$LOG"
+            echo "Applied: $path = $mask" >>"$LOG"
+        fi
+    fi
+done < "$JSON"
+
+exit 0
