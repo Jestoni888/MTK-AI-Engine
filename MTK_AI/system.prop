@@ -129,3 +129,4 @@ ro.surface_flinger.max_frame_buffer_acquired_buffers=3
 ro.ril.disable.power.collapse=0
 pm.sleep_mode=1
 wifi.supplicant_scan_interval=180
+vendor.camera.tran.nums=1
