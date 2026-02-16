@@ -1,0 +1,106 @@
+#!/system/bin/sh
+#!/data/adb/modules/MTK_AI/busybox sh
+
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+
+MODULE_PATH="/data/adb/modules/MTK_AI"
+BUSYBOX="$MODULE_PATH/busybox"
+LOCAL_PROP="$MODULE_PATH/module.prop"
+REMOTE_PROP_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/module.prop"
+TEMP_REMOTE_PROP="/dev/.mtk_ai_remote.prop"
+
+# Ensure /dev exists
+[ -d /dev ] || mkdir -p /dev
+
+# Use your module's BusyBox to run wget
+"$BUSYBOX" wget -q --timeout=10 --tries=1 -O "$TEMP_REMOTE_PROP" "$REMOTE_PROP_URL"
+
+HAS_UPDATE=0
+
+if [ -f "$TEMP_REMOTE_PROP" ] && [ -f "$LOCAL_PROP" ]; then
+    # Extract versionCode safely using BusyBox grep/sed
+    REMOTE_VERSION_CODE=$("$BUSYBOX" grep -E "^versionCode[[:space:]]*=" "$TEMP_REMOTE_PROP" | "$BUSYBOX" sed 's/^[^=]*=[[:space:]]*//' | tr -d '\r')
+    LOCAL_VERSION_CODE=$("$BUSYBOX" grep -E "^versionCode[[:space:]]*=" "$LOCAL_PROP" | "$BUSYBOX" sed 's/^[^=]*=[[:space:]]*//' | tr -d '\r')
+
+    # Validate numeric values
+    if [ -n "$REMOTE_VERSION_CODE" ] && [ -n "$LOCAL_VERSION_CODE" ]; then
+        case "$REMOTE_VERSION_CODE" in
+            ''|*[!0-9]*) REMOTE_VERSION_CODE=0 ;;
+        esac
+        case "$LOCAL_VERSION_CODE" in
+            ''|*[!0-9]*) LOCAL_VERSION_CODE=0 ;;
+        esac
+
+        if [ "$REMOTE_VERSION_CODE" -gt "$LOCAL_VERSION_CODE" ] 2>/dev/null; then
+            HAS_UPDATE=1
+        fi
+    fi
+fi
+
+# Cleanup
+rm -f "$TEMP_REMOTE_PROP"
+
+# Static metadata (your current local config)
+ID="MTK_AI"
+NAME="MediaTek AI Engine"
+VERSION="0.0.0.42"
+VERSIONCODE="42"
+AUTHOR="t.me/mikamisaturo"
+UPDATE_JSON="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/update.json"
+WEBUI="true"
+
+# Set dynamic description
+if [ "$HAS_UPDATE" -eq 1 ]; then
+    DESCRIPTION="[NEW UPDATE NOTICE✅ click action button ▶️]---MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way"
+else
+    DESCRIPTION="[NEW UPDATE NOTICE❌ click action button ▶️]---MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way"
+fi
+
+# Rewrite module.prop
+cat > "$LOCAL_PROP" <<EOF
+id=$ID
+name=$NAME
+version=$VERSION
+versionCode=$VERSIONCODE
+author=$AUTHOR
+description=$DESCRIPTION
+updateJson=$UPDATE_JSON
+webui=$WEBUI
+EOF
+
+echo "MTK_AI: Local v$VERSIONCODE | Update available: $( [ $HAS_UPDATE -eq 1 ] && echo YES || echo NO )"
+
+log_msg() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
+
+#Deactivating developer options to save battery
+su -c settings put global development_settings_enabled 0
+sleep 5
+
+echo "0" > /proc/sys/kernel/panic
+    
+# 1. Apply Properties (Fast)
+setprop debug.hwui.render_ahead 0
+setprop persist.sys.miravision.vivid.mode 0
+setprop persist.sys.force_vivid 0
+setprop persist.sys.framepredict.enable false
+setprop debug.sf.latch_unsignaled false
+setprop debug.cpurendering false
+setprop debug.egl.force_msaa false
+setprop persist.sys.ui.hw true
+setprop persist.sys.use_dithering 0
+setprop debug.sf.early_phase_offset_ns 0
+setprop debug.sf.early_gl_phase_offset_ns 0
+setprop debug.sf.high_fps_early_phase_offset_ns 0
+setprop debug.sf.high_fps_early_gl_phase_offset_ns 0
+
+# 2. Non-blocking SurfaceFlinger Call
+# We remove the loop and the sleep. We call it once.
+# If it's a "normal mode" script, the system is already up.
+
+    # Running this in a subshell ( ) & prevents the main engine from waiting
+    service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1
+        
+    log_msg "🟢 NORMAL MODE PROPS applied (SF 1008 called)"
+ 
