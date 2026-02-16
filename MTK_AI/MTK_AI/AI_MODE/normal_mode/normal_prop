@@ -1,0 +1,86 @@
+#!/system/bin/sh
+#!/data/adb/modules/MTK_AI/busybox sh
+
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+
+#!/system/bin/sh
+
+MODULE_PATH="/data/adb/modules/MTK_AI"
+BUSYBOX="$MODULE_PATH/busybox"
+LOCAL_PROP="$MODULE_PATH/module.prop"
+REMOTE_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/module.prop"
+TEMP_FILE="/dev/.mtk_ai_online.prop"
+
+# Fetch remote module.prop
+"$BUSYBOX" wget -q --timeout=10 --tries=1 -O "$TEMP_FILE" "$REMOTE_URL"
+
+# Extract versionCode
+LOCAL_VER=$("$BUSYBOX" awk -F'=' '/^[ \t]*versionCode[ \t]*=/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}' "$LOCAL_PROP" 2>/dev/null)
+REMOTE_VER=$("$BUSYBOX" awk -F'=' '/^[ \t]*versionCode[ \t]*=/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}' "$TEMP_FILE" 2>/dev/null)
+
+# Validate integers
+case "$LOCAL_VER" in ''|*[!0-9]*) LOCAL_VER=0 ;; esac
+case "$REMOTE_VER" in ''|*[!0-9]*) REMOTE_VER=0 ;; esac
+
+# Clean up
+rm -f "$TEMP_FILE"
+
+# Choose description
+if [ "$REMOTE_VER" -gt "$LOCAL_VER" ] 2>/dev/null; then
+    NEW_DESC="[NEW UPDATE NOTICE✅ click action button ▶️]---MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way"
+else
+    NEW_DESC="[NEW UPDATE NOTICE❌ click action button ▶️]---MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way"
+fi
+
+# Update ONLY the description line in module.prop
+TMP_PROP="$MODULE_PATH/module.prop.tmp"
+{
+    while IFS= read -r line; do
+        if echo "$line" | "$BUSYBOX" grep -qE '^[ \t]*description[ \t]*='; then
+            echo "description=$NEW_DESC"
+        else
+            echo "$line"
+        fi
+    done < "$LOCAL_PROP"
+} > "$TMP_PROP"
+
+# Replace original
+mv "$TMP_PROP" "$LOCAL_PROP"
+
+# Optional: log
+echo "Description updated based on version check (local:$LOCAL_VER, remote:$REMOTE_VER)"
+
+log_msg() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
+
+#Deactivating developer options to save battery
+su -c settings put global development_settings_enabled 0
+sleep 5
+
+echo "0" > /proc/sys/kernel/panic
+    
+# 1. Apply Properties (Fast)
+setprop debug.hwui.render_ahead 0
+setprop persist.sys.miravision.vivid.mode 0
+setprop persist.sys.force_vivid 0
+setprop persist.sys.framepredict.enable false
+setprop debug.sf.latch_unsignaled false
+setprop debug.cpurendering false
+setprop debug.egl.force_msaa false
+setprop persist.sys.ui.hw true
+setprop persist.sys.use_dithering 0
+setprop debug.sf.early_phase_offset_ns 0
+setprop debug.sf.early_gl_phase_offset_ns 0
+setprop debug.sf.high_fps_early_phase_offset_ns 0
+setprop debug.sf.high_fps_early_gl_phase_offset_ns 0
+
+# 2. Non-blocking SurfaceFlinger Call
+# We remove the loop and the sleep. We call it once.
+# If it's a "normal mode" script, the system is already up.
+
+    # Running this in a subshell ( ) & prevents the main engine from waiting
+    service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1
+        
+    log_msg "🟢 NORMAL MODE PROPS applied (SF 1008 called)"
+ 
