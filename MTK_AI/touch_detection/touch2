@@ -75,7 +75,6 @@ done
 OPP=$(cat /sdcard/MTK_AI_Engine/global_gpu_opp_index.txt 2>/dev/null) || OPP=0
 [ "$OPP" -lt 0 ] || [ "$OPP" -gt 32 ] && OPP=0
 echo $OPP > /proc/gpufreqv2/fix_target_opp_index
-echo THAWED > /dev/freezer/frozen/freezer.state
 }
 
 touch_inactive() {
@@ -122,6 +121,7 @@ echo 32 > /proc/gpufreqv2/fix_target_opp_index
             "$DUMPSYS" power >/dev/null 2>&1
         fi
     ) &
+echo THAWED > /dev/freezer/frozen/freezer.state
 }
 
 # --- NOTIFICATION FUNCTION ---
