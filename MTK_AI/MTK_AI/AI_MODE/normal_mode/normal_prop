@@ -29,7 +29,7 @@ rm -f "$TEMP_FILE"
 if [ "$REMOTE_VER" -gt "$LOCAL_VER" ] 2>/dev/null; then
     NEW_DESC="[NEW UPDATE NOTICE✅ click action button ▶️]-----MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way"
 else
-    NEW_DESC="MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way"
+    NEW_DESC="[NO UPDATE❌] MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way"
 fi
 
 # Update ONLY the description line in module.prop
