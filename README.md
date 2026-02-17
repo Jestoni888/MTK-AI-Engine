@@ -4,45 +4,39 @@ with near zero usages of cpu power because it has no loop/sleep commands, just a
 also gives full features of your android device in all scenarios such as gaming , daily use & screen off to save power
 
 
-Previous features
+FEATURES 
 
-- CPUSETS OPTIMIZE
-- AUTO FREQUENCY DURING NORMAL USE BASED ON TEMPERATURE
-- ZRAM TUNING DURING GAMING & NON-GAMING
-- INTERNET OPTIMIZE ADDED IN PROPS
-- ADDED PPM POLICY DURING GAMING & NON-GAMING
-- POWERSAVER GOVERNOR WHEN SCREEN IS OFF (🔋SAVES SO MUCH BATTERY!)
-- ADDED AUTOMATIC VOLTAGE OFFSET ALONG WITH AUTO FREQUENCY & TEMPERATURE LOGIC COMBINE
-- ADDED 720P DOWNSCALE WHEN GAMING (DEPENDS ON USER IF THEY ALLOW IT IN EARLY INSTALLATION)
-- AUTOMATIC 4X MSAA & DISABLE HW OVERLAY IN GAMING BUT DISABLED DURING NORMAL USE
-- DOWN TO 30% CPU FREQUENCY IF NO ACTIVITIES/EVENTS
-- SHUTDOWN CPU6 IN 45°C & CPU7 IN 41°C 
-- ADDED ACTION BUTTON OF MODULE
-- Added surflinger optimization (VSYNC)
-- hide developer option or enable developer options without tapping 5-7 times in instant way
-- Touch Detection boosters while lowered frequencies in idle (ideal for average users
-- New Webui with friendly features & easy to toggle unlike action button
-- Added Custom gameprops (Oneplus 15)
-- Added High framerate mode during gaming
-- Added Game Booster Engine to faster loading resources during gaming
-- Added ram cleaner every 1 minute
-- Added bypass charging
-- Added ZRAM manager can apply swappiness value , zram size & algorithm on your choice
-- Added disable toggle for zram
-- added temperature status in shell notifications
-- Optimized bypass charging status (instant trigger during gaming)
-- Fast charging injected on default
-- added tab for gamelists, we can now directly adds them
-- added per-app renderer
-- added per-app vSync latency 
-- remodel webui & app arrangements
-- fixed refresh rate locker per-app with overlay toggle on top
-- Powersaving mode are now using system OS
-- added animation speed
-- added display scaling per-app & manual method
-- added cpu governor per-app & manual method
-- added renderer Vulkan/Opengl in manual method
-- explore whats new i'm lazy
+- Powersaver mode during screen-off events can be toggled to turning it on/off if you don't want missing notifications or alarms
+- Boost colors
+- Refresh rate locker / per-app
+- Resolution scaling
+- GPU frequency slider from min - max output
+- CPU governor selection
+- Devfreq governor selection
+- Render mode selection (Skia VULKAN & Skia GL)
+- Touch mode optimization ( auto raise CPU, GPU & refresh rate depends in your input values also automatically down all frequencies & refresh rate to low if limiter is enabled in webui
+- Application trimmer in extra storage caches can be toggled on/off in webui 
+- Ram cleaner every 30 seconds can be toggled on/off in webui
+- Thermal bypass for maximum performance on gaming
+- Bypass charging (working only during gaming mode)
+- Auto enable developer option & turning on 4X MSAA & Disable hw overlays for smoother gaming experience, can be toggled on/off in webui
+- PPM Policy control specifically only for MediaTek devices
+- EEM voltage offset slider for CPU, GPU & Cache coherent
+- CPUSET groups selections for cpu prioritization setup
+- CPU dynamic cgroups share control setup values for each groups of cpus
+- Display animation adjustment for those who want faster animation or smoother experience 
+- Zram manager up to 20GB extension along with custom swappiness value
+- App freezer during gaming
+  
+  GAMING MODE PER-APP 
+- Refresh rate
+- Resolution scaling slider
+- Cpu governor selection
+- Vsync offset slider
+- Voltage offset slider
+- Render mode skiagl or skiavk
+
+
 
  ------ UPDATES-------
  - ✅ Added action button for the users who encountered not working scenarios in this module, just click action button of this module in root manager to update all working scripts 
