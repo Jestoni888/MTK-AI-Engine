@@ -7,10 +7,6 @@ log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
 }
 
-#Deactivating developer options to save battery
-su -c settings put global development_settings_enabled 0
-sleep 5
-
 echo "0" > /proc/sys/kernel/panic
     
 # 1. Apply Properties (Fast)
@@ -27,13 +23,6 @@ setprop debug.sf.early_phase_offset_ns 0
 setprop debug.sf.early_gl_phase_offset_ns 0
 setprop debug.sf.high_fps_early_phase_offset_ns 0
 setprop debug.sf.high_fps_early_gl_phase_offset_ns 0
-
-# 2. Non-blocking SurfaceFlinger Call
-# We remove the loop and the sleep. We call it once.
-# If it's a "normal mode" script, the system is already up.
-
-    # Running this in a subshell ( ) & prevents the main engine from waiting
-    service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1
         
-    log_msg "🟢 NORMAL MODE PROPS applied (SF 1008 called)"
+    log_msg "🟢 NORMAL MODE PROPS applied"
  
