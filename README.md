@@ -38,6 +38,6 @@ FEATURES
 
 
 
- ------ UPDATES-------
- - ✅ Added action button for the users who encountered not working scenarios in this module, just click action button of this module in root manager to update all working scripts 
- - ✅ Update twice in action button in module section for the complete update (No need reboot)
+ ------ INSTRUCTIONS -------
+ - Choose universal for safe of bootloops
+ - Click action button for online updates (Added notice in module section if there's new updates)
