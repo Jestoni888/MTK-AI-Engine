@@ -23,6 +23,8 @@ setprop debug.sf.early_phase_offset_ns 0
 setprop debug.sf.early_gl_phase_offset_ns 0
 setprop debug.sf.high_fps_early_phase_offset_ns 0
 setprop debug.sf.high_fps_early_gl_phase_offset_ns 0
+
+service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1
         
     log_msg "🟢 NORMAL MODE PROPS applied"
  
