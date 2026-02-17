@@ -36,7 +36,8 @@ also gives full features of your android device in all scenarios such as gaming 
 - Voltage offset slider
 - Render mode skiagl or skiavk
 
-
+## DISCLAIMER
+- Any misconfiguration setup that not supported in your devices will result in instability or further sudden restart/reboot, missed notifications, alarms. Make a further research for your devices compatible setup in webui
 
  ## INSTRUCTIONS
  - Choose universal for safe of bootloops
