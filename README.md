@@ -4,7 +4,7 @@ with near zero usages of cpu power because it has no loop/sleep commands, just a
 also gives full features of your android device in all scenarios such as gaming , daily use & screen off to save power
 
 
-FEATURES 
+## FEATURES 
 
 - Powersaver mode during screen-off events can be toggled to turning it on/off if you don't want missing notifications or alarms
 - Boost colors
@@ -27,8 +27,8 @@ FEATURES
 - Display animation adjustment for those who want faster animation or smoother experience 
 - Zram manager up to 20GB extension along with custom swappiness value
 - App freezer during gaming
-  
-  GAMING MODE PER-APP 
+
+## GAMING MODE PER-APP 
 - Refresh rate
 - Resolution scaling slider
 - Cpu governor selection
