@@ -136,3 +136,65 @@ echo "---------------------------"
 
 echo "Script execution complete. Check $LOG_FILE for details."
 log_action "Script execution complete."
+
+log -t "NetTweak" "Starting network tweaks..."
+
+# === Universal Kernel Tweaks ===
+if [ -f /proc/sys/net/ipv4/tcp_congestion_control ]; then
+  echo bbr > /proc/sys/net/ipv4/tcp_congestion_control 2>/dev/null || \
+  echo cubic > /proc/sys/net/ipv4/tcp_congestion_control 2>/dev/null
+  log -t "NetTweak" "TCP congestion control set"
+fi
+
+if [ -f /proc/sys/net/ipv4/tcp_window_scaling ]; then
+  echo 1 > /proc/sys/net/ipv4/tcp_window_scaling
+fi
+
+if [ -f /proc/sys/net/ipv4/tcp_low_latency ]; then
+  echo 1 > /proc/sys/net/ipv4/tcp_low_latency
+fi
+
+# === Platform Detection & Runtime Props ===
+PLATFORM=$(getprop ro.board.platform)
+BASEBAND=$(getprop ro.baseband)
+
+# --- MediaTek ---
+if echo "$PLATFORM" | grep -qiE "mt[0-9]+|mt6[0-9]+"; then
+  log -t "NetTweak" "Detected MediaTek. Applying MTK runtime tweaks."
+  setprop persist.radio.mtksms 1
+  setprop persist.meta.dumpdata 0
+  setprop persist.radio.custom.ecc 1
+
+# --- Qualcomm ---
+elif echo "$PLATFORM" | grep -qiE "msm[0-9]+|sdm[0-9]+|sm[0-9]+|kona|lito|lahaina"; then
+  log -t "NetTweak" "Detected Qualcomm. Applying QMI runtime tweaks."
+  setprop persist.data.netmgrd.qos.enable true
+  setprop persist.data.mode concurrent
+  setprop persist.rmnet.data.enable true
+  setprop persist.data.iwlan.enable true
+
+# --- Samsung/Exynos ---
+elif echo "$BASEBAND" | grep -qiE "exynos"; then
+  log -t "NetTweak" "Detected Exynos. Applying Samsung runtime tweaks."
+  setprop persist.data.mode concurrent
+
+# --- Universal Fallback ---
+else
+  log -t "NetTweak" "Unknown Platform. Applying universal runtime tweaks."
+fi
+
+# === Interface Route Tweaks ===
+sleep 5
+for iface in rmnet0 rmnet_data0 pdp0 ccmni0; do
+  if ip link show $iface >/dev/null 2>&1; then
+    log -t "NetTweak" "Applying route tweaks to $iface"
+    ip route change default dev $iface initcwnd 30 initrwnd 30 2>/dev/null
+    break
+  fi
+done
+
+# === Flush DNS Cache ===
+ndc resolver flushdefaultif 2>/dev/null
+ndc resolver flushif 2>/dev/null
+
+log -t "NetTweak" "Network Tweaks Applied Successfully."
