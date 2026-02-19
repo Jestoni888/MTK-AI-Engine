@@ -136,7 +136,7 @@ apply_gaming_logic() {
       
     run_external_binary "$SCRIPT_RUNNER"    
     run_external_binary "$APP_OPTIMIZE"    
-    echo FROZEN > /dev/freezer/frozen/freezer.state         
+    run_external_binary "$FREEZE"         
     if [ -f "$EXTERNAL_CFG/enable_auto_freq" ] && [ -f "$AUTOFREQ_PATH" ]; then
         run_external_binary "$AUTOFREQ_PATH"
     fi
