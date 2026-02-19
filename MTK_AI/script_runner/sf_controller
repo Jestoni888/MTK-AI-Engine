@@ -1,0 +1,98 @@
+#!/system/bin/sh
+
+# ==============================
+# APP FREEZER BOOT SERVICE (Deep Freeze Only)
+# ==============================
+# Reads /sdcard/MTK_AI_Engine/freezer_apps.json
+# Freezes apps marked as "true" using ONLY Deep Freeze (/dev/freezer).
+# Does NOT use pkill -STOP (Lite).
+# Does NOT start a background loop.
+# ==============================
+
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+JSON_FILE="/sdcard/MTK_AI_Engine/freezer_apps.json"
+FREEZER_PATH="/dev/freezer/frozen"
+
+# Helper: Log with timestamp
+log() {
+    # Define max size in bytes (50 KB = 51200 bytes)
+    local MAX_SIZE=51200
+    
+    # Check if file exists and exceeds limit
+    if [ -f "$LOG_FILE" ]; then
+        local CURRENT_SIZE=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
+        
+        if [ "$CURRENT_SIZE" -gt "$MAX_SIZE" ]; then
+            # Keep only the last 50KB using tail
+            # We write to a temp file first to avoid corruption, then move it back
+            tail -c $MAX_SIZE "$LOG_FILE" > "${LOG_FILE}.tmp" && mv "${LOG_FILE}.tmp" "$LOG_FILE"
+            
+            # Optional: Add a separator to show logs were rotated
+            echo "--- Log Rotated ---" >> "$LOG_FILE"
+        fi
+    fi
+    
+    # Append the new log entry
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
+
+log "🚀 Deep Freeze Boot Service Started"
+
+# 1. Wait for Boot to Complete
+log "⏳ Waiting for system readiness..."
+while [ "$(getprop sys.boot_completed)" != "1" ]; do
+    sleep 2
+done
+sleep 5 # Extra safety for package manager
+log "✅ System ready."
+
+# 2. Check Prerequisites
+if [ ! -f "$JSON_FILE" ]; then
+    log "❌ Error: JSON config not found at $JSON_FILE"
+    exit 0
+fi
+
+if [ ! -w "$FREEZER_PATH/cgroup.procs" ]; then
+    log "❌ Error: Deep Freeze path not writable ($FREEZER_PATH). Aborting."
+    exit 0
+fi
+
+log "📄 Parsing config: $JSON_FILE"
+
+# 3. Ensure Freezer State is Ready
+# Make sure the group is set to accept processes
+echo "THAWED" > "$FREEZER_PATH/freezer.state" 2>/dev/null
+
+# 4. Parse JSON and Deep Freeze Active Apps
+log "⚙️ Scanning for apps to Deep Freeze..."
+
+COUNT=0
+cat "$JSON_FILE" | grep ': true' | while read -r line; do
+    # Extract package name
+    PKG=$(echo "$line" | cut -d'"' -f2)
+    
+    if [ -n "$PKG" ]; then
+        # Check if app is currently running
+        PID=$(pidof "$PKG")
+        
+        if [ -n "$PID" ]; then
+            log "❄️ Deep Freezing: $PKG (PIDs: $PID)"
+            
+            # Move ALL PIDs to the frozen cgroup
+            for p in $PID; do
+                echo "$p" > "$FREEZER_PATH/cgroup.procs" 2>/dev/null
+            done
+            
+            # Trigger the freeze state
+            echo "FROZEN" > "$FREEZER_PATH/freezer.state" 2>/dev/null
+            
+            COUNT=$((COUNT + 1))
+        else
+            # App not running. Your auto-trigger will handle it later.
+            log "⚪ Skipping (Not Running): $PKG"
+        fi
+    fi
+done
+
+log "✅ Boot Task Completed. Deep Froze $COUNT active apps."
+log "----------------------------------------"
