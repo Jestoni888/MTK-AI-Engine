@@ -46,7 +46,6 @@ persist.sys.dalvik.multithread=true
 ro.vendor.perf.scroll_opt=1
 vendor.perf.framepacing.enable=true
 # HWUI
-debug.hwui.renderer=opengl
 debug.hwui.disable_draw_defer=false
 debug.hwui.use_hint_manager=true
 debug.hwui.skip_empty_damage=true
@@ -115,7 +114,6 @@ net.ipv4.ip_local_port_range=1024 65000
 # Graphics Performance & Texture Limitation
 persist.sys.use_16bpp_alpha=1
 persist.sys.sf.disable_blurs=1
-debug.hwui.renderer=opengl
 debug.hwui.texture_cache_size=32
 debug.hwui.texture_cache_flushrate=0.4
 debug.renderengine.backend=gles
