@@ -465,7 +465,6 @@ while true; do
         echo "$DETECTED_PKG" > "$GAME_STATE_FILE"
         rm -f "$NORMAL_STATE_FILE"
         
-        apply_gaming_logic "$DETECTED_PKG"
         log_msg "🎮 Gaming mode triggered for: $DETECTED_PKG"
         notify_engine "🎮 Gaming mode" "Target: $DETECTED_PKG"
         
@@ -613,7 +612,7 @@ while true; do
         else
             enable_zram
         fi
-        
+            apply_gaming_logic "$DETECTED_PKG"
     else
         # 🔋 NORMAL MODE
         if [ -f "$CAMERA_STATE_FILE" ]; then
