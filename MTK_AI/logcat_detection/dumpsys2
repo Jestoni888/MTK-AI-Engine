@@ -247,7 +247,7 @@ apply_gaming_logic() {
     
     CURRENT_MODE="GAMING"
     log_msg "✅ Gaming Mode: $pkg_name"
-    notify_engine "🎮 Gaming Mode Active" "App: $pkg_name | Cores Locked"
+    notify_engine "🎮 Gaming Mode Active" "App: $pkg_name"
 }
 
 apply_non_gaming_logic() {
