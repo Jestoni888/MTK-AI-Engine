@@ -38,7 +38,7 @@ log_msg() {
         fi
     fi
 }
-
+chmod 755 "$MODDIR/script_runner/monitor_app_stats" 2>/dev/null
 # Cleanup lock
 su -c "rm -f $MODDIR/.running.lock" 2>/dev/null
 log_msg "MTK_AI daemon started"
