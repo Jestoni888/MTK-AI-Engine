@@ -1,0 +1,199 @@
+#!/system/bin/sh
+
+# --- CONFIGURATION ---
+TEMP_FILE="/sys/class/power_supply/battery/temp"
+VOLT_FILE="/sys/class/power_supply/battery/voltage_now"
+CURR_FILE="/sys/class/power_supply/battery/current_now"
+STATS_DIR="/sdcard/MTK_AI_Engine"
+CONFIG_DIR="/sdcard/MTK_AI_Engine"
+NOTIFY_ENABLED_FILE="$CONFIG_DIR/enable_notifications"
+PROC_STAT="/proc/stat"
+
+[ ! -f "$VOLT_FILE" ] && VOLT_FILE="/sys/class/power_supply/bms/voltage_now"
+[ ! -f "$CURR_FILE" ] && CURR_FILE="/sys/class/power_supply/bms/current_now"
+
+mkdir -p "$STATS_DIR" 2>/dev/null
+mkdir -p "$CONFIG_DIR" 2>/dev/null
+
+TARGET_PKG="$1"
+if [ -z "$TARGET_PKG" ]; then
+    if [ -f "/sdcard/MTK_AI_Engine/active_monitor_pkg.txt" ]; then
+        TARGET_PKG=$(cat /sdcard/MTK_AI_Engine/active_monitor_pkg.txt | tr -d '[:space:]')
+    else
+        exit 1
+    fi
+fi
+
+echo "⚡ Monitor: $TARGET_PKG"
+echo "📊 FPS Source: logcat BufferQueueProducer (Real FPS)"
+
+# ==========================================
+# 📢 NOTIFY ENGINE
+# ==========================================
+notify_engine() {
+    [ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
+    
+    local title="$1"
+    local msg="$2"
+    
+    RAW_TEMP=$(cat /sys/class/power_supply/battery/temp 2>/dev/null || echo "0")
+    B_TEMP="$((RAW_TEMP / 10)).$((RAW_TEMP % 10))°C"
+
+    VOLT_FILE="/sys/class/power_supply/battery/voltage_now"
+    CURR_FILE="/sys/class/power_supply/battery/current_now"
+    [ ! -f "$VOLT_FILE" ] && VOLT_FILE="/sys/class/power_supply/bms/voltage_now"
+    [ ! -f "$CURR_FILE" ] && CURR_FILE="/sys/class/power_supply/bms/current_now"
+
+    POWER_WATTS="N/A"
+    if [ -f "$VOLT_FILE" ] && [ -f "$CURR_FILE" ]; then
+        VOLT=$(cat "$VOLT_FILE" 2>/dev/null | tr -d '[:space:]')
+        CURR=$(cat "$CURR_FILE" 2>/dev/null | tr -d '[:space:]')        POWER_WATTS=$(awk -v v="$VOLT" -v c="$CURR" 'BEGIN {
+            volts = v / 1000000; amps = c / 1000000
+            if (amps < 0) amps = -amps
+            val = volts * amps
+            if (val >= 0.01 && val <= 60) printf "%.2fW", val; else print "N/A"
+        }')
+    fi
+    
+    local full_msg="$msg | Pwr: $POWER_WATTS | Temp: $B_TEMP"
+    su -lp 2000 -c "cmd notification post -S bigtext -t '$title' tag '$full_msg'" >/dev/null 2>&1
+}
+# ==========================================
+
+get_current_pkg() {
+    local raw_output=""
+    local pkg=""
+    
+    raw_output=$(cmd window get-focus 2>/dev/null)
+    if [ -n "$raw_output" ]; then
+        pkg=$(echo "$raw_output" | grep -oE '[a-zA-Z0-9._]+/[a-zA-Z0-9._]+' | head -n 1 | cut -d'/' -f1)
+    fi
+    
+    if [ -z "$pkg" ]; then
+        raw_output=$(dumpsys window windows 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp')
+        if [ -n "$raw_output" ]; then
+            pkg=$(echo "$raw_output" | grep -oE '[a-zA-Z0-9._]+/[a-zA-Z0-9._]+' | head -n 1 | cut -d'/' -f1)
+        fi
+    fi
+    
+    if [ -z "$pkg" ]; then
+        raw_output=$(dumpsys window displays 2>/dev/null)
+        if [ -n "$raw_output" ]; then
+            pkg=$(echo "$raw_output" | grep -oE '[a-zA-Z0-9._]+/[a-zA-Z0-9._]+' | head -n 1 | cut -d'/' -f1)
+        fi
+    fi    
+    echo "$pkg" | tr -d '[:space:]'
+}
+
+# ==========================================
+# 🚀 GET REAL FPS
+# ==========================================
+get_real_fps() {
+    local pkg="$1"
+    local fps=0
+    
+    fps=$(logcat -b main -d 2>/dev/null | \
+          grep "BufferQueueProducer.*$pkg.*fps=" | \
+          tail -5 | \
+          awk -F'fps=' '          {
+              split($2,a," ")
+              fps=a[1]+0
+              if(fps > 0) {
+                  if(fps > max) max = fps
+              }
+          }
+          END {
+              if(max > 0) printf "%.0f", max; else print "0"
+          }')
+    
+    [ -z "$fps" ] && fps=0
+    echo "$fps"
+}
+
+# Function: Calculate CPU Load % (kept for display)
+get_cpu_load() {
+    read cpu u1 n1 s1 i1 w1 x1 y1 rest < $PROC_STAT
+    sleep 0.4
+    read cpu u2 n2 s2 i2 w2 x2 y2 rest < $PROC_STAT
+    
+    local idle=$((i2 - i1))
+    local total=$(( (u2+n2+s2+i2+w2+x2+y2) - (u1+n1+s1+i1+w1+x1+y1) ))
+    
+    if [ "$total" -eq 0 ]; then echo "0"; return; fi
+    awk -v t="$total" -v id="$idle" 'BEGIN{ l=(t-id)/t*100; if(l<0)l=0; if(l>100)l=100; printf "%.0f", l }'
+}
+
+WAIT_COUNT=0
+while true; do
+    sleep 0.5
+    CURRENT_PKG=$(get_current_pkg)
+    [ -z "$CURRENT_PKG" ] && continue
+    [ "$CURRENT_PKG" = "$TARGET_PKG" ] && break
+    WAIT_COUNT=$((WAIT_COUNT + 1))
+    [ "$WAIT_COUNT" -ge 60 ] && exit 1
+done
+
+echo "✅ App Detected! Starting Monitoring..."
+
+TOTAL_WATTS=0; TOTAL_TEMP=0; TOTAL_FPS=0; COUNT=0; LAST_AVG="0"
+
+save_stats() {
+    if [ "$COUNT" -gt 0 ]; then
+        AVG_W=$(awk -v t="$TOTAL_WATTS" -v c="$COUNT" 'BEGIN{printf "%.2f",t/c}')
+        AVG_T=$(awk -v t="$TOTAL_TEMP" -v c="$COUNT" 'BEGIN{printf "%.1f",t/c}')
+        AVG_F=$(awk -v t="$TOTAL_FPS" -v c="$COUNT" 'BEGIN{printf "%.0f",t/c}')
+        {
+            echo "Package: $TARGET_PKG"; echo "Timestamp: $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "Samples: $COUNT"; echo "Avg_Power: ${AVG_W}W"; echo "Avg_Temp: ${AVG_T}°C"; echo "Avg_FPS: ${AVG_F} (Real)"
+        } > "$STATS_DIR/stats_${TARGET_PKG}.txt"
+        LAST_AVG=$AVG_F
+    fi
+}
+
+trap "save_stats; exit 0" TERM INT
+
+while true; do
+    CURRENT_PKG=$(get_current_pkg)
+    
+    if [ "$CURRENT_PKG" = "$TARGET_PKG" ]; then
+        # 1. Temp & Power
+        RAW_TEMP=$(cat "$TEMP_FILE" 2>/dev/null || echo "0")
+        TEMP_VAL=$((RAW_TEMP / 10))
+        VOLT=$(cat "$VOLT_FILE" 2>/dev/null | tr -d '[:space:]')
+        CURR=$(cat "$CURR_FILE" 2>/dev/null | tr -d '[:space:]')
+        WATT_NUM="0.00"
+        [ -n "$VOLT" ] && [ -n "$CURR" ] && WATT_NUM=$(awk -v v="$VOLT" -v c="$CURR" 'BEGIN{volts=v/1000000; amps=c/1000000; if(amps<0)amps=-amps; val=volts*amps; if(val>=0.01&&val<=60)printf "%.2f",val; else print "0.00"}')
+
+        # 2. 🚀 GET REAL FPS FROM LOGCAT
+        ACTUAL_FPS=$(get_real_fps "$TARGET_PKG")
+        [ -z "$ACTUAL_FPS" ] && ACTUAL_FPS=0
+
+        # 3. CPU Load (kept for display only)
+        CPU_LOAD=$(get_cpu_load)
+
+        # Accumulate
+        TOTAL_WATTS=$(awk -v t="$TOTAL_WATTS" -v w="$WATT_NUM" 'BEGIN{print t+w}')
+        TOTAL_TEMP=$((TOTAL_TEMP + TEMP_VAL))
+        TOTAL_FPS=$((TOTAL_FPS + ACTUAL_FPS))
+        COUNT=$((COUNT + 1))
+
+        AVG_F=$(awk -v t="$TOTAL_FPS" -v c="$COUNT" 'BEGIN{printf "%.0f",t/c}')
+
+        # Display
+        printf "\r🎮 [%s] Real FPS:%3d | CPU:%3d%% | Pwr:%sW  " \
+            "$TARGET_PKG" "$ACTUAL_FPS" "$CPU_LOAD" "$WATT_NUM"
+            
+        if [ $((COUNT % 10)) -eq 0 ]; then
+            save_stats         
+        fi
+    else
+        if [ "$COUNT" -gt 0 ]; then
+             printf "\r⏳ Lost focus... (Avg: %s)  " "$LAST_AVG"
+        else
+             printf "\r⏳ Waiting for %s... " "$TARGET_PKG"
+        fi
+        sleep 5
+    fi
+        notify_engine "📊 Live Stats" "FPS: $ACTUAL_FPS | CPU:$CPU_LOAD%"
+    sleep 3
+done
