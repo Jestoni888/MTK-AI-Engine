@@ -1,0 +1,263 @@
+l#!/system/bin/sh
+#!/data/adb/modules/MTK_AI/busybox sh
+
+PID_FILE="/data/adb/modules/MTK_AI/touch.pid"
+
+echo $$ > "$PID_FILE"
+
+# Set highest CPU priority
+renice -n -20 -p $$
+
+# Prevent Low Memory Killer (LMK) from targeting this process
+if [ -f /proc/$$/oom_score_adj ]; then
+    echo -1000 > /proc/$$/oom_score_adj
+fi
+
+# Move to top-app cpuset to ensure the script isn't throttled
+echo $$ > /dev/cpuset/top-app/tasks 2>/dev/null
+
+# --- PATHS ---
+MOD_DIR="/data/adb/modules/MTK_AI"
+BB="$MOD_DIR/busybox"
+EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
+NOTIFY_ENABLED_FILE="$EXTERNAL_CFG/enable_notifications"
+MONITORX="$EXTERNAL_CFG/enable_monitor"
+MONITOR="$MOD_DIR/script_runner/monitor_app_stats"
+DUMPSYS="$MOD_DIR/touch_detection/dumpsys"
+CPUSET_STATE_FILE="/dev/.mtk_ai_cpuset_state"
+# Read custom timeout from SD card (default: 5 seconds)
+TIMEOUT=5
+if [ -f "/sdcard/MTK_AI_Engine/touch_timeout.txt" ]; then
+    CUSTOM_TIMEOUT=$(cat "/sdcard/MTK_AI_Engine/touch_timeout.txt" | tr -d '\r\n ')
+    # Validate range: 3-10 seconds
+    if [ "$CUSTOM_TIMEOUT" -ge 3 ] 2>/dev/null && [ "$CUSTOM_TIMEOUT" -le 10 ] 2>/dev/null; then
+        TIMEOUT=$CUSTOM_TIMEOUT
+    fi
+fi
+ 
+touch_active() {
+su -c rm -f "$CPUSET_STATE_FILE"
+"$DUMPSYS" power >/dev/null 2>&1 &
+    CPU_SYS="/sys/devices/system/cpu"
+    
+    # Tune schedutil for faster response
+    for p in $CPU_SYS/cpufreq/policy*; do
+        [ -d "$p" ] || continue
+        [ -w "$p/schedutil/rate_limit_us" ] && echo 100 > "$p/schedutil/rate_limit_us"
+    done
+
+    # Replace the existing frequency setting with:
+TOUCH_ACTIVE_PERCENT=100
+if [ -f "/sdcard/MTK_AI_Engine/manual_touch_active_freq.txt" ]; then
+    TOUCH_ACTIVE_PERCENT=$(cat "/sdcard/MTK_AI_Engine/manual_touch_active_freq.txt" | tr -d '\r\n ')
+    # Validate range
+    if [ "$TOUCH_ACTIVE_PERCENT" -lt 50 ] 2>/dev/null; then TOUCH_ACTIVE_PERCENT=50; fi
+    if [ "$TOUCH_ACTIVE_PERCENT" -gt 100 ] 2>/dev/null; then TOUCH_ACTIVE_PERCENT=100; fi
+fi
+
+# --- 5. REFRESH RATE ---
+            REFRESH_FILE="/sdcard/MTK_AI_Engine/manual_refresh_lock.txt"
+            if [ -f "$REFRESH_FILE" ]; then
+                MODE_ID=$(tr -d '\r\n\t ' < "$REFRESH_FILE")
+                if [ -n "$MODE_ID" ] && [ "$MODE_ID" -eq "$MODE_ID" ] 2>/dev/null; then
+                    service call SurfaceFlinger 1035 i32 "$MODE_ID" >/dev/null 2>&1 && \
+                        log_msg "🖥️ Refresh Rate: mode $MODE_ID"
+                fi
+            fi
+
+for cpu in $CPU_SYS/cpu[0-9]*; do
+    MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
+    MIN_FREQ=$(cat "$cpu/cpufreq/cpuinfo_min_freq")
+    TARGET_MAX=$((MAX_FREQ * TOUCH_ACTIVE_PERCENT / 100))
+    echo "$MIN_FREQ" > "$cpu/cpufreq/scaling_min_freq"
+    echo "$TARGET_MAX" > "$cpu/cpufreq/scaling_max_freq"
+done
+
+[ "$(id -u)" -ne 0 ] && exit 1
+OPP=$(cat /sdcard/MTK_AI_Engine/global_gpu_opp_index.txt 2>/dev/null) || OPP=0
+[ "$OPP" -lt 0 ] || [ "$OPP" -gt 32 ] && OPP=0
+echo $OPP > /proc/gpufreqv2/fix_target_opp_index
+# --- MONITOR MANAGEMENT ---
+# Use busybox pkill/pgrep if available to ensure consistency
+PGREP="$BB pgrep"
+PKILL="$BB pkill"
+
+if [ -f "$MONITORX" ]; then
+    # Check if monitor is already running to prevent duplicates
+    if ! $PGREP -f "monitor_app_stats" > /dev/null; then
+        log_msg "🤖 Starting Monitor..."
+        # Run in background (&), detach from terminal (nohup/disown equivalent via &)
+        sh "$MONITOR" & 
+    fi
+else
+    # Stop monitor if flag file is missing
+    if $PGREP -f "monitor_app_stats" > /dev/null; then
+        log_msg "⏹️ Stopping Monitor..."
+        $PKILL -f "monitor_app_stats"
+    fi
+fi
+}
+
+touch_inactive() {
+echo 32 > /proc/gpufreqv2/fix_target_opp_index
+    # Enable power saving
+        
+    su -c "service call SurfaceFlinger 1035 i32 2" 2>/dev/null
+
+    # Read saved Inactive CPU % from SD card
+    INACTIVE_PERCENT=30
+    if [ -f "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" ]; then
+        INACTIVE_PERCENT=$(cat "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" | tr -d '\r\n ')
+        # Enforce 25-50% range
+        if [ "$INACTIVE_PERCENT" -lt 25 ] 2>/dev/null; then
+            INACTIVE_PERCENT=25
+        elif [ "$INACTIVE_PERCENT" -gt 50 ] 2>/dev/null; then
+            INACTIVE_PERCENT=50
+        fi
+    fi
+
+    for policy in $CPU_SYS/cpufreq/policy*; do
+        [ -d "$policy" ] || continue
+        
+        if [ -f "$policy/cpuinfo_max_freq" ]; then
+            max_val=$(cat "$policy/cpuinfo_max_freq")
+            target_val=$(( max_val * INACTIVE_PERCENT / 100 ))
+            
+            chmod 644 "$policy/scaling_max_freq" 2>/dev/null
+            echo "$target_val" > "$policy/scaling_max_freq"
+        fi
+    done
+
+    sync
+}
+dumpsys() {
+"$DUMPSYS" power >/dev/null 2>&1 &
+    # --- DELAYED DUMPSYS EXECUTION (after 30 seconds) ---
+    (
+        # Wait 30 seconds
+        sleep 30
+
+        # Only run if we're STILL in SAVE state (not switched back to PERF)
+        CURRENT_STATE=$(cat /data/local/tmp/touch_mode_state 2>/dev/null)
+        if [ "$CURRENT_STATE" = "SAVE" ]; then
+            "$DUMPSYS" power >/dev/null 2>&1
+        fi
+    ) &
+    }
+
+# --- NOTIFICATION FUNCTION ---
+# Uses UID 2000 to bypass SELinux restrictions
+notify_status() {
+# Skip if notification toggle is OFF
+    [ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
+
+    # --- 1. Temperature ---
+    RAW_TEMP=$(cat /sys/class/power_supply/battery/temp 2>/dev/null || echo "0")
+    B_TEMP="$((RAW_TEMP / 10)).$((RAW_TEMP % 10))°C"
+
+    # --- 2. Governor ---
+    GOV_FILE="/sys/devices/system/cpu/cpufreq/policy0/scaling_governor"
+    [ ! -f "$GOV_FILE" ] && GOV_FILE="/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+    CPU_GOV="Unknown"
+    [ -f "$GOV_FILE" ] && CPU_GOV=$(cat "$GOV_FILE" 2>/dev/null | tr -d '[:space:]')
+
+    # --- 3. Power Calculation (FIXED FOR LARGE NUMBERS) ---
+    VOLT_FILE="/sys/class/power_supply/battery/voltage_now"
+    CURR_FILE="/sys/class/power_supply/battery/current_now"
+    [ ! -f "$VOLT_FILE" ] && VOLT_FILE="/sys/class/power_supply/bms/voltage_now"
+    [ ! -f "$CURR_FILE" ] && CURR_FILE="/sys/class/power_supply/bms/current_now"
+
+    POWER_WATTS="N/A"
+
+    if [ -f "$VOLT_FILE" ] && [ -f "$CURR_FILE" ]; then
+        VOLT=$(cat "$VOLT_FILE" 2>/dev/null | tr -d '[:space:]')
+        CURR=$(cat "$CURR_FILE" 2>/dev/null | tr -d '[:space:]')
+
+        # FIX: Divide inputs by 1,000,000 FIRST to get Volts and Amps.
+        # Then multiply. This prevents integer overflow in awk.
+        POWER_WATTS=$(awk -v v="$VOLT" -v c="$CURR" 'BEGIN {
+            # Convert micro-units to base units immediately
+            volts = v / 1000000
+            amps = c / 1000000
+            
+            # Make amps positive
+            if (amps < 0) amps = -amps
+            
+            # Calculate Watts
+            val = volts * amps
+            
+            # Sanity Check (0.01W to 60W)
+            if (val >= 0.01 && val <= 60) {
+                printf "%.2fW", val
+            } else {
+                print "N/A"
+            }
+        }')
+    fi
+
+    local status_msg="$1"
+    local full_msg="Status : $status_msg | Gov: $CPU_GOV | Pwr: $POWER_WATTS | Temp: $B_TEMP"
+
+    su -lp 2000 -c "cmd notification post -I /data/adb/modules/MTK_AI/icon.png -S bigtext -t 'Touch Optimizer' tag '$full_msg'" >/dev/null 2>&1
+}
+
+# --- 1. UNIVERSAL DETECTION ---
+find_touchscreen() {
+    for dev in /dev/input/event*; do
+        if getevent -p "$dev" | grep -q "0035"; then
+            echo "$dev"
+            return 0
+        fi
+    done
+}
+
+TOUCH_DEV=$(find_touchscreen)
+[ -z "$TOUCH_DEV" ] && exit 1
+
+# --- 2. CLEANUP OLD PROCESSES ---
+pkill -f "getevent $TOUCH_DEV"
+
+# --- 3. THE HEARTBEAT (Background) ---
+(
+    getevent "$TOUCH_DEV" | while read -r line; do
+        echo "$("$BB" date +%s)" > /data/local/tmp/touch_ts
+    done
+) &
+
+run_cmd() {
+    [ -f "$1" ] && sh "$1" >/dev/null 2>&1 &
+}
+
+# Initial State
+echo "$("$BB" date +%s)" > /data/local/tmp/touch_ts
+STATE="PERF"
+notify_status "Active"
+
+# --- 4. THE MONITOR LOOP ---
+while true; do
+    NOW=$("$BB" date +%s)
+    LAST_TS=$(cat /data/local/tmp/touch_ts)
+    ELAPSED=$((NOW - LAST_TS))
+
+    if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+        if [ "$STATE" = "PERF" ]; then
+            STATE="SAVE"    
+            dumpsys        
+            if [ -f "$EXTERNAL_CFG/enable_limiter" ]; then
+                touch_inactive
+                notify_status "🥶"
+            fi
+        fi
+    else
+        if [ "$STATE" = "SAVE" ]; then
+            STATE="PERF"
+            notify_status "🥵"
+            touch_active
+        fi
+    fi
+
+    # UI display for Terminal
+    printf "\r[Dev: %s] [Mode: %s] [Idle: %ds]   " "${TOUCH_DEV##*/}" "$STATE" "$ELAPSED"
+    
+    sleep 1
+done
