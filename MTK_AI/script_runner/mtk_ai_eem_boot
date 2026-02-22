@@ -1,0 +1,166 @@
+#!/system/bin/sh
+# ==========================================
+# MTK AI ENGINE - MASTER BOOT SCRIPT
+# Applies: EEM Voltage, CPU Shares, Sysctl
+# Path: /data/adb/service.d/99_mtk_ai_engine.sh
+# ==========================================
+
+# 1. SAFETY CHECK (Must be first)
+if [ "$(id -u)" -ne 0 ]; then
+    echo "❌ Root required! Exiting."
+    exit 1
+fi
+
+# 2. CONFIGURATION
+STORAGE="/sdcard/MTK_AI_Engine"
+LOG_TAG="MTK_AI_BOOT"
+
+# Helper: Log with timestamp
+log_msg() {
+    echo "[$(date '+%H:%M:%S')] [$LOG_TAG] $1"
+    # Also log to dmesg/logcat if possible
+    echo "$LOG_TAG: $1" > /dev/kmsg 2>/dev/null || true
+}
+
+# 3. WAIT FOR STORAGE & BOOT
+# Ensure SD card is mounted and system is ready
+wait_for_storage() {
+    local max_wait=30
+    local count=0
+    while [ ! -d "$STORAGE" ] && [ $count -lt $max_wait ]; do
+        sleep 1
+        count=$((count + 1))
+    done
+    if [ ! -d "$STORAGE" ]; then
+        log_msg "❌ Storage not found at $STORAGE after ${max_wait}s. Aborting."
+        exit 1
+    fi
+    log_msg "✅ Storage ready."
+}
+
+wait_for_storage
+
+log_msg "🚀 Starting MTK AI Engine Restoration..."
+
+# ==========================================
+# MODULE 1: EEM VOLTAGE OFFSET
+# ==========================================
+apply_eem() {
+    local config="$STORAGE/eem_voltage_offset.txt"
+    if [ -f "$config" ]; then        local offset=$(cat "$config" | tr -d '\r\n ')
+        if [ -n "$offset" ]; then
+            log_msg "⚡ Applying EEM Offset: $offset"
+            
+            # Universal EEM paths (Mediatek)
+            local eem_paths="
+            /proc/eem/EEM_DET_B/eem_offset
+            /proc/eem/EEM_DET_L/eem_offset
+            /proc/eem/EEM_DET_CCI/eem_offset
+            /proc/eem/EEM_DET_BL/eem_offset
+            /proc/eemg/EEMG_DET_GPU/eemg_offset
+            /proc/eemg/EEMG_DET_GPU_HI/eemg_offset
+            "
+            
+            local applied=0
+            for path in $eem_paths; do
+                if [ -w "$path" ]; then
+                    echo "$offset" > "$path" 2>/dev/null && applied=$((applied + 1))
+                fi
+            done
+            log_msg "✅ EEM Applied to $applied domains."
+        fi
+    else
+        log_msg "ℹ️ No EEM config found (Skipping)."
+    fi
+}
+
+# ==========================================
+# MODULE 2: CPU SHARES (UCLAMP/CGROUPS)
+# ==========================================
+apply_cpu_shares() {
+    log_msg "🧠 Restoring CPU Shares..."
+    local applied=0
+    
+    # Find all cpu_*_share.txt files
+    for shares_file in "$STORAGE"/cpu_*_share.txt; do
+        if [ -f "$shares_file" ]; then
+            # Extract cgroup name: cpu_foreground_share.txt -> foreground
+            local filename=$(basename "$shares_file")
+            local cgroup_name=$(echo "$filename" | sed 's/cpu_\(.*\)_share\.txt/\1/')
+            
+            local target_path="/dev/cpuctl/$cgroup_name/cpu.shares"
+            
+            if [ -w "$target_path" ]; then
+                local val=$(cat "$shares_file" | tr -d '\r\n ')
+                if [ -n "$val" ] && [ "$val" -ge 10 ] && [ "$val" -le 20000 ] 2>/dev/null; then
+                    echo "$val" > "$target_path" 2>/dev/null
+                    log_msg "✅ CPU Shares: $cgroup_name = $val"
+                    applied=$((applied + 1))
+                else                    log_msg "⚠️ Invalid value for $cgroup_name: $val"
+                fi
+            fi
+        fi
+    done
+    
+    if [ $applied -eq 0 ]; then
+        log_msg "ℹ️ No CPU share configs applied (Paths may differ on this ROM)."
+    fi
+}
+
+# ==========================================
+# MODULE 3: DYNAMIC SYSCTL (UNIVERSAL)
+# ==========================================
+apply_sysctl() {
+    log_msg "⚙️ Scanning & Restoring Sysctl parameters..."
+    local success=0
+    local failed=0
+
+    # We scan the actual /proc/sys directories and check if a save file exists.
+    # This avoids complex string manipulation errors.
+    local dirs="vm net/core net/ipv4 kernel debug"
+    
+    for dir in $dirs; do
+        if [ -d "/proc/sys/$dir" ]; then
+            for file in $(ls "/proc/sys/$dir" 2>/dev/null); do
+                # Construct the full proc path
+                local proc_file="$dir/$file"
+                local full_path="/proc/sys/$proc_file"
+                
+                # Create the safe filename we used in JS: replace / with _
+                # Example: net/core/rmem_max -> net_core_rmem_max
+                local safe_name=$(echo "$proc_file" | sed 's/\//_/g')
+                local save_file="$STORAGE/sysctl_${safe_name}.txt"
+                
+                if [ -f "$save_file" ]; then
+                    local val=$(cat "$save_file" | tr -d '\r\n ')
+                    if [ -w "$full_path" ]; then
+                        if echo "$val" > "$full_path" 2>/dev/null; then
+                            log_msg "✅ Sysctl: $proc_file = $val"
+                            success=$((success + 1))
+                        else
+                            log_msg "❌ Sysctl Write Failed: $proc_file"
+                            failed=$((failed + 1))
+                        fi
+                    else
+                        log_msg "⚠️ Sysctl Not Writable: $proc_file"
+                    fi
+                fi
+            done        fi
+    done
+    
+    log_msg "🏁 Sysctl Restore Complete: $success Success, $failed Failed."
+}
+
+# ==========================================
+# EXECUTION ORDER
+# ==========================================
+# 1. EEM (Voltage) - Hardware level
+apply_eem
+
+# 2. CPU Shares (Scheduler) - Process level
+apply_cpu_shares
+
+# 3. Sysctl (Kernel Params) - System level
+apply_sysctl
+
+log_msg "🎉 MTK AI Engine Boot Sequence Finished."
