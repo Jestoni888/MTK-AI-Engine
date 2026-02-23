@@ -26,7 +26,9 @@ also gives full features of your android device in all scenarios such as gaming 
 - CPU dynamic cgroups share control setup values for each groups of cpus
 - Display animation adjustment for those who want faster animation or smoother experience 
 - Zram manager up to 20GB extension along with custom swappiness value
-- Auto App freezer during gaming & during screen-off, can also automatically unfreeze during normal use suitable for who doesn't want disturbance during gaming sessions 
+- Auto App freezer during gaming & during screen-off, can also automatically unfreeze during normal use suitable for who doesn't want disturbance during gaming sessions
+  🆙🆕
+- Sysctl kernel tuner (Under experimental) 
 
 ## GAMING MODE PER-APP 
 - Refresh rate
