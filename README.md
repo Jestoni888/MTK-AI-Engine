@@ -39,7 +39,8 @@ also gives full features of your android device in all scenarios such as gaming 
 - Render mode skiagl or skiavk
 
 ## DISCLAIMER
-- Any misconfiguration setup that not supported in your devices will result in instability or further sudden restart/reboot, missed notifications, alarms, laggy. Make a further research for your devices compatible setup in webui
+- Any misconfiguration setup that not supported in your devices will result in instability or further sudden restart/reboot, missed notifications, alarms, laggy. Make a further research for your devices compacompatsetup in webui
+- This is only my personal module as a hobby to learn something but I'm gonna share it to everyone for further information
 
  ## INSTRUCTIONS
  - Choose universal for safe of bootloops
