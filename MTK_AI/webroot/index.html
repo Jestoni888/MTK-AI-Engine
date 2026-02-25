@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MTK AI ENGINE</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- Loading Warning Banner -->
+    <div class="loading-warning" id="loading-warning">
+        Wait for the configured buttons to be loaded in 10-15 seconds before toggling them
+    </div>
+    
+   <div class="header">
+        <h1>MTK AI LIVE MANAGER</h1>
+        <div class="stats-bar">
+
+<!-- NEW -->
+<div class="stat-item" onclick="toggleMTKServices()" style="cursor: pointer; position: relative;">
+    MTK AI SERVICES <span id="mon_services" class="stat-val">ON</span>
+    <span id="services-status-dot" style="display: none; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; background: #32D74B; border-radius: 50%;"></span>
+</div>
+    
+    <!-- REPLACED FPS WITH OVERLAY TOGGLE -->
+    <div class="stat-item" onclick="toggleOverlay()" style="cursor: pointer; position: relative;">
+        REFRESH RATE OVERLAY <span id="mon_overlay" class="stat-val">OFF</span>
+        <!-- Optional: small indicator dot -->
+        <span id="overlay-status-dot" style="display: none; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; background: #ff3b30; border-radius: 50%;"></span>
+    </div>
+
+    <div class="stat-item">Detection <span id="detection-status" class="stat-val" onclick="toggleDetect()">Logcat</span></div>
+    </div>
+        <div id="debug-msg" style="font-size:10px; color:var(--text-secondary); margin-top:8px; text-transform: uppercase;">System Ready</div>
+    </div>
+    
+    <!-- Universal Brightness Control -->
+<div class="section-header" data-section="brightness" style="display:flex; justify-content:space-between; align-items:center;">
+    <span>☀️ Universal Brightness Control</span>
+    <label class="ios-switch" style="transform: scale(0.8);">
+        <input type="checkbox" id="auto-brightness-toggle" onchange="toggleAutoBrightness()">
+        <span class="slider"></span>
+    </label>
+</div>
+<div class="section-content" id="brightness-content">
+    <div class="ios-list">
+        <!-- Status Info -->
+        <div class="list-item" style="padding: 16px; background: rgba(0,122,255,0.05); border-radius: 10px; margin-bottom: 12px;">
+            <div class="item-content">
+                <span class="item-title" style="color: var(--color-blue);">ℹ️ Status</span>
+                <span class="item-desc" id="brightness-path-status">Detecting backlight path...</span>
+            </div>
+        </div>
+
+        <!-- Warning about Auto-Brightness -->
+        <div class="list-item" style="padding: 12px; background: rgba(255,165,0,0.1); border-radius: 8px; margin-bottom: 12px; display:flex; align-items:center; gap:10px;">
+            <span style="font-size:20px;">⚠️</span>
+            <div style="font-size:11px; color:#aaa; line-height:1.4;">
+                <b>Auto-Brightness</b> must be <span style="color:#ff453a; font-weight:bold;">OFF</span> (toggle above) for manual control to work.
+            </div>
+        </div>
+
+        <!-- Brightness Slider -->
+        <div class="ios-range-container" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="range-label-row">
+                <span class="item-title">Screen Brightness</span>
+                <span id="brightness-val" style="color:var(--color-blue); font-weight:bold;">50%</span>
+            </div>
+            <input type="range" id="brightness-slider" min="0" max="255" step="1" value="128" class="ios-range" 
+                   oninput="updateBrightnessDisplay(this.value)" 
+                   onchange="applyBrightness(this.value)">
+            
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-top: 8px;">
+                <span>Min (0)</span>
+                <span>Max (255)</span>
+            </div>
+            
+            <!-- ... Existing Brightness Slider ... -->
+
+<!-- LOCK BRIGHTNESS TOGGLE -->
+<div class="list-item" style="padding: 16px; background: rgba(255,69,58,0.05); border-radius: 10px; margin-top: 12px; border: 1px solid rgba(255,69,58,0.2);">
+    <div class="item-content">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:18px;">🔒</span>
+            <div>
+                <span class="item-title" style="color:#ff453a;">Lock Brightness (Anti-Override)</span>
+                <span class="item-desc">Prevents OS/Thermal from changing brightness. Must unlock to adjust.</span>
+            </div>
+        </div>
+        <label class="ios-switch">
+            <input type="checkbox" id="brightness-lock-toggle" onchange="toggleBrightnessLock()">
+            <span class="slider"></span>
+        </label>
+    </div>
+</div>
+
+<!-- Status Message for Lock -->
+<div id="brightness-lock-status" style="padding: 10px; text-align:center; font-size:11px; color:#666; display:none;">
+    ⚠️ Brightness Locked! Unlock to adjust.
+</div>
+            
+            <!-- Quick Presets -->
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button onclick="setBrightness(50)" style="flex:1; padding:6px; background:rgba(255,255,255,0.1); border:none; border-radius:4px; color:#fff; font-size:10px;">Dim (50)</button>
+                <button onclick="setBrightness(128)" style="flex:1; padding:6px; background:rgba(255,255,255,0.1); border:none; border-radius:4px; color:#fff; font-size:10px;">Medium (128)</button>
+                <button onclick="setBrightness(255)" style="flex:1; padding:6px; background:rgba(255,255,255,0.1); border:none; border-radius:4px; color:#fff; font-size:10px;">Max (255)</button>
+            </div>
+        </div>
+        
+        <!-- Save Setting -->
+        <div class="list-item" style="padding: 12px; border-top: 1px solid var(--border-color);">
+            <div class="item-content">
+                <span class="item-title">Save on Boot</span>
+                <span class="item-desc">Apply this brightness automatically when phone starts</span>
+            </div>
+            <label class="ios-switch">
+                <input type="checkbox" id="save-brightness-boot" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+</div>
+    
+    <!-- Touch Mode Battery Saver -->
+<div class="section-header" data-section="touch">
+    <span>Smart Touch Battery Saver 🔋</span>
+</div>
+<div class="section-content" id="touch-content">
+    <div class="ios-list">
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">Inactivity Limiter - Cooldown Your Devices From Overheating </span><span class="item-desc">Limit CPU / GPU / Refresh rate when idle but also automatically raise CPU/GPU/RefreshRate when touching/swipe 💡</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_limiter"><span class="slider"></span></label>
+        </div>
+    </div>
+
+    <!-- TOUCH ACTIVE CPU FREQUENCY SLIDER -->
+    <div class="ios-list">
+        <div class="ios-range-container" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="range-label-row">
+                <span class="item-title">Touch Booster mode </span>
+                <span id="touch-active-freq-val" style="color:var(--color-blue); font-weight:bold;">100%</span>
+            </div>
+            <input type="range" id="touch-active-freq-slider" min="50" max="100" step="5" value="100" class="ios-range">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-top: 8px;">
+                <span>50% (Slightly lag but saves much battery & cooling devices🔋)</span>
+                <span>100% (Performance - Smoothness - Extreme heat 🔥)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- INACTIVE TOUCH CPU FREQUENCY SLIDER -->
+    <div class="ios-list">
+        <div class="ios-range-container" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="range-label-row">
+                <span class="item-title">Inactivity Mode - Triggered only if limiter is enabled</span>
+                <span id="inactive-freq-val" style="color:var(--color-blue); font-weight:bold;">30%</span>
+            </div>
+            <input type="range" id="inactive-freq-slider" min="25" max="50" step="5" value="30" class="ios-range">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-top: 8px;">
+                <span>25% (slightly lag but saves more battery ideal for watching videos/movies/tv-series )</span>
+                <span>50% (Sustain Smoothness)</span>
+            </div>
+        </div>
+    </div>
+
+<!-- TOUCH TIMEOUT SLIDER -->
+<div class="ios-list">
+    <div class="ios-range-container" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+        <div class="range-label-row">
+            <span class="item-title">Activity Timeout for triggering Inactivity mode</span>
+            <span id="touch-timeout-val" style="color:var(--color-blue); font-weight:bold;">5s</span>
+        </div>
+        <input type="range" id="touch-timeout-slider" min="3" max="10" step="1" value="5" class="ios-range">
+        <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-top: 8px;">
+            <span>3s (Agressive)</span>
+            <span>5s (Recommended)</span>
+            <span>10s (Preserve smoothness)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Boost colors -->
+<div class="section-header" data-section="colors">
+    <span>Boost colors</span>
+</div>
+<div class="section-content" id="colors-content">
+    <div class="ios-list">
+        <div class="ios-range-container" style="border-bottom:none;">
+            <div class="range-label-row"><span class="item-title">Saturation Boost</span><span id="saturation_val" style="color:var(--color-blue); font-weight:bold;">1.0</span></div>
+            <input type="range" min="0" max="2" step="0.1" value="1.0" class="ios-range" id="saturation_slider">
+        </div>
+    </div> 
+   </div> 
+   
+   <!-- Manual Refresh Rate -->
+<div class="section-header" data-section="refresh">
+    <span>Manual Refresh Rate Lock</span>
+</div>
+<div class="section-content" id="refresh-content">
+    <div class="refresh-lock-buttons" style="margin: 20px 0; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+        <div style="font-size: 12px; color: #aaa; font-weight: bold; margin-bottom: 8px;">MANUAL REFRESH RATE LOCK</div>
+        <div id="dynamic-refresh-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+            <!-- Buttons will be inserted here by JS -->
+        </div>
+        <div style="margin-top: 8px; font-size: 10px; color: #666; text-align: center;">Override system auto-refresh</div>
+    </div>
+</div>
+
+<!-- Resolution Scaling -->
+<div class="section-header" data-section="scaling">
+    <span>Resolution Scaling</span>
+</div>
+<div class="section-content" id="scaling-content">
+    <div class="ios-list">
+        <div class="ios-range-container" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="range-label-row">
+                <span class="item-title">Resolution Scaling</span>
+                <span id="global-scaling-val" style="color:var(--color-blue); font-weight:bold;">100%</span>
+            </div>
+            <input type="range" id="global-scaling-slider" min="50" max="200" step="10" value="100" class="ios-range">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-top: 8px;">
+                <span>50% (Performance)</span>
+                <span>100% (Default)</span>
+                <span>200% (Quality)</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GPU Frequency Control -->
+<div class="section-header" data-section="gpu">
+    <span>GPU Frequency Control 🎮</span>
+</div>
+<div class="section-content" id="gpu-content">
+    <!-- GPU Frequency Slider (ALWAYS LOCKED) -->
+    <div class="ios-list">
+        <div class="ios-range-container" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="range-label-row">
+                <span class="item-title">GPU Frequency</span>
+                <span id="gpu-opp-val" style="color:var(--color-blue); font-weight:bold;">836 MHz</span>
+            </div>
+            <input type="range" id="gpu-opp-slider" min="0" max="32" step="1" value="0" class="ios-range">
+            <div id="gpu-frequency-labels" style="display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-top: 8px;">
+                <span>Min</span>
+                <span>Max</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Apply Button -->
+    <div id="apply-global-gpu-btn" style="padding: 16px; margin-top: 10px; cursor: pointer; background: var(--color-blue); border-radius: 14px; text-align: center; font-weight: bold; color: white; font-size: 16px; box-shadow: 0 4px 10px rgba(0,122,255,0.3);">
+        APPLY GPU SETTINGS
+    </div>
+</div>
+
+<!-- CPU Governor -->
+<div class="section-header" data-section="governor">
+    <span>Manual CPU Governor</span>
+</div>
+<div class="section-content" id="governor-content">
+    <div class="refresh-lock-buttons" style="margin: 20px 0; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+        <div style="font-size: 12px; color: #aaa; font-weight: bold; margin-bottom: 8px;">MANUAL CPU GOVERNOR</div>
+        <div id="dynamic-governor-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+            <!-- Buttons will be inserted here by JS -->
+        </div>
+        <div style="margin-top: 8px; font-size: 10px; color: #666; text-align: center;">Applies to all CPU cores</div>
+    </div>
+</div>
+
+<!-- Renderer Mode -->
+<div class="section-header" data-section="renderer">
+    <span>Manual Renderer Mode</span>
+</div>
+<div class="section-content" id="renderer-content">
+    <div class="refresh-lock-buttons" style="margin: 20px 0; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+        <div style="font-size: 12px; color: #aaa; font-weight: bold; margin-bottom: 8px;">MANUAL RENDERER MODE</div>
+        <div id="dynamic-renderer-buttons" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+            <!-- Buttons will be inserted here by JS -->
+        </div>
+        <div style="margin-top: 8px; font-size: 10px; color: #666; text-align: center;">Requires app restart</div>
+    </div>
+</div>
+
+<!-- zRAM Manager (Memory) -->
+<div class="section-header" data-section="zram">
+    <span>zRAM Manager (Memory)</span>
+</div>
+<div class="section-content" id="zram-content">
+    <div class="ios-list">
+        <!-- Status Row -->
+        <div class="list-item" style="padding: 16px; background: rgba(0,122,255,0.05); border-bottom: 1px solid var(--border-color);">
+            <div class="item-content">
+                <span class="item-title">zRAM Status</span>
+                <span id="zram_stats_text" class="item-desc">Scanning...</span>
+            </div>
+            <!-- Badge will be controlled by your JS via innerText or style if needed -->
+        </div>
+
+        <!-- Algorithm Selector -->
+        <div class="list-item" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="item-content">
+                <span class="item-title">Compression Algorithm</span>
+                <span class="item-desc">Optimize for speed or compression ratio</span>
+            </div>
+            <select id="zram_algo_select" style="width: auto; background: none; border: none; color: var(--color-blue); font-weight: bold; outline: none; padding: 4px 8px; border-radius: 6px;">
+                <option value="lz4">lz4</option>
+                <option value="zstd">zstd</option>
+                <option value="lzo-rle">lzo-rle</option>
+            </select>
+        </div>
+
+        <!-- Disk Size Slider -->
+        <div class="ios-range-container" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="range-label-row">
+                <span class="item-title">zRAM Disk Size</span>
+                <span id="zram_size_val" style="color:var(--color-blue); font-weight:bold;">2048 MB</span>
+            </div>
+            <input type="range" id="zram_size_slider" min="128" step="128" value="2048" class="ios-range">
+        </div>
+
+        <!-- Swappiness Input -->
+        <div id="swappiness_container" style="display: flex; align-items: center; gap: 10px; padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <span style="font-size:14px; color:var(--text-secondary);">Swappiness:</span>
+            <input type="number" id="zram_swappiness_input" min="1" max="100" value="100"
+                   style="width: 60px; background: #2c2c2e; color: white; border: 1px solid #444; border-radius: 6px; padding: 6px; text-align: center; font-weight: bold;">
+        </div>
+
+        <!-- Apply Button -->
+        <div id="apply_zram_btn" style="padding: 16px; margin-top: 10px; cursor: pointer; background: var(--color-blue); border-radius: 14px; text-align: center; font-weight: bold; color: white; font-size: 16px; box-shadow: 0 4px 10px rgba(0,122,255,0.3);">
+            APPLY ZRAM CHANGES
+        </div>
+    </div>
+</div>
+    
+    <!-- Gaming Performance -->
+<div class="section-header" data-section="gaming">
+    <span>Gaming Performance</span>
+</div>
+<div class="section-content" id="gaming-content">
+    <div class="ios-list">
+        <div class="list-item">
+            <div class="item-content"><span class="item-title" style="color:var(--color-red)">Thermal Bypass 🔥</span><span class="item-desc">No CPU throttling. Dangerous heat.</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_disable_thermal"><span class="slider"></span></label>
+        </div>
+        <div class="list-item">
+            <div class="item-content"><span class="item-title" style="color:var(--color-blue)">Performance</span><span class="item-desc">Fpsgo Booster</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_performance"><span class="slider"></span></label>
+        </div>
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">Bypass charging ⚡</span><span class="item-desc">Direct power supply (less heating during gaming)</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_bypass"><span class="slider"></span></label>
+        </div>
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">Gaming Props 1</span><span class="item-desc">Raw performance. Balanced.</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_gaming_prop"><span class="slider"></span></label>
+        </div>
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">Gaming Props 2 🔥</span><span class="item-desc">⚠️Developer Options: Force 4x MSAA & GPU focus.</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_gaming_prop2"><span class="slider"></span></label>
+        </div>
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">High Framerate</span><span class="item-desc">Unlock maximum game FPS.</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_highframerate"><span class="slider"></span></label>
+        </div>
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">Lite Gaming</span><span class="item-desc">60fps limit & powersave mode.</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_lite_gaming"><span class="slider"></span></label>
+        </div>
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">Disable ZRAM</span><span class="item-desc">Makes game smoother but if you're out of memory it may crash</span></div>
+            <label class="ios-switch"><input type="checkbox" id="disable_zram"><span class="slider"></span></label>
+        </div>
+    </div>
+</div>
+
+<!-- Thermal Services Control -->
+<div class="section-header" data-section="thermal-services">
+    <span>Thermal Services Control 🔥</span>
+</div>
+<div class="section-content" id="thermal-services-content">
+    <div class="ios-list">
+        <!-- Start All Button -->
+        <div class="list-item">
+            <div class="item-content">
+                <span class="item-title">Start All Thermal Services</span>
+                <span class="item-desc">Enable all detected thermal services</span>
+            </div>
+            <div onclick="startAllThermalServices()" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--color-green); border-radius: 20px;">
+                <span style="color: white; font-size: 20px;">▶️</span>
+            </div>
+        </div>
+        
+        <!-- Stop All Button -->
+        <div class="list-item">
+            <div class="item-content">
+                <span class="item-title">Stop All Thermal Services</span>
+                <span class="item-desc">Disable all detected thermal services </span>
+            </div>
+            <div onclick="stopAllThermalServices()" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--color-red); border-radius: 20px;">
+                <span style="color: white; font-size: 20px;">⏹️</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Status Display -->
+    <div id="thermal-status-container" style="padding: 16px; text-align: center; color: #666;">
+        ⚠️Warning: Webui will freeze 5-15 seconds upon executing this service
+    </div>
+</div>
+
+<!-- PPM Policy Control -->
+<div class="section-header" data-section="ppm-policy">
+    <span>PPM Policy Control ⚡</span>
+</div>
+<div class="section-content" id="ppm-policy-content">
+    <!-- Current Status Header -->
+    <div style="padding: 16px; background: rgba(0,122,255,0.1); border-bottom: 1px solid var(--border-color);">
+        <div style="font-size: 12px; color: #aaa; margin-bottom: 8px;">CURRENT STATUS</div>
+        <div id="ppm-current-status" style="font-size: 14px; color: #32D74B; font-weight: bold;">
+            Loading PPM status...
+        </div>
+    </div>
+    
+    <!-- Dynamic Policy Items Container -->
+    <div class="ios-list" id="ppm-policies-container">
+        <!-- Policies loaded here -->
+    </div>
+    
+    <!-- Detailed Status Display -->
+    <div style="padding: 16px; margin-top: 16px; background: rgba(52,199,89,0.1); border-radius: 8px;">
+        <div style="font-size: 12px; color: #aaa; margin-bottom: 8px;">STATUS INFO</div>
+        <div id="ppm-detailed-status" style="font-size: 11px; color: #666; line-height: 1.4;">
+            Loading status info...
+        </div>
+    </div>
+</div>
+
+<!-- EEM Voltage Offset Control -->
+<div class="section-header" data-section="eem-voltage">
+    <span>⚡ EEM Voltage Offset</span>
+</div>
+<div class="section-content" id="eem-voltage-content">
+    <div class="ios-list">
+        <div class="list-item" style="padding: 16px; background: rgba(255,165,0,0.1); border-radius: 10px; margin-bottom: 12px;">
+            <div class="item-content">
+                <span class="item-title" style="color: #FF9F0A;">⚠️ Warning</span>
+                <span class="item-desc">Negative values reduce voltage also may render device unstable sudden screen-off or reboot (better thermals, lower performance). Positive values increase voltage (higher performance, more heat). Start with small values!</span>
+            </div>
+        </div>
+        
+        <!-- Voltage Offset Slider -->
+        <div class="ios-range-container" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="range-label-row">
+                <span class="item-title">Voltage Offset</span>
+                <span id="eem-offset-val" style="color:var(--color-blue); font-weight:bold;">0</span>
+            </div>
+            <input type="range" id="eem-offset-slider" min="-20" max="10" step="1" value="0" class="ios-range">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-top: 8px;">
+                <span>-20 (Max Undervolt)</span>
+                <span>0 (Default)</span>
+                <span>+10 (Overvolt)</span>
+            </div>
+            <div style="font-size: 11px; color: #aaa; margin-top: 10px; text-align: center;">
+                Applies to all EEM domains: CPU Big/Little, CCI, GPU
+            </div>
+        </div>
+        
+        <!-- Apply Button -->
+        <div id="apply-eem-btn" style="padding: 16px; margin-top: 10px; cursor: pointer; background: var(--color-blue); border-radius: 14px; text-align: center; font-weight: bold; color: white; font-size: 16px; box-shadow: 0 4px 10px rgba(0,122,255,0.3);">
+            APPLY VOLTAGE OFFSET
+        </div>
+        
+        <!-- Current Status -->
+        <div style="padding: 12px; margin-top: 10px; background: rgba(0,122,255,0.05); border-radius: 8px; text-align: center;">
+            <span id="eem-status" style="font-size: 12px; color: #666;">Status: Ready</span>
+        </div>
+    </div>
+</div>
+
+<!-- Display Animation Speed -->
+<div class="section-header" data-section="animation">
+    <span>Display Animation Speed</span>
+</div>
+<div class="section-content" id="animation-content">
+    <div class="ios-list">
+        <div class="list-item" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="item-content">
+                <span class="item-title">Window Animation</span>
+                <span class="item-desc">Opening/closing windows</span>
+            </div>
+            <select id="anim_window" class="anim-select" style="width: auto; background: none; border: none; color: var(--color-blue); font-weight: bold; outline: none; padding: 4px 8px; border-radius: 6px;">
+                <option value="0.1">0.1×</option>
+                <option value="0.25">0.25×</option>
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1.0× (Default)</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="1.75">1.75×</option>
+                <option value="2">2.0×</option>
+                <option value="2.5">2.5×</option>
+                <option value="3">3.0×</option>
+                <option value="">System Default</option>
+            </select>
+        </div>
+
+        <div class="list-item" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="item-content">
+                <span class="item-title">Transition Animation</span>
+                <span class="item-desc">Activity/screen transitions</span>
+            </div>
+            <select id="anim_transition" class="anim-select" style="width: auto; background: none; border: none; color: var(--color-blue); font-weight: bold; outline: none; padding: 4px 8px; border-radius: 6px;">
+                <option value="0.1">0.1×</option>
+                <option value="0.25">0.25×</option>
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1.0× (Default)</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="1.75">1.75×</option>
+                <option value="2">2.0×</option>
+                <option value="2.5">2.5×</option>
+                <option value="3">3.0×</option>
+                <option value="">System Default</option>
+            </select>
+        </div>
+
+        <div class="list-item" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="item-content">
+                <span class="item-title">Animator Duration</span>
+                <span class="item-desc">Property animations (e.g. buttons)</span>
+            </div>
+            <select id="anim_animator" class="anim-select" style="width: auto; background: none; border: none; color: var(--color-blue); font-weight: bold; outline: none; padding: 4px 8px; border-radius: 6px;">
+                <option value="0.1">0.1×</option>
+                <option value="0.25">0.25×</option>
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1.0× (Default)</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="1.75">1.75×</option>
+                <option value="2">2.0×</option>
+                <option value="2.5">2.5×</option>
+                <option value="3">3.0×</option>
+                <option value="">System Default</option>
+            </select>
+        </div>
+
+        <div class="list-item" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div class="item-content">
+                <span class="item-title">MI Transition Ratio</span>
+                <span class="item-desc">Xiaomi-specific transition speed</span>
+            </div>
+            <select id="anim_duration_ratio" class="anim-select" style="width: auto; background: none; border: none; color: var(--color-blue); font-weight: bold; outline: none; padding: 4px 8px; border-radius: 6px;">
+                <option value="0.01">0.01×</option>
+                <option value="0.1">0.1×</option>
+                <option value="0.25">0.25×</option>
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1.0× (Default)</option>
+                <option value="">System Default</option>
+            </select>
+        </div>
+
+        <div id="apply_anim_btn" style="padding: 16px; margin-top: 10px; cursor: pointer; background: var(--color-blue); border-radius: 14px; text-align: center; font-weight: bold; color: white; font-size: 16px; box-shadow: 0 4px 10px rgba(0,122,255,0.3);">
+            APPLY ANIMATION SETTINGS
+        </div>
+    </div>
+</div>
+
+<!-- CPUSet Groups -->
+<div class="section-header" data-section="cpuset">
+    <span>CPUSet Groups</span>
+</div>
+<div class="section-content" id="cpuset-content">
+    <div class="list-item"><div class="item-desc">Loading CPUSet groups...</div></div>
+</div>
+
+    <!-- Advanced CPU Control -->
+<div class="section-header" data-section="cpu-control">
+    <span>Advanced CPU Control</span>
+</div>
+<div class="section-content" id="cpu-control-content">
+    <div class="ios-list">
+        <!-- CPU Core Limit -->
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">CPU Core Limit</span><span class="item-desc">Limit CPU6/7 based on temp.</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_cpu"><span class="slider"></span></label>
+        </div>
+        
+        <!-- Auto Frequency -->
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">Auto Frequency Scaling</span><span class="item-desc">Limit frequencies during gaming to avoid overheat 🔥</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_auto_freq"><span class="slider"></span></label>
+        </div>
+        
+        <!-- UNIFIED CPU FREQUENCY SCALING -->
+        <div class="ios-range-container" style="padding: 16px; border-top: 1px solid var(--border-color); margin-top: 12px;">
+            <div class="range-label-row">
+                <span class="item-title">🎮 Max CPU Frequency</span>
+                <span id="cpu-freq-val" style="color:var(--color-blue); font-weight:bold;">100%</span>
+            </div>
+            <!-- LARGER SLIDER -->
+            <input type="range" id="cpu-freq-slider" min="30" max="100" step="5" value="100" 
+                   style="width: 100%; height: 24px; -webkit-appearance: none; background: rgba(255,255,255,0.1); border-radius: 12px; outline: none;"
+                   oninput="updateCpuFreqDisplay(this.value)"
+                   onchange="applyCpuFreqScaling()">
+            
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-top: 12px;">
+                <span>30% (Battery Saver)</span>
+                <span>100% (Performance)</span>
+            </div>
+            <div style="font-size: 11px; color: #aaa; margin-top: 8px; text-align: center; line-height: 1.4;">
+                🔥 Auto scales down by 5% per 1°C above 38°C<br>
+                🌡️ Based on real-time battery temperature
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CPU Control Settings -->
+<div class="section-header" data-section="cpu-control-settings">
+    <span>⚙️ CPU Control (Dynamic cgroups)</span>
+</div>
+<div class="section-content" id="cpu-control-settings-content">
+    <div class="ios-list">
+        <div class="list-item" style="padding: 16px; background: rgba(0,122,255,0.1); border-radius: 10px; margin-bottom: 12px;">
+            <div class="item-content">
+                <span class="item-title" style="color: var(--color-blue);">ℹ️ Info</span>
+                <span class="item-desc">Auto-detected all CPU cgroups from /dev/cpuctl/. Adjust shares for each group.</span>
+            </div>
+        </div>
+        
+        <!-- Dynamic CPU Share Controls -->
+        <div id="cpu-cgroup-controls" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div style="font-size: 12px; color: #aaa; text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                Loading CPU cgroups...
+            </div>
+        </div>
+        
+        <div id="apply-cpu-control-btn" style="padding: 16px; margin-top: 10px; cursor: pointer; background: var(--color-blue); border-radius: 14px; text-align: center; font-weight: bold; color: white; font-size: 16px; box-shadow: 0 4px 10px rgba(0,122,255,0.3);">
+    APPLY ALL CHANGES
+</div>
+ 
+        <!-- Status -->
+        <div style="padding: 12px; margin-top: 10px; background: rgba(0,122,255,0.05); border-radius: 8px; text-align: center;">
+            <span id="cpu-control-status" style="font-size: 12px; color: #666;">Status: Ready</span>
+        </div>
+    </div>
+</div>
+
+<!-- Sysctl Kernel Tuning -->
+<div class="section-header" data-section="sysctl" style="display:flex; justify-content:space-between; align-items:center;">
+    <span>⚙️ Sysctl Kernel Tuning</span>
+    <!-- New Refresh Button -->
+    <span onclick="forceRescanSysctl()" style="font-size:16px; cursor:pointer; opacity:0.7;" title="Force Re-scan">re-scan</span>
+</div>
+<div class="section-content" id="sysctl-content">
+    <!-- ... rest of your content ... -->
+    <div class="ios-list">
+        <!-- Warning Banner -->
+        <div class="list-item" style="padding: 16px; background: rgba(255,165,0,0.1); border-radius: 10px; margin-bottom: 12px;">
+            <div class="item-content">
+                <span class="item-title" style="color: #FF9F0A;">⚠️ Advanced Users Only</span>
+                <span class="item-desc">Modifies kernel parameters directly. Incorrect values can cause bootloops. Values are saved to SD Card for persistence.</span>
+            </div>
+        </div>
+        
+        <!-- Dynamic Sysctl Container -->
+        <div id="sysctl-controls-container" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <div style="font-size: 12px; color: #aaa; text-align: center; padding: 20px;">
+                Loading kernel parameters...
+            </div>
+        </div>
+        
+        <!-- Save Button -->
+        <div id="apply-sysctl-btn" style="padding: 16px; margin-top: 10px; cursor: pointer; background: var(--color-blue); border-radius: 14px; text-align: center; font-weight: bold; color: white; font-size: 16px; box-shadow: 0 4px 10px rgba(0,122,255,0.3);">
+            SAVE & APPLY ALL SETTINGS
+        </div>
+        
+        <!-- Status -->
+        <div style="padding: 12px; margin-top: 10px; background: rgba(0,122,255,0.05); border-radius: 8px; text-align: center;">
+            <span id="sysctl-status" style="font-size: 12px; color: #666;">Status: Ready</span>
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance -->
+<div class="section-header" data-section="maintenance">
+    <span>Maintenance</span>
+</div>
+<div class="section-content" id="maintenance-content">
+    <div class="ios-list">
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">App Trimming</span><span class="item-desc">⚠️Warning: use only if you feel lag to optimize installed apps. more CPU usage if you use this permanently!</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_trim"><span class="slider"></span></label>
+        </div>
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">Ram Cleaner</span><span class="item-desc">Auto Clear RAM at 50% usage.</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_cleaner"><span class="slider"></span></label>
+        </div>
+        <!-- One-Click Setup -->
+<div class="list-item">
+    <div class="item-content">
+        <span class="item-title" style="color:var(--color-green)">One-Click Setup</span>
+        <span class="item-desc">Reset & install latest MTK AI Engine config from GitHub</span>
+    </div>
+    <button id="btn-oneclick-setup" class="btn-small" style="font-size:12px; padding:4px 12px;">
+        🔄 Install Now
+    </button>
+</div>
+        <div class="list-item">
+            <div class="item-content"><span class="item-title">Notifications status</span><span class="item-desc">ON/OFF notifications</span></div>
+            <label class="ios-switch"><input type="checkbox" id="enable_notifications"><span class="slider"></span></label>
+        </div>
+    </div>
+</div>
+
+<!-- Smart Power Control -->
+<div class="section-header" data-section="power">
+    <span>Smart Power Saver - screen-off</span>
+</div>
+<div class="section-content" id="power-content">
+    <div class="ios-list">
+        <div class="list-item">
+    <div class="item-content"><span class="item-title" style="color:var(--color-blue)">Deep Sleep Governor</span><span class="item-desc">Enable Android Low Power Mode — powersaves CPU/GPU/Devfreq, restricts apps, kills services when screen off.</span></div>
+    <label class="ios-switch"><input type="checkbox" id="enable_smart_powersave"><span class="slider"></span></label>
+</div>
+    </div>
+        </div>
+        
+        <!-- GLOBAL ROOT FILE SEARCH & EDITOR -->
+<div class="section-header" data-section="root-search">
+    <span>🔍 Global Root Search</span>
+</div>
+<div class="section-content" id="search-content">
+    <div class="ios-list">
+        
+        <!-- Search Controls -->
+        <div style="padding: 16px; background: rgba(0,0,0,0.3); border-radius: 10px; margin-bottom: 12px;">
+            <input type="text" id="global-search-input" 
+                placeholder="Keyword (e.g., throttling, current)..." 
+                style="width: 100%; padding: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 6px; outline: none; margin-bottom: 10px;">
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <label style="font-size: 12px; color: #ccc; display:flex; align-items:center; gap:5px;">
+                    <input type="checkbox" id="search-mode-content" checked> 
+                    Search File <b>Contents</b> (Slow, Deep)
+                </label>
+                <label style="font-size: 12px; color: #ccc; display:flex; align-items:center; gap:5px;">
+                    <input type="checkbox" id="search-mode-name"> 
+                    Search <b>Filenames</b> Only (Fast)
+                </label>
+            </div>
+
+            <button onclick="startGlobalSearch()" 
+                style="width: 100%; padding: 12px; background: #0A84FF; color: white; border: none; border-radius: 6px; font-weight: bold;">
+                🔍 START SEARCH
+            </button>
+            
+            <div id="search-status" style="font-size: 11px; color: #FF9F0A; margin-top: 8px; display:none;"></div>
+            <div style="font-size: 10px; color: #8E8E93; margin-top: 8px;">
+                💾 Results are cached to SD Card for instant loading next time.
+            </div>
+        </div>
+
+        <!-- Cache Control -->
+        <div style="padding: 0 16px; margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size: 12px; color: #8E8E93;">Cached Keywords: <span id="cache-count">0</span></span>
+            <button onclick="clearSearchCache()" style="font-size: 10px; padding: 4px 8px; background: rgba(255,69,58,0.2); color: #ff453a; border: 1px solid #ff453a; border-radius: 4px;">Clear Cache</button>
+        </div>
+
+        <!-- Results List -->
+        <div id="search-results-container" style="min-height: 50px; padding: 0 16px;">
+            <div style="padding: 20px; text-align: center; color: #666;">Enter a keyword to search root files...</div>
+        </div>
+
+        <!-- EDITOR MODAL (Updated with Permission Control) -->
+<div id="file-editor-modal" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; align-items: center; justify-content: center;" onclick="if(event.target==this) closeEditor()">
+    <div style="background: #1c1c1e; width: 90%; max-width: 600px; border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; max-height: 80vh;">
+        
+        <h3 style="margin-top:0; color:white; font-size: 18px; display:flex; justify-content:space-between; align-items:center;">
+            ✏️ Edit Value & Permissions
+            <span style="font-size:10px; background:#333; padding:4px 8px; border-radius:4px; color:#aaa;">Root Access</span>
+        </h3>
+        
+        <!-- Path Display -->
+        <div id="editor-path-display" style="font-size: 11px; color: #8E8E93; margin-bottom: 10px; font-family:monospace; line-height:1.4; word-break: break-all;">
+            Loading path...
+        </div>
+
+        <!-- 🆕 NEW: Permission Control Row -->
+        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 15px; display:flex; align-items:center; gap: 10px; flex-wrap: wrap;">
+            <span style="font-size: 12px; color: #ccc;">Permissions:</span>
+            <span id="editor-current-perm" style="font-family: monospace; color: #FF9F0A; font-weight: bold; font-size: 14px; background: #000; padding: 2px 6px; border-radius: 4px;">---</span>
+            
+            <input type="text" id="editor-new-perm" placeholder="e.g. 644" maxlength="4" 
+                   style="width: 70px; background: #333; border: 1px solid #555; color: white; border-radius: 4px; padding: 4px 8px; text-align: center; font-family: monospace; font-size: 13px;">
+            
+            <button onclick="changeFilePermissions()" 
+                style="padding: 5px 12px; background: #0A84FF; color: white; border: none; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer;">
+                CHANGE
+            </button>
+            <span id="perm-status" style="font-size: 11px; color: #8E8E93; margin-left: auto;"></span>
+        </div>
+        
+        <!-- Text Area (Scrollable) -->
+        <textarea id="editor-value-input" style="flex:1; min-height: 150px; max-height: 400px; background: rgba(0,0,0,0.5); color: #32D74B; border: 1px solid #32D74B; border-radius: 8px; padding: 12px; font-family: 'Courier New', monospace; font-size: 13px; resize: none; white-space: pre; overflow-x: auto;"></textarea>
+        
+        <div style="display:flex; gap: 10px; margin-top: 15px;">
+            <button onclick="saveFileValue()" style="flex:1; padding: 14px; background: #32D74B; color: black; border: none; border-radius: 8px; font-weight: bold; font-size: 14px;">💾 SAVE CHANGES</button>
+            <button onclick="closeEditor()" style="flex:1; padding: 14px; background: rgba(255,255,255,0.1); color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Cancel</button>
+        </div>
+        
+        <div id="editor-status" style="font-size: 12px; text-align: center; margin-top: 10px; color: #8E8E93; min-height: 16px;"></div>
+    </div>
+</div>
+
+    </div>
+</div>
+
+<!-- Devfreq Governor Control -->
+<div class="section-header" data-section="devfreq-governor">
+    <span>Devfreq Governor Control - ‼️ Changing governor in this section can cause system instability</span>
+</div>
+<div class="section-content" id="devfreq-governor-content">
+    <div id="devfreq-governor-container" class="ios-list">
+        <div style="padding:20px; text-align:center;">Loading governors...</div>
+    </div>
+    
+    <!-- Apply Button -->
+    <div id="apply-devfreq-btn" style="padding: 16px; margin-top: 10px; cursor: pointer; background: var(--color-blue); border-radius: 14px; text-align: center; font-weight: bold; color: white; font-size: 16px; box-shadow: 0 4px 10px rgba(0,122,255,0.3);">
+        APPLY SELECTED GOVERNOR
+    </div>
+</div>
+    
+    <div style="position:fixed; bottom:0; left:0; right:0; height:65px; background:var(--bg-card); border-top:1px solid var(--border-color); display:flex; justify-content:space-around; align-items:center; z-index:1000;">
+    <div onclick="switchTab('dash')" style="flex:1; text-align:center; cursor:pointer;">
+        <span style="display:block; font-size:20px;">📊</span>
+        <span style="font-size:12px;">Manager</span>
+    </div>
+    <div onclick="switchTab('apps')" style="flex:1; text-align:center; cursor:pointer;">
+        <span style="display:block; font-size:20px;">🎮</span>
+        <span style="font-size:12px;">App List</span>
+    </div>
+</div>
+
+<!-- App List Tab (separate) -->
+<div id="apps-tab" style="display:none; padding-bottom:80px;">
+    <div class="section-header">Select App to Add in GAMELISTS</div>
+    <div id="app-list-container" class="ios-list">
+        <div style="padding:20px; text-align:center;">Loading Applications...</div>
+    </div>
+    
+    <!-- Skip Apps Whitelist -->
+<div class="section-header" data-section="skip-whitelist">
+    <span>Skip Mode Whitelist 🚫</span>
+</div>
+<div class="section-content" id="skip-whitelist-content">
+    <div id="skip-whitelist-container" class="ios-list">
+        <div style="padding:20px; text-align:center;">Loading skip list...</div>
+    </div>
+</div>
+
+<!-- All User Apps for Whitelist Selection -->
+<div class="section-header" data-section="user-apps">
+    <span>All User Applications</span>
+</div>
+<div class="section-content" id="user-apps-content">
+    <div id="user-apps-container" class="ios-list">
+        <div style="padding:20px; text-align:center;">Loading applications...</div>
+    </div>
+</div>
+
+    <!-- Per-App Cpusets During Gaming -->
+<div class="section-header" data-section="cpusets">
+    <span>Per-App Cpusets During Gaming</span>
+</div>
+<div class="section-content" id="cpusets-content">
+    <div id="cpuset-apps-container" class="ios-list" style="max-height: 400px; overflow-y: auto;">
+        <div id="cpuset-loading" style="padding:20px; text-align:center;">Loading packages...</div>
+    </div>
+
+    <!-- Control Buttons -->
+    <div style="padding: 12px; display: flex; gap: 8px; margin-top: 10px;">
+        <button id="cpuset-all-bg" style="flex:1; padding:10px; background:var(--color-blue); color:white; border:none; border-radius:8px; font-weight:bold; font-size:12px;">
+            📉 All → Background
+        </button>
+        <button id="cpuset-clear" style="flex:1; padding:10px; background:var(--color-red); color:white; border:none; border-radius:8px; font-weight:bold; font-size:12px;">
+            ❌ Clear
+        </button>
+    </div>
+    
+    <div style="padding:12px; margin-top:10px; background:rgba(52,199,89,0.1); border-radius:8px; text-align:center;">
+        <span id="cpuset-status" style="font-size:12px; color:#34C759;">⚠️Backgrounding all apps while gaming can make game smoother but it will also killed services including MTK AI service & the worst case can cause system instability either Restarted/Reboot</span>
+    </div>
+</div>
+
+<!-- App Freezer -->
+<div class="section-header" data-section="freezer">
+    <span>App Freezer During Gaming & Screen-off</span>
+</div>
+<div class="section-content" id="freezer-content">
+    <div class="list-item"><div class="item-desc">Loading user apps...</div></div>
+</div>
+
+<!-- ========================================== -->
+<!-- 1️⃣ SETTINGS POPUP (Graphics & Per-App)    -->
+<!-- ========================================== -->
+<div id="floating-popup" class="popup-overlay" onclick="if(event.target == this) closeAppPopup()">
+    <div class="popup-card">
+        <div class="popup-title">Graphics Engine & Latency</div>
+        <span id="popup-pkg-display" class="popup-pkg">com.t2ksports.nba2k25modded</span>
+        
+        <!-- CONTENT STARTS HERE -->
+        
+        <!-- REFRESH RATE LOCK -->
+        <div class="refresh-lock-container" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 11px; color: #aaa; font-weight: bold; letter-spacing: 0.5px;">REFRESH RATE LOCK</span>
+                <span id="refresh-mode-display" style="font-size: 11px; color: #FF453A; font-family: monospace; font-weight: bold;">Off</span>
+            </div>
+            <select id="refresh-mode-select" onchange="applyRefreshLock()" style="width: 100%; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 6px; font-size: 12px;">
+                <option value="">— Disabled —</option>
+            </select>
+        </div>
+        
+        <!-- RESOLUTION SCALING -->
+        <div class="scaling-container" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 11px; color: #aaa; font-weight: bold; letter-spacing: 0.5px;">RESOLUTION SCALING</span>
+                <span id="scaling-val-display" style="font-size: 11px; color: #32D74B; font-family: monospace; font-weight: bold;">100%</span>
+            </div>
+            <input type="range" id="scaling-slider" min="50" max="200" step="10" value="100"
+                   oninput="updateScalingDisplay(this.value)"
+                   onchange="saveAndApplyScaling()"
+                   style="width: 100%; accent-color: #32D74B; cursor: pointer;">
+            <div style="display: flex; justify-content: space-between; font-size: 9px; color: #666; margin-top: 5px;">
+                <span>50%</span>
+                <span>100%</span>
+                <span>200%</span>
+            </div>
+            <button onclick="resetScalingToDefault()" 
+                    style="width:100%; margin-top:8px; padding:6px; background:rgba(255,255,255,0.1); color:#FF9F0A; border:none; border-radius:6px; font-size:11px; font-weight:bold;">
+                ↺ Reset to Default (100%)
+            </button>
+        </div>
+
+        <!-- CPU GOVERNOR -->
+        <div class="governor-container" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 11px; color: #aaa; font-weight: bold; letter-spacing: 0.5px;">CPU GOVERNOR</span>
+                <span id="governor-display" style="font-size: 11px; color: #FF9F0A; font-family: monospace; font-weight: bold;">auto</span>
+            </div>
+            <select id="governor-select" onchange="saveAndApplyGovernor()" style="width: 100%; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 6px; font-size: 12px;">
+                <option value="">— Loading… —</option>            </select>
+        </div>
+            
+        <!-- VSYNC OFFSET -->
+        <div class="vsync-container" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 11px; color: #aaa; font-weight: bold; letter-spacing: 0.5px;">5-POINT VSYNC OFFSET</span>
+                <span id="vsync-val-display" style="font-size: 11px; color: #007AFF; font-family: monospace; font-weight: bold;">0ns</span>
+            </div>
+            <input type="range" id="vsync-slider" min="0" max="5000000" step="500000" value="0" 
+                   oninput="updateVsyncDisplay(this.value)" 
+                   onchange="saveAndApplyVsync()"
+                   style="width: 100%; accent-color: #007AFF; cursor: pointer;">
+            <div style="display: flex; justify-content: space-between; font-size: 9px; color: #666; margin-top: 5px;">
+                <span>ULTRA (0ns)</span>
+                <span>STABLE (5ms)</span>
+            </div>
+        </div>
+        
+        <!-- EEM VOLTAGE OFFSET -->
+        <div class="eem-container" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin: 10px 0; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 11px; color: #aaa; font-weight: bold; letter-spacing: 0.5px;">EEM VOLTAGE OFFSET</span>
+                <span id="eem-offset-display" style="font-size: 11px; color: #FF9F0A; font-family: monospace; font-weight: bold;">0</span>
+            </div>
+            <input type="range" id="eem-offset-slider" min="-20" max="10" step="1" value="0" 
+                   oninput="updateEemOffsetDisplay(this.value)" 
+                   onchange="saveAndApplyEemOffset(event)"
+                   style="width: 100%; accent-color: #FF9F0A; cursor: pointer;">
+            <div style="display: flex; justify-content: space-between; font-size: 9px; color: #666; margin-top: 5px;">
+                <span>-20 (Undervolt)</span>
+                <span>0 (Default)</span>
+                <span>+10 (Overvolt)</span>
+            </div>
+            <div style="font-size: 10px; color: #aaa; margin-top: 5px; text-align: center;">
+                Applies to CPU/GPU domains for this app
+            </div>
+        </div>
+
+        <!-- RENDERER MODES -->
+        <div class="popup-option" onclick="saveAndApplyRenderer('skiavk')">
+            <div class="option-main">
+                <span class="option-title">🔥 Performance Mode</span>
+                <span class="option-subtitle">Vulkan • Clear Cache • Restart</span>
+            </div>
+            <div class="fix-badge">Apply</div>
+        </div>
+
+        <div class="popup-option" onclick="saveAndApplyRenderer('skiagl')">
+            <div class="option-main">                <span class="option-title">🔋 Balanced Mode</span>
+                <span class="option-subtitle">OpenGL • Normal Heat</span>
+            </div>
+            <div class="fix-badge">Apply</div>
+        </div>
+
+        <!-- VERIFY SECTION -->
+        <div class="verify-section">
+            <div id="live-renderer-status" class="status-text">Status: Ready to Verify</div>
+            <button onclick="verifyRenderer()" style="width:100%; padding:10px; background:#007AFF; color:white; border:none; border-radius:8px; font-size:12px; font-weight:bold;">
+                VERIFY LIVE RENDERER
+            </button>
+        </div>
+
+        <!-- CLOSE BUTTON -->
+        <button onclick="closeAppPopup()" style="width:100%; margin-top:15px; padding:12px; background:rgba(255,69,58,0.1); color:#FF453A; border:1px solid rgba(255,69,58,0.3); font-size:14px; font-weight:600; border-radius:8px;">
+            Dismiss
+        </button>
+        
+    </div> <!-- ✅ END OF POPUP CARD -->
+</div> <!-- ✅ END OF FLOATING POPUP -->
+
+<!-- ========================================== -->
+<!-- 2️⃣ MONITORING POPUP (MATCHES OTHERS)       -->
+<!-- ========================================== -->
+<div id="monitor-popup" class="popup-overlay" style="display:none;">
+    <div class="popup-card monitor-card">
+        <div class="popup-header">
+            <div class="popup-title">Session Statistics</div>
+            <!-- X Button in Header -->
+            <button class="close-btn" onclick="closeMonitorPopup()">&times;</button>
+        </div>
+        
+        <div class="pkg-badge" id="monitor-pkg-display">com.example.game</div>
+
+        <div class="stats-grid">
+            <div class="stat-box power-box">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-value" id="stat-avg-power">-- W</div>
+                <div class="stat-label">Avg Power</div>
+            </div>
+            <div class="stat-box temp-box">
+                <div class="stat-icon">🌡️</div>
+                <div class="stat-value" id="stat-avg-temp">-- °C</div>
+                <div class="stat-label">Avg Temp</div>
+            </div>
+            <div class="stat-box fps-box">
+                <div class="stat-icon">🎮</div>
+                <div class="stat-value" id="stat-avg-fps">-- FPS</div>
+                <div class="stat-label">Avg FPS</div>
+            </div>
+        </div>
+
+        <div class="details-row">
+            <span>Samples: <b id="stat-samples">0</b></span>
+            <span>Last Update: <b id="stat-time">--:--:--</b></span>
+        </div>
+
+        <!-- Toggle Button -->
+        <div style="text-align: center; margin-top: 10px;">
+            <button id="btn-toggle-monitor" class="btn btn-live" onclick="toggleMonitor()" style="width: 100%; max-width: 300px;">
+                ▶️ Start Monitor
+            </button>
+        </div>
+        
+        <div id="monitor-status" class="status-text"></div>
+
+        <!-- ✅ DISMISS BUTTON (Matches other popups) -->
+        <button onclick="closeMonitorPopup()" style="width:100%; margin-top:15px; padding:12px; background:rgba(255,69,58,0.1); color:#FF453A; border:1px solid rgba(255,69,58,0.3); font-size:14px; font-weight:600; border-radius:8px; cursor:pointer;">
+            Dismiss
+        </button>
+    </div>
+</div>
+</div>
+    <script src="script.js"></script>
+</body>
+</html>
