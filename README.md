@@ -29,7 +29,7 @@ also gives full features of your android device in all scenarios such as gaming 
 - Auto App freezer during gaming & during screen-off, can also automatically unfreeze during normal use suitable for who doesn't want disturbance during gaming sessions
   🆙🆕
 - Sysctl kernel tuner editor (Under experimental)
-- Global root search with editor (Under experimental) 
+- Global root search with editor & file permission changer (Under experimental) 
 
 ## GAMING MODE PER-APP 
 - Refresh rate
