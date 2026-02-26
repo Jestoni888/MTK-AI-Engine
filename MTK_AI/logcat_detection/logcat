@@ -324,7 +324,7 @@ apply_non_gaming_logic() {
     pkill -f lite_gaming
     pkill -f auto_frequency
     monitor
-    wm reset
+    wm size reset && wm density reset && settings put system accelerometer_rotation 0 && settings put system user_rotation 0
     su -c am broadcast -a com.coloros.phonemanager.action.CLEAN_UP
     su -c "am broadcast -a com.transsion.phonemaster.action.CLEAN_MEMORY"
     CURRENT_MODE="NORMAL"
