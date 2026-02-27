@@ -1,0 +1,79 @@
+#!/system/bin/sh
+
+# CPUSet Auto-Apply Boot Script
+# Reads /sdcard/cpuset_auto.json and applies masks to all groups
+# Place in /data/adb/service.d/ (Magisk) or /system/etc/init.d/ (init.d)
+
+JSON="/sdcard/MTK_AI_Engine/cpuset_auto.json"
+LOG="/dev/null"  # change to "/data/media/0/MTK_AI_Engine/MTK_AI_Engine.log" for debugging
+
+[ -f "$JSON" ] || exit 0
+
+# Wait for /dev/cpuset to be ready (up to 10 sec)
+i=0
+while [ ! -d "/dev/cpuset/foreground" ] && [ $i -lt 20 ]; do
+    sleep 0.5
+    i=$((i + 1))
+done
+
+# Parse JSON and apply each group
+while IFS= read -r line; do
+    # Extract "path": "/dev/cpuset/..."
+    if echo "$line" | grep -q '"path"'; then
+        # Extract path value (2nd quoted string)
+        path=$(echo "$line" | grep -o '"[^"]*"' | sed -n '2p' | tr -d '"')
+        # Extract mask from next lines (look for "mask": "...")
+        mask=""
+        while IFS= read -r next; do
+            if echo "$next" | grep -q '"mask"'; then
+                mask=$(echo "$next" | grep -o '"[^"]*"' | sed -n '2p' | tr -d '"')
+                break
+            fi
+            # Stop if we hit next object
+            echo "$next" | grep -q '{' && break
+        done
+        # Apply if valid
+        if [ -n "$mask" ] && [ -w "$path" ]; then
+            echo "$mask" > "$path" 2>>"$LOG"
+            echo "Applied: $path = $mask" >>"$LOG"
+        fi
+    fi
+done < "$JSON"
+
+exit 0
+
+# Check if PPM interface exists
+if [ ! -f "$PPM_PATH" ]; then
+    log_msg "⚠️ PPM not available on this device"
+    exit 0
+fi
+
+# Check if config file exists
+if [ ! -f "$PPM_CONFIG" ]; then
+    log_msg "ℹ️ No PPM config found, using defaults"
+    exit 0
+fi
+
+log_msg "🎮 Loading PPM policies from SDCard..."
+
+# Source the config file to get policy variables
+. "$PPM_CONFIG" 2>/dev/null
+
+# Apply all PPM policies (0-9)
+for i in 0 1 2 3 4 5 6 7 8 9; do
+    # Get policy state using eval
+    eval "POLICY_STATE=\$policies[$i]"
+    
+    if [ "$POLICY_STATE" = "0" ] || [ "$POLICY_STATE" = "1" ]; then
+        echo "$i $POLICY_STATE" > "$PPM_PATH" 2>/dev/null
+        if [ $? -eq 0 ]; then
+            log_msg "✅ Applied PPM policy $i = $POLICY_STATE"
+        else
+            log_msg "❌ Failed to apply PPM policy $i"
+        fi
+    else
+        log_msg "⚠️ Policy $i not set in config, skipping"
+    fi
+done
+
+log_msg "✅ PPM policies loaded successfully from SDCard!"
