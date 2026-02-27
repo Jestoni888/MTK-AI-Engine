@@ -1,0 +1,256 @@
+#!/system/bin/sh
+
+# Maximum Performance Script — Final Version
+# Based on your kr-script/mtk XML logic
+# Targets: mt6983, mt6895, and gpufreqv2-based Dimensity SoCs
+
+set -e
+
+echo "[+] Applying MAXIMUM PERFORMANCE CONFIG..."
+
+# --- Detect DVFSRC path ---
+dvfsrc_a=/sys/devices/platform/soc/1c00f000.dvfsrc
+dvfsrc_b=/sys/devices/platform/1c00f000.dvfsrc
+dvfsrc_c=/sys/devices/platform/1c013000.dvfsrc
+dvfsrc_d=/sys/class/devfreq/mtk-dvfsrc-devfreq
+dvfsrc_dir=""
+for d in "$dvfsrc_a" "$dvfsrc_b" "$dvfsrc_c" "$dvfsrc_d"; do
+  if [ -d "$d" ]; then
+    dvfsrc_dir="$d"
+    break
+  fi
+done
+
+if [ -z "$dvfsrc_dir" ]; then
+  echo "[!] DVFSRC not found. Skipping DDR tuning."
+fi
+
+# --- Paths ---
+perfmgr=/sys/module/mtk_fpsgo/parameters/perfmgr_enable
+pandora_feas=/sys/module/perfmgr_mtk/parameters/perfmgr_enable
+fpsgo=/sys/kernel/fpsgo/common/fpsgo_enable
+fbt_ceiling=/sys/kernel/fpsgo/fbt/enable_ceiling
+ged_kpi=/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled
+dcs_mode=/sys/kernel/ged/hal/dcs_mode
+
+# Prefer Pandora FEAS if available
+if [ -f "$pandora_feas" ]; then
+  perfmgr="$pandora_feas"
+fi
+
+# --- Helper: lock_value ---
+lock_value() {
+  chmod 664 "$2" 2>/dev/null
+  echo "$1" > "$2"
+  chmod 444 "$2" 2>/dev/null
+}
+
+# ==============================
+# 🔧 1. Enable Performance Subsystems
+# ==============================
+
+if [ -f "$fpsgo" ]; then
+  echo "[+] Enabling FPSGO..."
+  lock_value 1 "$fpsgo"
+fi
+
+if [ -f "$fbt_ceiling" ]; then
+  echo "[+] Enabling FBT Ceiling..."
+  lock_value 1 "$fbt_ceiling"
+fi
+
+if [ -f "$perfmgr" ]; then
+  echo "[+] Enabling PerfMgr (FEAS)..."
+  # Ensure FPSGO is on first
+  if [ "$(cat "$fpsgo" 2>/dev/null)" != "1" ]; then
+    lock_value 1 "$fpsgo"
+  fi
+  # GED KPI should be ON unless hybrid governor is used
+  if [ ! -d /data/adb/modules/dimensity_hybrid_governor ] && [ -f "$ged_kpi" ]; then
+    lock_value 1 "$ged_kpi"
+  fi
+  lock_value 1 "$perfmgr"
+fi
+
+# ==============================
+# 🎮 2. GPU: Lock to MAX Frequency
+# ==============================
+
+if [ -f /proc/gpufreqv2/stack_signed_opp_table ]; then
+  # Get highest frequency (first line = highest OPP)
+  MAX_FREQ=$(head -n1 /proc/gpufreqv2/stack_signed_opp_table | awk '{print $3}' | cut -d',' -f1)
+  if [ -n "$MAX_FREQ" ] && [ "$MAX_FREQ" != "0" ]; then
+    echo "[+] Locking GPU to max: ${MAX_FREQ}KHz"
+
+    # Set custom upbound (via GED)
+    lock_value "$MAX_FREQ" /sys/kernel/ged/hal/custom_upbound_gpu_freq
+
+    # Also disable fixed freq (let upbound control it)
+    echo -1 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null || true
+    echo 0 0 > /proc/gpufreqv2/fix_custom_freq_volt 2>/dev/null || true
+
+    # Disable GPT thermal throttle if present
+    if [ -f /sys/kernel/thermal/gpt ]; then
+      echo disable > /sys/kernel/thermal/gpt
+    fi
+  fi
+fi
+
+# ==============================
+# 💾 3. DDR: Set Min Freq = Max Freq
+# ==============================
+
+if [ -n "$dvfsrc_dir" ]; then
+  dvfsrc="$dvfsrc_dir/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq"
+  if [ -f "$dvfsrc/max_freq" ] && [ -f "$dvfsrc/min_freq" ]; then
+    MAX_DDR=$(cat "$dvfsrc/max_freq")
+    if [ -n "$MAX_DDR" ]; then
+      echo "[+] Setting DDR min freq to max: $MAX_DDR Hz"
+      chmod 664 "$dvfsrc/min_freq" 2>/dev/null
+      echo "$MAX_DDR" > "$dvfsrc/min_freq"
+      chmod 444 "$dvfsrc/min_freq" 2>/dev/null
+    fi
+  fi
+fi
+
+# ==============================
+# 🚫 4. Disable Power-Saving Features
+# ==============================
+
+# Disable DCS (Dynamic Core Scaling) — keeps all GPU cores active
+if [ -f "$dcs_mode" ]; then
+  echo "[+] Disabling DCS (keep all GPU cores active)..."
+  lock_value 0 "$dcs_mode"
+fi
+
+# Disable GED KPI throttling (if not using hybrid governor)
+if [ -f "$ged_kpi" ] && [ ! -d /data/adb/modules/dimensity_hybrid_governor ]; then
+  echo "[+] Ensuring GED KPI is ENABLED (required for PerfMgr)..."
+  lock_value 1 "$ged_kpi"
+fi
+
+# --- Configuration ---
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+PPM_PATH="/proc/ppm/policy_status"
+
+# Ensure the script is executed with root privileges
+if [[ $EUID -ne 0 ]]; then
+   echo "This script requires root privileges. Please run with 'su -c ./set_ppm_policies.sh' or use 'su' before execution."
+   exit 1
+fi
+
+# --- Logging Function ---
+# Logs a timestamped message to the LOG_FILE
+log_action() {
+    local message="$1"
+    # Get current timestamp
+    local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+    echo "[$timestamp] $message" >> "$LOG_FILE"
+}
+
+# --- Initialization and Root Check ---
+# Log script start
+log_action "=================================================="
+log_action "Script execution started."
+
+# Ensure the script is executed with root privileges
+if [[ $EUID -ne 0 ]]; then
+   local error_msg="This script requires root privileges. Please run with 'su -c ./set_ppm_policies.sh' or use 'su' before execution."
+   echo "$error_msg"
+   log_action "ERROR: $error_msg" # Log the error
+   log_action "Script execution failed (Missing root)."
+   exit 1
+fi
+
+log_action "Root privileges confirmed. Proceeding with PPM settings."
+
+
+# --- Current Status Check ---
+echo "--- Current PPM Policy Status ---"
+# Check if PPM_PATH exists before trying to read it
+if [ -f "$PPM_PATH" ]; then
+    current_status=$(cat "$PPM_PATH")
+    echo "$current_status"
+    log_action "Current PPM Policy Status:\n$current_status"
+else
+    local warning_msg="WARNING: PPM_PATH ($PPM_PATH) not found."
+    echo "$warning_msg"
+    log_action "$warning_msg"
+fi
+echo "---------------------------------"
+
+
+# --- Policy Definitions ---
+# Define the policies and their desired status (1=enabled, 0=disabled)
+declare -A policies
+policies[0]=0  # PPM_POLICY_PTPOD
+policies[1]=0  # PPM_POLICY_UT
+policies[2]=0  # PPM_POLICY_FORCE_LIMIT
+policies[3]=0  # PPM_POLICY_PWR_THRO
+policies[4]=0  # PPM_POLICY_THERMAL
+policies[5]=0  # PPM_POLICY_DLPT
+policies[6]=0  # PPM_POLICY_HARD_USER_LIMIT
+policies[7]=0  # PPM_POLICY_USER_LIMIT
+policies[8]=0  # PPM_POLICY_LCM_OFF
+policies[9]=1  # PPM_POLICY_SYS_BOOST
+
+log_action "Defined target policies: ${!policies[@]} to ${policies[@]}"
+
+echo "Applying new PPM Policy settings..."
+log_action "Starting to apply policies."
+
+
+# --- Policy Application Loop ---
+# Loop through the policies and apply the status
+for idx in "${!policies[@]}"; do
+    status=${policies[$idx]}
+    
+    # Write the index and status (1 or 0) to the policy_status file
+    echo "$idx $status" > "$PPM_PATH" 2>/dev/null
+    
+    # Check if the operation was successful (policies may not exist on all kernels)
+    if [ $? -eq 0 ]; then
+        local success_msg="Policy [$idx] set to $status."
+        echo "$success_msg"
+        log_action "$success_msg"
+    else
+        local warning_msg="Warning: Could not set policy [$idx] to $status (File write failed or policy unavailable)."
+        echo "$warning_msg"
+        log_action "$warning_msg"
+    fi
+done
+
+echo "---------------------------------"
+
+
+# --- New Status Check ---
+echo "--- New PPM Policy Status ---"
+if [ -f "$PPM_PATH" ]; then
+    new_status=$(cat "$PPM_PATH")
+    echo "$new_status"
+    log_action "New PPM Policy Status after applying settings:\n$new_status"
+else
+    # The warning for path not found was logged earlier, just echo the message again.
+    echo "WARNING: PPM_PATH ($PPM_PATH) not found. Cannot check new status."
+fi
+echo "---------------------------"
+
+echo "Script execution complete. Check $LOG_FILE for details."
+log_action "Script execution complete."
+
+        if [ -f "/data/adb/service.d/99_mtk_ai_restore_values.sh" ]; then
+            sh /data/adb/service.d/99_mtk_ai_restore_values.sh &
+        fi
+
+# ==============================
+# ✅ Done
+# ==============================
+
+echo ""
+echo "✅ MAXIMUM PERFORMANCE ACTIVE!"
+echo "   - PerfMgr / FPSGO / FBT: enabled"
+echo "   - GPU: locked to max frequency"
+echo "   - DDR: min freq = max"
+echo "   - DCS: disabled"
+echo ""
+echo "⚠️  Monitor temperature! Reboot to restore defaults."
