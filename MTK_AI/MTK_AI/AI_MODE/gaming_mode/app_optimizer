@@ -1,0 +1,127 @@
+#!/system/bin/sh
+#!/data/adb/modules/MTK_AI/busybox sh
+
+CONFIG_DIR="/sdcard/MTK_AI_Engine"
+CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
+LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
+PPM_CONFIG="$CONFIG_DIR/ppm_config.conf"
+PPM_PATH="/proc/ppm/policy_status"
+
+log_msg() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+# 1. Find the PID that is currently in the 'top-app' cpuset
+# This is the most accurate way to find the active app without dumpsys
+for pid in /proc/[0-9]*; do
+    if grep -q "top-app" "$pid/cpuset" 2>/dev/null; then
+        # Exclude SurfaceFlinger and SystemUI so we only get the actual App
+        PNAME=$(cat "$pid/cmdline" | tr '\0' ' ')
+        case "$PNAME" in
+            *surfaceflinger*|*systemui*|*com.android.*) continue ;;
+        esac
+        
+        FPID=${pid##*/}
+        break
+    fi
+done
+
+if [ -z "$FPID" ]; then
+    log_msg "Foreground app not found in top-app cpuset."
+    exit 1
+fi
+
+log_msg "Optimize App PID: $FPID"
+
+# Make it unkillable by Low Memory Killer
+if [ -f "/proc/$FPID/oom_score_adj" ]; then
+    echo -1000 > "/proc/$FPID/oom_score_adj"
+fi
+
+# 2. Apply renice and ionice
+renice -n -20 -p "$FPID"
+ionice -c 1 -n 0 -p "$FPID" 2>/dev/null
+
+# 3. Apply to all threads of that app
+for tid in /proc/$FPID/task/*; do
+    TID=${tid##*/}
+    renice -n -20 -p "$TID" 2>/dev/null
+    echo "$TID" > /dev/cpuset/top-app/tasks 2>/dev/null
+done
+
+# --- PATHS (common locations for edge touch control) ---
+EDGE_PATHS="
+/sys/class/sec/tsp/cmd_edge_swipe_enable
+/sys/devices/virtual/touch/touch_dev/edge_filter
+/sys/class/input/touchscreen0/edge_suppression
+/sys/module/goodix_core/parameters/edge_limit
+/sys/class/drm/card0/device/edge_touch_disable
+/sys/kernel/touch/edge_ignore
+"
+
+# Try known OEM-specific paths
+for path in $EDGE_PATHS; do
+    if [ -w "$path" ]; then
+        log_msg "Found writable edge control at: $path"
+        if [ "$ENABLE" -eq 1 ]; then
+            # Disable edge touch
+            echo 0 > "$path" 2>/dev/null || echo 1 > "$path" 2>/dev/null
+        else
+            # Re-enable
+            echo 1 > "$path" 2>/dev/null || echo 0 > "$path" 2>/dev/null
+        fi
+        sync
+    fi
+done
+
+# --- Alternative: Use vendor-specific service (Samsung example) ---
+if command -v sec_touch_grip >/dev/null 2>&1; then
+    if [ "$ENABLE" -eq 1 ]; then
+        sec_touch_grip --enable 0
+    else
+        sec_touch_grip --enable 1
+    fi
+fi
+
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Config file not found"
+    exit 1
+fi
+
+echo "Loading devfreq settings..."
+
+# Process each line
+while IFS= read -r line; do
+    # Skip comments and empty lines
+    case "$line" in
+        \#*|"") continue ;;
+    esac
+    
+    # Extract device and governor from "device"="governor" format
+    if echo "$line" | grep -q '=".*"$'; then
+        # Remove quotes and split
+        clean_line=$(echo "$line" | sed 's/"//g')
+        DEVICE=$(echo "$clean_line" | cut -d'=' -f1)
+        GOVERNOR=$(echo "$clean_line" | cut -d'=' -f2)
+        
+        if [ -n "$DEVICE" ] && [ -n "$GOVERNOR" ]; then
+            GOV_PATH="/sys/class/devfreq/$DEVICE/governor"
+            if [ -f "$GOV_PATH" ]; then
+                echo "$GOVERNOR" > "$GOV_PATH" 2>/dev/null
+                if [ $? -eq 0 ]; then
+                    echo "✅ Applied $GOVERNOR to $DEVICE"
+                else
+                    echo "❌ Failed to apply $GOVERNOR to $DEVICE"
+                fi
+            else
+                echo "⚠️ Device not found: $DEVICE"
+            fi
+        fi
+    fi
+done < "$CONFIG_FILE"
+
+echo "✅ Devfreq settings loaded successfully!"
+
+settings put global low_power 0
+settings put global low_power_sticky 0
+echo "0" > /proc/sys/kernel/panic
