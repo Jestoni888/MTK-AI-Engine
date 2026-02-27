@@ -4,8 +4,6 @@
 CONFIG_DIR="/sdcard/MTK_AI_Engine"
 CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
 LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
-PPM_CONFIG="$CONFIG_DIR/ppm_config.conf"
-PPM_PATH="/proc/ppm/policy_status"
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
