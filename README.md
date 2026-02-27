@@ -38,6 +38,10 @@ also gives full features of your android device in all scenarios such as gaming 
 - Vsync offset slider
 - Voltage offset slider
 - Render mode skiagl or skiavk
+- Screen resolution with custom input
+- Cpu frequency slider applied to all clusters
+- Custom command for your own scripts
+- Monitoring average for fps, power, battery Temperature, cpu usage
 
 ## DISCLAIMER
 - Any misconfiguration setup that not supported in your devices will result in instability or further sudden restart/reboot, missed notifications, alarms, laggy. Make a further research for your devices in webui
