@@ -657,39 +657,7 @@ process_log_line() {
                         fi
                     fi
                 fi
-                
-                # --- BACKGROUND APP SUPPRESSION ---
-GAME_PID=$(pidof "$DETECTED_PKG" | awk '{print $1}')
-
-if [ -n "$GAME_PID" ]; then
-    log_msg "🛡️ Activating Background Suppression for $DETECTED_PKG..."
-
-    # 1. Set Game to Highest Priority (Real-Time)
-    # -c 1 = FIFO (Real-Time), -n 0 = Highest Priority
-    ionice -c 1 -n 0 -p $GAME_PID 2>/dev/null
-    chrt -f 99 -p $GAME_PID 2>/dev/null
-
-    # 2. Throttle ALL Other Apps to Lowest Priority
-    # Find all PIDs except the game and system critical processes
-    for pid in $(ls /proc | grep -E '^[0-9]+$'); do
-        # Skip if it's the game, kernel, or system UI
-        if [ "$pid" != "$GAME_PID" ] && \
-           [ "$pid" != "1" ] && \
-           ! pidof -s com.android.systemui >/dev/null 2>&1 || [ "$pid" != "$(pidof -s com.android.systemui)" ]; then
-            
-            # Check if process is user-app (not kernel)
-            if [ -f "/proc/$pid/cmdline" ] && grep -q "." /proc/$pid/cmdline 2>/dev/null; then
-                # Set I/O to "Idle" (Class 3). They only get disk access when NO ONE else wants it.
-                ionice -c 3 -p $pid 2>/dev/null
-                
-                # Optional: Lower CPU scheduling priority (Nice 19 = Lowest)
-                renice -n 19 -p $pid 2>/dev/null
-            fi
-        fi
-    done
-    log_msg "✅ Background apps throttled to IDLE I/O & Low CPU priority."
-fi
-                
+                      
                 if [ -f "$EXTERNAL_CFG/disable_zram" ]; then 
                     disable_zram
                 else
