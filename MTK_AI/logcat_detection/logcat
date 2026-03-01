@@ -452,6 +452,7 @@ process_log_line() {
                 rm -f "$NORMAL_STATE_FILE"
                 log_msg "🎮 Gaming mode triggered for: $DETECTED_PKG"
                 notify_engine "🎮 Gaming mode" "Target: $DETECTED_PKG"
+                pkill -f touch2
                 
                 # 🧠 APPLY CPUSETS
                 CPUSET_RULES="/sdcard/MTK_AI_Engine/gaming_cpuset_rules.json"
