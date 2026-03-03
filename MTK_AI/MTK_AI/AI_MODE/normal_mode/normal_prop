@@ -193,9 +193,6 @@ log -t "NetTweak" "Network Tweaks Applied Successfully."
 BB="/data/adb/modules/MTK_AI/busybox"
 SAVE_DIR="/sdcard/MTK_AI_Engine/cooldown_values"
 
-# Wait for boot to settle
-sleep 120
-
 # Loop through all saved config files
 for conf in $SAVE_DIR/*.conf; do
     [ -f "$conf" ] || continue
