@@ -35,6 +35,7 @@ has_internet() {
 # === 3. Required files list ===
 required_files="
 action.sh
+detection/logcat
 "
 
 # === 4. Download helper ===
