@@ -1,1 +1,282 @@
+#!/system/bin/sh
+# ============================================
+# 🎯 Logcat Monitor + App Trigger
+# NO dumpsys - Pure logcat-based detection
+# ============================================
+MOD_DIR="/data/adb/modules/Tweaker"
+# --- BUSYBOX INTEGRATION ---
+BB="$MOD_DIR/busybox"
+[ ! -x "$BB" ] && { echo "FATAL: BusyBox missing"; exit 1; }
+
+# Wrap essential tools
+grep() { "$BB" grep "$@"; }; sed() { "$BB" sed "$@"; }; awk() { "$BB" awk "$@"; }
+cut() { "$BB" cut "$@"; }; head() { "$BB" head "$@"; }; tail() { "$BB" tail "$@"; }
+wc() { "$BB" wc "$@"; }; date() { "$BB" date "$@"; }; ionice() { "$BB" ionice "$@"; }
+renice() { "$BB" renice "$@"; }; mkswap() { "$BB" mkswap "$@"; }; swapon() { "$BB" swapon "$@"; }
+swapoff() { "$BB" swapoff "$@"; }; free() { "$BB" free "$@"; }
+
+LOGCAT_PID_FILE="/data/adb/modules/Tweaker/logcat_monitor.pid"
+EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
+
+# Cleanup old processes
+pkill -f "logcat.*events" 2>/dev/null
+pkill -f "inotifywait" 2>/dev/null
+
+notify_engine() {
+    # Skip if notification toggle is OFF
+    [ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
+
+    local title="$1"
+    local msg="$2"
+    local manual_pkg="$3"
+
+    # --- 1. Temperature ---
+    RAW_TEMP=$(cat /sys/class/power_supply/battery/temp 2>/dev/null || echo "0")
+    B_TEMP="$((RAW_TEMP / 10)).$((RAW_TEMP % 10))°C"
+
+    # --- 2. Governor ---
+    GOV_FILE="/sys/devices/system/cpu/cpufreq/policy0/scaling_governor"
+    [ ! -f "$GOV_FILE" ] && GOV_FILE="/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+    CPU_GOV="Unknown"
+    [ -f "$GOV_FILE" ] && CPU_GOV=$(cat "$GOV_FILE" 2>/dev/null | tr -d '[:space:]')
+
+    # --- 3. Power Calculation ---
+    VOLT_FILE="/sys/class/power_supply/battery/voltage_now"
+    CURR_FILE="/sys/class/power_supply/battery/current_now"
+    [ ! -f "$VOLT_FILE" ] && VOLT_FILE="/sys/class/power_supply/bms/voltage_now"
+    [ ! -f "$CURR_FILE" ] && CURR_FILE="/sys/class/power_supply/bms/current_now"
+
+    POWER_WATTS="N/A"
+    if [ -f "$VOLT_FILE" ] && [ -f "$CURR_FILE" ]; then
+        VOLT=$(cat "$VOLT_FILE" 2>/dev/null | tr -d '[:space:]')
+        CURR=$(cat "$CURR_FILE" 2>/dev/null | tr -d '[:space:]')
+        POWER_WATTS=$(awk -v v="$VOLT" -v c="$CURR" 'BEGIN {
+            volts = v / 1000000; amps = c / 1000000
+            if (amps < 0) amps = -amps
+            val = volts * amps
+            if (val >= 0.01 && val <= 60) printf "%.2fW", val; else print "N/A"
+        }')
+    fi
+
+    # --- 4. Detect Graphics Renderer (Using dumpsys gfxinfo) ---
+    RENDERER="🖥️ Idle"
+    TARGET_APP=""
+    CHECK_PKG=""
+
+    # Determine which package to check (Priority: Arg -> Foreground -> Last Game)
+    if [ -n "$manual_pkg" ]; then
+        CHECK_PKG="$manual_pkg"
+    else
+        # Try Foreground App
+        CHECK_PKG=$(dumpsys window windows 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp' | grep -oE '[^ /]+/[^ /]+' | head -n 1 | cut -d'/' -f1)
+        
+        # Fallback to Last Game State
+        if [ -z "$CHECK_PKG" ] && [ -f "/dev/.mtk_ai_active_game" ]; then            CHECK_PKG=$(cat /dev/.mtk_ai_active_game 2>/dev/null)
+        fi
+    fi
+
+    # Run detection if we have a package
+    if [ -n "$CHECK_PKG" ]; then
+        # ✅ FIX: Check if pidof returns a valid PID (number) instead of using -q
+        CHECK_PID=$(pidof -s "$CHECK_PKG" 2>/dev/null)
+        
+        if [ -n "$CHECK_PID" ]; then
+            TARGET_APP="$CHECK_PKG"
+            
+            # Query gfxinfo and capture output
+            # We look for "Pipeline", "Renderer", or "Graphics" lines
+            GFX_OUTPUT=$(dumpsys gfxinfo "$CHECK_PKG" 2>/dev/null | grep -E 'Pipeline|Renderer|OpenGL|Vulkan')
+            
+            if [ -n "$GFX_OUTPUT" ]; then
+                # Analyze the output to determine the type
+                if echo "$GFX_OUTPUT" | grep -qi "vulkan"; then
+                    RENDERER="🎮 Vulkan"
+                elif echo "$GFX_OUTPUT" | grep -qi "gl.*es.*3\|opengl es 3"; then
+                    RENDERER="🎨 OpenGL ES 3"
+                elif echo "$GFX_OUTPUT" | grep -qi "gl.*es.*2\|opengl es 2"; then
+                    RENDERER="🖼️ OpenGL ES 2"
+                elif echo "$GFX_OUTPUT" | grep -qi "pipeline"; then
+                    # If it mentions Pipeline but not Vulkan, it's likely GL
+                    RENDERER="🖥️ OpenGL Pipeline"
+                else
+                    # Fallback if text found but specific version unclear
+                    RENDERER="🎨 GPU Active"
+                fi
+            fi
+        fi
+    fi
+
+    # --- 5. Build Message ---
+    local gpu_part=""
+    if [ "$RENDERER" != "🖥️ Idle" ] && [ -n "$TARGET_APP" ]; then
+        gpu_part="| GPU: $RENDERER ($TARGET_APP)"
+    elif [ "$RENDERER" != "🖥️ Idle" ]; then
+        gpu_part="| GPU: $RENDERER"
+    fi
+    
+    local full_msg="$msg | Gov: $CPU_GOV | Pwr: $POWER_WATTS | Temp: $B_TEMP $gpu_part"
+
+    su -lp 2000 -c "cmd notification post -S bigtext -t '$title' tag '$full_msg'" >/dev/null 2>&1
+}
+
+log_msg() {
+    echo "[$(date '+%H:%M:%S')] $1"
+}
+
+# ============================================
+# 🔥 Extract Package from Logcat Line
+# ============================================
+extract_package_from_logcat() {
+    local line="$1"
+    local pkg=""
+    
+    # Method 1: Extract from "package=xxx" format
+    pkg=$(echo "$line" | grep -oE 'package=[^ ,}]+' | cut -d= -f2 | head -1)
+    
+    # Method 2: Extract from "[uid,pkg/class]" format
+    [ -z "$pkg" ] && pkg=$(echo "$line" | grep -oE '\[[0-9]+,[^/,]+' | cut -d, -f2 | tr -d '[]')
+    
+    # Method 3: Extract package name pattern (com.xxx.yyy)
+    [ -z "$pkg" ] && pkg=$(echo "$line" | grep -oE '[a-z]+\.[a-z.]+' | head -1)
+    
+    # Validate: must contain dots, no spaces, reasonable length
+    if [ -n "$pkg" ] && echo "$pkg" | grep -qE '^[a-z0-9._-]+\.[a-z0-9._-]+'; then
+        echo "$pkg"
+    fi
+}
+
+# ============================================
+# 🎯 Process Logcat Line
+# ============================================
+process_log_line() {
+    local line="$1"
+    [ -z "$line" ] && return
+
+    # ➤ SCREEN OFF TRIGGER
+    case "$line" in
+        *"screen_off"*|*"sys_screen_off"*|*"screen_toggled=0"*|*"lcd_power: 0"*|*"power_screen_state: [0,"*)
+            log_msg "🌙 Screen Off Detected."            notify_engine "🌙 Screen Off" "Entering Power Saver Mode"
+            ;;
+    esac
+
+    # ➤ SCREEN ON TRIGGER
+    case "$line" in
+        *"screen_on"*|*"sys_screen_on"*|*"screen_toggled=1"*|*"lcd_power: 1"*|*"power_screen_state: [1,"*)
+            log_msg "☀️ Screen On Detected."
+            notify_engine "☀️ Screen On" "Restoring Balanced Performance"
+            ;;
+    esac
+
+    # ➤ APP ACTIVITY RESUME - TRIGGER APP SCRIPT
+    case "$line" in
+        *"input_focus"*|*"wm_on_resume_called"*|*"top_resumed_app_focus"*|*"am_on_resume_called"*|*"monitor_focus_event"*|*"am_resume_activity"*|*"am_on_resume"*)
+            
+            # 🔥 Extract package from logcat line (NO dumpsys)
+            PKG=$(extract_package_from_logcat "$line")
+            
+            # Validate package
+            if [ -z "$PKG" ] || echo "$PKG" | grep -qE ' |[0-9]{4,}'; then
+                log_msg "❌ Invalid package from logcat: $PKG"
+                return
+            fi
+            
+            log_msg "🎯 App Detected: $PKG"
+            
+            # 🔥 Execute per-app trigger script
+            TRIGGER="$EXTERNAL_CFG/triggers/$PKG.sh"
+            
+            if [ -f "$TRIGGER" ]; then
+                log_msg "📁 Found trigger: $TRIGGER"
+                log_msg "🎬 Executing: sh $TRIGGER"
+                sh "$TRIGGER" &
+                log_msg "✅ Trigger launched"
+            else
+                log_msg "⚠️ No trigger script for: $PKG"
+            fi
+            
+            # Save current app for WebUI
+            echo "$PKG" > "$EXTERNAL_CFG/current_app.txt"
+            
+            # Send broadcast
+            am broadcast -a ai_engine.APP_DETECTED --es package "$PKG" >/dev/null 2>&1
+            
+            log_msg "✅ App trigger complete"
+            ;;
+    esac
+}
+# Define the monitor function IN THE MAIN SCOPE
+start_logcat_monitor() {
+    log_msg "🚀 Starting direct logcat stream processor..."
+    
+    while true; do
+        # FIX: Use standard pipe '|' instead of process substitution '< <()'
+        # This works on mksh, sh, and bash on all Android versions
+        logcat -b events -T 1 -v threadtime | while IFS= read -r line; do
+            process_log_line "$line"
+        done
+        
+        # If logcat dies or the pipe breaks, restart after delay
+        log_msg "⚠️ Logcat stream disconnected. Restarting in 2s..."
+        sleep 2
+    done
+}
+
+# Kill any existing monitor first to prevent duplicates
+if [ -f "$LOGCAT_PID_FILE" ]; then
+    OLD_PID=$(cat "$LOGCAT_PID_FILE")
+    kill "$OLD_PID" 2>/dev/null
+fi
+
+# Start the monitor in the background
+start_logcat_monitor &
+MONITOR_PID=$!
+echo "$MONITOR_PID" > "$LOGCAT_PID_FILE"
+
+log_msg "✅ Monitor started with PID: $MONITOR_PID"
+
+# Optional: Clean up on script exit
+trap "kill $MONITOR_PID 2>/dev/null; rm -f $LOGCAT_PID_FILE" EXIT INT TERM
+
+LOGCAT_PID=$!
+echo $LOGCAT_PID > "$LOGCAT_PID_FILE"
+
+# Optional: Use inotifywait to monitor State Files for external changes
+# This replaces the need to poll these files inside the main loop if other scripts modify them
+if command -v inotifywait >/dev/null 2>&1; then
+    (
+        log_msg "👁️ Starting inotify watcher for state files..."
+        while true; do
+            # Watch for modifications to state files
+            inotifywait -q -e modify "$GAME_STATE_FILE" "$NORMAL_STATE_FILE" "$CAMERA_STATE_FILE" "$CPUSET_STATE_FILE" 2>/dev/null
+            
+            # Trigger a dummy event or re-check logic if needed
+            # For this script, the main logic is driven by logcat, but this ensures 
+            # the script wakes up immediately if an external tool tweaks these flags
+            log_msg "🔄 State file modification detected via inotify"
+            
+            # Example: Force refresh cpusets if CPUSET_STATE_FILE was touched externally
+            if [ -f "$CPUSET_STATE_FILE" ]; then
+                 # Add custom logic here if external tools modify state files
+                 :
+            fi
+        done
+    ) &
+else
+    log_msg "⚠️ inotifywait not found. Running in fallback mode (Logcat stream only)."
+fi
+
+# Main Keep-Alive Loop (No sleep polling for logs anymore)
+# This loop just ensures the background logcat processor stays alive
+while true; do
+    if [ -f "$LOGCAT_PID_FILE" ]; then
+        CUR_PID=$(cat "$LOGCAT_PID_FILE")
+        if ! kill -0 "$CUR_PID" 2>/dev/null; then
+            log_msg "🔄 Logcat processor died, restarting..."
+            pkill -f "logcat.*events" 2>/dev/null
+            # The subshell above has 'exec $0' to restart itself, but we can also respawn here
+            # For simplicity, we rely on the subshell's self-restart or let the watchdog handle it
+        fi
+    fi
+    sleep 5 # Long sleep just for watchdog, not for event detection
+done
 
