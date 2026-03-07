@@ -155,7 +155,8 @@ process_log_line() {
     # ➤ SCREEN OFF TRIGGER
     case "$line" in
         *"screen_off"*|*"sys_screen_off"*|*"screen_toggled=0"*|*"lcd_power: 0"*|*"power_screen_state: [0,"*)
-            log_msg "🌙 Screen Off Detected."            notify_engine "🌙 Screen Off" "Entering Power Saver Mode"
+            log_msg "🌙 Screen Off Detected."            
+            notify_engine "🌙 Screen Off" "Entering Power Saver Mode"
             ;;
     esac
 
