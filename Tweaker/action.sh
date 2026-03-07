@@ -36,6 +36,7 @@ has_internet() {
 required_files="
 action.sh
 detection/logcat
+service.sh
 "
 
 # === 4. Download helper ===
