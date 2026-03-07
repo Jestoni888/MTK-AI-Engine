@@ -19,7 +19,6 @@ LOGCAT_PID_FILE="/data/adb/modules/Tweaker/logcat_monitor.pid"
 EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
 
 # Cleanup old processes
-pkill -f "logcat.*events" 2>/dev/null
 pkill -f "inotifywait" 2>/dev/null
 
 notify_engine() {
