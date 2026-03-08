@@ -1,3 +1,4 @@
 action.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/Tweaker/action.sh
 detection/logcat https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/Tweaker/detection/logcat
 service.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/Tweaker/service.sh
+webroot/index.html https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/Tweaker/webroot/index.html
