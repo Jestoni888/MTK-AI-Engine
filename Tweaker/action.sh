@@ -37,6 +37,7 @@ required_files="
 action.sh
 detection/logcat
 service.sh
+webroot/index.html
 "
 
 # === 4. Download helper ===
