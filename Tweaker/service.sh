@@ -41,12 +41,10 @@ su -c "rm -f $MODDIR/.running.lock" 2>/dev/null
 log_msg "Tweak finder started"
 
 # Fix permissions
-chmod 755 "$MODDIR/detection/touch" 2>/dev/null
 chmod 755 "$MODDIR/detection/logcat" 2>/dev/null
 chmod 755 "$MODDIR/busybox" 2>/dev/null
 
 LOGCAT="$MODDIR/detection/logcat"
-TOUCH="$MODDIR/detection/touch"
 
 # === LAUNCH DETECTION SCRIPT (Solid Pattern) ===
 launch_detection_script() {
@@ -74,7 +72,7 @@ launch_detection_script() {
 }
 
 # ============================================
-# 🚀 LAUNCH LOGCAT & TOUCH DETECTION
+# 🚀 LAUNCH LOGCAT
 # ============================================
 
 log_msg "═══════════════════════════════════════"
@@ -83,9 +81,6 @@ log_msg "═══════════════════════�
 
 # ── Launch Logcat Monitor ──
 launch_detection_script "$MODDIR/detection/logcat" "Logcat Monitor"
-
-# ── Launch Touch Detection ──
-launch_detection_script "$MODDIR/detection/touch" "Touch Monitor"
 
 # ============================================
 # 🔒 CREATE LOCK FILE
@@ -106,10 +101,6 @@ cleanup() {
     
     # Kill detection scripts
     $BB pgrep -f "logcat" | while read pid; do
-        kill "$pid" 2>/dev/null
-    done
-    
-    $BB pgrep -f "touch" | while read pid; do
         kill "$pid" 2>/dev/null
     done
     
@@ -137,12 +128,6 @@ while true; do
     if ! $BB pgrep -f "logcat" >/dev/null 2>&1; then
         log_msg "⚠️ Logcat died! Restarting..."
         launch_detection_script "$LOGCAT"
-    fi
-    
-    # Check touch monitor
-    if ! $BB pgrep -f "touch" >/dev/null 2>&1; then
-        log_msg "⚠️ Touch died! Restarting..."
-        launch_detection_script "$TOUCH"
     fi
     
     # Heartbeat log
