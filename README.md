@@ -51,3 +51,4 @@ also gives full features of your android device in all scenarios such as gaming 
  - Choose universal for safe of bootloops
  - Click action button for online updates (Added notice in module section if there's new updates)
  - Go to webui in maintenance section for 1click configuration setup from github if you don't understand the setup of webui
+ - New release for tweak finder that can search & tweaks all system files of your rooted sndroid
