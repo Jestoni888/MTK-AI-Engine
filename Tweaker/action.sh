@@ -22,13 +22,20 @@ detect_moddir() {
 MODDIR="$(detect_moddir)"
 log "📁 Module dir: $MODDIR"
 
-# === 2. Check internet using YOUR BUSYBOX ===
+# === 2. Check internet with multiple methods ===
 has_internet() {
+    # Method 1: BusyBox wget with full URL
     if [ -x "$MODDIR/busybox" ]; then
-        "$MODDIR/busybox" wget -q --timeout=5 -O /dev/null \
-            "1.1.1.1" 2>/dev/null
-        return $?
+        "$MODDIR/busybox" wget -q -T 5 -O /dev/null "http://1.1.1.1" 2>/dev/null && return 0
+        "$MODDIR/busybox" wget -q -T 5 -O /dev/null "http://dns.google" 2>/dev/null && return 0
     fi
+    
+    # Method 2: Ping fallback
+    ping -c1 -W2 1.1.1.1 >/dev/null 2>&1 && return 0
+    
+    # Method 3: curl fallback (if available)
+    command -v curl >/dev/null 2>&1 && curl -sf --max-time 5 -o /dev/null "http://1.1.1.1" && return 0
+    
     return 1
 }
 
@@ -40,11 +47,21 @@ service.sh
 webroot/index.html
 "
 
-# === 4. Download helper ===
+# === 4. Download helper (BusyBox compatible) ===
 download() {
     url="$1"
     out="$2"
-    "$MODDIR/busybox" wget -q --timeout=10 --tries=3 -O "$out" "$url" 2>/dev/null
+    # Ensure URL has protocol
+    case "$url" in
+        http://*|https://*) ;;  # Already has protocol
+        *) url="https://$url" ;;  # Add https if missing
+    esac
+    
+    if [ -x "$MODDIR/busybox" ]; then
+        "$MODDIR/busybox" wget -q -T 10 -O "$out" "$url" 2>/dev/null
+        return $?
+    fi
+    return 1
 }
 
 is_required() {
@@ -113,9 +130,8 @@ if [ ! -f "$SERVICE_SCRIPT" ]; then
 fi
 
 pkill -f "Tweaker.*logcat" 2>/dev/null
-pkill -f "touch" 2>/dev/null
 pkill -f "service.sh" 2>/dev/null
-killall service.sh logcat touch2 2>/dev/null
+killall service.sh logcat 2>/dev/null
 
 sleep 2
 
