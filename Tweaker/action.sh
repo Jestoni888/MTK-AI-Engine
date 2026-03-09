@@ -121,19 +121,13 @@ else
 fi
 
 # === 6. ALWAYS RESTART SERVICES ===
-log "🔄 Tweaker services..."
+log "🔄 Restarting MTK AI Engine services..."
 
 SERVICE_SCRIPT="$MODDIR/service.sh"
 
 if [ ! -f "$SERVICE_SCRIPT" ]; then
     log "❌ service.sh not found at $SERVICE_SCRIPT"    exit 1
 fi
-
-pkill -f "Tweaker.*logcat" 2>/dev/null
-pkill -f "service.sh" 2>/dev/null
-killall service.sh logcat 2>/dev/null
-
-sleep 2
 
 su -c "sh '$SERVICE_SCRIPT' &" 2>/dev/null
 
