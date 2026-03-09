@@ -43,6 +43,7 @@ log_msg "Tweak finder started"
 # Fix permissions
 chmod 755 "$MODDIR/detection/logcat" 2>/dev/null
 chmod 755 "$MODDIR/busybox" 2>/dev/null
+chmod 755 "$MODDIR/webroot/app.js" 2>/dev/null
 
 LOGCAT="$MODDIR/detection/logcat"
 
