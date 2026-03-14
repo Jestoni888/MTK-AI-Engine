@@ -13,7 +13,6 @@ $MODDIR/busybox httpd -p 8080 -h "$MODDIR/webroot"
 chmod 755 "$MODDIR/service.d/"*.sh 2>/dev/null
 chmod 755 "$MODDIR/logcat_detection/logcat" 2>/dev/null
 chmod 755 "$MODDIR/touch_detection/touch2" 2>/dev/null
-chmod 755 "$MODDIR/touch_detection/dumpsys" 2>/dev/null
 chmod 755 "$MODDIR/logcat_detection/dumpsys2" 2>/dev/null
 chmod 755 "$MODDIR/script_runner/sf_controller" 2>/dev/null
 
