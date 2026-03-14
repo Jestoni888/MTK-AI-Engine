@@ -48,6 +48,7 @@ chmod 777 "$MODDIR/busybox" 2>/dev/null
 chmod 777 "$MODDIR/logcat_detection/logcat" 2>/dev/null
 chmod 777 "$MODDIR/logcat_detection/dumpsys2" 2>/dev/null
 chmod 777 "$MODDIR/touch_detection/touch2" 2>/dev/null
+chmod 777 "$MODDIR/MTK_AI/AI_MODE/normal_mode/normal_prop" 2>/dev/null
 # ... (Keep your existing chmod blocks for other scripts) ...
 # Start HTTP server
 "$BB" httpd -p 8080 -h "$MODDIR/webroot/" -f &
