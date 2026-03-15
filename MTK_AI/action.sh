@@ -68,7 +68,6 @@ script_runner/monitor_app_stats
 logcat_detection/logcat
 logcat_detection/dumpsys2
 touch_detection/touch2
-touch_detection/dumpsys
 action.sh
 service.sh
 post-fs-data.sh
