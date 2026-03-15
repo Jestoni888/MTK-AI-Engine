@@ -31,7 +31,6 @@ script_runner/monitor_app_stats https://raw.githubusercontent.com/Jestoni888/MTK
 logcat_detection/logcat https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/logcat_detection/logcat
 logcat_detection/dumpsys2 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/logcat_detection/dumpsys2
 touch_detection/touch2 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/touch_detection/touch2
-touch_detection/dumpsys https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/touch_detection/dumpsys
 action.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/action.sh
 service.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/service.sh
 post-fs-data.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/post-fs-data.sh
