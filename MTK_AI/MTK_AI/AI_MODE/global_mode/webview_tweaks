@@ -128,5 +128,8 @@ pin_to_little_cores powerhal
 
 # Optional: Google Play Services (can be heavy)
 pin_to_little_cores com.google.android.gms
-
+[ "$(id -u)" -ne 0 ] && exit 1
+OPP=$(cat /sdcard/MTK_AI_Engine/global_gpu_opp_index.txt 2>/dev/null) || OPP=0
+[ "$OPP" -lt 0 ] || [ "$OPP" -gt 32 ] && OPP=0
+echo $OPP > /proc/gpufreqv2/fix_target_opp_index
 echo "✅ OS + SystemUI pinned to little cores | Big cores reserved for apps"
