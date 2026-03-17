@@ -21,6 +21,8 @@ MTK_AI/AI_MODE/global_mode/ram_cleaner https://raw.githubusercontent.com/Jestoni
 MTK_AI/AI_MODE/global_mode/resources_tweaks https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/resources_tweaks
 MTK_AI/AI_MODE/global_mode/trim_memory https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/trim_memory
 MTK_AI/AI_MODE/global_mode/webview_tweaks https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/webview_tweaks
+MTK_AI/AI_MODE/global_mode/fastcharging https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/fastcharging
+MTK_AI/AI_MODE/global_mode/disable_fastcharging https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/disable_fastcharging
 script_runner/display_mode https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/display_mode
 script_runner/global https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/global
 script_runner/mtk_ai_manual https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/mtk_ai_manual
