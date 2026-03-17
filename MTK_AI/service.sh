@@ -49,6 +49,8 @@ chmod 777 "$MODDIR/logcat_detection/logcat" 2>/dev/null
 chmod 777 "$MODDIR/logcat_detection/dumpsys2" 2>/dev/null
 chmod 777 "$MODDIR/touch_detection/touch2" 2>/dev/null
 chmod 777 "$MODDIR/MTK_AI/AI_MODE/normal_mode/normal_prop" 2>/dev/null
+chmod 777 "$MODDIR/MTK_AI/AI_MODE/global_mode/fastcharging" 2>/dev/null
+chmod 777 "$MODDIR/MTK_AI/AI_MODE/global_mode/disable_fastcharging" 2>/dev/null
 rm -f "$MODDIR/touch_detection/dumpsys"
 # ... (Keep your existing chmod blocks for other scripts) ...
 # Start HTTP server
