@@ -56,8 +56,6 @@ rm -f "$MODDIR/touch_detection/dumpsys"
 # Start HTTP server
 "$BB" httpd -p 8080 -h "$MODDIR/webroot/" -f &
 
-su -c 'mkdir -p /sdcard/MTK_AI_Engine && :> /sdcard/MTK_AI_Engine/enable_notifications'
-
 CFG_DIR="/sdcard/MTK_AI_Engine/config"
 # Pointing to your custom wrappers
 LOGCAT_SCRIPT="$MODDIR/logcat_detection/logcat"
