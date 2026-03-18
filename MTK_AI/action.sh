@@ -159,6 +159,7 @@ killall service.sh logcat touch2 2>/dev/null
 
 sleep 2
 
+su -c 'mkdir -p /sdcard/MTK_AI_Engine && :> /sdcard/MTK_AI_Engine/enable_notifications'
 su -c "sh '$SERVICE_SCRIPT' &" 2>/dev/null
 
 if pgrep -f "service.sh" > /dev/null 2>&1; then
