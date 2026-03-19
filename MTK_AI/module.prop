@@ -1,8 +1,8 @@
 id=MTK_AI
 name=MediaTek AI Engine
-version=0.0.0.60
-versionCode=60
+version=0.0.0.61
+versionCode=61
 author=t.me/mikamisaturo
-description=[NO UPDATE❌] MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way
+description=[Uses logcat for app detection & inotify for screen on/off events] MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way
 updateJson=https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/update.json
 webui=true
