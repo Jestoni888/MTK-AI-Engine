@@ -126,6 +126,11 @@ done < "$CONFIG_FILE"
 
 echo "✅ Devfreq settings loaded successfully!"
 
+for q in /sys/block/*/queue; do 
+  echo 4096|tee $q/read_ahead_kb 2>/dev/null
+  echo none|tee $q/scheduler 2>/dev/null
+done
+
 settings put global low_power 0
 settings put global low_power_sticky 0
 echo "0" > /proc/sys/kernel/panic
