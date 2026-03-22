@@ -53,6 +53,7 @@ chmod 777 "$MODDIR/MTK_AI/AI_MODE/global_mode/fastcharging" 2>/dev/null
 chmod 777 "$MODDIR/MTK_AI/AI_MODE/global_mode/disable_fastcharging" 2>/dev/null
 chmod 777 "$MODDIR/MTK_AI/AI_MODE/normal_mode/powersavex" 2>/dev/null
 chmod 777 "$MODDIR/lib64/libc++_shared.so" 2>/dev/null
+chmod 777 "$MODDIR/MTK_AI/AI_MODE/global_mode/fastchargingx" 2>/dev/null
 rm -f "$MODDIR/touch_detection/dumpsys"
 # ... (Keep your existing chmod blocks for other scripts) ...
 # Start HTTP server
