@@ -82,6 +82,7 @@ system.prop
 webroot/index.html
 webroot/script.js
 webroot/style.css
+lib64/libc++_shared.so
 "
 
 # === 4. Download helper ===
