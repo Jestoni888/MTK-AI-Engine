@@ -46,8 +46,10 @@ log_msg "MTK_AI daemon started"
 # Fix permissions (Ensure your custom binaries are executable)
 chmod 777 "$MODDIR/busybox" 2>/dev/null
 chmod 777 "$MODDIR/logcat_detection/logcat" 2>/dev/null
+chmod 777 "$MODDIR/logcat_detection/logcat.sh" 2>/dev/null
 chmod 777 "$MODDIR/logcat_detection/dumpsys2" 2>/dev/null
 chmod 777 "$MODDIR/touch_detection/touch2" 2>/dev/null
+chmod 777 "$MODDIR/touch_detection/touch2.sh" 2>/dev/null
 chmod 777 "$MODDIR/MTK_AI/AI_MODE/normal_mode/normal_prop" 2>/dev/null
 chmod 777 "$MODDIR/MTK_AI/AI_MODE/global_mode/fastcharging" 2>/dev/null
 chmod 777 "$MODDIR/MTK_AI/AI_MODE/global_mode/disable_fastcharging" 2>/dev/null
