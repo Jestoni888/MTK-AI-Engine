@@ -1,0 +1,124 @@
+#!/system/bin/sh
+#!/data/adb/modules/MTK_AI/busybox sh
+
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+
+log_msg() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+}
+
+BB="/data/adb/modules/MTK_AI/busybox"
+SAVE_DIR="/sdcard/MTK_AI_Engine/cooldown_values"
+
+echo enabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
+
+# Loop through all saved config files
+for conf in $SAVE_DIR/*.conf; do
+    [ -f "$conf" ] || continue
+    
+    # Read line (format: PATH=VALUE)
+    line=$($BB cat "$conf")
+    
+    # Extract Path and Value
+    fpath=$(echo "$line" | $BB cut -d'=' -f1)
+    fval=$(echo "$line" | $BB cut -d'=' -f2-)
+    
+    # Apply if path exists
+    if [ -f "$fpath" ]; then
+        echo "$fval" > "$fpath" 2>/dev/null && log_msg "Restored: $fpath"
+    fi
+done
+
+log_msg "MTK AI Values Restored."
+
+echo "0" > /proc/sys/kernel/panic
+    
+# 1. Apply Properties (Fast)
+setprop debug.hwui.render_ahead 0
+setprop persist.sys.miravision.vivid.mode 0
+setprop persist.sys.force_vivid 0
+setprop persist.sys.framepredict.enable false
+setprop debug.sf.latch_unsignaled false
+setprop debug.cpurendering false
+setprop debug.egl.force_msaa false
+setprop persist.sys.ui.hw true
+setprop persist.sys.use_dithering 0
+setprop debug.sf.early_phase_offset_ns 0
+setprop debug.sf.early_gl_phase_offset_ns 0
+setprop debug.sf.high_fps_early_phase_offset_ns 0
+setprop debug.sf.high_fps_early_gl_phase_offset_ns 0
+
+service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1
+        
+    log_msg "🟢 NORMAL MODE PROPS applied"
+ 
+[ "$(id -u)" != "0" ] && { echo "Root required"; exit 1; }
+while read -r line; do
+  case "$line" in \#*|"") continue ;; esac
+  idx=$(echo "$line" | sed 's/policies\[\([0-9]*\)\]=.*/\1/')
+  val=$(echo "$line" | sed 's/.*=\([0-9]*\).*/\1/')
+  echo "$idx $val" > /proc/ppm/policy_status
+done < /sdcard/MTK_AI_Engine/ppm_config.conf
+echo "Done"
+
+log -t "NetTweak" "Starting network tweaks..."
+
+# === Universal Kernel Tweaks ===
+if [ -f /proc/sys/net/ipv4/tcp_congestion_control ]; then
+  echo bbr > /proc/sys/net/ipv4/tcp_congestion_control 2>/dev/null || \
+  echo cubic > /proc/sys/net/ipv4/tcp_congestion_control 2>/dev/null
+  log -t "NetTweak" "TCP congestion control set"
+fi
+
+if [ -f /proc/sys/net/ipv4/tcp_window_scaling ]; then
+  echo 1 > /proc/sys/net/ipv4/tcp_window_scaling
+fi
+
+if [ -f /proc/sys/net/ipv4/tcp_low_latency ]; then
+  echo 1 > /proc/sys/net/ipv4/tcp_low_latency
+fi
+
+# === Platform Detection & Runtime Props ===
+PLATFORM=$(getprop ro.board.platform)
+BASEBAND=$(getprop ro.baseband)
+
+# --- MediaTek ---
+if echo "$PLATFORM" | grep -qiE "mt[0-9]+|mt6[0-9]+"; then
+  log -t "NetTweak" "Detected MediaTek. Applying MTK runtime tweaks."
+  setprop persist.radio.mtksms 1
+  setprop persist.meta.dumpdata 0
+  setprop persist.radio.custom.ecc 1
+
+# --- Qualcomm ---
+elif echo "$PLATFORM" | grep -qiE "msm[0-9]+|sdm[0-9]+|sm[0-9]+|kona|lito|lahaina"; then
+  log -t "NetTweak" "Detected Qualcomm. Applying QMI runtime tweaks."
+  setprop persist.data.netmgrd.qos.enable true
+  setprop persist.data.mode concurrent
+  setprop persist.rmnet.data.enable true
+  setprop persist.data.iwlan.enable true
+
+# --- Samsung/Exynos ---
+elif echo "$BASEBAND" | grep -qiE "exynos"; then
+  log -t "NetTweak" "Detected Exynos. Applying Samsung runtime tweaks."
+  setprop persist.data.mode concurrent
+
+# --- Universal Fallback ---
+else
+  log -t "NetTweak" "Unknown Platform. Applying universal runtime tweaks."
+fi
+
+# === Interface Route Tweaks ===
+sleep 5
+for iface in rmnet0 rmnet_data0 pdp0 ccmni0; do
+  if ip link show $iface >/dev/null 2>&1; then
+    log -t "NetTweak" "Applying route tweaks to $iface"
+    ip route change default dev $iface initcwnd 30 initrwnd 30 2>/dev/null
+    break
+  fi
+done
+
+# === Flush DNS Cache ===
+ndc resolver flushdefaultif 2>/dev/null
+ndc resolver flushif 2>/dev/null
+
+log -t "NetTweak" "Network Tweaks Applied Successfully."
