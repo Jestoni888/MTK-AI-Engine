@@ -155,6 +155,7 @@ if [ ! -f "$SERVICE_SCRIPT" ]; then
 fi
 
 pkill -f "MTK_AI.*mtk_ai_engine" 2>/dev/null
+pkill -f "mtk_ai_engine" 2>/dev/null
 pkill -f "service.sh" 2>/dev/null
 killall service.sh mtk_ai_engine 2>/dev/null
 
