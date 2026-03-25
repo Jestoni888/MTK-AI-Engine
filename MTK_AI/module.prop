@@ -1,8 +1,8 @@
 id=MTK_AI
 name=MediaTek AI Engine
-version=0.0.0.65
-versionCode=65
+version=0.0.0.66
+versionCode=66
 author=t.me/mikamisaturo
-description=[Fixing C++ library script dependencies] MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way
+description=[Added throttling during screen off to save battery] MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way
 updateJson=https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/update.json
 webui=true
