@@ -1,4 +1,4 @@
-# /data/adb/modules/MTK_AI/main_control/mtk_ai_engine
+# /data/adb/modules/MTK_AI/main_control/mtk_ai_engine.sh
 #!/system/bin/sh
 
 PIDFILE="/data/adb/modules/MTK_AI/engine.pid"
