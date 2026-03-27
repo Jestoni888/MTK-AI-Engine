@@ -1,3 +1,4 @@
+# /data/adb/modules/MTK_AI/service.sh
 #!/system/bin/sh
 # action.sh - Full updater + service restarter + telemetry
 
