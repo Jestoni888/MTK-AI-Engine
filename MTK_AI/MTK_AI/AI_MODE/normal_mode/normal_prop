@@ -10,6 +10,8 @@ log_msg() {
 BB="/data/adb/modules/MTK_AI/busybox"
 SAVE_DIR="/sdcard/MTK_AI_Engine/cooldown_values"
 
+echo "1" > /sys/kernel/fpsgo/fbt/enable_switch_down_throttle
+
 echo enabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
 
 # Loop through all saved config files
