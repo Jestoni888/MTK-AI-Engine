@@ -9,8 +9,6 @@ log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
-
 # 1. Find the PID that is currently in the 'top-app' cpuset
 # This is the most accurate way to find the active app without dumpsys
 for pid in /proc/[0-9]*; do
