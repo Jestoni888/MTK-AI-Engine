@@ -22,7 +22,7 @@ LOG="$MODDIR/service.log"
 
 # Wait for boot
 while [ "$(getprop sys.boot_completed)" != "1" ]; do
-    sleep 30
+    sleep 5
 done
 
 # FIX 2: Corrected log_msg function to use $LOG instead of $LOG_FILE
