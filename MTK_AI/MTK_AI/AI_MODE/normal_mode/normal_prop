@@ -14,7 +14,7 @@ echo "0" > /sys/kernel/fpsgo/fbt/enable_switch_down_throttle
 
 echo "1" > /proc/cpufreq/cpufreq_power_mode
 
-echo "1" > /proc/cpufreq/cpufreq_cci_mode
+echo "0" > /proc/cpufreq/cpufreq_cci_mode
 
 echo enabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
 
