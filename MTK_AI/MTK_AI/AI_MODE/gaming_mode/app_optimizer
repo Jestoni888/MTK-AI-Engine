@@ -135,6 +135,8 @@ echo "1" > /proc/cpufreq/cpufreq_cci_mode
 
 echo "0" > /sys/kernel/fpsgo/fbt/enable_switch_down_throttle
 
+echo "1" > /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable
+
 settings put global low_power 0
 settings put global low_power_sticky 0
 echo "0" > /proc/sys/kernel/panic
