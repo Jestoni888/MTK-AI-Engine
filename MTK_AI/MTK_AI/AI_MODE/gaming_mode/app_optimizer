@@ -147,6 +147,10 @@ echo "1" > /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_cover_mode
 
 echo "1" > /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_glove_mode
 
+echo "1" > /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_prc
+
+echo "1" > /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_ta_mode
+
 settings put global low_power 0
 settings put global low_power_sticky 0
 echo "0" > /proc/sys/kernel/panic
