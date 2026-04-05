@@ -79,6 +79,13 @@ while true; do
         pkill -f "cpu7"
     fi
 
+    # --- Battery 90% Safety Cut-off ---
+    BATTERY_LEVEL=$(dumpsys battery | grep level | tr -dc '0-9')
+    if [ "$BATTERY_LEVEL" -ge 90 ] 2>/dev/null; then
+        pkill -f fastcharging
+        rm -f /sdcard/MTK_AI_Engine/fast_charging
+    fi
+
     # Wait for 60 seconds before running again
     sleep 60
 done
