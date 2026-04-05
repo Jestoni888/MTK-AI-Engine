@@ -119,6 +119,7 @@ while true; do
             kill "$(cat "$FC_PID_FILE")" 2>/dev/null
         fi
         pkill -f "fastchargingx" 2>/dev/null
+        pkill -f "fastcharging" 2>/dev/null
         rm -f "$FC_PID_FILE"
     fi
 
