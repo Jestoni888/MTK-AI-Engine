@@ -66,8 +66,6 @@ MTK_AI_ENGINE="$MODDIR/main_control/mtk_ai_engine.sh"
             sh /data/adb/service.d/99_mtk_ai_restore_values.sh &
         fi
 
-pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null
-
 GLOBAL="$MODDIR/script_runner/global"
 sh "$GLOBAL" &
 
