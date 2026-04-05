@@ -1,54 +1,37 @@
 #!/system/bin/sh
-### ==== FLOOD GUARD BEGIN ==== ###
+### === SINGLE INSTANCE LOCK ===
+LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
+mkdir -p "$LOCK_DIR"
+LOCK_FILE="$LOCK_DIR/global_runner.pid"
 
-SCRIPT_NAME="$(basename "$0")"
-STATE_DIR="/data/adb/modules/MTK_AI/.guard"
-mkdir -p "$STATE_DIR"
-
-RUN_TS_FILE="$STATE_DIR/${SCRIPT_NAME}.last"
-COUNT_FILE="$STATE_DIR/${SCRIPT_NAME}.count"
-
-NOW=$(date +%s)
-LAST=$(cat "$RUN_TS_FILE" 2>/dev/null || echo 0)
-COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)
-
-# --- rate limits ---
-MIN_INTERVAL=5      # seconds between runs
-MAX_RUNS=5          # max runs per minute
-WINDOW=60
-
-# Too soon? exit silently
-[ $((NOW - LAST)) -lt $MIN_INTERVAL ] && exit 0
-
-# Count runs in window
-if [ $((NOW - LAST)) -lt $WINDOW ]; then
-  COUNT=$((COUNT + 1))
-else
-  COUNT=1
+# If PID file exists and process is alive → exit silently
+if [ -f "$LOCK_FILE" ]; then
+    OLD_PID=$(cat "$LOCK_FILE" 2>/dev/null)
+    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+        exit 0
+    fi
 fi
-LOG="/sdcard/MTK_AI_Engine/flood_guard.log"
-MAX_SIZE=10240
-# Too many executions? hard stop
-if [ "$COUNT" -gt "$MAX_RUNS" ]; then
-  echo "[FLOOD-GUARD] $SCRIPT_NAME blocked" \
-    >> /sdcard/MTK_AI_Engine/flood_guard.log
-  exit 0
-fi
+
+# Register current process as the single instance
+echo $$ > "$LOCK_FILE"
+# Auto-clean PID file on normal exit or SIGTERM
+trap 'rm -f "$LOCK_FILE"' EXIT
+### ============================
 
 MOD_DIR="/data/adb/modules/MTK_AI"
 EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
+STATE_DIR="$LOCK_DIR" # Reuse lock dir for internal state files
+
 TRIMMING_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/trim_memory"
 RAM_CLEANER_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/ram_cleaner"
 LOGIC_CPU7_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu7"
 LOGIC_CPU6_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu6"
-RAM_CLEANER_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/ram_cleaner"
 
-# Ensure permissions
+# Ensure permissions (RESOURCES_PATH removed: undefined in your snippet)
 chmod +x "$TRIMMING_PATH"
 chmod +x "$RAM_CLEANER_PATH"
 chmod +x "$LOGIC_CPU6_PATH"
 chmod +x "$LOGIC_CPU7_PATH"
-chmod +x "$RESOURCES_PATH"
 
 while true; do
     # Logic for Trim Memory
@@ -64,7 +47,6 @@ while true; do
     else
         pkill -f "ram_cleaner"
     fi
-
     # Logic for CPU6
     if [ -f "$EXTERNAL_CFG/enable_cpu" ]; then
         pgrep -f "cpu6" > /dev/null || "$LOGIC_CPU6_PATH" &
@@ -84,7 +66,7 @@ while true; do
     FC_PID_FILE="$STATE_DIR/fastchargingx.pid"
     STATE_FILE="$EXTERNAL_CFG/fast_charging"
 
-    # 1. STRICT Charger Detection (exact match to avoid "Not charging" false positives)
+    # 1. STRICT Charger Detection (exact match)
     IS_CHARGING=0
     BATT_STATUS=$(cat /sys/class/power_supply/battery/status 2>/dev/null | tr -d '[:space:]')
     if [ "$BATT_STATUS" = "Charging" ] || [ "$BATT_STATUS" = "Full" ]; then
@@ -104,7 +86,6 @@ while true; do
         FC_PID=$(cat "$FC_PID_FILE")
         kill -0 "$FC_PID" 2>/dev/null && IS_FC_RUNNING=1
     fi
-    # Fallback if PID file is missing/stale
     [ "$IS_FC_RUNNING" -eq 0 ] && pgrep -f "fastchargingx" > /dev/null 2>&1 && IS_FC_RUNNING=1
 
     # 4. Launch or Stop
@@ -114,9 +95,8 @@ while true; do
             echo $! > "$FC_PID_FILE"
         fi
     else
-        # Force kill when conditions are NOT met
         if [ "$IS_FC_RUNNING" -eq 1 ] && [ -f "$FC_PID_FILE" ]; then
-            kill "$(cat "$FC_PID_FILE")" 2>/dev/null
+            kill "$(cat "$FC_PID_FILE")" 2>/dev/null        
         fi
         pkill -f "fastchargingx" 2>/dev/null
         pkill -f "fastcharging" 2>/dev/null
@@ -129,5 +109,5 @@ while true; do
     fi
 
     # Wait for 60 seconds before running again
-    sleep 60
+    sleep 30
 done
