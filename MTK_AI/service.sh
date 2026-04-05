@@ -67,7 +67,7 @@ MTK_AI_ENGINE="$MODDIR/main_control/mtk_ai_engine.sh"
         fi
 
 # Kill existing processes
-pkill -f "MTK_AI.*mtk_ai_engine" 2>/dev/null
+pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null
 
 export MTK_AI_PATH=/data/adb/modules/MTK_AI/main_control:$MTK_AI_PATH
 exec /data/adb/modules/MTK_AI/main_control/mtk_ai_engine.sh
