@@ -1,5 +1,8 @@
 #!/system/bin/sh
 
+# Unlock High fps on gaming
+setprop debug.graphics.game_default_frame_rate.disabled true
+
 # Enable aggressive GPU rasterization & zero-copy
 settings put global hardware_accelerated_drawing_enabled 1
 settings put global force_hw_ui 1
