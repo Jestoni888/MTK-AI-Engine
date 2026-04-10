@@ -14,7 +14,9 @@ log_msg() {
 }
 
 echo "=== MTK AI MANUAL OVERRIDES STARTING ==="
-
+settings put global low_power 0
+settings put global low_power_sticky 0
+echo "0" > /proc/sys/kernel/panic
 # --- 1. RESOLUTION SCALING ---
 if [ -f "$CONFIG_DIR/manual_scaling.txt" ]; then
     PERCENT=$(cat "$CONFIG_DIR/manual_scaling.txt" 2>/dev/null | tr -d '\r\n\t ')
@@ -178,9 +180,5 @@ done
 log_msg "✅ PPM policies loaded successfully from SDCard!"
 
 echo "✅ Devfreq settings loaded successfully!"
-
-settings put global low_power 0
-settings put global low_power_sticky 0
-echo "0" > /proc/sys/kernel/panic
 
 echo "=== MTK AI MANUAL OVERRIDES COMPLETED ==="
