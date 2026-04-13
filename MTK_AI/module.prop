@@ -3,6 +3,6 @@ name=MediaTek AI Engine
 version=0.0.0.69
 versionCode=69
 author=t.me/mikamisaturo
-description=[Fast charging mode optimized✅] MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way
+description=MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way
 updateJson=https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/update.json
 webui=true
