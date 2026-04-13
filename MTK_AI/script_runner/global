@@ -61,53 +61,6 @@ while true; do
         pkill -f "cpu7"
     fi
 
-    # --- Fast Charging Logic (Strict Charger Check & Single-Instance) ---
-    FASTCHARGING_SCRIPT="$MOD_DIR/MTK_AI/AI_MODE/global_mode/fastchargingx"
-    FC_PID_FILE="$STATE_DIR/fastchargingx.pid"
-    STATE_FILE="$EXTERNAL_CFG/fast_charging"
-
-    # 1. STRICT Charger Detection (exact match)
-    IS_CHARGING=0
-    BATT_STATUS=$(cat /sys/class/power_supply/battery/status 2>/dev/null | tr -d '[:space:]')
-    if [ "$BATT_STATUS" = "Charging" ] || [ "$BATT_STATUS" = "Full" ]; then
-        IS_CHARGING=1
-    elif [ "$(cat /sys/class/power_supply/usb/online 2>/dev/null | tr -d '[:space:]')" = "1" ] || \
-         [ "$(cat /sys/class/power_supply/ac/online 2>/dev/null | tr -d '[:space:]')" = "1" ]; then
-        IS_CHARGING=1
-    fi
-
-    # 2. Battery Level (strips hidden chars)
-    BATTERY_LEVEL=$(dumpsys battery | grep "level:" | head -n1 | tr -cd '0-9')
-    [ -z "$BATTERY_LEVEL" ] && BATTERY_LEVEL=0
-
-    # 3. Check if fastchargingx is already running
-    IS_FC_RUNNING=0
-    if [ -f "$FC_PID_FILE" ]; then
-        FC_PID=$(cat "$FC_PID_FILE")
-        kill -0 "$FC_PID" 2>/dev/null && IS_FC_RUNNING=1
-    fi
-    [ "$IS_FC_RUNNING" -eq 0 ] && pgrep -f "fastchargingx" > /dev/null 2>&1 && IS_FC_RUNNING=1
-
-    # 4. Launch or Stop
-    if [ "$IS_CHARGING" -eq 1 ] && [ -f "$STATE_FILE" ] && [ "$BATTERY_LEVEL" -lt 90 ]; then
-        if [ "$IS_FC_RUNNING" -eq 0 ]; then
-            "$FASTCHARGING_SCRIPT" &
-            echo $! > "$FC_PID_FILE"
-        fi
-    else
-        if [ "$IS_FC_RUNNING" -eq 1 ] && [ -f "$FC_PID_FILE" ]; then
-            kill "$(cat "$FC_PID_FILE")" 2>/dev/null        
-        fi
-        pkill -f "fastchargingx" 2>/dev/null
-        pkill -f "fastcharging" 2>/dev/null
-        rm -f "$FC_PID_FILE"
-    fi
-
-    # 5. Strict 90% Cutoff
-    if [ "$BATTERY_LEVEL" -ge 90 ]; then
-        pkill -f fastcharging 2>/dev/null
-    fi
-
     # Wait for 60 seconds before running again
     sleep 30
 done
