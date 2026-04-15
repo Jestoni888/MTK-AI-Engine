@@ -1,0 +1,141 @@
+#!/system/bin/sh
+# Single-run module installer with PID lock
+# Meant to be executed by an external loop (e.g., every 30s)
+
+LOCKFILE="/data/adb/.module_checker.pid"
+UPDATE_DIR="/data/adb/modules_update"
+MODULE_DIR="/data/adb/modules"
+STATE_FILE="/data/adb/.module_processed"
+
+# ─── PID LOCK MECHANISM ───
+if [ -f "$LOCKFILE" ]; then
+    OLD_PID=$(cat "$LOCKFILE" 2>/dev/null)
+    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+        echo "[$(date '+%H:%M:%S')] Already running (PID $OLD_PID). Skipping this cycle."
+        exit 1
+    else
+        echo "[$(date '+%H:%M:%S')] Stale lock found. Cleaning up..."
+        rm -f "$LOCKFILE"
+    fi
+fi
+
+# Create lock & ensure cleanup on exit
+echo $$ > "$LOCKFILE"
+trap 'rm -f "$LOCKFILE"' 0
+
+# ─── SETUP ───
+mkdir -p "$UPDATE_DIR" "$MODULE_DIR"
+touch "$STATE_FILE"
+
+echo "[$(date '+%H:%M:%S')] Starting module check..."
+
+# ─── HANDLE DISABLES (Kill processes but keep module) ───
+for mod_dir in "$MODULE_DIR"/*/; do
+    [ -d "$mod_dir" ] || continue
+    mod_name=$(basename "$mod_dir")
+
+    if [ -f "$mod_dir/disable" ]; then
+        echo "[$(date '+%H:%M:%S')] Disable requested: $mod_name"
+
+        # 1. Kill via PID files
+        for pf in "$mod_dir"/*.pid "$mod_dir"/.*.pid "$mod_dir"/*/*.pid; do
+            [ -f "$pf" ] || continue
+            pid=$(cat "$pf" 2>/dev/null | tr -cd '0-9')
+            [ -z "$pid" ] && continue
+            if kill -0 "$pid" 2>/dev/null; then
+                echo "Killing PID $pid (from $pf)"
+                kill -9 "$pid" 2>/dev/null
+            fi
+        done
+
+        # 2. Kill processes running from/containing the module path
+        ps -A -o pid,args 2>/dev/null | grep -F "$mod_dir" | grep -v grep | while read -r line; do            pid=$(echo "$line" | awk '{print $1}')
+            [ "$pid" = "$$" ] && continue
+            [ -z "$pid" ] && continue
+            echo "Killing PID $pid (module path match)"
+            kill -9 "$pid" 2>/dev/null
+        done
+
+        echo "[$(date '+%H:%M:%S')] Processes terminated for: $mod_name"
+    fi
+done
+
+# ─── HANDLE REMOVALS ───
+for mod_dir in "$MODULE_DIR"/*/; do
+    [ -d "$mod_dir" ] || continue
+    mod_name=$(basename "$mod_dir")
+
+    if [ -f "$mod_dir/remove" ]; then
+        echo "[$(date '+%H:%M:%S')] Removal requested: $mod_name"
+
+        # ─── KILL BACKGROUND PROCESSES ───
+        echo "Terminating active processes for $mod_name..."
+
+        # 1. Kill via PID files
+        for pf in "$mod_dir"/*.pid "$mod_dir"/.*.pid "$mod_dir"/*/*.pid; do
+            [ -f "$pf" ] || continue
+            pid=$(cat "$pf" 2>/dev/null | tr -cd '0-9')
+            [ -z "$pid" ] && continue
+            if kill -0 "$pid" 2>/dev/null; then
+                echo "Killing PID $pid (from $pf)"
+                kill -9 "$pid" 2>/dev/null
+            fi
+        done
+
+        # 2. Kill processes running from/containing the module path
+        ps -A -o pid,args 2>/dev/null | grep -F "$mod_dir" | grep -v grep | while read -r line; do
+            pid=$(echo "$line" | awk '{print $1}')
+            [ "$pid" = "$$" ] && continue
+            [ -z "$pid" ] && continue
+            echo "Killing PID $pid (module path match)"
+            kill -9 "$pid" 2>/dev/null
+        done
+
+        sleep 0.5
+        rm -rf "$mod_dir"
+        sed -i "/^${mod_name}$/d" "$STATE_FILE"
+        echo "[$(date '+%H:%M:%S')] Successfully removed: $mod_name"
+    fi
+done
+
+# ─── PROCESS NEW MODULES ───
+for dir in "$UPDATE_DIR"/*/; do
+    [ -d "$dir" ] || continue
+    mod_name=$(basename "$dir")
+
+    # Skip if already processed
+    if grep -qxF "$mod_name" "$STATE_FILE"; then
+        continue
+    fi
+
+    # Wait briefly to ensure extraction/copy into update dir is complete
+    sleep 1
+    [ -d "$dir" ] || continue
+
+    echo "[$(date '+%H:%M:%S')] Detected: $mod_name"
+
+    # 1. Copy to modules directory
+    if ! cp -a "$dir" "$MODULE_DIR/"; then
+        echo "[$(date '+%H:%M:%S')] Failed to copy $mod_name"
+        continue
+    fi
+
+    # 2. Apply requested permissions
+    chmod -R 777 "$MODULE_DIR/$mod_name"
+    rm -f "$MODULE_DIR/$mod_name/update"
+
+    # 3. Run service.sh if it exists
+    if [ -f "$MODULE_DIR/$mod_name/service.sh" ]; then
+        echo "[$(date '+%H:%M:%S')] Running service.sh for $mod_name..."
+        export MODPATH="$MODULE_DIR/$mod_name"
+        # Run in background to avoid blocking this script
+        (cd "$MODULE_DIR/$mod_name" && sh service.sh >/dev/null 2>&1 &)
+    fi
+
+    # 4. Mark as processed & clean source
+    echo "$mod_name" >> "$STATE_FILE"
+    rm -rf "$dir"
+    echo "[$(date '+%H:%M:%S')] Installed: $mod_name"
+done
+
+echo "[$(date '+%H:%M:%S')] Run complete."
