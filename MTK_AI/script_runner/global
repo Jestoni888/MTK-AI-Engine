@@ -24,6 +24,7 @@ STATE_DIR="$LOCK_DIR" # Reuse lock dir for internal state files
 
 TRIMMING_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/trim_memory"
 RAM_CLEANER_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/ram_cleaner"
+MODULE_EXECUTER="$MOD_DIR/MTK_AI/AI_MODE/global_mode/module_executer"
 LOGIC_CPU7_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu7"
 LOGIC_CPU6_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu6"
 
@@ -32,6 +33,7 @@ chmod +x "$TRIMMING_PATH"
 chmod +x "$RAM_CLEANER_PATH"
 chmod +x "$LOGIC_CPU6_PATH"
 chmod +x "$LOGIC_CPU7_PATH"
+chmod +x "$MODULE_EXECUTER"
 
 while true; do
     # Logic for Trim Memory
@@ -61,6 +63,13 @@ while true; do
         pkill -f "cpu7"
     fi
 
-    # Wait for 60 seconds before running again
+    # Logic for MODULE_EXECUTER
+    if [ -f "$EXTERNAL_CFG/enable_module" ]; then
+        pgrep -f "module_executer" > /dev/null || "$MODULE_EXECUTER" &
+    else
+        pkill -f "module_executer"
+    fi
+
+    # Wait for 30 seconds before running again
     sleep 30
 done
