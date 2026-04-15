@@ -51,6 +51,7 @@ chmod 777 "$MODDIR/main_control/mtk_ai_engine.sh" 2>/dev/null
 chmod 777 "$MODDIR/MTK_AI/AI_MODE/normal_mode/normal_prop" 2>/dev/null
 chmod 777 "$MODDIR/MTK_AI/AI_MODE/normal_mode/powersavex" 2>/dev/null
 chmod 777 "$MODDIR/lib64/libc++_shared.so" 2>/dev/null
+chmod 777 "$MODDIR/script_runner/global" 2>/dev/null
 # ... (Keep your existing chmod blocks for other scripts) ...
 # Start HTTP server
 "$BB" httpd -p 8080 -h "$MODDIR/webroot/" -f &
