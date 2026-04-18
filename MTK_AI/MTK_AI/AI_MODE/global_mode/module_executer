@@ -7,6 +7,8 @@ UPDATE_DIR="/data/adb/modules_update"
 MODULE_DIR="/data/adb/modules"
 STATE_FILE="/data/adb/.module_processed"
 
+pkill -f module_executer
+
 # ─── PID LOCK MECHANISM ───
 if [ -f "$LOCKFILE" ]; then
     OLD_PID=$(cat "$LOCKFILE" 2>/dev/null)
