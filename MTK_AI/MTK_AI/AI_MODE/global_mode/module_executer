@@ -139,3 +139,6 @@ for dir in "$UPDATE_DIR"/*/; do
 done
 
 echo "[$(date '+%H:%M:%S')] Run complete."
+
+rm -f /data/adb/.module_processed
+pkill -f module_executer
