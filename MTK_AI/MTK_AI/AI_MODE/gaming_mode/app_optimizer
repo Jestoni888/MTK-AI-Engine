@@ -9,6 +9,34 @@ log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
+for q in /sys/block/*/queue; do 
+  echo 4096|tee $q/read_ahead_kb 2>/dev/null
+  echo none|tee $q/scheduler 2>/dev/null
+done
+
+echo "3" > /proc/cpufreq/cpufreq_power_mode
+
+echo "1" > /proc/cpufreq/cpufreq_cci_mode
+
+echo "1" > /sys/kernel/fpsgo/common/fpsgo_enable
+
+echo "1" > /sys/kernel/fpsgo/fstb/fstb_self_ctrl_fps_enable
+
+echo "1" > /sys/kernel/fpsgo/fbt/enable_switch_down_throttle
+
+echo "1" > /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable
+
+echo "1" > /sys/kernel/fpsgo/fstb/set_cam_active
+
+echo "1" > /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_cover_mode
+
+echo "1" > /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_glove_mode
+
+echo "0" > /proc/sys/kernel/panic
+
+settings put global low_power 0
+settings put global low_power_sticky 0
+
 # 1. Find the PID that is currently in the 'top-app' cpuset
 # This is the most accurate way to find the active app without dumpsys
 for pid in /proc/[0-9]*; do
@@ -123,30 +151,3 @@ done < "$CONFIG_FILE"
         fi
 
 echo "✅ Devfreq settings loaded successfully!"
-
-for q in /sys/block/*/queue; do 
-  echo 4096|tee $q/read_ahead_kb 2>/dev/null
-  echo none|tee $q/scheduler 2>/dev/null
-done
-
-echo "3" > /proc/cpufreq/cpufreq_power_mode
-
-echo "1" > /proc/cpufreq/cpufreq_cci_mode
-
-echo "1" > /sys/kernel/fpsgo/common/fpsgo_enable
-
-echo "1" > /sys/kernel/fpsgo/fstb/fstb_self_ctrl_fps_enable
-
-echo "1" > /sys/kernel/fpsgo/fbt/enable_switch_down_throttle
-
-echo "1" > /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable
-
-echo "1" > /sys/kernel/fpsgo/fstb/set_cam_active
-
-echo "1" > /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_cover_mode
-
-echo "1" > /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_glove_mode
-
-settings put global low_power 0
-settings put global low_power_sticky 0
-echo "0" > /proc/sys/kernel/panic
