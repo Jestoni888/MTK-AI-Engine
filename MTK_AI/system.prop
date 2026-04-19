@@ -146,10 +146,17 @@ wifi.supplicant_scan_interval=180
 vendor.camera.tran.nums=1
 
 # Disable blurred to reduce power consumption 
-ro.tr_animation.platform_level=2
+ro.tr_animation.platform_level=1
+ro.tr_perf.launch_start_exit.model=3
+ro.tr_perf.power_keyguard_animation.model=3
+ro.tr_perf.recent_animation.model=3
+ro.tr_perf.unlock_mode.model=1
 ro.os.recent.blur=0
 ro.os.tran_hide_status_bar_for_land_recent=1
+ro.os.tran_recent_dismiss_single_task_spring_support=1
+ro.os.tran_recent_drag_down_single_task_spring_support=1
 ro.tran.hide.freezer=0
+ro.transsion_async_animation_support=1
 ro.transsion_launcher_gaussian_blur_support=0
 tr_launcher.depth_wallpaper.support=true
 tr_launcher.gaussianblur.support=0
