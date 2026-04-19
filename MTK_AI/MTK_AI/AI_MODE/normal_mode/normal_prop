@@ -69,6 +69,8 @@ setprop persist.sys.doze_mode true
 # Limit background process
 setprop persist.sys.max_background 10
 
+setprop persist.sys.wifi.suspend_opt 1  # Enable Wi-Fi suspend optimization
+
 service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1
         
     log_msg "🟢 NORMAL MODE PROPS applied"
