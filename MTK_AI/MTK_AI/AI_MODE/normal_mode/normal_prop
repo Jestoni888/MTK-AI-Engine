@@ -65,6 +65,9 @@ setprop debug.sf.high_fps_early_gl_phase_offset_ns 0
 # Powersaving in normal use
 setprop persist.sys.batterysaver true
 
+# Limit background process
+setprop persist.sys.max_background 10
+
 service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1
         
     log_msg "🟢 NORMAL MODE PROPS applied"
