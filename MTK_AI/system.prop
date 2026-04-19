@@ -146,7 +146,6 @@ wifi.supplicant_scan_interval=180
 vendor.camera.tran.nums=1
 
 # Disable blurred to reduce power consumption 
-
 ro.tr_animation.platform_level=2
 ro.os.recent.blur=0
 ro.os.tran_hide_status_bar_for_land_recent=1
