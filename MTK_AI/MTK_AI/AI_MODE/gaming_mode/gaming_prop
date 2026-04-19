@@ -11,3 +11,6 @@ setprop core_ctl_isolated 1
 # Disable some sync delays to let frames fly
 setprop debug.sf.latch_unsignaled 1
 setprop debug.sf.disable_backpressure 1
+
+# Disable thermal policies
+setprop persist.sys.thermal_policy 0
