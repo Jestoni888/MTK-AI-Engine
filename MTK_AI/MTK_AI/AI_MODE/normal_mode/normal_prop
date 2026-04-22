@@ -66,6 +66,17 @@ setprop debug.sf.high_fps_early_gl_phase_offset_ns 0
 setprop persist.sys.batterysaver true
 setprop persist.sys.doze_mode true
 
+# Vulkan Default
+setprop debug.hwui.renderer skiavk
+setprop debug.renderengine.backend skiavkthreaded
+setprop debug.hwui.shadow.renderer skiavk
+setprop ro.ui.pipeline vulkan
+setprop debug.hwui.use_vulkan true
+setprop debug.hwui.force_vulkan true
+setprop ro.hwui.use_vulkan true
+setprop ro.hwui.hardware.vulkan true
+setprop debug.composition.type c2d
+
 # Limit background process
 setprop persist.sys.max_background 10
 
