@@ -127,7 +127,6 @@ persist.sys.use_16bpp_alpha=1
 persist.sys.sf.disable_blurs=1
 debug.hwui.texture_cache_size=32
 debug.hwui.texture_cache_flushrate=0.4
-debug.renderengine.backend=gles
 debug.graphics.game_default_frame_rate.disabled=true
 
 # MediaTek & ColorOS Specifics
