@@ -21,6 +21,17 @@ view.touch_slop=2
 # Example: Change dpi
 # ro.sf.lcd_density=320
 
+# Vulkan Default
+debug.hwui.renderer=skiavk
+debug.renderengine.backend=skiavkthreaded
+debug.hwui.shadow.renderer=skiavk
+ro.ui.pipeline=vulkan
+debug.hwui.use_vulkan=true
+debug.hwui.force_vulkan=true
+ro.hwui.use_vulkan=true
+ro.hwui.hardware.vulkan=true
+debug.composition.type=c2d
+
 # Rendering Engine
 debug.hwui.render_dirty_regions=true
 debug.hwui.use_gpu_pixel_buffers=true
