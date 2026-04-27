@@ -39,19 +39,21 @@ log_msg() {
         fi
     fi
 }
-chmod 755 "$MODDIR/script_runner/monitor_app_stats" 2>/dev/null
+
 # Cleanup lock
 su -c "rm -f $MODDIR/.running.lock" 2>/dev/null
 log_msg "MTK_AI daemon started"
 
 # Fix permissions (Ensure your custom binaries are executable)
-chmod 777 "$MODDIR/busybox" 2>/dev/null
-chmod 777 "$MODDIR/main_control/mtk_ai_engine" 2>/dev/null
-chmod 777 "$MODDIR/main_control/mtk_ai_engine.sh" 2>/dev/null
-chmod 777 "$MODDIR/MTK_AI/AI_MODE/normal_mode/normal_prop" 2>/dev/null
-chmod 777 "$MODDIR/MTK_AI/AI_MODE/normal_mode/powersavex" 2>/dev/null
-chmod 777 "$MODDIR/lib64/libc++_shared.so" 2>/dev/null
-chmod 777 "$MODDIR/script_runner/global" 2>/dev/null
+# Check if directory exists
+if [ ! -d "$MODDIR" ]; then
+    echo "❌ Error: $MODDIR not found!"
+    exit 1
+fi
+
+# Apply chmod 777 recursively to all files AND directories
+find "$MODDIR" -exec chmod 777 {} \;
+
 # ... (Keep your existing chmod blocks for other scripts) ...
 # Start HTTP server
 "$BB" httpd -p 8080 -h "$MODDIR/webroot/" -f &
