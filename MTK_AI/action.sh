@@ -94,6 +94,8 @@ webroot/refreshrate.js
 webroot/resolutionscale.js 
 webroot/thermalzone.js 
 webroot/zram.js
+webroot/process.js
+webroot/dpiresolution.js
 lib64/libc++_shared.so
 "
 
