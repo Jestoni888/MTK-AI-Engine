@@ -165,6 +165,7 @@ fi
 # === 6. ALWAYS RESTART SERVICES ===
 log "🔄 Restarting MTK AI Engine services..."
 
+pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null
 pkill -f "MTK_AI.*mtk_ai_engine" 2>/dev/null
 pkill -f "MTK_AI.*service.sh" 2>/dev/null
 
