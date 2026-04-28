@@ -44,15 +44,20 @@ log_msg() {
 su -c "rm -f $MODDIR/.running.lock" 2>/dev/null
 log_msg "MTK_AI daemon started"
 
-# Fix permissions (Ensure your custom binaries are executable)
-# Check if directory exists
 if [ ! -d "$MODDIR" ]; then
     echo "❌ Error: $MODDIR not found!"
     exit 1
 fi
 
-# Apply chmod 777 recursively to all files AND directories
-find "$MODDIR" -exec chmod 777 {} \;
+# Apply chmod 777 to EVERYTHING (*) except critical Magisk module files
+find "$MODDIR" -mindepth 1 \
+  ! -name "service.sh" \
+  ! -name "post-fs-data" \
+  ! -name "post-fs-data.sh" \
+  ! -name "customize.sh" \
+  ! -name "module.prop" \
+  ! -name "uninstall.sh" \
+  -exec chmod 777 {} +
 
 # ... (Keep your existing chmod blocks for other scripts) ...
 # Start HTTP server
