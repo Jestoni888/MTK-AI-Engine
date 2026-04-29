@@ -80,7 +80,7 @@
         
         // Update the value display with the selected mode
         valEl.innerHTML = `${text} <i class="fas fa-chevron-right"></i>`;
-        valEl.style.color = modeId === '0' ? '#636366' : '#32D74B';
+        valEl.style.color = modeId === '0' ? '#32D74B' : '#32D74B';
     }
 
     function bindClickHandler() {
