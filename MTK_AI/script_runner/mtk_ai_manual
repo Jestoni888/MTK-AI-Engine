@@ -18,30 +18,32 @@ settings put global low_power 0
 settings put global low_power_sticky 0
 echo "0" > /proc/sys/kernel/panic
 # --- 1. RESOLUTION SCALING ---
-if [ -f "$CONFIG_DIR/manual_scaling.txt" ]; then
-    PERCENT=$(cat "$CONFIG_DIR/manual_scaling.txt" 2>/dev/null | tr -d '\r\n\t ')
-    if [ -n "$PERCENT" ] && [ "$PERCENT" -ge 50 ] 2>/dev/null && [ "$PERCENT" -le 200 ] 2>/dev/null; then
-        # Get current density properly
-        CURRENT_DENSITY=$(dumpsys display 2>/dev/null | grep "mBaseDisplayInfo" | head -n1 | awk '{print $6}' | cut -d',' -f1)
-        if [ -z "$CURRENT_DENSITY" ] || ! [ "$CURRENT_DENSITY" -gt 0 ] 2>/dev/null; then
-            CURRENT_DENSITY=480  # Fallback
-        fi
+RES_CONFIG="$CONFIG_DIR/resolution_scale_config.txt"
+if [ -f "$RES_CONFIG" ]; then
+    # Parse key=value pairs, strip CR/LF/whitespace
+    SCALE=$(grep -m1 "^scale=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ')
+    TEXTURE=$(grep -m1 "^texture=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ')
+    TARGET_DENSITY=$(grep -m1 "^density=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ')
+
+    # Validate density is a positive integer
+    if [ -n "$TARGET_DENSITY" ] && [ "$TARGET_DENSITY" -gt 0 ] 2>/dev/null; then
+        echo "Applying resolution config: scale=${SCALE}%, texture=${TEXTURE}, density=${TARGET_DENSITY}"
         
-        NEW_DENSITY=$((CURRENT_DENSITY * PERCENT / 100))
-        echo "Applying scaling: ${PERCENT}% → ${NEW_DENSITY} DPI"
-        
-        # Apply with proper context
-        su -c "wm density $NEW_DENSITY" 2>/dev/null
+        # Apply density via wm
+        su -c "wm density $TARGET_DENSITY" 2>/dev/null
         if [ $? -eq 0 ]; then
-            echo "✓ Scaling applied successfully"
+            echo "✓ Resolution/Density applied successfully"
+            log_msg "Resolution config applied: scale=$SCALE, texture=$TEXTURE, density=$TARGET_DENSITY"
         else
-            echo "✗ Failed to apply scaling"
+            echo "✗ Failed to apply density $TARGET_DENSITY"
+            log_msg "Failed to apply density: $TARGET_DENSITY"
         fi
     else
-        echo "Invalid scaling value: '$PERCENT'"
+        echo "Invalid or missing density value in config"
+        log_msg "Invalid density value in resolution_scale_config.txt"
     fi
 else
-    echo "No scaling config found"
+    echo "No resolution config found at $RES_CONFIG"
 fi
 
 # --- 2. CPU GOVERNOR ---
