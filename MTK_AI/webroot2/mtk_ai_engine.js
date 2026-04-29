@@ -38,7 +38,7 @@ const toggleConfig = {
     low_power_mode: { title: "Deep sleep system", desc: "Enable deep sleep power mode during screen-off", group: "Battery" },
     enable_notifications: { title: "Module Notifications", desc: "Manage notification behavior of this module", group: "System" },
     throttle_user_apps_in_gaming: { title: "Throttle Background Apps", desc: "Limit background apps while gaming", group: "Gaming" },
-    enable_limiter: { title: "Enable Touch Control", desc: "Master toggle for TOUCH Control", group: "Touch Control" },
+    enable_limiter: { title: "Enable Touch Control", desc: "Master toggle for TOUCH Control & Smart Refresh rate", group: "Touch Control" },
     enable_highframerate: { title: "Unlock High FPS", desc: "Remove system-level FPS caps", group: "Gaming" },
     enable_disable_thermal: { title: "Disable Thermals", desc: "Bypass thermal throttling (⚠️ Risk of overheating)", group: "Thermal" },
     enable_gaming_prop: { title: "Gaming Properties", desc: "Apply gaming-specific system properties", group: "Gaming" },
