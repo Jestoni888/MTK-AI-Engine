@@ -96,6 +96,7 @@ webroot/thermalzone.js
 webroot/zram.js
 webroot/process.js
 webroot/dpiresolution.js
+webroot/performancetest.js
 lib64/libc++_shared.so
 "
 
