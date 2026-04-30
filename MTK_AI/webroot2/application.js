@@ -262,7 +262,7 @@ function renderAppList(apps) {
             lastSection = section;
             const count = apps.filter(a => a.isInGameList).length;
             if (section === 'game-list') {
-                html += `<div class="section-divider added">📋 In Game List (${count})</div>`;
+                html += `<div class="section-divider added">🎮 In Game List (${count})</div>`;
             } else {
                 html += `<div class="section-divider">📱 Available Apps (${apps.filter(a => !a.isInGameList).length})</div>`;
             }
