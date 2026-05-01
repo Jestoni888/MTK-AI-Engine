@@ -1,0 +1,218 @@
+#!/system/bin/sh
+# Single-run module installer with PID lock + AUTO-RUN support
+# Meant to be executed by an external loop (e.g., every 30s)
+
+LOCKFILE="/data/adb/.module_checker.pid"
+UPDATE_DIR="/data/adb/modules_update"
+MODULE_DIR="/data/adb/modules"
+STATE_FILE="/data/adb/.module_processed"
+AUTORUN_STATE="/data/adb/.module_autorun"  # ← NEW: tracks auto-started modules
+
+# ─── PID LOCK MECHANISM ───
+if [ -f "$LOCKFILE" ]; then
+    OLD_PID=$(cat "$LOCKFILE" 2>/dev/null)
+    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+        echo "[$(date '+%H:%M:%S')] Already running (PID $OLD_PID). Skipping this cycle."
+        exit 1
+    else
+        echo "[$(date '+%H:%M:%S')] Stale lock found. Cleaning up..."
+        rm -f "$LOCKFILE"
+    fi
+fi
+
+echo $$ > "$LOCKFILE"
+trap 'rm -f "$LOCKFILE"' 0
+
+# ─── SETUP ───
+mkdir -p "$UPDATE_DIR" "$MODULE_DIR"
+touch "$STATE_FILE" "$AUTORUN_STATE"
+
+echo "[$(date '+%H:%M:%S')] Starting module check..."
+
+# ─── HELPER: Check if process is already running for module ───
+is_module_running() {
+    local mod_path="$1"
+    local mod_name="$2"
+    
+    # Check PID files first
+    for pf in "$mod_path"/*.pid "$mod_path"/.*.pid "$mod_path"/*/*.pid; do
+        [ -f "$pf" ] || continue
+        pid=$(cat "$pf" 2>/dev/null | tr -cd '0-9')
+        [ -z "$pid" ] && continue
+        kill -0 "$pid" 2>/dev/null && return 0
+    done
+    
+    # Fallback: check by path in process args
+    ps -A -o pid,args 2>/dev/null | grep -F "$mod_path" | grep -v grep -q . && return 0
+    
+    return 1
+}
+# ─── HELPER: Auto-run module if eligible ───
+auto_run_module() {
+    local mod_dir="$1"
+    local mod_name="$2"
+    
+    # Skip if already marked as auto-run
+    if grep -qxF "$mod_name" "$AUTORUN_STATE" 2>/dev/null; then
+        # Optional: verify process is still alive, re-run if dead
+        if ! is_module_running "$mod_dir" "$mod_name"; then
+            echo "[$(date '+%H:%M:%S')] Process dead, re-starting: $mod_name"
+            # Continue to re-launch below
+        else
+            echo "[$(date '+%H:%M:%S')] Already running: $mod_name (skipping)"
+            return 0
+        fi
+    fi
+    
+    # Priority: service.sh > post-fs-data.sh > custom.sh
+    local runner=""
+    [ -x "$mod_dir/service.sh" ] && runner="service.sh"
+    [ -z "$runner" ] && [ -x "$mod_dir/post-fs-data.sh" ] && runner="post-fs-data.sh"
+    [ -z "$runner" ] && [ -x "$mod_dir/custom.sh" ] && runner="custom.sh"
+    
+    if [ -n "$runner" ]; then
+        echo "[$(date '+%H:%M:%S')] Auto-running $runner for: $mod_name"
+        export MODPATH="$mod_dir"
+        export MODULE_NAME="$mod_name"
+        
+        # Run in background, detach from parent
+        (cd "$mod_dir" && nohup sh "$runner" >/dev/null 2>&1 &)
+        
+        # Give it a moment to spawn
+        sleep 0.3
+        
+        # Save PID if the script created one
+        if [ -f "$mod_dir/$runner.pid" ]; then
+            echo "[$(date '+%H:%M:%S')] PID recorded: $(cat "$mod_dir/$runner.pid")"
+        fi
+        
+        # Mark as auto-run to prevent duplicate launches
+        echo "$mod_name" >> "$AUTORUN_STATE"
+        echo "[$(date '+%H:%M:%S')] Auto-started: $mod_name"
+    else
+        echo "[$(date '+%H:%M:%S')] No executable script found for: $mod_name"
+    fi
+}
+
+# ─── HANDLE DISABLES (Kill processes but keep module) ───
+for mod_dir in "$MODULE_DIR"/*/; do
+    [ -d "$mod_dir" ] || continue    mod_name=$(basename "$mod_dir")
+
+    if [ -f "$mod_dir/disable" ]; then
+        echo "[$(date '+%H:%M:%S')] Disable requested: $mod_name"
+
+        # Remove from auto-run state if disabled
+        sed -i "/^${mod_name}$/d" "$AUTORUN_STATE" 2>/dev/null
+
+        # 1. Kill via PID files
+        for pf in "$mod_dir"/*.pid "$mod_dir"/.*.pid "$mod_dir"/*/*.pid; do
+            [ -f "$pf" ] || continue
+            pid=$(cat "$pf" 2>/dev/null | tr -cd '0-9')
+            [ -z "$pid" ] && continue
+            if kill -0 "$pid" 2>/dev/null; then
+                echo "Killing PID $pid (from $pf)"
+                kill -9 "$pid" 2>/dev/null
+            fi
+        done
+
+        # 2. Kill processes running from/containing the module path
+        ps -A -o pid,args 2>/dev/null | grep -F "$mod_dir" | grep -v grep | while read -r line; do
+            pid=$(echo "$line" | awk '{print $1}')
+            [ "$pid" = "$$" ] && continue
+            [ -z "$pid" ] && continue
+            echo "Killing PID $pid (module path match)"
+            kill -9 "$pid" 2>/dev/null
+        done
+
+        echo "[$(date '+%H:%M:%S')] Processes terminated for: $mod_name"
+    fi
+done
+
+# ─── HANDLE REMOVALS ───
+for mod_dir in "$MODULE_DIR"/*/; do
+    [ -d "$mod_dir" ] || continue
+    mod_name=$(basename "$mod_dir")
+
+    if [ -f "$mod_dir/remove" ]; then
+        echo "[$(date '+%H:%M:%S')] Removal requested: $mod_name"
+
+        # Clean state files
+        sed -i "/^${mod_name}$/d" "$STATE_FILE" "$AUTORUN_STATE" 2>/dev/null
+
+        # Kill processes (same logic as disable)
+        for pf in "$mod_dir"/*.pid "$mod_dir"/.*.pid "$mod_dir"/*/*.pid; do
+            [ -f "$pf" ] || continue
+            pid=$(cat "$pf" 2>/dev/null | tr -cd '0-9')
+            [ -z "$pid" ] && continue
+            kill -9 "$pid" 2>/dev/null
+        done
+        ps -A -o pid,args 2>/dev/null | grep -F "$mod_dir" | grep -v grep | while read -r line; do
+            pid=$(echo "$line" | awk '{print $1}')
+            [ "$pid" = "$$" ] && continue
+            [ -z "$pid" ] && continue
+            kill -9 "$pid" 2>/dev/null
+        done
+
+        sleep 0.5
+        rm -rf "$mod_dir"
+        echo "[$(date '+%H:%M:%S')] Successfully removed: $mod_name"
+    fi
+done
+
+# ─── AUTO-RUN ENABLED MODULES (NEW SECTION) ───
+echo "[$(date '+%H:%M:%S')] Checking for modules to auto-run..."
+for mod_dir in "$MODULE_DIR"/*/; do
+    [ -d "$mod_dir" ] || continue
+    mod_name=$(basename "$mod_dir")
+    
+    # Skip if disabled, removed, or being updated
+    [ -f "$mod_dir/disable" ] && continue
+    [ -f "$mod_dir/remove" ] && continue
+    [ -f "$mod_dir/update" ] && continue
+    
+    # Skip Magisk core modules
+    [ "$mod_name" = "Magisk" ] || [ "$mod_name" = "magisk" ] && continue
+    
+    echo "[$(date '+%H:%M:%S')] Eligible for auto-run: $mod_name"
+    auto_run_module "$mod_dir" "$mod_name"
+done
+
+# ─── PROCESS NEW MODULES (from update dir) ───
+for dir in "$UPDATE_DIR"/*/; do
+    [ -d "$dir" ] || continue
+    mod_name=$(basename "$dir")
+
+    # Skip if already processed
+    if grep -qxF "$mod_name" "$STATE_FILE"; then
+        continue
+    fi
+
+    sleep 1  # Wait for extraction to complete
+    [ -d "$dir" ] || continue
+
+    echo "[$(date '+%H:%M:%S')] Detected new module: $mod_name"
+
+    # 1. Copy to modules directory
+    if ! cp -a "$dir" "$MODULE_DIR/"; then
+        echo "[$(date '+%H:%M:%S')] Failed to copy $mod_name"        continue
+    fi
+
+    # 2. Apply permissions & cleanup
+    chmod -R 777 "$MODULE_DIR/$mod_name"
+    rm -f "$MODULE_DIR/$mod_name/update"
+
+    # 3. Auto-run immediately if eligible (no disable file)
+    if [ ! -f "$MODULE_DIR/$mod_name/disable" ]; then
+        auto_run_module "$MODULE_DIR/$mod_name" "$mod_name"
+    fi
+
+    # 4. Mark as processed & clean source
+    echo "$mod_name" >> "$STATE_FILE"
+    rm -rf "$dir"
+    echo "[$(date '+%H:%M:%S')] Installed: $mod_name"
+done
+
+echo "[$(date '+%H:%M:%S')] Run complete."
+
+# Optional: Clean state file if you want fresh auto-run every boot
+# rm -f "$AUTORUN_STATE"  # ← Uncomment to reset auto-run tracking on each script run
