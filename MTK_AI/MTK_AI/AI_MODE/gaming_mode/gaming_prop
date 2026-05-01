@@ -1,4 +1,175 @@
+#!/system/bin/sh
+# Celestial Flinger Flux + Throughput Focus (@Kzuyoo)
+# Version: 1.8 Essential + Performance Additions
+# Note: All values unquoted per request - ensure no spaces in values or use escape if needed
 
+###############################
+# Celestial Flinger Flux (@Kzuyoo)
+###############################
+setprop sys.surfaceflinger.idle_reduce_framerate_enable no
+
+# HWUI Optimized (Essential)
+setprop debug.hwui.use_hint_manager true
+setprop debug.hwui.use_gpu_pixel_buffers true
+
+###############################
+# Celestial Render FlowX (@Kzuyoo)
+# Version: 1.5G
+###############################
+setprop view.touch_slop 2
+
+# Vulkan Default
+setprop debug.hwui.renderer skiavk
+setprop debug.renderengine.backend skiavkthreaded
+setprop debug.hwui.shadow.renderer skiavk
+setprop ro.ui.pipeline vulkan
+setprop debug.hwui.use_vulkan true
+setprop debug.hwui.force_vulkan true
+setprop ro.hwui.use_vulkan true
+setprop ro.hwui.hardware.vulkan true
+setprop debug.composition.type c2d
+
+# Rendering Engine
+setprop debug.hwui.render_dirty_regions true
+setprop debug.hwui.use_gpu_pixel_buffers true
+setprop debug.hwui.trace_gpu_resources false
+setprop debug.egl.buffcount 2
+setprop debug.egl.callstack 0
+setprop debug.egl.finish 0
+setprop debug.egl.force_msaa 0
+setprop debug.egl.trace 0
+setprop debug.egl.traceGpuCompletion 0
+setprop debug.gr.swapinterval 1
+setprop debug.gr.numframebuffers 2
+setprop debug.graphics.gpu.profiler.perfetto 0
+
+# MAKES APPS LOAD FASTER AND FREES MORE RAM
+setprop dalvik.vm.dexopt-flags m=y,o=v,u=y
+
+# Hyperthreading & Multithread
+setprop persist.sys.dalvik.hyperthreading truesetprop persist.sys.dalvik.multithread true
+
+# Vendor perf
+setprop ro.vendor.perf.scroll_opt 1
+setprop vendor.perf.framepacing.enable true
+
+# HWUI
+setprop debug.hwui.disable_draw_defer false
+setprop debug.hwui.use_hint_manager true
+setprop debug.hwui.skip_empty_damage true
+setprop debug.hwui.use_buffer_age true
+setprop debug.hwui.use_partial_updates true
+setprop debug.hwui.skip_eglmanager_telemetry true
+setprop ro.hwui.disable_scissor_opt false
+setprop ro.zygote.disable_gl_preload false
+
+# HWUI properties
+setprop ro.hwui.texture_cache_size 72
+setprop ro.hwui.layer_cache_size 48
+setprop ro.hwui.r_buffer_cache_size 8
+setprop ro.hwui.path_cache_size 32
+setprop ro.hwui.gradient_cache_size 1
+setprop ro.hwui.drop_shadow_cache_size 6
+setprop ro.hwui.texture_cache_flushrate 0.4
+setprop ro.hwui.text_small_cache_width 1024
+setprop ro.hwui.text_small_cache_height 1024
+setprop ro.hwui.text_large_cache_width 2048
+setprop ro.hwui.text_large_cache_height 1024
+
+# for qcom
+setprop sys.hwc.gpu_perf_mode 1
+
+# SurfaceFlinger / high FPS tuning
+setprop persist.sys.sf.high_fps 1
+setprop persist.sys.sf.latch_unsignaled 1
+setprop persist.sys.sf.disable_backpressure 1
+setprop persist.sys.sf.frame_rate_multiple_threshold 0
+
+# Media / screen recording hints
+setprop persist.vendor.media.fps.disable 1
+setprop persist.media.screenrecord.fps 144
+setprop persist.vendor.powerhal.fps.max 144
+
+# ----------------------------------------
+# NETWORK & PING STABILIZATION
+# ----------------------------------------
+# === Universal TCP Buffer Tweaks ===
+setprop net.tcp.buffersize.default 4096,87380,1048576,4096,16384,1048576
+setprop net.tcp.buffersize.wifi 4096,87380,1048576,4096,16384,1048576
+setprop net.tcp.buffersize.umts 4096,87380,1048576,4096,16384,1048576setprop net.tcp.buffersize.edge 4096,87380,256960,4096,16384,256960
+setprop net.tcp.buffersize.gprs 4096,87380,256960,4096,16384,256960
+setprop net.tcp.buffersize.hsdpa 4096,87380,2097152,4096,16384,2097152
+setprop net.tcp.buffersize.lte 4096,87380,4194304,4096,16384,4194304
+setprop net.tcp.buffersize.nr 4096,87380,8388608,4096,16384,8388608
+
+# === Universal Network Responsiveness ===
+setprop net.core.wmem.max 2097152
+setprop net.core.rmem.max 2097152
+setprop net.ipv4.tcp_rmem 4096\ 87380\ 2097152
+setprop net.ipv4.tcp_wmem 4096\ 87380\ 2097152
+setprop net.ipv4.tcp_no_metrics_save 1
+setprop net.ipv4.tcp_ecn 0
+setprop net.ipv4.tcp_window_scaling 1
+setprop net.ipv4.tcp_timestamps 0
+setprop net.ipv4.tcp_sack 1
+setprop net.ipv4.tcp_fastopen 3
+setprop net.ipv4.tcp_fack 0
+setprop net.ipv4.tcp_low_latency 1
+setprop net.ipv4.tcp_congestion_control bbr
+setprop net.ipv4.ip_local_port_range 1024\ 65000
+
+# Graphics Performance & Texture Limitation
+setprop persist.sys.use_16bpp_alpha 1
+setprop persist.sys.sf.disable_blurs 1
+setprop debug.hwui.texture_cache_size 32
+setprop debug.hwui.texture_cache_flushrate 0.4
+setprop debug.graphics.game_default_frame_rate.disabled true
+
+# MediaTek & ColorOS Specifics
+setprop debug.egl.hw 0
+
+# Improves the sync between CPU and GPU for lower input lag
+setprop debug.cpurend.vsync true
+setprop debug.choreographer.frametime true
+setprop persist.sys.composition.type c2d
+
+# Reduces the "delay" between a touch and the frame update
+setprop debug.egl.buffcount 4
+setprop debug.gr.num_framebuffers 3
+
+# Prevent the system from "dropping" frames during heavy load
+setprop ro.min_relative_per_pixel_refresh_rate 1
+setprop persist.sys.scrolling.friction 0.007
+
+# Enhances VSync stability under thermal throttling
+setprop debug.hwui.fps_divisor 1
+setprop ro.surface_flinger.max_frame_buffer_acquired_buffers 3
+
+# Reduce background search for Wi-Fi while gamingsetprop ro.ril.disable.power.collapse 0
+setprop pm.sleep_mode 1
+setprop wifi.supplicant_scan_interval 180
+setprop vendor.camera.tran.nums 1
+
+# Disable blurred to reduce power consumption 
+setprop ro.tr_animation.platform_level 1
+setprop ro.tr_perf.launch_start_exit.model 3
+setprop ro.tr_perf.power_keyguard_animation.model 3
+setprop ro.tr_perf.recent_animation.model 3
+setprop ro.tr_perf.unlock_mode.model 1
+setprop ro.os.recent.blur 0
+setprop ro.os.tran_hide_status_bar_for_land_recent 1
+setprop ro.os.tran_recent_dismiss_single_task_spring_support 1
+setprop ro.os.tran_recent_drag_down_single_task_spring_support 1
+setprop ro.tran.hide.freezer 0
+setprop ro.transsion_async_animation_support 1
+setprop ro.transsion_launcher_gaussian_blur_support 0
+setprop tr_launcher.depth_wallpaper.support true
+setprop tr_launcher.gaussianblur.support 0
+setprop tr_launcher.hidefreezer.support 0
+
+###############################
+# THROUGHPUT FOCUS ADDITIONS (NEW)
+###############################
 # 1. Focus on Throughput (Performance)
 setprop debug.hwui.render_ahead 2
 setprop debug.egl.hw 1
