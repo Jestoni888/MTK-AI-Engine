@@ -72,7 +72,7 @@ MTK_AI_ENGINE="$MODDIR/main_control/mtk_ai_engine.sh"
         fi
 
 GLOBAL="$MODDIR/script_runner/global"
-sh "$GLOBAL" &
+nohup "$GLOBAL" > /dev/null 2>&1 &
 
 export MTK_AI_PATH=/data/adb/modules/MTK_AI/main_control:$MTK_AI_PATH
 exec /data/adb/modules/MTK_AI/main_control/mtk_ai_engine.sh
