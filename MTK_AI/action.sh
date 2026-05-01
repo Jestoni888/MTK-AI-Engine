@@ -72,7 +72,6 @@ action.sh
 service.sh
 post-fs-data.sh
 module.prop
-system.prop
 webroot/index.html 
 webroot/application.js 
 webroot/animationspeed.js 
