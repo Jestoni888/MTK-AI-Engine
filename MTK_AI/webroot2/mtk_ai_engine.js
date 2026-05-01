@@ -24,8 +24,7 @@ const scriptPaths = {
     enable_module: { on: null, off: null, isDaemon: false, critical: false },
     fast_mode_switch: { on: null, off: null, isDaemon: false, critical: false },
     enable_cpu: { on: null, off: null, isDaemon: false, critical: false },
-    enable_lite_gaming: { on: null, off: null, isDaemon: false, critical: false },
-    disable_system_prop: { on: null, off: null, isDaemon: false, critical: false }
+    enable_lite_gaming: { on: null, off: null, isDaemon: false, critical: false }
 };
 
 const toggleConfig = {
@@ -46,8 +45,7 @@ const toggleConfig = {
     enable_gaming_prop2: { title: "Gaming Props v2", desc: "Advanced gaming property tweaks", group: "Gaming" },
     enable_module: { title: "Module automation", desc: "No need to reboot when new modules installed except system level modules", group: "System" },
     fast_mode_switch: { title: "Fast Mode Switch", desc: "Quickly switch between normal, gaming & screen state profiles", group: "System" },
-    enable_cpu: { title: "Auto shutdown CPU 6 & 7", desc: "Auto shutdown cpu 6 & 7 when temp reaches 42°C & auto revert in 39°C", group: "Battery" },    enable_lite_gaming: { title: "Lite Gaming Mode", desc: "Lightweight tweaks for low-end devices", group: "Gaming" },
-    disable_system_prop: { title: "Disable System.prop", desc: "Remove system.prop to revert module properties", group: "System", warning: "⚠️ Requires reboot after removal" }
+    enable_cpu: { title: "Auto shutdown CPU 6 & 7", desc: "Auto shutdown cpu 6 & 7 when temp reaches 42°C & auto revert in 39°C", group: "Battery" },    enable_lite_gaming: { title: "Lite Gaming Mode", desc: "Lightweight tweaks for low-end devices", group: "Gaming" }
 };
 
 const execFn = async function(cmd, timeout = 2000) {
