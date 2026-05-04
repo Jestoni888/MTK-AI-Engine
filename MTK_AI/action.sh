@@ -41,6 +41,7 @@ MTK_AI/AI_MODE/auto_frequency/cpu7
 MTK_AI/AI_MODE/gaming_mode/app_optimizer
 MTK_AI/AI_MODE/gaming_mode/bypass_on
 MTK_AI/AI_MODE/gaming_mode/disable_thermal
+MTK_AI/AI_MODE/gaming_mode/thermalx
 MTK_AI/AI_MODE/gaming_mode/gaming_prop
 MTK_AI/AI_MODE/gaming_mode/gaming_prop_2
 MTK_AI/AI_MODE/gaming_mode/limit
