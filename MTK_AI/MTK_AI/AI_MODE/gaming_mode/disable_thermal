@@ -1,0 +1,4 @@
+# /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal
+#!/system/bin/sh
+export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
+exec /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/thermalx
