@@ -180,4 +180,6 @@ done
 ndc resolver flushdefaultif 2>/dev/null
 ndc resolver flushif 2>/dev/null
 
+sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off"
+
 log -t "NetTweak" "Network Tweaks Applied Successfully."
