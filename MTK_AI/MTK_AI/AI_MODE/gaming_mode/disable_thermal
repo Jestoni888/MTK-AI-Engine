@@ -37,6 +37,32 @@ set_value() {
   fi
 }
 
+stop thermal_core
+stop thermal_manager
+stop vendor.thermal-hal-2-0.mtk
+stop mi_thermald
+stop vendor.thermal-engine
+stop vendor.thermal_manager
+stop vendor.thermal-manager
+stop vendor.thermal-hal-2-0
+stop vendor.thermal-symlinks
+stop vendor.thermal.symlinks
+stop thermal_mnt_hal_service
+stop vendor.thermal-hal
+stop thermal
+stop thermald
+stop thermalloadalgod
+stop thermalservice
+stop sec-thermal-1-0
+stop debug_pid.sec-thermal-1-0
+stop thermal-engine
+stop vendor.thermal-hal-1-0
+stop android.thermal-hal
+stop vendor-thermal-1-0
+stop thermal-hal
+stop android.thermal-hal
+stop android.hardware.thermal
+
 # --- 1. Disable Thermal Throttling (Basic) ---
 echo "[+] Disabling thermal limits..."
 echo "95 70" > /proc/driver/thermal/clatm_gpu_threshold 2>/dev/null || true
