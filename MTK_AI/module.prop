@@ -3,6 +3,6 @@ name=MediaTek AI Engine
 version=0.0.0.73
 versionCode=73
 author=t.me/mikamisaturo
-description=[➕New Interface under beta test] MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way
+description=[➕New Interface under beta test] MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way. Click ▶️ for updates.
 updateJson=https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/update.json
 webui=true
