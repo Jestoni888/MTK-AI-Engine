@@ -24,6 +24,31 @@ echo "1" > /proc/cpufreq/cpufreq_power_mode
 
 echo "0" > /proc/cpufreq/cpufreq_cci_mode
 
+start thermal_core
+start vendor.thermal-hal-2-0.mtk
+start vendor.thermal.symlinks
+start mi_thermald
+start vendor.thermal-engine
+start vendor.thermal_manager
+start vendor.thermal-manager
+start vendor.thermal-hal-2-0
+start vendor.thermal-symlinks
+start vendor.thermal-hal
+start thermal_mnt_hal_service
+start thermal
+start thermald
+start thermalloadalgod
+start thermalservice
+start sec-thermal-1-0
+start thermal-engine
+start vendor.thermal-hal-1-0
+start android.thermal-hal
+start vendor-thermal-1-0
+start thermal-hal
+start android.thermal-hal
+start thermal_manager
+start android.hardware.thermal
+
 echo enabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
 
 # Loop through all saved config files
