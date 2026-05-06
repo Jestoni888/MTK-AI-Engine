@@ -3,6 +3,6 @@ name=MediaTek AI Engine
 version=0.0.0.74
 versionCode=74
 author=t.me/mikamisaturo
-description=[😌Dex2oat compiler new feature] MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way. Click ▶️ for updates.
+description=[😌Maintenance feature added] MediaTek AI Engine has a features in performance, normal use & powersaver in a convenient way. Click ▶️ for updates.
 updateJson=https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/update.json
 webui=true
