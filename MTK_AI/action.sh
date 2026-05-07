@@ -98,6 +98,8 @@ webroot/process.js
 webroot/dpiresolution.js
 webroot/performancetest.js
 webroot/maintenance.js
+webroot/networktweak.js
+webroot/terminalemulator.js
 lib64/libc++_shared.so
 "
 
