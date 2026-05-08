@@ -212,6 +212,11 @@ for d in /sys/class/devfreq/*/; do
   [ -n "$f" ] && echo $f | tee "$d/min_freq" 2>/dev/null
 done
 
+for PROC in $(ps -e | grep thermal | grep -v grep | awk "{print \$NF}"); do
+    echo "Stopping service $PROC"
+    stop $PROC 2>/dev/null
+done
+
 # ==============================
 # ✅ Done
 # ==============================
