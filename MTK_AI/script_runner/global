@@ -35,6 +35,14 @@ chmod +x "$LOGIC_CPU6_PATH"
 chmod +x "$LOGIC_CPU7_PATH"
 chmod +x "$MODULE_EXECUTER"
 
+# Fast Reboot Mode Check
+if [ -f "/sdcard/MTK_AI_Engine/fast_reboot_enabled" ]; then
+    setprop persist.sys.mtk.fast_boot 1
+    setprop debug.sf.nobootanimation 1
+    # Add other fast-boot optimizations here
+    log "MTK_AI: Fast reboot mode active"
+fi
+
 while true; do
     # Logic for Trim Memory
     if [ -f "$EXTERNAL_CFG/enable_trim" ]; then
