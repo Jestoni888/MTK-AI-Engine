@@ -35,12 +35,38 @@ chmod +x "$LOGIC_CPU6_PATH"
 chmod +x "$LOGIC_CPU7_PATH"
 chmod +x "$MODULE_EXECUTER"
 
-# Fast Reboot Mode Check
-if [ -f "/sdcard/MTK_AI_Engine/fast_reboot_enabled" ]; then
+# --- Fast Reboot Check ---
+FAST_REBOOT_FLAG="/sdcard/MTK_AI_Engine/fast_reboot_enabled"
+
+if [ -f "$FAST_REBOOT_FLAG" ]; then
+    log "MTK_AI: Fast reboot flag detected, applying optimizations"
+
+    # Enable fast boot
     setprop persist.sys.mtk.fast_boot 1
     setprop debug.sf.nobootanimation 1
-    # Add other fast-boot optimizations here
+
+    # Optional: Skip system server init delays
+    setprop ro.config.hw_quickboot 1
+    setprop persist.sys.quick_boot 1
+
+    # Optional: Reduce Zygote preloading (faster app startup)
+    setprop dalvik.vm.dex2oat-flags "--compile-minimal"
+    
+    # Optional: Reduce system services startup delay
+    setprop persist.sys.start_delay 0
+
+    # Optional: Reduce SurfaceFlinger blocking
+    setprop debug.sf.disable_boot_anim 1
+    setprop debug.hwui.skip_init 1
+
+    # Optional: Bypass unnecessary background jobs during boot
+    for svc in `ls /data/system/package_cache/`; do
+        pm disable-user --user 0 "$svc" 2>/dev/null
+    done
+
     log "MTK_AI: Fast reboot mode active"
+else
+    log "MTK_AI: Fast reboot flag not found, skipping"
 fi
 
 while true; do
