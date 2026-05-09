@@ -43,7 +43,7 @@ const toggleConfig = {
         title: "Fast Reboot Mode", 
         desc: "Enable instant boot-up after reboot (skips non-essential init) ⚡", 
         group: "System",
-        warning: "⚠️ May skip some system checks - use with caution"
+        warning: "⚠️ May skip some system checks like dex2oat profile - use with caution"
     },
     enable_performance: { title:  "Performance Mode ", desc:  "Maximize CPU/GPU clocks  & scheduler ", group:  "Performance " },
     enable_screen_off_throttle: { title:  "Screen Off Throttle ", desc:  "Limit performance when display is off ", group:  "Battery " },
