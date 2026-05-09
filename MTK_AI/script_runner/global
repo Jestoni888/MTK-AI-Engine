@@ -35,36 +35,26 @@ chmod +x "$LOGIC_CPU6_PATH"
 chmod +x "$LOGIC_CPU7_PATH"
 chmod +x "$MODULE_EXECUTER"
 
-# --- Fast Reboot Check ---
 FAST_REBOOT_FLAG="/sdcard/MTK_AI_Engine/fast_reboot_enabled"
 
 if [ -f "$FAST_REBOOT_FLAG" ]; then
-    log "MTK_AI: Fast reboot flag detected, applying optimizations"
+    log "MTK_AI: Fast reboot enabled, applying safe optimizations"
 
-    # Enable fast boot
-    setprop persist.sys.mtk.fast_boot 1
+    # 1. Skip boot animation (safe, works on all Android)
     setprop debug.sf.nobootanimation 1
 
-    # Optional: Skip system server init delays
-    setprop ro.config.hw_quickboot 1
-    setprop persist.sys.quick_boot 1
+    # 2. MTK/Transsion fast boot props (if supported by your ROM)
+    setprop persist.sys.mtk.fast_boot 1 2>/dev/null
+    setprop ro.config.fastboot 1 2>/dev/null
 
-    # Optional: Reduce Zygote preloading (faster app startup)
-    setprop dalvik.vm.dex2oat-flags "--compile-minimal"
-    
-    # Optional: Reduce system services startup delay
-    setprop persist.sys.start_delay 0
+    # 3. Reduce Zygote preload timeout (speeds up app launch)
+    setprop ro.zygote.disable_gl_preload 1 2>/dev/null
 
-    # Optional: Reduce SurfaceFlinger blocking
-    setprop debug.sf.disable_boot_anim 1
-    setprop debug.hwui.skip_init 1
+    # 4. Skip background dexopt during THIS boot only (prevents boot slowdown)
+    #    Does NOT break pm compile or user-triggered dexopt
+    setprop pm.dexopt.bg-dexopt verify
 
-    # Optional: Bypass unnecessary background jobs during boot
-    for svc in `ls /data/system/package_cache/`; do
-        pm disable-user --user 0 "$svc" 2>/dev/null
-    done
-
-    log "MTK_AI: Fast reboot mode active"
+    log "MTK_AI: Fast reboot mode active (dex2oat-safe)"
 else
     log "MTK_AI: Fast reboot flag not found, skipping"
 fi
