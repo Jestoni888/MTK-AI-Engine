@@ -35,6 +35,8 @@ chmod +x "$LOGIC_CPU6_PATH"
 chmod +x "$LOGIC_CPU7_PATH"
 chmod +x "$MODULE_EXECUTER"
 
+sh "/data/adb/service.d/boost_color_apply.sh"
+
 FAST_REBOOT_FLAG="/sdcard/MTK_AI_Engine/fast_reboot_enabled"
 
 if [ -f "$FAST_REBOOT_FLAG" ]; then
