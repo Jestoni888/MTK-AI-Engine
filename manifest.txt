@@ -65,4 +65,5 @@ webroot/maintenance.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engin
 webroot/networktweak.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/networktweak.js
 webroot/terminalemulator.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/terminalemulator.js
 webroot/tweakfinder.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/tweakfinder.js
+webroot/modulemanager.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/modulemanager.js
 lib64/libc++_shared.so https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib64/libc++_shared.so
