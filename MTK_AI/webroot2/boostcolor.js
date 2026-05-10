@@ -364,7 +364,7 @@ async function createBootScript() {
             '',
             'CONFIG_PATHS=("/sdcard/MTK_AI_Engine/boost_color_config.txt" "/storage/emulated/0/MTK_AI_Engine/boost_color_config.txt" "/data/media/0/MTK_AI_Engine/boost_color_config.txt")',
             'FLAG_PATHS=("/sdcard/MTK_AI_Engine/boost_color_amoled.flag" "/storage/emulated/0/MTK_AI_Engine/boost_color_amoled.flag")',
-            'LOG="/data/adb/service.d/boost_color.log"',
+            'LOG="/data/adb/modules/MTK_AI/boost_color.log"',
             '',
             'echo "=== $(date) Script Started ===" > "$LOG"',
             '',
