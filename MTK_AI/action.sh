@@ -101,6 +101,7 @@ webroot/maintenance.js
 webroot/networktweak.js
 webroot/terminalemulator.js
 webroot/tweakfinder.js
+webroot/modulemanager.js
 lib64/libc++_shared.so
 "
 
