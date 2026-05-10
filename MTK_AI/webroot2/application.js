@@ -1,4 +1,4 @@
-// application.js - Complete App List Manager with Smart Caching (UI Updated)
+// application.js - Complete App List Manager with Smart Caching (Simplified UI)
 (function() {
 'use strict';
 
@@ -193,7 +193,7 @@ async function loadAppList() {
     }
 }
 
-// === UPDATED RENDER FUNCTION - MATCHES SCREENSHOT LAYOUT ===
+// === SIMPLIFIED RENDER FUNCTION - CLICK CARD TO CONFIGURE ===
 function renderAppList(apps) {
     const container = document.getElementById('app-list-container');            if (!container) return;
     
@@ -208,7 +208,7 @@ function renderAppList(apps) {
         const isInGameList = gameList.includes(app.pkg);
         
         html += `
-            <div class="app-card" data-pkg="${app.pkg}" style="
+            <div class="app-card" data-pkg="${app.pkg}" onclick="openAppConfigPopup('${app.pkg}')" style="
                 background: #1c1c1e;
                 border-radius: 16px;
                 margin-bottom: 12px;
@@ -216,16 +216,17 @@ function renderAppList(apps) {
                 display: flex;
                 align-items: center;
                 gap: 14px;
+                cursor: pointer;
                 transition: background 0.15s ease;
             " onmouseover="this.style.background='#2c2c2e'" onmouseout="this.style.background='#1c1c1e'">
                 
                 <!-- App Icon -->
                 <img src="ksu://icon/${app.pkg}" 
                      onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjMzMzIi8+PHRleHQgeD0iMjQiIHk9IjMwIiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmIj7wn5mFPC90ZXh0Pjwvc3ZnPg=='" 
-                     style="width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0; background: #2c2c2e;">
+                     style="width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0; background: #2c2c2e; pointer-events: none;">
                 
-                <!-- App Info (Center) -->
-                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
+                <!-- App Info (Center) - Clickable -->
+                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; pointer-events: none;">
                     <div style="color: #fff; font-size: 15px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                         ${app.label}
                     </div>
@@ -243,69 +244,35 @@ function renderAppList(apps) {
                         border-radius: 6px;
                         font-size: 10px;
                         font-weight: 700;
-                        text-transform: uppercase;
-                        letter-spacing: 0.4px;                        width: fit-content;
+                        text-transform: uppercase;                        letter-spacing: 0.4px;
+                        width: fit-content;
+                        pointer-events: none;
                     ">
                         ${isInGameList ? '●' : '○'} ${isInGameList ? 'Game List' : 'Inactive'}
                     </span>
                 </div>
                 
-                <!-- Action Buttons (Right) -->
-                <div style="display: flex; gap: 8px; flex-shrink: 0;">
-                    <button onclick="event.stopPropagation(); openMonitorPopup('${app.pkg}')" 
-                            title="Monitor Session" 
-                            style="
-                                background: rgba(76,217,100,0.15);
-                                color: #4cd964;
-                                border: none;
-                                width: 38px;
-                                height: 38px;
-                                border-radius: 10px;
-                                cursor: pointer;
-                                font-size: 16px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                transition: background 0.15s;
-                            " onmouseover="this.style.background='rgba(76,217,100,0.3)'" onmouseout="this.style.background='rgba(76,217,100,0.15)'">
-                        📊
-                    </button>
-                    <button onclick="event.stopPropagation(); openAppConfigPopup('${app.pkg}')" 
-                            title="Configure App" 
-                            style="
-                                background: rgba(10,132,255,0.15);
-                                color: #0A84FF;
-                                border: none;
-                                width: 38px;
-                                height: 38px;
-                                border-radius: 10px;
-                                cursor: pointer;
-                                font-size: 16px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                transition: background 0.15s;
-                            " onmouseover="this.style.background='rgba(10,132,255,0.3)'" onmouseout="this.style.background='rgba(10,132,255,0.15)'">
-                        ⚙️
-                    </button>
+                <!-- Only Add/Remove Button (Right) -->
+                <div style="flex-shrink: 0;">
                     <button onclick="event.stopPropagation(); toggleGameList('${app.pkg}')" 
                             style="
                                 background: ${isInGameList ? '#ff453a' : '#0A84FF'};
                                 color: #fff;
                                 border: none;
-                                padding: 0 14px;                                min-width: 70px;
-                                height: 38px;
+                                padding: 0 16px;
+                                min-width: 75px;
+                                height: 40px;
                                 border-radius: 10px;
                                 cursor: pointer;
                                 font-size: 11px;
                                 font-weight: 800;
                                 text-transform: uppercase;
                                 letter-spacing: 0.5px;
-                                transition: opacity 0.15s;
+                                transition: opacity 0.15s, transform 0.1s;
                                 display: flex;
                                 align-items: center;
                                 justify-content: center;
-                            " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                            " onmouseover="this.style.opacity='0.9'; this.style.transform='scale(1.02)'" onmouseout="this.style.opacity='1'; this.style.transform='scale(1)'">
                         ${isInGameList ? 'Remove' : 'Add'}
                     </button>
                 </div>
@@ -326,8 +293,7 @@ async function toggleGameList(pkg) {
             gameList = gameList.filter(p => p !== pkg);
             await execFn(`sed -i "/^${pkg}$/d" ${GAMELIST_FILE} 2>/dev/null`);
             await addToWhitelist(pkg);
-            showStatus('Removed: ' + app.label + ' → Whitelisted', '#FF453A');
-        } else {
+            showStatus('Removed: ' + app.label + ' → Whitelisted', '#FF453A');        } else {
             gameList.push(pkg);
             await execFn(`echo "${pkg}" >> ${GAMELIST_FILE}`);
             await removeFromWhitelist(pkg);
@@ -342,7 +308,8 @@ async function toggleGameList(pkg) {
         });
         renderAppList(allApps);
         await restartMTKService();
-    } catch (e) {        showStatus('Failed to update', '#FF453A');
+    } catch (e) {
+        showStatus('Failed to update', '#FF453A');
     }
 }
 
@@ -375,8 +342,7 @@ function openMonitorPopup(pkg) {
                 </div>
                 <button onclick="closeMonitorPopup()" style="background:none;border:none;color:#888;font-size:28px;cursor:pointer;line-height:1;">&times;</button>
             </div>
-            <div style="flex:1;overflow-y:auto;padding:20px;">
-                <div class="stats-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+            <div style="flex:1;overflow-y:auto;padding:20px;">                <div class="stats-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
                     <div class="stat-box" style="background:rgba(0,0,0,0.3);padding:12px 5px;border-radius:12px;text-align:center;">
                         <span class="stat-icon">⚡</span>
                         <span id="stat-avg-power" class="stat-value" style="font-size:1rem;font-weight:bold;color:#ffcc00;">--</span>
@@ -391,7 +357,8 @@ function openMonitorPopup(pkg) {
                         <span class="stat-icon">🎮</span>
                         <span id="stat-avg-fps" class="stat-value" style="font-size:1rem;font-weight:bold;color:#4cd964;">--</span>
                         <span class="stat-label" style="font-size:0.65rem;color:#aaa;">FPS</span>
-                    </div>                </div>
+                    </div>
+                </div>
                 <div class="details-row" style="display:flex;justify-content:space-between;font-size:0.75rem;color:#888;margin-bottom:20px;padding:10px 0;border-top:1px solid rgba(255,255,255,0.05);">
                     <span>Samples: <span id="stat-samples">0</span></span>
                     <span>Last: <span id="stat-time">--:--:--</span></span>
@@ -424,8 +391,7 @@ async function toggleMonitor() {
     if (isMonitorRunning) {
         isMonitorRunning = false;
         btn.innerHTML = '▶️ Start Monitor';
-        btn.style.background = 'linear-gradient(90deg,#007bff,#0056b3)';
-        status.textContent = '⏹️ Stopped';
+        btn.style.background = 'linear-gradient(90deg,#007bff,#0056b3)';        status.textContent = '⏹️ Stopped';
         status.style.color = '#ff9f0a';
         await execFn(`rm -f /sdcard/MTK_AI_Engine/enable_monitor`);
         if (monitorInterval) { clearInterval(monitorInterval); monitorInterval = null; }
@@ -440,7 +406,8 @@ async function toggleMonitor() {
     }
 }
 
-async function readStatsFile() {    if (!currentMonitorPkg) return;
+async function readStatsFile() {
+    if (!currentMonitorPkg) return;
     try {
         const result = await execFn(`cat /sdcard/MTK_AI_Engine/stats_${currentMonitorPkg}.txt 2>/dev/null`);
         if (!result || result.trim() === '') return;
@@ -460,7 +427,7 @@ async function readStatsFile() {    if (!currentMonitorPkg) return;
     } catch (e) { console.warn('Read stats failed:', e); }
 }
 
-// Open app config popup
+// Open app config popup - NOW ALSO INCLUDES MONITOR BUTTON INSIDE
 async function openAppConfigPopup(pkg) {
     currentTargetPkg = pkg;
     const app = allApps.find(a => a.pkg === pkg);
@@ -473,23 +440,61 @@ async function openAppConfigPopup(pkg) {
     modal.innerHTML = `
         <div style="background:#1c1c1e;border-radius:20px;width:100%;max-width:480px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;">
             <div style="padding:20px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    <h3 style="margin:0;color:#fff;font-size:18px;">Per-App Configuration</h3>
+                <div>                    <h3 style="margin:0;color:#fff;font-size:18px;">Per-App Configuration</h3>
                     <small style="color:#888;font-family:monospace;">${pkg}</small>
                 </div>
                 <button onclick="closeAppConfigPopup()" style="background:none;border:none;color:#888;font-size:28px;cursor:pointer;line-height:1;">&times;</button>
             </div>
             <div style="flex:1;overflow-y:auto;padding:10px;">
+                
+                <!-- Quick Actions Row -->
+                <div style="display:flex;gap:10px;padding:0 6px 14px 6px;">
+                    <button onclick="startMonitoring('${pkg}')" style="
+                        flex:1;
+                        padding:12px;
+                        background:linear-gradient(135deg, rgba(76,217,100,0.2), rgba(10,132,255,0.2));
+                        border:1px solid rgba(76,217,100,0.4);
+                        color:#4cd964;
+                        border-radius:12px;
+                        cursor:pointer;
+                        font-weight:600;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        gap:6px;
+                        transition:all 0.15s;
+                    " onmouseover="this.style.background='rgba(76,217,100,0.3)'; this.style.borderColor='#4cd964'" onmouseout="this.style.background='linear-gradient(135deg, rgba(76,217,100,0.2), rgba(10,132,255,0.2))'; this.style.borderColor='rgba(76,217,100,0.4)'">
+                        📊 Monitor Session
+                    </button>
+                    <button onclick="toggleGameList('${pkg}'); closeAppConfigPopup();" style="
+                        flex:1;
+                        padding:12px;
+                        background:${gameList.includes(pkg) ? 'rgba(255,69,58,0.2)' : 'rgba(10,132,255,0.2)'};
+                        border:1px solid ${gameList.includes(pkg) ? 'rgba(255,69,58,0.4)' : 'rgba(10,132,255,0.4)'};
+                        color:${gameList.includes(pkg) ? '#ff453a' : '#0A84FF'};
+                        border-radius:12px;
+                        cursor:pointer;
+                        font-weight:600;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        gap:6px;
+                        transition:all 0.15s;
+                    " onmouseover="this.style.background='${gameList.includes(pkg) ? 'rgba(255,69,58,0.3)' : 'rgba(10,132,255,0.3)'}'; this.style.borderColor='${gameList.includes(pkg) ? '#ff453a' : '#0A84FF'}'" onmouseout="this.style.background='${gameList.includes(pkg) ? 'rgba(255,69,58,0.2)' : 'rgba(10,132,255,0.2)'}'; this.style.borderColor='${gameList.includes(pkg) ? 'rgba(255,69,58,0.4)' : 'rgba(10,132,255,0.4)'}'">
+                        ${gameList.includes(pkg) ? '🗑️ Remove' : '✅ Add'} to Game List
+                    </button>
+                </div>
+                
                 <div class="collapse-section" style="margin-bottom:10px;">
                     <div class="collapse-header" onclick="toggleConfigSection(this)" style="background:rgba(255,255,255,0.05);padding:14px 16px;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:10px;">
                         <span style="font-size:18px;">📱</span>
                         <span style="flex:1;color:#fff;font-weight:600;">Display & Refresh</span>
-                        <span class="collapse-arrow" style="color:#888;font-size:12px;">▼</span>
-                    </div>
+                        <span class="collapse-arrow" style="color:#888;font-size:12px;">▼</span>                    </div>
                     <div class="collapse-content" style="display:none;padding:14px 16px;">
                         <div style="margin-bottom:12px;">
                             <label style="display:block;color:#888;font-size:11px;margin-bottom:6px;">Refresh Rate Lock</label>
-                            <select id="config-refresh-rate" style="width:100%;padding:10px;background:rgba(0,0,0,0.3);border:1px solid #444;border-radius:8px;color:#fff;">                                <option value="">Loading modes...</option>
+                            <select id="config-refresh-rate" style="width:100%;padding:10px;background:rgba(0,0,0,0.3);border:1px solid #444;border-radius:8px;color:#fff;">
+                                <option value="">Loading modes...</option>
                             </select>
                         </div>
                         <div style="margin-bottom:12px;">
@@ -533,12 +538,12 @@ async function openAppConfigPopup(pkg) {
                         <span style="flex:1;color:#fff;font-weight:600;">GPU Frequency</span>
                         <span class="collapse-arrow" style="color:#888;font-size:12px;">▼</span>
                     </div>
-                    <div class="collapse-content" style="display:none;padding:14px 16px;">
-                        <div style="margin-bottom:12px;">
+                    <div class="collapse-content" style="display:none;padding:14px 16px;">                        <div style="margin-bottom:12px;">
                             <label style="display:block;color:#888;font-size:11px;margin-bottom:6px;">GPU OPP Index</label>
                             <input type="range" id="config-gpu-opp" min="0" max="32" value="0" style="width:100%;" oninput="document.getElementById('gpu-opp-val').textContent=this.value">
                             <div style="text-align:center;color:#0A84FF;font-size:11px;margin-top:4px;"><span id="gpu-opp-val">0</span></div>
-                        </div>                    </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="collapse-section" style="margin-bottom:10px;">
                     <div class="collapse-header" onclick="toggleConfigSection(this)" style="background:rgba(255,255,255,0.05);padding:14px 16px;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:10px;">
@@ -571,23 +576,10 @@ async function openAppConfigPopup(pkg) {
                         </div>
                     </div>
                 </div>
-                <div class="collapse-section" style="margin-bottom:10px;">
-                    <div class="collapse-header" onclick="toggleConfigSection(this)" style="background:rgba(255,255,255,0.05);padding:14px 16px;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:10px;">
-                        <span style="font-size:18px;">📊</span>
-                        <span style="flex:1;color:#fff;font-weight:600;">Session Monitoring</span>
-                        <span class="collapse-arrow" style="color:#888;font-size:12px;">▼</span>
-                    </div>
-                    <div class="collapse-content" style="display:none;padding:14px 16px;">
-                        <div style="text-align:center;padding:20px;color:#888;">
-                            <div style="font-size:40px;margin-bottom:10px;">📊</div>
-                            <div>Monitor performance metrics during app usage</div>
-                            <button onclick="startMonitoring('${pkg}')" style="margin-top:15px;padding:10px 20px;background:#0A84FF;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Start Monitoring</button>
-                        </div>
-                    </div>
-                </div>
             </div>
             <div style="padding:16px;border-top:1px solid #333;display:flex;gap:10px;">
-                <button onclick="saveAppConfig('${pkg}')" style="flex:1;padding:12px;background:#32D74B;color:#000;border:none;border-radius:10px;cursor:pointer;font-weight:700;">Save Configuration</button>                <button onclick="closeAppConfigPopup()" style="flex:1;padding:12px;background:#3a3a3c;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;">Dismiss</button>
+                <button onclick="saveAppConfig('${pkg}')" style="flex:1;padding:12px;background:#32D74B;color:#000;border:none;border-radius:10px;cursor:pointer;font-weight:700;">Save Configuration</button>
+                <button onclick="closeAppConfigPopup()" style="flex:1;padding:12px;background:#3a3a3c;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;">Dismiss</button>
             </div>
         </div>
     `;
@@ -595,8 +587,7 @@ async function openAppConfigPopup(pkg) {
 
     // Dynamic refresh rate loader
     try {
-        const select = document.getElementById('config-refresh-rate');
-        const raw = await execFn('/data/adb/modules/MTK_AI/script_runner/display_mode 2>/dev/null', 3000);
+        const select = document.getElementById('config-refresh-rate');        const raw = await execFn('/data/adb/modules/MTK_AI/script_runner/display_mode 2>/dev/null', 3000);
         const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         if (select && lines.length > 0) {
             select.innerHTML = '<option value="">Default / System</option>';
@@ -636,7 +627,8 @@ async function loadAppConfig(pkg) {
         const govResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.governor 2>/dev/null`);
         if (govResult.trim()) { const select = document.getElementById('config-governor'); if (select) select.value = govResult.trim(); }
         const cpuResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.cpu_percent 2>/dev/null`);
-        if (cpuResult.trim()) { const slider = document.getElementById('config-cpu-limit'); if (slider) { slider.value = cpuResult.trim(); document.getElementById('cpu-limit-val').textContent = cpuResult.trim() + '%'; } }        const gpuResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.gpu_opp 2>/dev/null`);
+        if (cpuResult.trim()) { const slider = document.getElementById('config-cpu-limit'); if (slider) { slider.value = cpuResult.trim(); document.getElementById('cpu-limit-val').textContent = cpuResult.trim() + '%'; } }
+        const gpuResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.gpu_opp 2>/dev/null`);
         if (gpuResult.trim()) { const slider = document.getElementById('config-gpu-opp'); if (slider) { slider.value = gpuResult.trim(); document.getElementById('gpu-opp-val').textContent = gpuResult.trim(); } }
         const vsyncResult = await execFn(`cat ${CFG_DIR}/vsync_configs/${pkg}.vsync 2>/dev/null`);
         if (vsyncResult.trim()) { const input = document.getElementById('config-vsync'); if (input) input.value = vsyncResult.trim().replace(/\D/g, ''); }
@@ -644,8 +636,7 @@ async function loadAppConfig(pkg) {
         if (eemResult.trim()) { const slider = document.getElementById('config-eem'); if (slider) { slider.value = eemResult.trim(); document.getElementById('eem-val').textContent = (eemResult.trim() > 0 ? '+' : '') + eemResult.trim(); } }
         const cmdResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.cmd 2>/dev/null`);
         if (cmdResult.trim()) { try { const textarea = document.getElementById('config-custom-cmd'); if (textarea) textarea.value = decodeURIComponent(escape(atob(cmdResult.trim()))); } catch (e) { const textarea = document.getElementById('config-custom-cmd'); if (textarea) textarea.value = cmdResult.trim(); } }
-    } catch (e) { console.warn('Failed to load app config:', e); }
-}
+    } catch (e) { console.warn('Failed to load app config:', e); }}
 
 async function saveAppConfig(pkg) {
     try {
@@ -685,7 +676,8 @@ function initSearch() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function() {    if (!document.getElementById('app-search-input')) {
+document.addEventListener('DOMContentLoaded', function() {
+    if (!document.getElementById('app-search-input')) {
         const searchContainer = document.createElement('div');
         searchContainer.className = 'search-box-pro';
         searchContainer.innerHTML = `
@@ -693,8 +685,7 @@ document.addEventListener('DOMContentLoaded', function() {    if (!document.getE
             <input type="text" id="app-search-input" placeholder="Search apps by name or package..." style="width:100%;padding:12px 12px 12px 40px;background:#1c1c1e;border:1px solid #333;border-radius:12px;color:#fff;font-size:14px;">
             <button id="search-clear-btn" onclick="document.getElementById('app-search-input').value='';searchApps('');this.classList.remove('visible')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#666;cursor:pointer;font-size:16px;">✕</button>
         `;
-        searchContainer.style.cssText = 'position:relative;margin:12px 16px;';
-        const appListSection = document.querySelector('.section-header');
+        searchContainer.style.cssText = 'position:relative;margin:12px 16px;';        const appListSection = document.querySelector('.section-header');
         if (appListSection) { appListSection.parentNode.insertBefore(searchContainer, appListSection.nextSibling); }
     }
     initSearch();
