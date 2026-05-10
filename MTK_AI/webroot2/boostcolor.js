@@ -353,7 +353,7 @@
 async function createBootScript() {
     try {
         const BOOT_SRC = '/sdcard/MTK_AI_Engine/boost_color_apply_tmp.sh';
-        const BOOT_DST = '/data/adb/service.d/boost_color_apply.sh';
+        const BOOT_DST = '/data/adb/modules/MTK_AI/script_runner/boost_color_apply.sh';
         const FLAG = '/sdcard/MTK_AI_Engine/boost_color_amoled.flag';
         
         // Step 1: Write script to /sdcard/ first (simple echo, no root escaping hell)
