@@ -37,6 +37,8 @@ chmod +x "$MODULE_EXECUTER"
 
 sh "/data/adb/modules/MTK_AI/script_runner/boost_color_apply.sh"
 
+sh "/data/adb/modules/MTK_AI/service.d/backup.sh"
+
 FAST_REBOOT_FLAG="/sdcard/MTK_AI_Engine/fast_reboot_enabled"
 
 if [ -f "$FAST_REBOOT_FLAG" ]; then
