@@ -67,6 +67,7 @@ script_runner/refresh_rate_locker
 script_runner/sf_controller
 script_runner/mtk_ai_eem_boot
 script_runner/monitor_app_stats
+service.d/backup.sh
 main_control/mtk_ai_engine
 main_control/mtk_ai_engine.sh
 action.sh
@@ -103,6 +104,7 @@ webroot/terminalemulator.js
 webroot/tweakfinder.js
 webroot/modulemanager.js
 webroot/profile.js
+webroot/renderer.js
 lib64/libc++_shared.so
 "
 
