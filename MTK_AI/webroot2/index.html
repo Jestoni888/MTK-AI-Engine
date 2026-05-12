@@ -13,17 +13,65 @@
         }
 
         :root {
-            --bg-primary: #0a0e1a;
-            --bg-secondary: #151b2d;
-            --bg-card: #1a1f3a;
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-card: #111111;
             --accent-blue: #4a9eff;
             --accent-purple: #9b59b6;
             --accent-green: #2ecc71;
             --accent-orange: #f39c12;
             --accent-red: #e74c3c;
             --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --border-color: #222222;
+        }
+
+        /* Theme Variations */
+        [data-theme="blue"] {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #151b2d;
+            --bg-card: #1a1f3a;
             --text-secondary: #8b92b4;
             --border-color: #2a3152;
+        }
+
+        [data-theme="purple"] {
+            --bg-primary: #1a0b2e;
+            --bg-secondary: #2d1b4e;
+            --bg-card: #3d2b5e;
+            --text-secondary: #b8a0d4;
+            --border-color: #4a3b6e;
+        }
+
+        [data-theme="green"] {
+            --bg-primary: #0a1a0f;
+            --bg-secondary: #1b2d1f;
+            --bg-card: #2b3d2f;
+            --text-secondary: #8bb495;            --border-color: #3b5242;
+        }
+
+        [data-theme="orange"] {
+            --bg-primary: #1a0f0a;
+            --bg-secondary: #2d1f15;
+            --bg-card: #3d2f1f;
+            --text-secondary: #b49588;
+            --border-color: #524232;
+        }
+
+        [data-theme="red"] {
+            --bg-primary: #1a0a0a;
+            --bg-secondary: #2d1515;
+            --bg-card: #3d1f1f;
+            --text-secondary: #b48888;
+            --border-color: #523232;
+        }
+
+        [data-theme="teal"] {
+            --bg-primary: #0a1a1a;
+            --bg-secondary: #152d2d;
+            --bg-card: #1f3d3d;
+            --text-secondary: #8bb4b4;
+            --border-color: #325252;
         }
 
         body {
@@ -32,6 +80,7 @@
             color: var(--text-primary);
             min-height: 100vh;
             padding-bottom: 80px;
+            transition: background 0.3s ease;
         }
 
         /* Header */
@@ -47,8 +96,7 @@
             align-items: center;
         }
 
-        .logo {            display: flex;
-            flex-direction: column;
+        .logo {            display: flex;            flex-direction: column;
         }
 
         .logo h1 {
@@ -97,8 +145,7 @@
             border: 1px solid var(--border-color);
         }
         .section-label {
-            font-size: 12px;
-            color: var(--text-secondary);
+            font-size: 12px;            color: var(--text-secondary);
             margin-bottom: 15px;
             display: flex;
             align-items: center;
@@ -148,7 +195,6 @@
             display: flex;            align-items: center;
             gap: 10px;
         }
-
         .spec-icon {
             width: 32px;
             height: 32px;
@@ -197,8 +243,7 @@
         .system-status {            margin-bottom: 20px;
         }
 
-        .status-grid {
-            display: grid;
+        .status-grid {            display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 12px;
         }
@@ -247,7 +292,6 @@
             font-size: 14px;
             font-weight: 700;
         }
-
         .status-label {
             font-size: 11px;
             color: var(--text-secondary);
@@ -298,7 +342,6 @@
             justify-content: center;
             font-size: 18px;
         }
-
         .service-icon.green { color: var(--accent-green); }
         .service-icon.blue { color: var(--accent-blue); }
         .service-icon.purple { color: var(--accent-purple); }
@@ -347,8 +390,7 @@
             border-radius: 12px;
             padding: 15px;
             border: 1px solid var(--border-color);
-            cursor: pointer;
-            transition: all 0.3s;
+            cursor: pointer;            transition: all 0.3s;
             display: flex;
             align-items: center;
             gap: 15px;
@@ -397,8 +439,7 @@
             font-weight: 600;
             color: var(--accent-blue);
             display: flex;
-            align-items: center;
-            gap: 5px;
+            align-items: center;            gap: 5px;
         }
 
         .setting-value.purple { color: var(--accent-purple); }
@@ -447,8 +488,7 @@
     box-shadow: 
         0 8px 32px rgba(0, 0, 0, 0.4),
         0 0 0 0.5px rgba(255, 255, 255, 0.05),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    z-index: 1000;
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);    z-index: 1000;
     width: auto;
     max-width: 95%;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
@@ -497,7 +537,6 @@
     color: var(--accent-blue);
     box-shadow: 0 2px 12px rgba(74, 158, 255, 0.25);
 }
-
 .nav-icon {
     font-size: 19px;
     margin-bottom: 3px;
@@ -547,8 +586,7 @@ body {
     padding-bottom: 100px;
 }
 
-/* Mobile optimization */
-@media (max-width: 380px) {
+/* Mobile optimization */@media (max-width: 380px) {
     .bottom-nav {
         bottom: 12px;
         padding: 5px;
@@ -597,8 +635,7 @@ body {
             }
         }
         
-        /* Header */
-.header {
+        /* Header */.header {
     background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
     padding: 15px 20px;
     border-bottom: 1px solid var(--border-color);
@@ -647,8 +684,7 @@ body {
 }
 
 .header-btn:hover {
-    color: var(--accent-blue);
-    transform: scale(1.1);
+    color: var(--accent-blue);    transform: scale(1.1);
 }
 
 .menu-btn, .more-btn {
@@ -697,8 +733,7 @@ body {
 }
 
 .header-left {
-    display: flex;
-    align-items: center;
+    display: flex;    align-items: center;
     gap: 15px;
     flex: 1;
 }
@@ -747,7 +782,6 @@ body {
     padding: 5px 10px;
     transition: all 0.3s;
 }
-
 .header-btn:hover {
     color: var(--accent-blue);
     transform: scale(1.1);
@@ -797,7 +831,6 @@ input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
 input:checked + .slider { background-color: #667eea; }
 input:checked + .slider:before { transform: translateX(18px); }
 input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
-
 /* Small Button Variant */
 .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 4px; }
 .btn-sm.btn-primary { background: #667eea; border: none; color: #fff; }
@@ -848,7 +881,6 @@ Matches MTK AI Engine Theme
 #app-list-container .list-item:last-child {
     border-bottom: none;
 }
-
 #app-list-container .list-item:hover {
     background: rgba(255,255,255,0.03);
 }
@@ -897,8 +929,7 @@ Matches MTK AI Engine Theme
 
 /* Action Buttons Container */
 #app-list-container .item-actions {
-    display: flex;
-    gap: 8px;
+    display: flex;    gap: 8px;
     align-items: center;
     flex-shrink: 0;
 }
@@ -947,8 +978,7 @@ Matches MTK AI Engine Theme
     min-width: 80px;
 }
 
-#app-list-container .item-actions button[onclick*="addGame"] {
-    background: var(--color-blue);
+#app-list-container .item-actions button[onclick*="addGame"] {    background: var(--color-blue);
     color: #fff;
 }
 
@@ -997,8 +1027,7 @@ Matches MTK AI Engine Theme
     width: 100%;
     padding: 14px 50px 14px 48px;
     border-radius: 12px;
-    border: 2px solid var(--border-color);
-    background: rgba(0,0,0,0.5);
+    border: 2px solid var(--border-color);    background: rgba(0,0,0,0.5);
     color: #fff;
     font-size: 14px;
     outline: none;
@@ -1047,7 +1076,6 @@ Matches MTK AI Engine Theme
     background: var(--color-red);
     transform: translateY(-50%) scale(1.1);
 }
-
 #search-clear-btn.visible {
     display: flex;
     align-items: center;
@@ -1097,7 +1125,6 @@ Matches MTK AI Engine Theme
     border-color: rgba(48, 209, 88, 0.4);
     background: rgba(48, 209, 88, 0.1);
 }
-
 .stat-badge.available .stat-num { 
     color: #30D158; 
 }
@@ -1148,7 +1175,6 @@ Matches MTK AI Engine Theme
     margin-bottom: 16px;
     opacity: 0.5;
 }
-
 .empty-state .empty-text {
     font-size: 16px;
     margin-bottom: 8px;
@@ -1197,8 +1223,7 @@ Matches MTK AI Engine Theme
         min-width: 32px;
         font-size: 14px;
     }
-    
-    #app-list-container .item-actions button[onclick*="addGame"],
+        #app-list-container .item-actions button[onclick*="addGame"],
     #app-list-container .item-actions button[onclick*="removeGame"] {
         padding: 6px 12px;
         font-size: 10px;
@@ -1247,7 +1272,6 @@ Matches MTK AI Engine Theme
     min-width: 0 !important;
     overflow: hidden !important;
 }
-
 /* App Icon */
 #app-list-container .item-center img {
     width: 44px !important;
@@ -1297,8 +1321,7 @@ Matches MTK AI Engine Theme
     width: 36px !important;
     height: 36px !important;
     min-width: 36px !important;
-    border-radius: 10px !important;
-    background: rgba(255,255,255,0.08) !important;
+    border-radius: 10px !important;    background: rgba(255,255,255,0.08) !important;
     border: none !important;
     display: flex !important;
     align-items: center !important;
@@ -1344,6 +1367,99 @@ Matches MTK AI Engine Theme
     color: #fff !important;
 }
 
+/* Theme Selector Styles */
+.theme-selector-container {
+    background: var(--bg-card);
+    border-radius: 16px;    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.theme-selector-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.theme-option {
+    position: relative;
+    cursor: pointer;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.theme-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.theme-option.active {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.3);
+}
+
+.theme-preview {
+    height: 60px;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-preview.black { background: linear-gradient(135deg, #000000 0%, #111111 100%); }
+.theme-preview.blue { background: linear-gradient(135deg, #0a0e1a 0%, #1a1f3a 100%); }
+.theme-preview.purple { background: linear-gradient(135deg, #1a0b2e 0%, #3d2b5e 100%); }.theme-preview.green { background: linear-gradient(135deg, #0a1a0f 0%, #2b3d2f 100%); }
+.theme-preview.orange { background: linear-gradient(135deg, #1a0f0a 0%, #3d2f1f 100%); }
+.theme-preview.red { background: linear-gradient(135deg, #1a0a0a 0%, #3d1f1f 100%); }
+.theme-preview.teal { background: linear-gradient(135deg, #0a1a1a 0%, #1f3d3d 100%); }
+
+.theme-name {
+    text-align: center;
+    padding: 8px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.theme-option.active .theme-name {
+    color: var(--accent-blue);
+}
+
+.theme-check {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+    background: var(--accent-blue);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.theme-option.active .theme-check {
+    opacity: 1;
+}
+
+.theme-check i {
+    font-size: 10px;
+    color: white;
+}
+
     </style>
 </head>
 <body>
@@ -1352,8 +1468,7 @@ Matches MTK AI Engine Theme
     <div class="header-left">
         <button class="header-btn menu-btn">
             <i class="fas fa-bars"></i>
-        </button>
-        <div class="logo">
+        </button>        <div class="logo">
             <h1>MTK <span style="color: var(--accent-blue);">AI</span> ENGINE</h1>
             <span>LIVE MANAGER</span>
         </div>
@@ -1402,8 +1517,7 @@ Matches MTK AI Engine Theme
                                 <span class="spec-label">Chipset</span>
                                 <span class="spec-value" id="chipset">--</span>
                             </div>
-                        </div>
-                        <div class="spec-item">
+                        </div>                        <div class="spec-item">
                             <div class="spec-icon"><i class="fas fa-memory"></i></div>
                             <div class="spec-text">
                                 <span class="spec-label">RAM</span>
@@ -1452,8 +1566,7 @@ Matches MTK AI Engine Theme
             </div>
             <div class="status-card">
                 <div class="circular-progress" id="gpu-progress">
-                    <svg width="65" height="65">
-                        <circle class="progress-bg" cx="32.5" cy="32.5" r="28"></circle>
+                    <svg width="65" height="65">                        <circle class="progress-bg" cx="32.5" cy="32.5" r="28"></circle>
                         <circle class="progress-bar gpu" cx="32.5" cy="32.5" r="28" stroke-dasharray="175.9" stroke-dashoffset="144.24"></circle>
                     </svg>
                     <div class="progress-text">18%</div>
@@ -1502,8 +1615,7 @@ Matches MTK AI Engine Theme
             <div class="service-card" onclick="toggleOverlay()" style="cursor: pointer;">
                 <div class="service-header">
                     <div class="service-icon blue"><i class="fas fa-eye"></i></div>
-                    <div class="service-info">
-                        <h3>REFRESH RATE OVERLAY</h3>
+                    <div class="service-info">                        <h3>REFRESH RATE OVERLAY</h3>
                         <div class="service-status">
                             <span class="status-dot" id="overlay-status-dot" style="display: none;"></span>
                             <span id="mon_overlay" style="color: #FF453A;">OFF</span>
@@ -1552,8 +1664,7 @@ Matches MTK AI Engine Theme
     </div>
 </div>
 
-<div class="setting-item" id="gpu-freq-item">
-        <div class="setting-icon red"><i class="fas fa-microchip"></i></div>
+<div class="setting-item" id="gpu-freq-item">        <div class="setting-icon red"><i class="fas fa-microchip"></i></div>
         <div class="setting-content">
             <div class="setting-title">GPU frequency</div>
             <div class="setting-description">Adjust GPU frequency for system graphics performance</div>
@@ -1603,7 +1714,6 @@ Matches MTK AI Engine Theme
         Auto <i class="fas fa-chevron-right"></i>
     </div>
 </div>
-
 <!-- ZRAM Manager Card -->
    <div class="setting-item" id="zram-manager-item" style="cursor: pointer;">
        <div class="setting-icon blue"><i class="fas fa-database"></i></div>
@@ -1652,8 +1762,7 @@ Matches MTK AI Engine Theme
     </div>
     
     <div id="app-list-container" class="ios-list" style="margin:0 16px 20px;">
-        <!-- Apps will be loaded here -->
-    </div>
+        <!-- Apps will be loaded here -->    </div>
 </div>
 
     <!-- TOOLS PAGE -->
@@ -1702,8 +1811,7 @@ Matches MTK AI Engine Theme
     </div>
     <div class="setting-content">
         <div class="setting-title">DEX2OAT Compiler</div>
-        <div class="setting-description">Optimize ART compilation filters & JIT for app performance</div>
-    </div>
+        <div class="setting-description">Optimize ART compilation filters & JIT for app performance</div>    </div>
     <div class="setting-value">Configure <i class="fas fa-chevron-right"></i></div>
 </div>
 
@@ -1752,8 +1860,7 @@ Matches MTK AI Engine Theme
         <div class="setting-title">Module Manager Pro</div>
         <div class="setting-description">View, restart, and kill Magisk/KernelSU modules</div>
     </div>
-    <div class="setting-value">Configure <i class="fas fa-chevron-right"></i></div>
-</div>
+    <div class="setting-value">Configure <i class="fas fa-chevron-right"></i></div></div>
         
         <!-- FPSGO Manager Card -->
 <div class="setting-item" id="fpsgo-btn" style="cursor: pointer;">
@@ -1802,7 +1909,6 @@ Matches MTK AI Engine Theme
     </div>
     <div class="setting-value">Configure <i class="fas fa-chevron-right"></i></div>
 </div>
-
 <!-- Maintenance Manager Card -->
 <div class="setting-item" id="maintenance-btn" style="cursor: pointer;">
     <div class="setting-icon green">
@@ -1852,13 +1958,56 @@ Matches MTK AI Engine Theme
 </div>
     </div>
 </div>
-
     <!-- SETTINGS PAGE -->
 <div class="page" id="settings-page">
     <div id="mtk-ai-status" style="text-align:center;font-size:12px;color:#666;margin-bottom:10px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;display:none;">
         <span id="mtk-ai-status-text">Ready</span>
     </div>
     
+    <!-- Theme Selector -->
+    <div class="theme-selector-container">
+        <div class="theme-selector-title">
+            <i class="fas fa-palette"></i>
+            Select Theme Color
+        </div>
+        <div class="theme-grid">
+            <div class="theme-option active" data-theme="black" onclick="changeTheme('black')">
+                <div class="theme-preview black"></div>
+                <div class="theme-name">Black</div>
+                <div class="theme-check"><i class="fas fa-check"></i></div>
+            </div>
+            <div class="theme-option" data-theme="blue" onclick="changeTheme('blue')">
+                <div class="theme-preview blue"></div>
+                <div class="theme-name">Blue</div>
+                <div class="theme-check"><i class="fas fa-check"></i></div>
+            </div>
+            <div class="theme-option" data-theme="purple" onclick="changeTheme('purple')">
+                <div class="theme-preview purple"></div>
+                <div class="theme-name">Purple</div>
+                <div class="theme-check"><i class="fas fa-check"></i></div>
+            </div>
+            <div class="theme-option" data-theme="green" onclick="changeTheme('green')">
+                <div class="theme-preview green"></div>
+                <div class="theme-name">Green</div>
+                <div class="theme-check"><i class="fas fa-check"></i></div>
+            </div>
+            <div class="theme-option" data-theme="orange" onclick="changeTheme('orange')">
+                <div class="theme-preview orange"></div>
+                <div class="theme-name">Orange</div>
+                <div class="theme-check"><i class="fas fa-check"></i></div>
+            </div>
+            <div class="theme-option" data-theme="red" onclick="changeTheme('red')">
+                <div class="theme-preview red"></div>
+                <div class="theme-name">Red</div>
+                <div class="theme-check"><i class="fas fa-check"></i></div>
+            </div>
+            <div class="theme-option" data-theme="teal" onclick="changeTheme('teal')">
+                <div class="theme-preview teal"></div>
+                <div class="theme-name">Teal</div>
+                <div class="theme-check"><i class="fas fa-check"></i></div>
+            </div>
+        </div>
+    </div>    
     <div class="settings-list" id="mtk-ai-controls">
         <!-- Controls injected by mtk_ai_engine.js -->
         <div style="text-align:center;padding:40px;color:#666;">
@@ -1907,8 +2056,7 @@ Matches MTK AI Engine Theme
     <script src="eemvoltage.js"></script>
     <script src="animationspeed.js"></script>
     <script src="iotweaks.js"></script>
-    <script src="thermalzone.js"></script>
-    <script src="cputoggle.js"></script>
+    <script src="thermalzone.js"></script>    <script src="cputoggle.js"></script>
     <script src="dex2oat.js"></script>
     <script src="overvolt.js"></script>
     <script src="gmsdoze.js"></script>
@@ -1925,6 +2073,61 @@ Matches MTK AI Engine Theme
     <script src="modulemanager.js"></script>
     <script src="renderer.js"></script>
     <script>
+// Theme Management
+function changeTheme(themeName) {
+    // Remove theme attribute if black (default)
+    if (themeName === 'black') {
+        document.documentElement.removeAttribute('data-theme');
+    } else {
+        document.documentElement.setAttribute('data-theme', themeName);
+    }
+    
+    // Update active state in UI
+    document.querySelectorAll('.theme-option').forEach(option => {
+        option.classList.remove('active');
+        if (option.dataset.theme === themeName) {
+            option.classList.add('active');
+        }
+    });
+    
+    // Save to localStorage
+    localStorage.setItem('mtk-theme', themeName);
+    
+    // Show feedback
+    showStatusMessage(`Theme changed to ${themeName.charAt(0).toUpperCase() + themeName.slice(1)}`);
+}
+
+// Load saved theme on page load
+function loadSavedTheme() {
+    const savedTheme = localStorage.getItem('mtk-theme') || 'black';
+    if (savedTheme !== 'black') {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+    
+    // Update UI
+    document.querySelectorAll('.theme-option').forEach(option => {        option.classList.remove('active');
+        if (option.dataset.theme === savedTheme) {
+            option.classList.add('active');
+        }
+    });
+}
+
+// Status message helper
+function showStatusMessage(message) {
+    const statusMsg = document.getElementById('status-message');
+    if (statusMsg) {
+        statusMsg.textContent = message;
+        setTimeout(() => {
+            statusMsg.textContent = 'System Ready';
+        }, 2000);
+    }
+}
+
+// Initialize theme on load
+document.addEventListener('DOMContentLoaded', function() {
+    loadSavedTheme();
+});
+
 // Scroll-based navigation hide/show
 (function() {
     let lastScrollY = window.scrollY;
@@ -1951,8 +2154,7 @@ Matches MTK AI Engine Theme
         lastScrollY = currentScrollY;
         ticking = false;
     }
-    
-    function requestTick() {
+        function requestTick() {
         if (!ticking) {
             requestAnimationFrame(updateNavVisibility);
             ticking = true;
@@ -2001,8 +2203,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     page.classList.add('active');
                     // Scroll to top when switching tabs
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-            });
+                }            });
             
             // Handle header visibility for Advanced page
             if (this.dataset.page === 'advanced') {
