@@ -428,46 +428,146 @@
             line-height: 1.5;
         }
 
-        /* Bottom Navigation */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-secondary);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            z-index: 1000;        }
+        /* Bottom Navigation - Floating Pill Style with Scroll Hide */
+.bottom-nav {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%) translateY(0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px;
+    background: rgba(21, 27, 45, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 0 0.5px rgba(255, 255, 255, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    z-index: 1000;
+    width: auto;
+    max-width: 95%;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    opacity: 1;
+}
 
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            padding: 5px 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-            color: var(--text-secondary);
-        }
+/* Hidden state */
+.bottom-nav.hidden {
+    transform: translateX(-50%) translateY(150%);
+    opacity: 0;
+    pointer-events: none;
+}
 
-        .nav-item.active {
-            color: var(--accent-blue);
-        }
+/* Show on top of page */
+.bottom-nav.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
 
-        .nav-item:hover {
-            color: var(--accent-blue);
-        }
+/* Rest of your nav-item styles remain the same */
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);    position: relative;
+    min-width: 60px;
+    user-select: none;
+    color: var(--text-secondary);
+}
 
-        .nav-icon {
-            font-size: 22px;
-        }
+.nav-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+}
 
-        .nav-label {
-            font-size: 11px;
-            font-weight: 500;
-        }
+.nav-item:active {
+    transform: scale(0.96);
+}
+
+.nav-item.active {
+    background: rgba(74, 158, 255, 0.18);
+    color: var(--accent-blue);
+    box-shadow: 0 2px 12px rgba(74, 158, 255, 0.25);
+}
+
+.nav-icon {
+    font-size: 19px;
+    margin-bottom: 3px;
+    transition: all 0.25s ease;
+}
+
+.nav-item.active .nav-icon {
+    transform: translateY(-1px);
+    filter: drop-shadow(0 2px 4px rgba(74, 158, 255, 0.3));
+}
+
+.nav-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    transition: all 0.25s ease;
+}
+
+.nav-item.active .nav-label {
+    font-weight: 700;
+}
+
+/* Ripple effect */
+.nav-item::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;    height: 0;
+    border-radius: 50%;
+    background: rgba(74, 158, 255, 0.25);
+    transform: translate(-50%, -50%);
+    transition: width 0.5s, height 0.5s, opacity 0.3s;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.nav-item:active::after {
+    width: 50px;
+    height: 50px;
+    opacity: 1;
+    transition: 0s;
+}
+
+/* Adjust body padding */
+body {
+    padding-bottom: 100px;
+}
+
+/* Mobile optimization */
+@media (max-width: 380px) {
+    .bottom-nav {
+        bottom: 12px;
+        padding: 5px;
+        gap: 2px;
+    }
+    
+    .nav-item {
+        padding: 7px 10px;
+        min-width: 54px;
+    }
+    
+    .nav-icon {
+        font-size: 17px;
+    }
+    
+    .nav-label {
+        font-size: 9.5px;
+    }
+}
 
         /* Back button for advanced page */
         .back-btn {
@@ -1824,5 +1924,120 @@ Matches MTK AI Engine Theme
     <script src="tweakfinder.js"></script>
     <script src="modulemanager.js"></script>
     <script src="renderer.js"></script>
+    <script>
+// Scroll-based navigation hide/show
+(function() {
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+    const bottomNav = document.querySelector('.bottom-nav');
+    const scrollThreshold = 100; // Show nav when scrolled back to top
+    const deltaThreshold = 5; // Minimum scroll delta to trigger hide/show
+    
+    function updateNavVisibility() {
+        const currentScrollY = window.scrollY;
+        const scrollDelta = currentScrollY - lastScrollY;
+        
+        // Hide on scroll down, show on scroll up
+        if (scrollDelta > deltaThreshold && currentScrollY > scrollThreshold) {
+            // Scrolling down
+            bottomNav.classList.add('hidden');
+            bottomNav.classList.remove('show');
+        } else if (scrollDelta < -deltaThreshold || currentScrollY <= scrollThreshold) {
+            // Scrolling up or at top
+            bottomNav.classList.remove('hidden');
+            bottomNav.classList.add('show');
+        }
+        
+        lastScrollY = currentScrollY;
+        ticking = false;
+    }
+    
+    function requestTick() {
+        if (!ticking) {
+            requestAnimationFrame(updateNavVisibility);
+            ticking = true;
+        }
+    }
+    
+    // Use passive listener for better scroll performance
+    window.addEventListener('scroll', requestTick, { passive: true });
+    
+    // Always show nav at the very top
+    window.addEventListener('scroll', function() {
+        if (window.scrollY <= 10) {
+            bottomNav.classList.remove('hidden');
+            bottomNav.classList.add('show');
+        }
+    }, { passive: true });
+    
+    // Show nav when user stops scrolling
+    let scrollTimeout;
+    window.addEventListener('scroll', function() {
+        clearTimeout(scrollTimeout);        scrollTimeout = setTimeout(function() {
+            bottomNav.classList.remove('hidden');
+            bottomNav.classList.add('show');
+        }, 800); // Show after 800ms of no scrolling
+    }, { passive: true });
+})();
+
+// Tab navigation functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const navItems = document.querySelectorAll('.nav-item');
+    const pages = document.querySelectorAll('.page');
+    const advancedHeader = document.querySelector('.advanced-header');
+    const mainHeader = document.querySelector('.header:not(.advanced-header)');
+    
+    navItems.forEach(item => {
+        item.addEventListener('click', function() {
+            // Update active nav item
+            navItems.forEach(nav => nav.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Show corresponding page
+            const targetPage = this.dataset.page + '-page';
+            pages.forEach(page => {
+                page.classList.remove('active');
+                if (page.id === targetPage) {
+                    page.classList.add('active');
+                    // Scroll to top when switching tabs
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+            
+            // Handle header visibility for Advanced page
+            if (this.dataset.page === 'advanced') {
+                if (mainHeader) mainHeader.style.display = 'none';
+                if (advancedHeader) advancedHeader.style.display = 'flex';
+            } else {
+                if (mainHeader) mainHeader.style.display = 'flex';
+                if (advancedHeader) advancedHeader.style.display = 'none';
+            }
+            
+            // Always show nav when switching tabs
+            const bottomNav = document.querySelector('.bottom-nav');
+            if (bottomNav) {
+                bottomNav.classList.remove('hidden');
+                bottomNav.classList.add('show');
+            }
+            
+            // Save state to localStorage
+            localStorage.setItem('activeTab', this.dataset.page);
+        });    });
+    
+    // Restore active tab on page load
+    const savedTab = localStorage.getItem('activeTab') || 'home';
+    const savedItem = document.querySelector(`.nav-item[data-page="${savedTab}"]`);
+    if (savedItem) {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => savedItem.click(), 100);
+    }
+    
+    // Initialize nav as visible
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav) {
+        bottomNav.classList.add('show');
+    }
+});
+</script>
 </body>
 </html>
