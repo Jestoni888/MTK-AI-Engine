@@ -187,6 +187,7 @@
             {name:'Vibrant Cool',color:'#4ECDC4',sat:1.7,sharp:1.5,warm:-4,matrix:[0.95,0,0,0,0,1.05,0,0,0,0,1.2,0,-0.02,0,0.03,1]},
             {name:'Soft Warm',color:'#FFB347',sat:1.3,sharp:1.1,warm:4,matrix:[1.08,0,0,0,0,1.05,0,0,0,0,0.98,0,0.02,0.01,0,1]},
             {name:'Dark Vibrant',color:'#FF6B6B',sat:1.2,sharp:1.4,warm:-1,matrix:[1.5,0,0,0,0,1.5,0,0,0,0,1.5,0,-0.22,-0.22,-0.22,1]},
+            {name:'Dark Vibrant+',color:'#CC0000',sat:1.2,sharp:1.4,warm:-1,matrix:[1.4,0,0,0,0,1.4,0,0,0,0,1.4,0,-0.14,-0.14,-0.14,1]},
             {name:'Red Punch',color:'#FF5555',sat:1.6,sharp:1.3,warm:2,matrix:[1.25,0,0,0,0,0.95,0,0,0,0,0.95,0,0,0,0,1]},
             {name:'Cool Boost',color:'#4ECDC4',sat:1.5,sharp:1.4,warm:-6,matrix:[0.95,0,0,0,0,1.0,0,0,0,0,1.15,0,0,0,0,1]},            {name:'Identity',color:'#FFFFFF',sat:1.0,sharp:1.0,warm:0,matrix:[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]},
             {name:'Reset',color:'#FFFFFF',sat:1.0,sharp:1.0,warm:0,matrix:null}
