@@ -98,26 +98,56 @@
     function getEffectiveFilter(pkg, globalFilter) {
         return (appOverrides[pkg] && FILTERS.includes(appOverrides[pkg])) ? appOverrides[pkg] : globalFilter;    }    
     async function compileWithFallback(pkg, preferredFilter) {
-        const targetFilter = getEffectiveFilter(pkg, preferredFilter);
-        for (const filter of FILTER_FALLBACK) {
-            try {
-                log('🔄 Trying ' + filter + ' for ' + pkg);
-                const status = await execFn('dumpsys package ' + pkg + ' 2>/dev/null | grep "dexopt=" | head -1', 8000);
-                if (status && status.includes('dexopt=' + filter) && filter !== 'verify') {
-                    log('⏭️ ' + pkg + ' already compiled with ' + filter);
-                    return true;
-                }
-                const res = await execFn('su -c "pm compile -m ' + filter + ' ' + pkg + '" 2>&1', 120000);
-                if (!res || !res.toLowerCase().includes('failure')) {
-                    log('✅ ' + pkg + ' compiled with ' + filter);
-                    return true;
-                }
-                log('⚠️ ' + pkg + ' failed with ' + filter);
-            } catch (e) { log('❌ ' + pkg + ' exception: ' + e.message); }
+    const targetFilter = getEffectiveFilter(pkg, preferredFilter);
+    
+    // 🔹 STEP 1: Try the INTENDED filter first
+    try {
+        log('🎯 Trying target filter [' + targetFilter + '] for ' + pkg);
+        
+        // Check if already compiled with target filter
+        const status = await execFn('dumpsys package ' + pkg + ' 2>/dev/null | grep "dexopt=" | head -1', 8000);
+        if (status && status.includes('dexopt=' + targetFilter) && targetFilter !== 'verify') {
+            log('⏭️ ' + pkg + ' already compiled with ' + targetFilter);
+            return true;
         }
-        log('❌ ' + pkg + ' failed all filters');
-        return false;
+        
+        // Attempt compilation with target filter
+        const res = await execFn('su -c "pm compile -m ' + targetFilter + ' ' + pkg + '" 2>&1', 120000);
+        if (!res || !res.toLowerCase().includes('failure')) {
+            log('✅ ' + pkg + ' compiled with TARGET filter: ' + targetFilter);
+            return true;
+        }
+        log('⚠️ ' + pkg + ' failed with target filter [' + targetFilter + '], falling back...');
+    } catch (e) { 
+        log('❌ ' + pkg + ' exception with target filter: ' + e.message); 
     }
+    
+    // 🔹 STEP 2: Only if target fails, try fallback filters
+    for (const filter of FILTER_FALLBACK) {
+        // Skip if this IS the target filter (already tried)
+        if (filter === targetFilter) continue;
+        
+        try {
+            log('🔄 Fallback: Trying [' + filter + '] for ' + pkg);
+            const status = await execFn('dumpsys package ' + pkg + ' 2>/dev/null | grep "dexopt=" | head -1', 8000);
+            if (status && status.includes('dexopt=' + filter) && filter !== 'verify') {
+                log('⏭️ ' + pkg + ' already compiled with fallback ' + filter);
+                return true;
+            }
+            const res = await execFn('su -c "pm compile -m ' + filter + ' ' + pkg + '" 2>&1', 120000);
+            if (!res || !res.toLowerCase().includes('failure')) {
+                log('✅ ' + pkg + ' compiled with fallback [' + filter + ']');
+                return true;
+            }
+            log('⚠️ ' + pkg + ' failed with fallback [' + filter + ']');
+        } catch (e) { 
+            log('❌ ' + pkg + ' fallback exception: ' + e.message); 
+        }
+    }
+    
+    log('❌ ' + pkg + ' failed all filters (target: ' + targetFilter + ')');
+    return false;
+}
 
     async function isSystemApp(pkg) {
         try {
