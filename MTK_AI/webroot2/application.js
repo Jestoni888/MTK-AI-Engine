@@ -3,7 +3,7 @@
 'use strict';
 const CFG_DIR = '/sdcard/MTK_AI_Engine';
 const GAMELIST_FILE = CFG_DIR + '/game_list.txt';
-const PERAPP_DIR = CFG_DIR + '/perapp';
+const PERAPP_DIR = CFG_DIR + '/per_app';
 const REFRESH_LOCKS_DIR = CFG_DIR + '/refresh_locks';
 const APP_CACHE_FILE = CFG_DIR + '/app_list_cache.json';
 const WHITELIST_FILE = CFG_DIR + '/whitelist.txt';
@@ -46,13 +46,9 @@ function showStatus(msg, color) {
         el.textContent = msg;
         el.style.color = color || '#fff';
         setTimeout(() => { el.textContent = 'System Ready'; }, 2000);
-    }
-}
-// === RENDERER MANAGEMENT FUNCTIONS ===
+    }}
 
-/**
- * Applies a renderer globally (Vulkan = skiavk, OpenGL = skiagl)
- */
+// === RENDERER MANAGEMENT FUNCTIONS ===
 async function applyGlobalRenderer(rendererValue) {
     await execFn(`su -c "mkdir -p /sdcard/MTK_AI_Engine && echo '${rendererValue}' > /sdcard/MTK_AI_Engine/manual_renderer.txt"`);
     await execFn(`su -c "setprop debug.hwui.renderer ${rendererValue}"`);
@@ -64,12 +60,8 @@ async function applyGlobalRenderer(rendererValue) {
     });
 }
 
-/**
- * Verifies which renderer a specific app is currently using
- */
 async function verifyRenderer(pkg) {
-    const statusEl = document.getElementById(`renderer-status-${pkg}`);
-    if (!statusEl) return;
+    const statusEl = document.getElementById(`renderer-status-${pkg}`);    if (!statusEl) return;
     
     statusEl.innerHTML = "🔍 Checking Pipeline...";
     
@@ -93,10 +85,8 @@ async function verifyRenderer(pkg) {
     }
 }
 
-/**
- * Forces the renderer change for the currently targeted app & clears shader caches
- */
-async function applyHardCoreFix(pkg, rendererValue) {    const statusEl = document.getElementById(`renderer-status-${pkg}`);
+async function applyHardCoreFix(pkg, rendererValue) {
+    const statusEl = document.getElementById(`renderer-status-${pkg}`);
     if (statusEl) statusEl.innerHTML = '<span style="color:var(--color-blue)">Restarting App...</span>';
     
     await execFn(`su -c "setprop debug.hwui.renderer ${rendererValue} && am force-stop ${pkg}"`);
@@ -108,9 +98,6 @@ async function applyHardCoreFix(pkg, rendererValue) {    const statusEl = docume
     showStatus(`Renderer ${rendererValue === 'skiavk' ? 'Vulkan' : 'OpenGL'} applied to ${pkg}`, '#32D74B');
 }
 
-/**
- * Saves the renderer preference per-app and triggers the hard fix
- */
 async function saveAndApplyRenderer(pkg, rendererValue) {
     const configDir = "/sdcard/MTK_AI_Engine/threading_configs";
     const configFile = `${configDir}/${pkg}.renderer`;
@@ -118,37 +105,26 @@ async function saveAndApplyRenderer(pkg, rendererValue) {
     await execFn(`su -c "mkdir -p ${configDir} && echo '${rendererValue}' > ${configFile}"`);
     await applyHardCoreFix(pkg, rendererValue);
     
-    // Update UI toggle state if popup is open
     const popupToggle = document.getElementById(`renderer-toggle-${pkg}`);
     if (popupToggle) {
         popupToggle.querySelectorAll('.renderer-toggle-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.value === rendererValue);
         });
-    }
-}
+    }}
 
-/**
- * Loads saved per-app renderer preference
- */
 async function loadAppRenderer(pkg) {
     try {
-        // Check per-app config first
         const perApp = await execFn(`cat /sdcard/MTK_AI_Engine/threading_configs/${pkg}.renderer 2>/dev/null`);
         if (perApp.trim()) return perApp.trim();
-        
-        // Fallback to global setting
         const global = await execFn(`cat /sdcard/MTK_AI_Engine/manual_renderer.txt 2>/dev/null`);
         if (global.trim()) return global.trim();
-        
-        return ""; // No preference set
+        return "";
     } catch (e) {
         console.warn("Failed to load renderer pref:", e);
         return "";
     }
 }
-/**
- * Creates renderer toggle buttons for the popup UI
- */
+
 function createRendererToggles(pkg, savedValue, onToggle) {
     const container = document.createElement('div');
     container.id = `renderer-toggle-${pkg}`;
@@ -183,8 +159,7 @@ function createRendererToggles(pkg, savedValue, onToggle) {
         };
         btn.textContent = renderer.label;
         container.appendChild(btn);
-    });
-    
+    });    
     return container;
 }
 
@@ -194,7 +169,8 @@ async function loadCloudAppNames() {
         const cached = localStorage.getItem('mtk_cloud_app_names');
         const cachedTime = localStorage.getItem('mtk_cloud_cache_time');
         if (cached && cachedTime) {
-            const ageHours = (Date.now() - parseInt(cachedTime)) / (1000 * 60 * 60);            if (ageHours < CLOUD_CACHE_EXPIRY_HOURS) {
+            const ageHours = (Date.now() - parseInt(cachedTime)) / (1000 * 60 * 60);
+            if (ageHours < CLOUD_CACHE_EXPIRY_HOURS) {
                 cloudAppNames = JSON.parse(cached);
                 return;
             }
@@ -232,8 +208,7 @@ async function getAppLabel(pkg) {
         if (pmResult && pmResult.includes(pkg)) {
             const apkMatch = pmResult.match(/apk=([^\s=]+)/);
             if (apkMatch) {
-                const apkName = apkMatch[1].split('/').pop().replace('.apk', '');
-                if (apkName && apkName !== pkg) return formatPackageName(apkName);
+                const apkName = apkMatch[1].split('/').pop().replace('.apk', '');                if (apkName && apkName !== pkg) return formatPackageName(apkName);
             }
         }
         const localName = getLocalAppName(pkg);
@@ -243,6 +218,7 @@ async function getAppLabel(pkg) {
         return getLocalAppName(pkg) || formatPackageName(pkg);
     }
 }
+
 function getLocalAppName(pkg) {
     const localMappings = {
         'com.mobile.legends': 'Mobile Legends: Bang Bang', 'com.pubg.imobile': 'PUBG MOBILE',
@@ -281,8 +257,7 @@ async function restartMTKService() {
         await execFn(cmd, 5000);
         console.log('✅ MTK_AI service restarted');
     } catch (e) {
-        console.warn('⚠️ Service restart skipped/failed:', e);
-    }
+        console.warn('⚠️ Service restart skipped/failed:', e);    }
 }
 
 // === WHITELIST & GAME LIST ===
@@ -292,7 +267,8 @@ async function removeFromWhitelist(pkg) { try { await execFn(`sed -i "/^${pkg}$/
 async function loadGameList() { try { const r = await execFn(`cat ${GAMELIST_FILE} 2>/dev/null`); gameList = r.split('\n').map(l => l.trim()).filter(l => l); } catch { gameList = []; } }
 
 async function syncWhitelistFromGameList() {
-    showStatus('🔄 Syncing whitelist...', '#0A84FF');    try {
+    showStatus('🔄 Syncing whitelist...', '#0A84FF');
+    try {
         await loadGameList();
         const gameSet = new Set(gameList);
         const whitelistRaw = await execFn(`cat ${WHITELIST_FILE} 2>/dev/null`);
@@ -330,8 +306,7 @@ async function loadAppList() {
         }
     } catch (e) { console.log("Cache check failed, reloading list."); }
 
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Scanning Installed Apps...</div>';
-    try {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Scanning Installed Apps...</div>';    try {
         await loadGameList();
         const result = await execFn('pm list packages -3 2>/dev/null');
         const packages = result.split('\n').map(p => p.replace('package:', '').trim()).filter(p => p);
@@ -341,7 +316,8 @@ async function loadAppList() {
             const batch = packages.slice(i, i + batchSize);
             const batchApps = await Promise.all(batch.map(async pkg => {
                 const label = await getAppLabel(pkg);
-                return { pkg, label, isInGameList: gameList.includes(pkg) };            }));
+                return { pkg, label, isInGameList: gameList.includes(pkg) };
+            }));
             allApps = allApps.concat(batchApps);
             container.innerHTML = `<div style="text-align:center;padding:40px;color:#888;">⏳ Loading apps... ${Math.min(100, Math.round(((i + batchSize) / packages.length) * 100))}%</div>`;
         }
@@ -379,7 +355,6 @@ function renderAppList(apps) {
     `;
 
     let html = '<div style="display: flex; flex-direction: column; gap: 0; padding: 0; width: 100%;">';
-
     apps.forEach(app => {
         const isActive = gameList.includes(app.pkg);
         
@@ -390,7 +365,8 @@ function renderAppList(apps) {
             padding: 16px;
             display: flex;
             align-items: center;
-            gap: 14px;            cursor: pointer;
+            gap: 14px;
+            cursor: pointer;
             transition: background 0.15s ease;
             width: 100%;
             max-width: 100%;
@@ -401,7 +377,7 @@ function renderAppList(apps) {
             
             <!-- App Icon -->
             <img src="ksu://icon/${app.pkg}" 
-                onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjMzMzIi8+PHRleHQgeD0iMjQiIHk9IjMwIiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmIj7wn5mFPC90ZXh0Pjwvc3ZnPg=='" 
+                onerror="this.src='image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjMzMzIi8+PHRleHQgeD0iMjQiIHk9IjMwIiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmIj7wn5mFPC90ZXh0Pjwvc3ZnPg=='" 
                 style="width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0; background: #2c2c2e; pointer-events: none; object-fit: cover;">
             
             <!-- App Info -->
@@ -428,8 +404,7 @@ function renderAppList(apps) {
 async function toggleGameList(pkg, fromPopup = false) {
     const app = allApps.find(a => a.pkg === pkg);
     if (!app) return;
-    
-    const wasActive = gameList.includes(pkg);
+        const wasActive = gameList.includes(pkg);
     app.isInGameList = !wasActive;
     
     if (app.isInGameList) {
@@ -439,7 +414,8 @@ async function toggleGameList(pkg, fromPopup = false) {
         showStatus('✅ Added to Game List: ' + app.label, '#32D74B');
     } else {
         gameList = gameList.filter(p => p !== pkg);
-        await addToWhitelist(pkg);        await execFn(`sed -i "/^${pkg}$/d" ${GAMELIST_FILE}`);
+        await addToWhitelist(pkg);
+        await execFn(`sed -i "/^${pkg}$/d" ${GAMELIST_FILE}`);
         showStatus('❌ Removed from Game List: ' + app.label, '#ff9f0a');
     }
     
@@ -477,8 +453,7 @@ async function toggleGameList(pkg, fromPopup = false) {
         }
         
         if (navigator.vibrate) navigator.vibrate(50);
-    }
-}
+    }}
 
 // === MONITOR POPUP ===
 function openMonitorPopup(pkg) {
@@ -488,7 +463,8 @@ function openMonitorPopup(pkg) {
     const modal = document.createElement('div');
     modal.id = 'monitor-popup';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;padding:10px;';
-    modal.innerHTML = `        <div style="background:#1c1c1e;border-radius:20px;width:100%;max-width:420px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;">
+    modal.innerHTML = `
+        <div style="background:#1c1c1e;border-radius:20px;width:100%;max-width:420px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;">
             <div style="padding:20px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;">
                 <div><h3 style="margin:0;color:#fff;font-size:18px;">Session Monitor</h3><small style="color:#888;font-family:monospace;">${pkg}</small></div>
                 <button onclick="closeMonitorPopup()" style="background:none;border:none;color:#888;font-size:28px;cursor:pointer;line-height:1;">&times;</button>
@@ -526,8 +502,7 @@ async function readStatsFile() {
     if (!currentMonitorPkg) return;
     try {
         const result = await execFn(`cat /sdcard/MTK_AI_Engine/stats_${currentMonitorPkg}.txt 2>/dev/null`);
-        if (!result || result.trim() === '') return;
-        const stats = {};
+        if (!result || result.trim() === '') return;        const stats = {};
         result.split('\n').forEach(line => { const parts = line.split(':'); if (parts.length >= 2) stats[parts[0].trim()] = parts.slice(1).join(':').trim(); });
         const mapping = { 'Avg_Power': 'stat-avg-power', 'Avg_Temp': 'stat-avg-temp', 'Avg_FPS': 'stat-avg-fps', 'Samples': 'stat-samples' };
         for (const [key, id] of Object.entries(mapping)) { const el = document.getElementById(id); if (el && stats[key]) el.textContent = stats[key]; }
@@ -537,7 +512,8 @@ async function readStatsFile() {
 
 // === APP CONFIG POPUP WITH RENDERER ===
 async function openAppConfigPopup(pkg) {
-    currentTargetPkg = pkg;    const app = allApps.find(a => a.pkg === pkg);
+    currentTargetPkg = pkg;
+    const app = allApps.find(a => a.pkg === pkg);
     if (!app) return;
 
     const isActive = gameList.includes(pkg);
@@ -557,7 +533,7 @@ async function openAppConfigPopup(pkg) {
             <div id="menu-${pkg}" style="display:none;position:absolute;right:0;top:30px;background:#1e1e1e;border-radius:12px;width:180px;box-shadow:0 4px 12px rgba(0,0,0,0.5);z-index:101;">
                 <div onclick="launchApp('${pkg}')" style="padding:14px 16px;border-bottom:1px solid #333;cursor:pointer;">Launch</div>
                 <div style="padding:14px 16px;border-bottom:1px solid #333;cursor:pointer;">App Info</div>
-                <div style="padding:14px 16px;color:#ff5c5c;cursor:pointer;">Reset Setting</div>
+                <div onclick="resetScalingToDefault('${pkg}')" style="padding:14px 16px;color:#ff5c5c;cursor:pointer;">Reset Scaling</div>
             </div>
         </div>
     </div>
@@ -575,8 +551,7 @@ async function openAppConfigPopup(pkg) {
             <div style="margin-top:16px;display:flex;align-items:center;gap:12px;background:#1e1e1e;padding:10px 16px;border-radius:16px;">
                 <span style="color:#888;font-size:14px;">Game Mode</span>
                 <div id="popup-toggle-${pkg}" onclick="event.stopPropagation(); toggleGameList('${pkg}', true)" style="
-                    position: relative;
-                    width: 52px;
+                    position: relative;                    width: 52px;
                     height: 28px;
                     background-color: ${isActive ? '#ff9f0a' : '#3a3a3c'};
                     border-radius: 28px;
@@ -586,7 +561,8 @@ async function openAppConfigPopup(pkg) {
                     <div class="toggle-thumb" style="
                         position: absolute;
                         top: 3px;
-                        ${isActive ? 'right: 3px;' : 'left: 3px;'}                        width: 22px;
+                        ${isActive ? 'right: 3px;' : 'left: 3px;'}
+                        width: 22px;
                         height: 22px;
                         background-color: #fff;
                         border-radius: 50%;
@@ -624,8 +600,7 @@ async function openAppConfigPopup(pkg) {
                 <select id="config-governor" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;" onchange="saveAppConfig('${pkg}')">
                     <option value="default">Default</option>
                     <option value="performance">Performance</option>
-                    <option value="powersave">Powersave</option>
-                    <option value="schedutil">Schedutil</option>
+                    <option value="powersave">Powersave</option>                    <option value="schedutil">Schedutil</option>
                 </select>
                 <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">CPU Max Limit</label>
                 <input type="range" id="config-cpu-limit" min="30" max="100" value="100" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('cpu-limit-val').textContent=this.value+'%'; saveAppConfig('${pkg}')">
@@ -635,7 +610,8 @@ async function openAppConfigPopup(pkg) {
 
         <!-- Lock Frequencies Item -->
         <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;">
-            <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;">                <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;">
+            <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;">
+                <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;">
                     <span style="font-size:18px;">🔒</span>
                 </div>
                 <div style="flex:1;">
@@ -673,32 +649,28 @@ async function openAppConfigPopup(pkg) {
                 <label style="display:block;color:#888;font-size:11px;margin-bottom:6px;">EEM Voltage Offset</label>
                 <input type="range" id="config-eem" min="-20" max="10" value="0" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('eem-val').textContent=(this.value>0?'+':'')+this.value; saveAppConfig('${pkg}')">
                 <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="eem-val">0</span></div>
-            </div>
-        </div>
+            </div>        </div>
 
         <!-- Game API Section -->
         <div style="padding:0 16px;margin-bottom:8px;">
             <span style="display:inline-block;background:#1e1e1e;padding:4px 12px;border-radius:12px;font-size:13px;color:#8ab4f8;">Game API</span>
         </div>
 
-        <!-- Downscaling Item -->
+        <!-- Downscaling Item (DENSITY-ONLY) -->
         <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;">
             <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;">
-                <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;">                    <span style="font-size:18px;">📉</span>
+                <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;">
+                    <span style="font-size:18px;">📉</span>
                 </div>
                 <div style="flex:1;">
                     <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Downscaling</div>
-                    <div style="font-size:13px;color:#888;">Scale game API rendering resolution, reducing GPU load.</div>
+                    <div style="font-size:13px;color:#888;">Scale UI density via wm density (no resolution change).</div>
                 </div>
                 <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;">
                     <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span>
                 </div>
             </div>
-            <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;">
-                <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Resolution Scaling</label>
-                <input type="range" id="config-scaling" min="50" max="200" value="100" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('scaling-val').textContent=this.value+'%'; saveAppConfig('${pkg}')">
-                <div style="text-align:center;color:#8ab4f8;font-size:12px;margin-bottom:12px;"><span id="scaling-val">100%</span></div>
-                
+            <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;">  
                 <label style="display:block;color:#888;font-size:11px;margin-bottom:6px;">Downscale Factor</label>
                 <input type="range" id="config-downscale" min="10" max="100" value="100" step="5" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('downscale-val').textContent=(this.value/100).toFixed(1)+'x'; saveAppConfig('${pkg}')">
                 <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="downscale-val">1.0x</span></div>
@@ -722,8 +694,7 @@ async function openAppConfigPopup(pkg) {
             <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;">
                 <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Refresh Rate Lock</label>
                 <select id="config-refresh-rate" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')"><option value="">Loading modes...</option></select>
-            </div>
-        </div>
+            </div>        </div>
 
         <!-- Custom Shell Command -->
         <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;">
@@ -733,7 +704,8 @@ async function openAppConfigPopup(pkg) {
                 </div>
                 <div style="flex:1;">
                     <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Custom Shell Command</div>
-                    <div style="font-size:13px;color:#888;">Execute custom commands on app launch</div>                </div>
+                    <div style="font-size:13px;color:#888;">Execute custom commands on app launch</div>
+                </div>
                 <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;">
                     <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span>
                 </div>
@@ -771,8 +743,7 @@ async function openAppConfigPopup(pkg) {
                 </div>
                 <div style="margin-top:10px;padding:8px 12px;background:rgba(255,159,10,0.1);border-radius:8px;border:1px solid rgba(255,159,10,0.3);">
                     <span style="font-size:11px;color:#ff9f0a;">💡 Tip: Changes require app restart. Clear shader caches automatically.</span>
-                </div>
-            </div>
+                </div>            </div>
         </div>
 
     </div>
@@ -821,17 +792,18 @@ async function openAppConfigPopup(pkg) {
         const select = document.getElementById('config-refresh-rate');
         const raw = await execFn('/data/adb/modules/MTK_AI/script_runner/display_mode 2>/dev/null', 3000);
         const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        if (select && lines.length > 0) {
-            select.innerHTML = '<option value="">Default / System</option>';
+        if (select && lines.length > 0) {            select.innerHTML = '<option value="">Default / System</option>';
             lines.forEach((line, idx) => { const opt = document.createElement('option'); opt.value = String(idx); opt.textContent = `Mode ${idx}: ${line}`; select.appendChild(opt); });
         } else if (select) { select.innerHTML = '<option value="">No modes detected</option>'; }
     } catch (e) { const s = document.getElementById('config-refresh-rate'); if (s) s.innerHTML = '<option value="">Script failed</option>'; }
 
+    // Initialize density & load config
     await loadAppConfig(pkg);
     
     // === Initialize Renderer Toggles ===
     try {
-        const savedRenderer = await loadAppRenderer(pkg);        const toggleContainer = document.getElementById(`renderer-toggle-container-${pkg}`);
+        const savedRenderer = await loadAppRenderer(pkg);
+        const toggleContainer = document.getElementById(`renderer-toggle-container-${pkg}`);
         if (toggleContainer) {
             toggleContainer.appendChild(createRendererToggles(pkg, savedRenderer, async (value) => {
                 await saveAndApplyRenderer(pkg, value);
@@ -855,8 +827,7 @@ async function loadAppConfig(pkg) {
     try {
         const refreshResult = await execFn(`cat ${REFRESH_LOCKS_DIR}/${pkg}.mode 2>/dev/null`);
         if (refreshResult.trim() !== "") { const s = document.getElementById('config-refresh-rate'); if (s) s.value = refreshResult.trim(); }
-        const scaleResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.scale 2>/dev/null`);
-        if (scaleResult.trim()) { const sl = document.getElementById('config-scaling'); if (sl) { sl.value = scaleResult.trim(); document.getElementById('scaling-val').textContent = scaleResult.trim() + '%'; } }
+        
         const downscaleResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.downscale 2>/dev/null`);
         if (downscaleResult.trim()) { const sl = document.getElementById('config-downscale'); const d = document.getElementById('downscale-val'); if (sl) { sl.value = downscaleResult.trim(); if (d) d.textContent = (downscaleResult.trim() / 100).toFixed(1) + 'x'; } }
         const govResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.governor 2>/dev/null`);
@@ -880,7 +851,8 @@ async function loadAppConfig(pkg) {
                 toggleContainer.querySelectorAll('.renderer-toggle-btn').forEach(btn => {
                     btn.classList.toggle('active', btn.dataset.value === rendererResult.trim());
                     const isActive = btn.classList.contains('active');
-                    const color = btn.dataset.value === 'skiavk' ? '#4cd964' : '#ff9500';                    btn.style.background = isActive ? color + '20' : '#2a2a2c';
+                    const color = btn.dataset.value === 'skiavk' ? '#4cd964' : '#ff9500';
+                    btn.style.background = isActive ? color + '20' : '#2a2a2c';
                     btn.style.borderColor = isActive ? color : '#3a3a3c';
                     btn.style.color = isActive ? color : '#fff';
                 });
@@ -894,9 +866,7 @@ async function saveAppConfig(pkg) {
         const refreshRate = document.getElementById('config-refresh-rate').value;
         if (refreshRate !== "") await execFn(`mkdir -p ${REFRESH_LOCKS_DIR} && echo "${refreshRate}" > ${REFRESH_LOCKS_DIR}/${pkg}.mode`);
         else await execFn(`rm -f ${REFRESH_LOCKS_DIR}/${pkg}.mode 2>/dev/null`);
-
-        const scaling = document.getElementById('config-scaling').value;
-        await execFn(`mkdir -p ${PERAPP_DIR} && echo "${scaling}" > ${PERAPP_DIR}/${pkg}.scale`);
+        
         const downscaleRaw = document.getElementById('config-downscale').value;
         await execFn(`mkdir -p ${PERAPP_DIR} && echo "${downscaleRaw}" > ${PERAPP_DIR}/${pkg}.downscale`);
         await execFn(`am force-stop ${pkg}`);
@@ -929,7 +899,7 @@ async function launchApp(pkg) {
     showStatus('🚀 Launching ' + pkg + '...', '#0A84FF');
     try {
         const dumpsysResult = await execFn(`dumpsys package ${pkg} 2>/dev/null | grep -A 1 "android.intent.action.MAIN" | grep "android.intent.category.LAUNCHER" | awk '{print $4}'`, 3000);
-                if (dumpsysResult && dumpsysResult.trim()) {
+        if (dumpsysResult && dumpsysResult.trim()) {
             const activity = dumpsysResult.trim();
             await execFn(`am start -n ${activity}`, 3000);
             showStatus('✅ Launched: ' + pkg, '#32D74B');
@@ -937,8 +907,7 @@ async function launchApp(pkg) {
             await execFn(`monkey -p ${pkg} -c android.intent.category.LAUNCHER 1 2>/dev/null`, 3000);
             showStatus('✅ Launched (monkey): ' + pkg, '#32D74B');
         }
-    } catch (e) {
-        showStatus('❌ Failed: ' + e.message, '#FF453A');
+    } catch (e) {        showStatus('❌ Failed: ' + e.message, '#FF453A');
     }
 }
 
@@ -978,7 +947,8 @@ window.toggleConfigSection = toggleConfigSection;
 window.saveAppConfig = saveAppConfig;
 window.clearSearch = clearSearch;
 window.launchApp = launchApp;
-window.loadCloudAppNames = loadCloudAppNames;// Renderer exports
+window.loadCloudAppNames = loadCloudAppNames;
+// Renderer exports
 window.applyGlobalRenderer = applyGlobalRenderer;
 window.verifyRenderer = verifyRenderer;
 window.applyHardCoreFix = applyHardCoreFix;
