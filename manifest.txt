@@ -69,4 +69,5 @@ webroot/tweakfinder.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engin
 webroot/modulemanager.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/modulemanager.js
 webroot/profile.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/profile.js
 webroot/renderer.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/renderer.js
+webroot/cpuset.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/cpuset.js
 lib64/libc++_shared.so https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib64/libc++_shared.so
