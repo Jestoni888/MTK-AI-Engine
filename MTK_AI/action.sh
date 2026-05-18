@@ -105,6 +105,7 @@ webroot/tweakfinder.js
 webroot/modulemanager.js
 webroot/profile.js
 webroot/renderer.js
+webroot/cpuset.js
 lib64/libc++_shared.so
 "
 
