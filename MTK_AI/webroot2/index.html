@@ -1731,6 +1731,17 @@ Matches MTK AI Engine Theme
         </div>
         <div class="setting-value purple">Performance <i class="fas fa-chevron-right"></i></div>
     </div>
+    <!-- CPUSET TOGGLE CARD -->
+<div class="setting-item" id="cpuset-item" style="cursor: pointer;">
+    <div class="setting-icon purple"><i class="fas fa-microchip"></i></div>
+    <div class="setting-content">
+        <div class="setting-title">CPU Set</div>
+        <div class="setting-description">Tap to cycle CPU affinity presets</div>
+    </div>
+    <div class="setting-value purple" id="cpuset-val">
+        Tap to Apply <i class="fas fa-chevron-right"></i>
+    </div>
+</div>
             <!-- EEM Voltage Card -->
     <div class="setting-item" id="eem-voltage-item" style="cursor: pointer;">
         <div class="setting-icon orange"><i class="fas fa-bolt"></i></div>
@@ -2073,6 +2084,7 @@ Matches MTK AI Engine Theme
     <script src="tweakfinder.js"></script>
     <script src="modulemanager.js"></script>
     <script src="renderer.js"></script>
+    <script src="cpuset.js"></script>
     <script>
 // Theme Management
 function changeTheme(themeName) {
