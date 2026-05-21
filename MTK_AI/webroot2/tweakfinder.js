@@ -1018,52 +1018,121 @@
     }
 
     // ========== APPLY FUNCTIONS ==========
-    async function applyToggle(id, on) {
-        if (!rootAvailable) { showStatus('⚠️ Root required', 'error'); return; }
-        const cfg = controls.find(c => c.id === id); if (!cfg) return;
-        const val = on ? cfg.on : cfg.off;
-        const st = document.getElementById(`tf-ts-${id}`);
-        try {
-            if (cfg.path.includes('*')) {
-                const dir = cfg.path.substring(0, cfg.path.lastIndexOf('/'));
-                const pattern = cfg.path.substring(cfg.path.lastIndexOf('/') + 1);
-                const files = await execFn(`${CFG.BB} ls ${dir}/${pattern} 2>/dev/null`);
-                const fileList = files.split('\n').filter(f => f.trim());                let successCount = 0;
-                for (const file of fileList) {
-                    if (await execFn(`test -w "${file}" && echo "yes" || echo "no"`) === 'yes') {
-                        await execFn(`${CFG.BB} echo "${val}" > "${file}" 2>/dev/null`);
+async function applyToggle(id, on) {
+    if (!rootAvailable) { showStatus('⚠️ Root required', 'error'); return; }
+    const cfg = controls.find(c => c.id === id); 
+    if (!cfg) return;
+    
+    const val = on ? cfg.on : cfg.off;
+    const st = document.getElementById(`tf-ts-${id}`);
+    
+    try {
+        let successCount = 0;
+        let totalPaths = 0;
+        let failedPaths = [];
+        
+        if (cfg.path.includes('*')) {
+            // Handle wildcard paths
+            const dir = cfg.path.substring(0, cfg.path.lastIndexOf('/'));
+            const pattern = cfg.path.substring(cfg.path.lastIndexOf('/') + 1);
+            const files = await execFn(`${CFG.BB} ls ${dir}/${pattern} 2>/dev/null`);
+            const fileList = files.split('\n').filter(f => f.trim());
+            totalPaths = fileList.length;
+            
+            // Apply to each matched file
+            for (const file of fileList) {
+                const writable = await execFn(`test -w "${file}" && echo "yes" || echo "no"`);
+                if (writable.trim() === 'yes') {
+                    await execFn(`${CFG.BB} echo "${val}" > "${file}" 2>/dev/null`);
+                    // Verify each file immediately
+                    const actual = await execFn(`${CFG.BB} cat "${file}" 2>/dev/null`);
+                    if (actual.trim() === val) {
                         successCount++;
+                    } else {
+                        failedPaths.push(file);
                     }
+                } else {
+                    failedPaths.push(`${file} (not writable)`);
                 }
-                showStatus(`✅ Applied to ${successCount}/${fileList.length} paths`, 'success');
-            } else {
-                await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);
             }
-            if (cfg.persist) await saveValue(id, val);
-            cfg.current = val;
-            if (st) { st.textContent = on ? '✅ ON' : '❌ OFF'; st.style.color = on ? 'var(--green)' : 'var(--text-dim)'; }
-            showStatus(`✅ ${cfg.label}: ${on ? 'ON' : 'OFF'}`, 'success');
-            setTimeout(async () => {
-                try {
+            
+            // Update UI based on results
+            if (successCount === totalPaths) {
+                if (st) { 
+                    st.textContent = on ? '✅ ON' : '❌ OFF'; 
+                    st.style.color = on ? 'var(--green)' : 'var(--text-dim)'; 
+                }
+                showStatus(`✅ ${cfg.label}: ${on ? 'ON' : 'OFF'} (${successCount}/${totalPaths} paths)`, 'success');
+            } else if (successCount > 0) {
+                if (st) { 
+                    st.textContent = `⚠️ ${successCount}/${totalPaths}`; 
+                    st.style.color = 'var(--orange)';                 }
+                showStatus(`⚠️ ${cfg.label}: ${successCount}/${totalPaths} succeeded${failedPaths.length ? `, ${failedPaths.length} failed` : ''}`, 'warning', 5000);
+            } else {
+                if (st) { 
+                    st.textContent = '❌ Failed'; 
+                    st.style.color = 'var(--red)'; 
+                }
+                showStatus(`❌ ${cfg.label}: All ${totalPaths} paths failed`, 'error', 5000);
+            }
+            
+        } else {
+            // Single path handling (original logic)
+            await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);
+            
+            // Verify single path
+            const actual = await execFn(`${CFG.BB} cat "${cfg.path}" 2>/dev/null`);
+            if (actual.trim() === val) {
+                if (st) { 
+                    st.textContent = on ? '✅ ON' : '❌ OFF'; 
+                    st.style.color = on ? 'var(--green)' : 'var(--text-dim)'; 
+                }
+                showStatus(`✅ ${cfg.label}: ${on ? 'ON' : 'OFF'}`, 'success');
+            } else {
+                if (st) { 
+                    st.textContent = `⚠️ ${actual.trim()}`; 
+                    st.style.color = 'var(--orange)'; 
+                }
+                showStatus(`⚠️ ${cfg.label}: wrote ${val}, kernel has ${actual.trim()}`, 'warning', 5000);
+            }
+        }
+        
+        // Save value if persistent
+        if (cfg.persist) await saveValue(id, val);
+        cfg.current = val;
+        
+        // Refresh UI state after short delay
+        setTimeout(async () => {
+            try {
+                if (cfg.path.includes('*')) {
+                    // For wildcards, check first successful path as representative
+                    const dir = cfg.path.substring(0, cfg.path.lastIndexOf('/'));
+                    const pattern = cfg.path.substring(cfg.path.lastIndexOf('/') + 1);
+                    const files = await execFn(`${CFG.BB} ls ${dir}/${pattern} 2>/dev/null`);
+                    const fileList = files.split('\n').filter(f => f.trim());
+                    if (fileList.length > 0) {
+                        const sample = await execFn(`${CFG.BB} cat "${fileList[0]}" 2>/dev/null`);
+                        const actualOn = (sample.trim() === cfg.on);
+                        const el = document.getElementById(`tf-ct-${id}`);
+                        if (el) el.checked = actualOn;
+                    }                } else {
                     const actual = await readCurrentValue(cfg.path);
                     if (actual === null || actual === undefined) return;
                     const el = document.getElementById(`tf-ct-${id}`);
                     const actualOn = (actual === cfg.on);
                     cfg.current = actual;
                     if (el) el.checked = actualOn;
-                    if (st) {
-                        if (actualOn !== on) { st.textContent = `⚠️ ${actual}`; st.style.color = 'var(--orange)'; showStatus(`⚠️ ${cfg.label}: wrote ${val}, kernel has ${actual}`, 'warning', 5000); }
-                        else { st.textContent = actualOn ? '✅ ON' : '❌ OFF'; st.style.color = actualOn ? 'var(--green)' : 'var(--text-dim)'; }
-                    }
-                } catch (e) { console.warn('[Toggle verify]', e); }
-            }, 350);
-        } catch (e) {
-            console.error(e);
-            const el = document.getElementById(`tf-ct-${id}`);
-            if (el) el.checked = !on;
-            showStatus(`❌ ${e.message}`, 'error', 4000);
-        }
+                }
+            } catch (e) { console.warn('[Toggle verify]', e); }
+        }, 350);
+        
+    } catch (e) {
+        console.error(e);
+        const el = document.getElementById(`tf-ct-${id}`);
+        if (el) el.checked = !on;
+        showStatus(`❌ ${e.message}`, 'error', 4000);
     }
+}
 
     async function applyPPMPolicy(ctrlId, policyIdx, enabled) {
         if (!rootAvailable) { showStatus('⚠️ Root required', 'error'); return; }
