@@ -232,15 +232,106 @@
                 const excludePids = "-path '/proc/[0-9]*' -prune -o";
                 
                 if (byPath) {
-                    const pathCheck = await execFn(`test -e "${kw}" && echo "exists" || echo "notfound"`);
-                    if (pathCheck.trim() === 'exists') {
-                        const isDir = await execFn(`test -d "${kw}" && echo "dir" || echo "file"`);
-                        if (isDir.trim() === 'dir') {
-                            const out = await execFn(`${CFG.BB} find "${kw}" -type f 2>/dev/null | ${CFG.BB} head -n ${CFG.maxResults}`);
-                            found = out.split('\n').filter(l => l.trim());
-                        } else { found = [kw]; }
+    // 1. FIRST: Check if keyword is an exact full path
+    if (kw.startsWith('/')) {
+        const exists = await execFn(`${CFG.BB} test -e "${kw}" 2>/dev/null && echo "yes" || echo "no"`);
+        if (exists.trim() === 'yes') {
+            const isDir = await execFn(`${CFG.BB} test -d "${kw}" 2>/dev/null && echo "dir" || echo "file"`);
+            if (isDir.trim() === 'dir') {
+                // List files in directory
+                const filesOut = await execFn(`${CFG.BB} find "${kw}" -maxdepth 1 -type f 2>/dev/null | ${CFG.BB} head -n ${CFG.maxResults}`);
+                found = filesOut.split('\n').filter(l => l.trim());
+            } else {
+                // It's a file
+                found = [kw];
+            }
+        }
+    }
+    
+    // 2. SECOND: Check known locations (fast)
+if (found.length === 0) {
+    const knownPaths = [
+        `/sys/${kw}`,
+        `/dev/${kw}`
+    ];
+    
+    for (const expPath of knownPaths) {
+        try {
+            const exists = await execFn(`${CFG.BB} test -d "${expPath}" 2>/dev/null && echo "yes" || echo "no"`);
+            if (exists.trim() === 'yes') {
+                const filesOut = await execFn(`${CFG.BB} ls -1 "${expPath}" 2>/dev/null | ${CFG.BB} head -n 100`);
+                const files = filesOut.split('\n').filter(l => l.trim());
+                for (const f of files) {
+                    const fullPath = `${expPath}/${f}`;
+                    const isFile = await execFn(`${CFG.BB} test -f "${fullPath}" 2>/dev/null && echo "yes" || echo "no"`);
+                    if (isFile.trim() === 'yes') {
+                        found.push(fullPath);
                     }
-                } else if (byName && !byContent && !byPath) {
+                }
+            }
+        } catch (e) { /* skip errors */ }
+    }
+    
+    // Check /proc for non-numeric directories containing keyword
+    try {
+        // List /proc dirs that start with letters (not PIDs)
+        const procDirsCmd = `${CFG.BB} ls -1 /proc 2>/dev/null | ${CFG.BB} grep "^[a-z]"`;
+        const procDirsOut = await execFn(procDirsCmd);
+        const procTopDirs = procDirsOut.split('\n').filter(l => l.trim());
+        
+        for (const dirName of procTopDirs) {
+            const fullPath = `/proc/${dirName}`;
+            // Check if directory name contains keyword
+            if (dirName.toLowerCase().includes(kw.toLowerCase())) {
+                const isDir = await execFn(`${CFG.BB} test -d "${fullPath}" 2>/dev/null && echo "yes" || echo "no"`);
+                if (isDir.trim() === 'yes') {
+                    const filesOut = await execFn(`${CFG.BB} find "${fullPath}" -maxdepth 2 -type f 2>/dev/null | ${CFG.BB} head -n 100`);
+                    const files = filesOut.split('\n').filter(l => l.trim());
+                    found = [...found, ...files];
+                }
+            }
+            
+            // Also check subdirectories (e.g., /proc/sys/kernel)
+            try {
+                const subCmd = `${CFG.BB} ls -1 "${fullPath}" 2>/dev/null | ${CFG.BB} grep -i "${kw}"`;
+                const subOut = await execFn(subCmd);
+                const subDirs = subOut.split('\n').filter(l => l.trim());
+                
+                for (const sub of subDirs) {
+                    const subPath = `${fullPath}/${sub}`;
+                    const isDir = await execFn(`${CFG.BB} test -d "${subPath}" 2>/dev/null && echo "yes" || echo "no"`);
+                    if (isDir.trim() === 'yes') {
+                        const filesOut = await execFn(`${CFG.BB} find "${subPath}" -maxdepth 1 -type f 2>/dev/null | ${CFG.BB} head -n 100`);
+                        const files = filesOut.split('\n').filter(l => l.trim());
+                        found = [...found, ...files];
+                    }
+                }
+            } catch (e) { /* skip */ }
+        }
+    } catch (e) { /* skip */ }
+}
+    
+    // 3. THIRD: Limited wildcard search if still nothing found
+    if (found.length === 0) {
+        const limitedPaths = ['/sys', '/proc/sys', '/sys/devices', '/sys/class', '/sys/module'];
+        for (const basePath of limitedPaths) {
+            try {
+                const cmd = `${CFG.BB} find "${basePath}" -maxdepth 3 -type d -name "*${kw}*" 2>/dev/null | ${CFG.BB} head -n 10`;
+                const dirOut = await execFn(cmd);
+                const dirs = dirOut.split('\n').filter(l => l.trim());
+                
+                for (const dir of dirs) {
+                    const filesOut = await execFn(`${CFG.BB} find "${dir}" -maxdepth 1 -type f 2>/dev/null | ${CFG.BB} head -n 50`);
+                    const dirFiles = filesOut.split('\n').filter(l => l.trim());
+                    found = [...found, ...dirFiles];
+                }
+            } catch (e) { /* skip */ }
+        }
+    }
+    
+    // Remove duplicates
+    found = [...new Set(found)].slice(0, CFG.maxResults);
+} else if (byName && !byContent && !byPath) {
                     const out = await execFn(`${CFG.BB} find ${allPaths.join(' ')} ${excludePids} -type f -name "*${kw}*" 2>/dev/null | ${CFG.BB} head -n ${CFG.maxResults}`);
                     found = filterProcPids(out.split('\n').filter(l => l.trim()));
                 } else if (byContent && !byName && !byPath) {                    const out = await execFn(`${CFG.BB} grep -ril --binary-files=without-match "${kw}" ${allPaths.join(' ')} ${excludePids} 2>/dev/null | ${CFG.BB} head -n ${CFG.maxResults}`);
