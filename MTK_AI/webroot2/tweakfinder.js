@@ -21,6 +21,7 @@
     let searchCache = {}, controls = [], analyzing = null, editingId = null;
     let rootAvailable = false, currentApp = null, appScripts = {};
     let watchdogInterval = null;
+    let currentBrowsePath = '/', browseHistory = [];
 
     // ========== ROOT EXECUTION WRAPPER ==========
     const execFn = window.exec || (async function(cmd, timeout = 30000) {
@@ -46,8 +47,7 @@
     .tf-header h1 { font-size: 18px; font-weight: 700; }
     .tf-header .status { font-size: 11px; color: var(--text-dim); }
     .tf-search-box { display: flex; gap: 8px; margin-bottom: 12px; }
-    .tf-search-box input { flex: 1; padding: 12px 14px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 12px; font-size: 14px; }
-    .tf-search-box input:focus { outline: none; border-color: var(--blue); }    .tf-search-box button { padding: 12px 16px; background: var(--blue); color: white; border: none; border-radius: 12px; font-weight: 600; font-size: 14px; }
+    .tf-search-box input { flex: 1; padding: 12px 14px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 12px; font-size: 14px; }    .tf-search-box input:focus { outline: none; border-color: var(--blue); }    .tf-search-box button { padding: 12px 16px; background: var(--blue); color: white; border: none; border-radius: 12px; font-weight: 600; font-size: 14px; }
     .tf-search-options { display: flex; gap: 12px; margin-bottom: 16px; font-size: 12px; flex-wrap: wrap; }
     .tf-search-options label { display: flex; align-items: center; gap: 4px; color: var(--text-dim); }
     .tf-search-options input { accent-color: var(--blue); }
@@ -96,8 +96,7 @@
     .tf-modal-field { margin-bottom: 14px; }
     .tf-modal-field label { display: block; font-size: 12px; margin-bottom: 5px; color: var(--text-dim); }
     .tf-modal-field input, .tf-modal-field select { width: 100%; padding: 10px; background: #2c2c2e; color: white; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
-    .tf-modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }    .tf-modal-check { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); }
-    .tf-modal-check input { accent-color: var(--blue); }
+    .tf-modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }    .tf-modal-check { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); }    .tf-modal-check input { accent-color: var(--blue); }
     .tf-modal-actions { display: flex; gap: 10px; margin-top: 16px; }
     .tf-modal-actions button { flex: 1; padding: 11px; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; }
     .tf-modal-actions .cancel { background: #2c2c2e; color: white; }
@@ -146,8 +145,7 @@
     .tf-app-icon { width: 32px; height: 32px; border-radius: 8px; margin-right: 12px; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
     .tf-app-item button { z-index: 100; position: relative; pointer-events: auto !important; }
     .tf-app-item > div[onclick] { pointer-events: none; }    .tf-app-item > div[onclick] > * { pointer-events: auto; }
-    .tf-app-item > div[onclick] button { pointer-events: auto !important; }
-    `;
+    .tf-app-item > div[onclick] button { pointer-events: auto !important; }    `;
 
     // ========== UTILITY FUNCTIONS ==========
     function showStatus(msg, type = 'info', dur = 3000) {
@@ -197,7 +195,6 @@
             }            return extraPaths;
         } catch (e) { return []; }
     }
-
     // ========== SEARCH & ANALYSIS ==========
     async function doSearch() {
         if (!rootAvailable) { showStatus('⚠️ Root not available', 'error'); return; }
@@ -206,7 +203,7 @@
         const byContent = document.getElementById('tf-opt-content').checked;
         const byPath = document.getElementById('tf-opt-path').checked;
         const status = document.getElementById('tf-search-status');
-        const results = document.getElementById('tf-search-results-container');
+        const results = document.getElementById('tf-browse-results-container');
         
         if (!kw) { showStatus('Enter a keyword', 'warning'); return; }
         if (!byName && !byContent && !byPath) { showStatus('Select search mode', 'warning'); return; }
@@ -229,114 +226,100 @@
                 let found = [];
                 const chipsetPaths = await getChipsetProcPaths();
                 const allPaths = [...new Set([...CFG.safePaths, ...chipsetPaths])];
-                const excludePids = "-path '/proc/[0-9]*' -prune -o";
                 
                 if (byPath) {
-    // 1. FIRST: Check if keyword is an exact full path
-    if (kw.startsWith('/')) {
-        const exists = await execFn(`${CFG.BB} test -e "${kw}" 2>/dev/null && echo "yes" || echo "no"`);
-        if (exists.trim() === 'yes') {
-            const isDir = await execFn(`${CFG.BB} test -d "${kw}" 2>/dev/null && echo "dir" || echo "file"`);
-            if (isDir.trim() === 'dir') {
-                // List files in directory
-                const filesOut = await execFn(`${CFG.BB} find "${kw}" -maxdepth 1 -type f 2>/dev/null | ${CFG.BB} head -n ${CFG.maxResults}`);
-                found = filesOut.split('\n').filter(l => l.trim());
-            } else {
-                // It's a file
-                found = [kw];
-            }
-        }
-    }
-    
-    // 2. SECOND: Check known locations (fast)
-if (found.length === 0) {
-    const knownPaths = [
-        `/sys/${kw}`,
-        `/dev/${kw}`
-    ];
-    
-    for (const expPath of knownPaths) {
-        try {
-            const exists = await execFn(`${CFG.BB} test -d "${expPath}" 2>/dev/null && echo "yes" || echo "no"`);
-            if (exists.trim() === 'yes') {
-                const filesOut = await execFn(`${CFG.BB} ls -1 "${expPath}" 2>/dev/null | ${CFG.BB} head -n 100`);
-                const files = filesOut.split('\n').filter(l => l.trim());
-                for (const f of files) {
-                    const fullPath = `${expPath}/${f}`;
-                    const isFile = await execFn(`${CFG.BB} test -f "${fullPath}" 2>/dev/null && echo "yes" || echo "no"`);
-                    if (isFile.trim() === 'yes') {
-                        found.push(fullPath);
+                    // 1. FIRST: Check if keyword is an exact full path
+                    if (kw.startsWith('/')) {
+                        const exists = await execFn(`${CFG.BB} test -e "${kw}" 2>/dev/null && echo "yes" || echo "no"`);
+                        if (exists.trim() === 'yes') {
+                            const isDir = await execFn(`${CFG.BB} test -d "${kw}" 2>/dev/null && echo "dir" || echo "file"`);
+                            if (isDir.trim() === 'dir') {
+                                const filesOut = await execFn(`${CFG.BB} find "${kw}" -maxdepth 1 -type f 2>/dev/null | ${CFG.BB} head -n ${CFG.maxResults}`);
+                                found = filesOut.split('\n').filter(l => l.trim());
+                            } else {
+                                found = [kw];
+                            }
+                        }
                     }
-                }
-            }
-        } catch (e) { /* skip errors */ }
-    }
-    
-    // Check /proc for non-numeric directories containing keyword
-    try {
-        // List /proc dirs that start with letters (not PIDs)
-        const procDirsCmd = `${CFG.BB} ls -1 /proc 2>/dev/null | ${CFG.BB} grep "^[a-z]"`;
-        const procDirsOut = await execFn(procDirsCmd);
-        const procTopDirs = procDirsOut.split('\n').filter(l => l.trim());
-        
-        for (const dirName of procTopDirs) {
-            const fullPath = `/proc/${dirName}`;
-            // Check if directory name contains keyword
-            if (dirName.toLowerCase().includes(kw.toLowerCase())) {
-                const isDir = await execFn(`${CFG.BB} test -d "${fullPath}" 2>/dev/null && echo "yes" || echo "no"`);
-                if (isDir.trim() === 'yes') {
-                    const filesOut = await execFn(`${CFG.BB} find "${fullPath}" -maxdepth 2 -type f 2>/dev/null | ${CFG.BB} head -n 100`);
-                    const files = filesOut.split('\n').filter(l => l.trim());
-                    found = [...found, ...files];
-                }
-            }
-            
-            // Also check subdirectories (e.g., /proc/sys/kernel)
-            try {
-                const subCmd = `${CFG.BB} ls -1 "${fullPath}" 2>/dev/null | ${CFG.BB} grep -i "${kw}"`;
-                const subOut = await execFn(subCmd);
-                const subDirs = subOut.split('\n').filter(l => l.trim());
-                
-                for (const sub of subDirs) {
-                    const subPath = `${fullPath}/${sub}`;
-                    const isDir = await execFn(`${CFG.BB} test -d "${subPath}" 2>/dev/null && echo "yes" || echo "no"`);
-                    if (isDir.trim() === 'yes') {
-                        const filesOut = await execFn(`${CFG.BB} find "${subPath}" -maxdepth 1 -type f 2>/dev/null | ${CFG.BB} head -n 100`);
-                        const files = filesOut.split('\n').filter(l => l.trim());
-                        found = [...found, ...files];
+                    
+                    // 2. SECOND: Check known locations (fast)
+                    if (found.length === 0) {                        const knownPaths = [`/sys/${kw}`, `/dev/${kw}`];
+                        for (const expPath of knownPaths) {
+                            try {
+                                const exists = await execFn(`${CFG.BB} test -d "${expPath}" 2>/dev/null && echo "yes" || echo "no"`);
+                                if (exists.trim() === 'yes') {
+                                    const filesOut = await execFn(`${CFG.BB} ls -1 "${expPath}" 2>/dev/null | ${CFG.BB} head -n 100`);
+                                    const files = filesOut.split('\n').filter(l => l.trim());
+                                    for (const f of files) {
+                                        const fullPath = `${expPath}/${f}`;
+                                        const isFile = await execFn(`${CFG.BB} test -f "${fullPath}" 2>/dev/null && echo "yes" || echo "no"`);
+                                        if (isFile.trim() === 'yes') found.push(fullPath);
+                                    }
+                                }
+                            } catch (e) { /* skip */ }
+                        }
+                        
+                        // Check /proc for non-numeric directories containing keyword
+                        try {
+                            const procDirsCmd = `${CFG.BB} ls -1 /proc 2>/dev/null | ${CFG.BB} grep "^[a-z]"`;
+                            const procDirsOut = await execFn(procDirsCmd);
+                            const procTopDirs = procDirsOut.split('\n').filter(l => l.trim());
+                            
+                            for (const dirName of procTopDirs) {
+                                const fullPath = `/proc/${dirName}`;
+                                if (dirName.toLowerCase().includes(kw.toLowerCase())) {
+                                    const isDir = await execFn(`${CFG.BB} test -d "${fullPath}" 2>/dev/null && echo "yes" || echo "no"`);
+                                    if (isDir.trim() === 'yes') {
+                                        const filesOut = await execFn(`${CFG.BB} find "${fullPath}" -maxdepth 2 -type f 2>/dev/null | ${CFG.BB} head -n 100`);
+                                        const files = filesOut.split('\n').filter(l => l.trim());
+                                        found = [...found, ...files];
+                                    }
+                                }
+                                try {
+                                    const subCmd = `${CFG.BB} ls -1 "${fullPath}" 2>/dev/null | ${CFG.BB} grep -i "${kw}"`;
+                                    const subOut = await execFn(subCmd);
+                                    const subDirs = subOut.split('\n').filter(l => l.trim());
+                                    for (const sub of subDirs) {
+                                        const subPath = `${fullPath}/${sub}`;
+                                        const isDir = await execFn(`${CFG.BB} test -d "${subPath}" 2>/dev/null && echo "yes" || echo "no"`);
+                                        if (isDir.trim() === 'yes') {
+                                            const filesOut = await execFn(`${CFG.BB} find "${subPath}" -maxdepth 1 -type f 2>/dev/null | ${CFG.BB} head -n 100`);
+                                            const files = filesOut.split('\n').filter(l => l.trim());
+                                            found = [...found, ...files];
+                                        }
+                                    }
+                                } catch (e) { /* skip */ }
+                            }
+                        } catch (e) { /* skip */ }
                     }
-                }
-            } catch (e) { /* skip */ }
-        }
-    } catch (e) { /* skip */ }
-}
-    
-    // 3. THIRD: Limited wildcard search if still nothing found
-    if (found.length === 0) {
-        const limitedPaths = ['/sys', '/proc/sys', '/sys/devices', '/sys/class', '/sys/module'];
-        for (const basePath of limitedPaths) {
-            try {
-                const cmd = `${CFG.BB} find "${basePath}" -maxdepth 3 -type d -name "*${kw}*" 2>/dev/null | ${CFG.BB} head -n 10`;
-                const dirOut = await execFn(cmd);
-                const dirs = dirOut.split('\n').filter(l => l.trim());
-                
-                for (const dir of dirs) {
-                    const filesOut = await execFn(`${CFG.BB} find "${dir}" -maxdepth 1 -type f 2>/dev/null | ${CFG.BB} head -n 50`);
-                    const dirFiles = filesOut.split('\n').filter(l => l.trim());
-                    found = [...found, ...dirFiles];
-                }
-            } catch (e) { /* skip */ }
-        }
-    }
-    
-    // Remove duplicates
-    found = [...new Set(found)].slice(0, CFG.maxResults);
-} else if (byName && !byContent && !byPath) {
+                                        // 3. THIRD: Limited wildcard search if still nothing found
+                    if (found.length === 0) {
+                        const limitedPaths = ['/sys', '/proc/sys', '/sys/devices', '/sys/class', '/sys/module'];
+                        for (const basePath of limitedPaths) {
+                            try {
+                                const cmd = `${CFG.BB} find "${basePath}" -maxdepth 3 -type d -name "*${kw}*" 2>/dev/null | ${CFG.BB} head -n 10`;
+                                const dirOut = await execFn(cmd);
+                                const dirs = dirOut.split('\n').filter(l => l.trim());
+                                for (const dir of dirs) {
+                                    const filesOut = await execFn(`${CFG.BB} find "${dir}" -maxdepth 1 -type f 2>/dev/null | ${CFG.BB} head -n 50`);
+                                    const dirFiles = filesOut.split('\n').filter(l => l.trim());
+                                    found = [...found, ...dirFiles];
+                                }
+                            } catch (e) { /* skip */ }
+                        }
+                    }
+                    found = [...new Set(found)].slice(0, CFG.maxResults);
+                    
+                } else if (byName && !byContent && !byPath) {
+                    const excludePids = "-path '/proc/[0-9]*' -prune -o";
                     const out = await execFn(`${CFG.BB} find ${allPaths.join(' ')} ${excludePids} -type f -name "*${kw}*" 2>/dev/null | ${CFG.BB} head -n ${CFG.maxResults}`);
                     found = filterProcPids(out.split('\n').filter(l => l.trim()));
-                } else if (byContent && !byName && !byPath) {                    const out = await execFn(`${CFG.BB} grep -ril --binary-files=without-match "${kw}" ${allPaths.join(' ')} ${excludePids} 2>/dev/null | ${CFG.BB} head -n ${CFG.maxResults}`);
+                } else if (byContent && !byName && !byPath) {
+                    const excludePids = "-path '/proc/[0-9]*' -prune -o";
+                    const out = await execFn(`${CFG.BB} grep -ril --binary-files=without-match "${kw}" ${allPaths.join(' ')} ${excludePids} 2>/dev/null | ${CFG.BB} head -n ${CFG.maxResults}`);
                     found = filterProcPids(out.split('\n').filter(l => l.trim()));
                 } else {
+                    const excludePids = "-path '/proc/[0-9]*' -prune -o";
                     const n = await execFn(`${CFG.BB} find ${allPaths.join(' ')} ${excludePids} -type f -name "*${kw}*" 2>/dev/null`);
                     const c = await execFn(`${CFG.BB} grep -ril --binary-files=without-match "${kw}" ${allPaths.join(' ')} ${excludePids} 2>/dev/null`);
                     found = [...new Set([...n.split('\n'), ...c.split('\n')].filter(l => l.trim()))].slice(0, CFG.maxResults);
@@ -358,18 +341,105 @@ if (found.length === 0) {
                 renderResults(found);
             } catch (e) {
                 console.error(e);
-                status.textContent = `⚠️ ${e.message}`;
-                status.style.color = 'var(--red)';
+                status.textContent = `⚠️ ${e.message}`;                status.style.color = 'var(--red)';
                 results.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red)">Search failed</div>';
             }
         }, 100);
     }
 
+    // ========== BROWSE FUNCTIONS ==========
+    async function browsePath(path) {
+        if (!rootAvailable) { showStatus('⚠️ Root not available', 'error'); return; }
+        const status = document.getElementById('tf-search-status');
+        const results = document.getElementById('tf-browse-results-container');
+        const browsePathEl = document.getElementById('tf-browse-current-path');
+        
+        status.style.display = 'block';
+        status.textContent = `📂 ${path}`;
+        status.style.color = 'var(--blue)';
+        if (browsePathEl) browsePathEl.textContent = path;
+        results.innerHTML = '<div class="tf-loading"><div class="tf-spinner"></div>Loading...</div>';
+        
+        try {
+            const dirCmd = `${CFG.BB} ls -1 "${path}" 2>/dev/null`;
+            const dirOut = await execFn(dirCmd);
+            const items = dirOut.split('\n').filter(l => l.trim());
+            
+            let html = '';
+            if (path !== '/') {
+                const parentPath = path.substring(0, path.lastIndexOf('/')) || '/';
+                html += `<div class="tf-list-item" style="background:rgba(10,132,255,0.15);border-color:var(--blue)">
+                    <div class="tf-item-content" onclick="TweakFinder.browsePath('${parentPath}')">
+                        <div class="tf-item-title">📁 .. (Parent)</div>
+                        <div class="tf-item-desc">${parentPath}</div>
+                    </div>
+                </div>`;
+            }
+            
+            const dirs = [], files = [];
+            for (const item of items) {
+                const fullPath = path === '/' ? `/${item}` : `${path}/${item}`;
+                const isDir = await execFn(`${CFG.BB} test -d "${fullPath}" && echo "yes" || echo "no"`);
+                if (isDir.trim() === 'yes') dirs.push({ name: item, path: fullPath });
+                else files.push({ name: item, path: fullPath });
+            }
+            
+            for (const dir of dirs.sort((a, b) => a.name.localeCompare(b.name))) {
+                const writable = CFG.safePaths.some(s => dir.path.startsWith(s));
+                const hasCtrl = controls.find(c => c.path === dir.path);
+                html += `<div class="tf-list-item">
+                    <div class="tf-item-content" onclick="TweakFinder.browsePath('${dir.path}')">
+                        <div class="tf-item-title">📁 ${escapeHtml(dir.name)}</div>
+                        <div class="tf-item-desc">${escapeHtml(dir.path)}</div>                        ${hasCtrl ? '<span class="tf-item-badge">✓ Control</span>' : ''}
+                    </div>
+                    <div style="display:flex;gap:4px">
+                        ${writable ? `<button class="tf-btn-sm add" onclick="event.stopPropagation(); TweakFinder.browseAddControl('${dir.path}', 'dir')">➕</button>` : ''}
+                    </div>
+                </div>`;
+            }
+            
+            for (const file of files.sort((a, b) => a.name.localeCompare(b.name))) {
+                const writable = CFG.safePaths.some(s => file.path.startsWith(s));
+                const hasCtrl = controls.find(c => c.path === file.path);
+                html += `<div class="tf-list-item">
+                    <div class="tf-item-content" onclick="TweakFinder.previewFile('${file.path}')">
+                        <div class="tf-item-title">📄 ${escapeHtml(file.name)}</div>
+                        <div class="tf-item-desc">${escapeHtml(file.path)}</div>
+                        ${hasCtrl ? '<span class="tf-item-badge">✓ Control</span>' : ''}
+                    </div>
+                    <div style="display:flex;gap:4px">
+                        ${writable && !hasCtrl ? `<button class="tf-btn-sm add" onclick="event.stopPropagation(); TweakFinder.analyzeFile('${file.path}')">➕</button>` : ''}
+                        ${hasCtrl ? `<button class="tf-btn-sm edit" onclick="event.stopPropagation(); TweakFinder.editControlByPath('${file.path}')">⚙️</button>` : ''}
+                        <button class="tf-btn-sm" onclick="event.stopPropagation(); TweakFinder.previewFile('${file.path}')">✏️</button>
+                    </div>
+                </div>`;
+            }
+            
+            if (!items.length) html = '<div class="tf-empty-state"><div class="icon">📭</div><p>Empty directory</p></div>';
+            results.innerHTML = html;
+            currentBrowsePath = path;
+        } catch (e) {
+            console.error(e);
+            status.textContent = `⚠️ ${e.message}`;
+            status.style.color = 'var(--red)';
+            results.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red)">Failed to load directory</div>';
+        }
+    }
+
+    async function browseAddControl(path, type) {
+        if (type === 'dir') {
+            const name = prompt('Enter control name for directory:', path.split('/').pop());
+            if (name) {
+                analyzing = { path, type: 'text', options: { label: name, path }, content: path };
+                showCreator();
+            }
+        }
+    }
+
     function renderResults(paths) {
         const container = document.getElementById('tf-search-results-container');
         if (!container) return;
-        if (!paths.length) {
-            container.innerHTML = '<div class="tf-empty-state"><div class="icon">📭</div><p>No results</p></div>';
+        if (!paths.length) {            container.innerHTML = '<div class="tf-empty-state"><div class="icon">📭</div><p>No results</p></div>';
             return;
         }
         let html = '';
@@ -418,8 +488,7 @@ if (found.length === 0) {
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-shrink:0">
                     <strong style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">📄 ${escapeHtml(name)}</strong>
                     <button onclick="this.closest('.tf-modal').remove()" style="background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;padding:0;width:32px;height:32px">&times;</button>
-                </div>
-                <pre style="background:#000;padding:12px;border-radius:8px;font-size:9px;color:#0f0;flex:1;overflow-y:auto;overflow-x:auto;white-space:pre;min-height:0;line-height:1.3">${escapeHtml(clean)}</pre>
+                </div>                <pre style="background:#000;padding:12px;border-radius:8px;font-size:9px;color:#0f0;flex:1;overflow-y:auto;overflow-x:auto;white-space:pre;min-height:0;line-height:1.3">${escapeHtml(clean)}</pre>
                 <div style="margin-top:12px;text-align:center;flex-shrink:0;display:flex;gap:8px;justify-content:center">
                     <button onclick="TweakFinder.copyContent('${escapeHtml(clean).replace(/'/g, "\\'")}')" style="padding:10px 16px;background:#0A84FF;color:white;border:none;border-radius:10px;font-weight:600">📋 Copy</button>
                     <button onclick="this.closest('.tf-modal').remove()" style="padding:10px 24px;background:#2c2c2e;color:white;border:none;border-radius:10px;font-weight:600">Close</button>
@@ -468,8 +537,7 @@ if (found.length === 0) {
 
     async function scanPathForOptions(path) {
         try {
-            const dir = path.substring(0, path.lastIndexOf('/'));
-            const files = await execFn(`${CFG.BB} ls "${dir}" 2>/dev/null`);
+            const dir = path.substring(0, path.lastIndexOf('/'));            const files = await execFn(`${CFG.BB} ls "${dir}" 2>/dev/null`);
             const fileList = files.split('\n').filter(f => f.trim());
             const options = { min: null, max: null, values: [] };
             for (const file of fileList) {
@@ -518,8 +586,7 @@ if (found.length === 0) {
             const val = content.trim();
             if (!val) throw new Error('Empty file');
             
-            if (path.includes('policy_status') || path.includes('ppm')) {
-                const policies = parsePPMStatus(content);
+            if (path.includes('policy_status') || path.includes('ppm')) {                const policies = parsePPMStatus(content);
                 if (policies.length > 0) {
                     analyzing = { path, type: 'ppm_policy', options: { policies }, content: val };
                     showCreator();
@@ -569,7 +636,6 @@ if (found.length === 0) {
     function detectMax(p, cur) { const l = p.toLowerCase(); if (l.includes('max') || l.includes('high')) return Math.max(100, cur * 2); if (l.includes('temp') || l.includes('thermal')) return 100; if (l.includes('freq') || l.includes('mhz')) return 3000; if (l.includes('volt') || l.includes('mv')) return 1500; if (l.includes('percent') || l.includes('ratio')) return 100; return Math.ceil(cur * 3); }
     function detectStep(p) { const l = p.toLowerCase(); if (l.includes('freq')) return 50; if (l.includes('volt') || l.includes('mv')) return 25; if (l.includes('percent')) return 5; return 1; }
     function detectUnit(p) { const l = p.toLowerCase(); if (l.includes('freq') || l.includes('mhz')) return 'MHz'; if (l.includes('volt') || l.includes('mv')) return 'mV'; if (l.includes('temp')) return '°C'; if (l.includes('percent') || l.includes('ratio')) return '%'; if (l.includes('time') || l.includes('ms')) return 'ms'; return ''; }
-
     // ========== CONTROL CREATOR ==========
     function showCreator() {
         if (!analyzing) return;
@@ -618,8 +684,7 @@ if (found.length === 0) {
                     <label>Available Governors</label>
                     <select id="tf-cc-governor-select" class="tf-gov-select">
                         ${options.governors?.map(g => `<option value="${g}" ${g === options.current ? 'selected' : ''}>${g}</option>`).join('') || ''}
-                    </select>
-                    <div style="font-size:10px;color:var(--text-dim);margin-top:4px">
+                    </select>                    <div style="font-size:10px;color:var(--text-dim);margin-top:4px">
                         Current: <strong style="color:var(--green)">${options.current || 'unknown'}</strong>
                     </div>
                 </div>
@@ -668,8 +733,7 @@ if (found.length === 0) {
                 <div class="tf-modal-actions">
                     ${editingId ? `<button class="delete" onclick="TweakFinder.deleteControl('${options.id}')">🗑️ Delete</button>` : ''}
                     <button class="cancel" onclick="TweakFinder.closeCreator()">Cancel</button>
-                    <button class="create" onclick="${editingId ? `TweakFinder.updateControl('${options.id}')` : `TweakFinder.createControl('${safeId}')`}">${editingId ? 'Save Changes' : 'Create'}</button>
-                </div>
+                    <button class="create" onclick="${editingId ? `TweakFinder.updateControl('${options.id}')` : `TweakFinder.createControl('${safeId}')`}">${editingId ? 'Save Changes' : 'Create'}</button>                </div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -718,8 +782,7 @@ if (found.length === 0) {
             cfg.current = document.getElementById('tf-cc-governor-select').value;
         } else if (type === 'ppm_policy') {
             const checks = document.querySelectorAll('.tf-ppm-policy-check');
-            cfg.policies = [];
-            checks.forEach(chk => {
+            cfg.policies = [];            checks.forEach(chk => {
                 if (chk.checked) {
                     const idx = parseInt(chk.value);
                     const policy = analyzing.options.policies.find(p => p.index === idx);
@@ -768,8 +831,7 @@ if (found.length === 0) {
             const duplicate = controls.find(c => c.path === newPath && c.id !== cfg.id);
             if (duplicate) { showStatus(`⚠️ Path already used by "${duplicate.label}"`, 'warning', 4000); if (!confirm('Continue anyway?')) return; }
             cfg.path = newPath;
-        }
-        cfg.label = label; cfg.persist = persist;
+        }        cfg.label = label; cfg.persist = persist;
 
         if (newType === 'toggle') {
             cfg.type = 'toggle'; cfg.off = document.getElementById('tf-cc-off').value; cfg.on = document.getElementById('tf-cc-on').value;
@@ -818,8 +880,7 @@ if (found.length === 0) {
     async function deleteControl(id) {
         if (!rootAvailable) { showStatus('⚠️ Root required', 'error'); return; }
         if (!confirm('Delete this control?')) return;
-        const idx = controls.findIndex(c => c.id === id); if (idx < 0) return;
-        try {
+        const idx = controls.findIndex(c => c.id === id); if (idx < 0) return;        try {
             controls.splice(idx, 1); await saveRegistry();
             const el = document.getElementById(`tf-ctrl-${id}`); if (el) el.remove();
             try { await execFn(`${CFG.BB} rm -f "${CFG.VALUES_DIR}/${id}.val" 2>/dev/null`); } catch (e) {}
@@ -868,8 +929,7 @@ if (found.length === 0) {
                     <button class="tf-btn-sm remove" onclick="TweakFinder.removeControl('${cfg.id}')">✕</button>
                 </div>
             </div>`;
-        if (isToggle) {
-            html += `<div style="display:flex;justify-content:space-between;align-items:center">
+        if (isToggle) {            html += `<div style="display:flex;justify-content:space-between;align-items:center">
                 <span id="tf-ts-${cfg.id}" style="font-size:11px;color:${cfg.current === cfg.on ? 'var(--green)' : 'var(--text-dim)'}">${cfg.current === cfg.on ? '✅ ON' : '❌ OFF'}</span>
                 <label class="tf-ios-switch"><input type="checkbox" id="tf-ct-${cfg.id}" ${cfg.current === cfg.on ? 'checked' : ''} onchange="TweakFinder.applyToggle('${cfg.id}',this.checked)"><span class="tf-slider"></span></label>
             </div>`;
@@ -918,8 +978,7 @@ if (found.length === 0) {
         } else {
             html += `<input type="text" class="tf-text-control" id="tf-ctext-${cfg.id}" value="${escapeHtml(cfg.current)}" onchange="TweakFinder.applyText('${cfg.id}',this.value)">`;
         }
-        html += `</div>`;
-        container.insertAdjacentHTML('afterbegin', html);
+        html += `</div>`;        container.insertAdjacentHTML('afterbegin', html);
         refreshControlState(cfg).catch(() => {
             if (cfg.persist) {
                 loadValue(cfg.id, cfg.current).then(saved => {                    if (saved !== cfg.current) {
@@ -968,8 +1027,7 @@ if (found.length === 0) {
                     }
                 }
                 showStatus(`✅ Applied to ${successCount}/${fileList.length} paths`, 'success');
-            } else {
-                await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);
+            } else {                await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);
             }
             if (cfg.persist) await saveValue(id, val);            cfg.current = val;
             if (st) { st.textContent = on ? '✅ ON' : '❌ OFF'; st.style.color = on ? 'var(--green)' : 'var(--text-dim)'; }
@@ -1018,8 +1076,7 @@ if (found.length === 0) {
                 }
             }, 300);
         } catch (e) {
-            console.error(e);
-            const toggle = document.getElementById(`tf-ppm-toggle-${ctrlId}-${policyIdx}`);
+            console.error(e);            const toggle = document.getElementById(`tf-ppm-toggle-${ctrlId}-${policyIdx}`);
             if (toggle) toggle.checked = !enabled;            showStatus(`❌ ${e.message}`, 'error', 4000);
         }
     }
@@ -1068,8 +1125,7 @@ if (found.length === 0) {
     }
 
     async function applyGovernor(id, value) {
-        if (!rootAvailable) { showStatus('⚠️ Root required', 'error'); return; }
-        const cfg = controls.find(c => c.id === id); if (!cfg) { showStatus('❌ Control not found', 'error', 4000); return; }        const sel = document.getElementById(`tf-gov-select-${id}`);
+        if (!rootAvailable) { showStatus('⚠️ Root required', 'error'); return; }        const cfg = controls.find(c => c.id === id); if (!cfg) { showStatus('❌ Control not found', 'error', 4000); return; }        const sel = document.getElementById(`tf-gov-select-${id}`);
         try {
             if (cfg.path.includes('*')) {
                 const dir = cfg.path.substring(0, cfg.path.lastIndexOf('/'));
@@ -1118,8 +1174,7 @@ if (found.length === 0) {
                     }
                 }
                 showStatus(`✅ Applied to ${successCount}/${fileList.length} paths`, 'success');
-            } else {                await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);
-            }
+            } else {                await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);            }
             if (cfg.persist) await saveValue(id, val);
             cfg.current = val;
             showStatus(`✅ ${cfg.label} updated`, 'success');
@@ -1168,8 +1223,7 @@ if (found.length === 0) {
                             if (actual.trim() !== value) { valDisplay.style.color = 'var(--orange)'; showStatus(`⚠️ Kernel has ${actual.trim()}, not ${value}`, 'warning', 4000); }
                         }
                     }                } catch (e) { /* silent */ }
-            }, 400);
-        } catch (e) {
+            }, 400);        } catch (e) {
             console.error(e);
             showStatus(`❌ ${e.message}`, 'error', 4000);
             setTimeout(async () => {
@@ -1218,8 +1272,7 @@ if (found.length === 0) {
                         if (isOn) { statusEl.textContent = '✅ ON'; statusEl.style.color = 'var(--green)'; }
                         else if (isOff) { statusEl.textContent = '❌ OFF'; statusEl.style.color = 'var(--text-dim)'; }                        else { statusEl.textContent = `⚠️ ${actual}`; statusEl.style.color = 'var(--orange)'; }
                     }
-                    cfg.current = actual; break;
-                }
+                    cfg.current = actual; break;                }
                 case 'slider':
                     const num = parseFloat(actual) || cfg.min;
                     const clamped = Math.max(cfg.min, Math.min(cfg.max, num));
@@ -1268,8 +1321,7 @@ if (found.length === 0) {
         }    }
 
     async function applyAllSavedValues() {
-        if (!rootAvailable) return;
-        let appliedCount = 0;
+        if (!rootAvailable) return;        let appliedCount = 0;
         let failedCount = 0;
         for (const cfg of controls) {
             if (!cfg.persist) continue;
@@ -1318,8 +1370,7 @@ if (found.length === 0) {
                         const wr = await execFn(`test -w "${file}" && echo "yes" || echo "no"`);
                         if (wr.trim() === 'yes') { await execFn(`${CFG.BB} echo "${savedValue}" > "${file}" 2>/dev/null`); }
                     }
-                    cfg.current = savedValue; appliedCount++;
-                } else if (cfg.type === 'ppm_policy') {
+                    cfg.current = savedValue; appliedCount++;                } else if (cfg.type === 'ppm_policy') {
                     if (cfg.policies && cfg.policies.length > 0) {
                         for (const pol of cfg.policies) {
                             const value = pol.enabled ? '1' : '0';
@@ -1368,8 +1419,7 @@ if (found.length === 0) {
     async function deleteAppScript(pkg) {
         if (!confirm(`Delete trigger script for ${pkg}?`)) return;
         try {
-            await execFn(`${CFG.BB} rm -f "${CFG.TRIGGERS_DIR}/${pkg}.sh" 2>/dev/null`);
-            delete appScripts[pkg];
+            await execFn(`${CFG.BB} rm -f "${CFG.TRIGGERS_DIR}/${pkg}.sh" 2>/dev/null`);            delete appScripts[pkg];
             showStatus(`🗑️ Script deleted for ${pkg}`, 'info', 2000);
         } catch (e) { showStatus(`❌ Delete failed: ${e.message}`, 'error', 4000); }
     }
@@ -1385,7 +1435,6 @@ if (found.length === 0) {
 
     async function getCurrentApp() {
         try {
-            // Try multiple methods to detect foreground app
             const methods = [
                 `dumpsys window windows | grep -E 'mCurrentFocus|mFocusedApp' | head -1`,
                 `dumpsys activity activities | grep mResumedActivity`,
@@ -1419,8 +1468,7 @@ if (found.length === 0) {
                     <div class="tf-app-icon">📱</div>
                     <div style="flex:1;min-width:0">
                         <div class="tf-app-pkg">${escapeHtml(pkg)}</div>
-                        <div class="tf-app-status ${hasScript ? 'has-script' : ''}">${hasScript ? '✓ Script' : 'No script'}</div>
-                    </div>
+                        <div class="tf-app-status ${hasScript ? 'has-script' : ''}">${hasScript ? '✓ Script' : 'No script'}</div>                    </div>
                 </div>
                 <div style="display:flex;gap:4px">
                     <button class="tf-btn-sm edit" onclick="TweakFinder.openScriptEditor('${pkg}')">✏️</button>
@@ -1469,8 +1517,7 @@ if (found.length === 0) {
 
     async function testAppScriptFromUI() {
         const pkg = document.getElementById('tf-editor-pkg-name').textContent;
-        await testAppScript(pkg);
-    }
+        await testAppScript(pkg);    }
 
     // ========== TABS & UI INIT ==========
     function switchTab(tabName) {
@@ -1478,6 +1525,11 @@ if (found.length === 0) {
         document.querySelectorAll('.tf-tab-content').forEach(tab => tab.classList.remove('active'));
         document.querySelector(`.tf-tab-btn[onclick*="'${tabName}'"]`)?.classList.add('active');
         document.getElementById(`tf-tab-${tabName}`)?.classList.add('active');
+        
+        // Auto-load browse when tab is opened
+        if (tabName === 'browse' && currentBrowsePath === '/') {
+            setTimeout(() => browsePath('/'), 100);
+        }
     }
 
     function injectStyles() {
@@ -1496,6 +1548,7 @@ if (found.length === 0) {
                 </div>
                 <div class="tf-tab-nav">
                     <button class="tf-tab-btn active" onclick="TweakFinder.switchTab('search')">🔍 Search</button>
+                    <button class="tf-tab-btn" onclick="TweakFinder.switchTab('browse')">📁 Browse</button>
                     <button class="tf-tab-btn" onclick="TweakFinder.switchTab('controls')">🎛️ Controls</button>
                 </div>
                 <div class="tf-cache-info">Cache: <span id="tf-cache-count">0</span> searches <button onclick="TweakFinder.clearCache()">Clear</button></div>
@@ -1505,6 +1558,23 @@ if (found.length === 0) {
                         <div class="tf-empty-state"><div class="icon">🔍</div><p><strong>Search for tweakable files</strong></p><p>Enter a keyword to scan /sys, /proc, /dev paths</p></div>
                     </div>
                 </div>
+                <div id="tf-tab-browse" class="tf-tab-content">
+                    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+                        <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/')" style="background:var(--blue)">🏠 Root</button>
+                        <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/sys')">🔧 Sys</button>
+                        <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/proc')">📊 Proc</button>
+                        <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/dev')">⚡ Dev</button>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px">
+                        📍 Current: <code id="tf-browse-current-path" style="color:var(--blue)">/</code>                    </div>
+                    <div id="tf-browse-results-container">
+    <div class="tf-empty-state">
+        <div class="icon">📁</div>
+        <p><strong>Browse filesystem</strong></p>
+        <p>Navigate directories to find tweakable files</p>
+        <button class="tf-btn-sm add" onclick="TweakFinder.browsePath('/')" style="margin-top:12px">Start Browsing</button>
+    </div>
+</div>
                 <div id="tf-tab-controls" class="tf-tab-content">
                     <div class="tf-section-title">🎛️ My Controls</div>
                     <div id="tf-discovered-controls-container">                        <div class="tf-empty-state"><div class="icon">🎛️</div><p>No controls yet</p><p>Search above, then tap <strong>➕ Add Control</strong></p></div>
@@ -1545,7 +1615,6 @@ if (found.length === 0) {
             </div>
         `;
     }
-
     async function init(containerId) {
         injectStyles();
         const container = document.getElementById(containerId);
@@ -1594,8 +1663,7 @@ if (found.length === 0) {
         // Detect current app
         currentApp = await getCurrentApp();
         document.getElementById('tf-current-app-display').textContent = currentApp || 'No app detected';
-        
-        // Auto-apply saved values
+                // Auto-apply saved values
         setTimeout(() => { applyAllSavedValues(); }, 500);
     }
 
@@ -1604,6 +1672,8 @@ if (found.length === 0) {
         init,
         switchTab,
         doSearch,
+        browsePath,
+        browseAddControl,
         previewFile,
         copyContent,        analyzeFile,
         createControl,
@@ -1642,13 +1712,10 @@ if (found.length === 0) {
     // ==========================================
     // REPLACEMENT CODE (Paste this at the very bottom of tweakfinder.js)
     // ==========================================
-
     function setupTweakFinderModal() {
-        // 1. Find the button in your Tools page
         const btn = document.getElementById('tweakfinder-btn');
-        if (!btn) return; // If button doesn't exist, do nothing
+        if (!btn) return;
 
-        // 2. Create the Modal HTML (Hidden by default)
         if (!document.getElementById('tf-modal')) {
             const modal = document.createElement('div');
             modal.id = 'tf-modal';
@@ -1661,22 +1728,13 @@ if (found.length === 0) {
                 <div id="tf-modal-root" style="padding-bottom:20px;"></div>
             `;
             document.body.appendChild(modal);
-            
-            // Close button logic
-            document.getElementById('tf-close-btn').onclick = () => {
-                modal.style.display = 'none';
-            };
+            document.getElementById('tf-close-btn').onclick = () => { modal.style.display = 'none'; };
         }
 
-        // 3. Handle Click Event
         btn.onclick = async () => {
             const modal = document.getElementById('tf-modal');
             const root = document.getElementById('tf-modal-root');
-            
-            // Show Modal
             modal.style.display = 'block';
-            
-            // Inject styles and Init UI if not already done
             if (!root.hasChildNodes()) {
                 injectStyles(); 
                 await init('tf-modal-root');
@@ -1684,7 +1742,6 @@ if (found.length === 0) {
         };
     }
 
-    // Run setup when page is ready
     document.addEventListener('DOMContentLoaded', setupTweakFinderModal);
 
 })(); // End of script
