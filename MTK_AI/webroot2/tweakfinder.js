@@ -203,7 +203,7 @@
         const byContent = document.getElementById('tf-opt-content').checked;
         const byPath = document.getElementById('tf-opt-path').checked;
         const status = document.getElementById('tf-search-status');
-        const results = document.getElementById('tf-browse-results-container');
+        const results = document.getElementById('tf-search-results-container');
         
         if (!kw) { showStatus('Enter a keyword', 'warning'); return; }
         if (!byName && !byContent && !byPath) { showStatus('Select search mode', 'warning'); return; }
@@ -226,6 +226,7 @@
                 let found = [];
                 const chipsetPaths = await getChipsetProcPaths();
                 const allPaths = [...new Set([...CFG.safePaths, ...chipsetPaths])];
+                const excludePids = "-path '/proc/[0-9]*' -prune -o";
                 
                 if (byPath) {
                     // 1. FIRST: Check if keyword is an exact full path
@@ -242,8 +243,9 @@
                         }
                     }
                     
-                    // 2. SECOND: Check known locations (fast)
-                    if (found.length === 0) {                        const knownPaths = [`/sys/${kw}`, `/dev/${kw}`];
+                    // 2. SECOND: Check known locations (fast)                    
+                    if (found.length === 0) {
+                        const knownPaths = [`/sys/${kw}`, `/dev/${kw}`];
                         for (const expPath of knownPaths) {
                             try {
                                 const exists = await execFn(`${CFG.BB} test -d "${expPath}" 2>/dev/null && echo "yes" || echo "no"`);
@@ -256,7 +258,7 @@
                                         if (isFile.trim() === 'yes') found.push(fullPath);
                                     }
                                 }
-                            } catch (e) { /* skip */ }
+                            } catch (e) { /* skip errors */ }
                         }
                         
                         // Check /proc for non-numeric directories containing keyword
@@ -291,8 +293,8 @@
                                 } catch (e) { /* skip */ }
                             }
                         } catch (e) { /* skip */ }
-                    }
-                                        // 3. THIRD: Limited wildcard search if still nothing found
+                    }                    
+                    // 3. THIRD: Limited wildcard search if still nothing found
                     if (found.length === 0) {
                         const limitedPaths = ['/sys', '/proc/sys', '/sys/devices', '/sys/class', '/sys/module'];
                         for (const basePath of limitedPaths) {
@@ -311,15 +313,12 @@
                     found = [...new Set(found)].slice(0, CFG.maxResults);
                     
                 } else if (byName && !byContent && !byPath) {
-                    const excludePids = "-path '/proc/[0-9]*' -prune -o";
                     const out = await execFn(`${CFG.BB} find ${allPaths.join(' ')} ${excludePids} -type f -name "*${kw}*" 2>/dev/null | ${CFG.BB} head -n ${CFG.maxResults}`);
                     found = filterProcPids(out.split('\n').filter(l => l.trim()));
                 } else if (byContent && !byName && !byPath) {
-                    const excludePids = "-path '/proc/[0-9]*' -prune -o";
                     const out = await execFn(`${CFG.BB} grep -ril --binary-files=without-match "${kw}" ${allPaths.join(' ')} ${excludePids} 2>/dev/null | ${CFG.BB} head -n ${CFG.maxResults}`);
                     found = filterProcPids(out.split('\n').filter(l => l.trim()));
                 } else {
-                    const excludePids = "-path '/proc/[0-9]*' -prune -o";
                     const n = await execFn(`${CFG.BB} find ${allPaths.join(' ')} ${excludePids} -type f -name "*${kw}*" 2>/dev/null`);
                     const c = await execFn(`${CFG.BB} grep -ril --binary-files=without-match "${kw}" ${allPaths.join(' ')} ${excludePids} 2>/dev/null`);
                     found = [...new Set([...n.split('\n'), ...c.split('\n')].filter(l => l.trim()))].slice(0, CFG.maxResults);
@@ -341,9 +340,9 @@
                 renderResults(found);
             } catch (e) {
                 console.error(e);
-                status.textContent = `⚠️ ${e.message}`;                status.style.color = 'var(--red)';
-                results.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red)">Search failed</div>';
-            }
+                status.textContent = `⚠️ ${e.message}`;
+                status.style.color = 'var(--red)';
+                results.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red)">Search failed</div>';            }
         }, 100);
     }
 
@@ -390,9 +389,9 @@
                 html += `<div class="tf-list-item">
                     <div class="tf-item-content" onclick="TweakFinder.browsePath('${dir.path}')">
                         <div class="tf-item-title">📁 ${escapeHtml(dir.name)}</div>
-                        <div class="tf-item-desc">${escapeHtml(dir.path)}</div>                        ${hasCtrl ? '<span class="tf-item-badge">✓ Control</span>' : ''}
-                    </div>
-                    <div style="display:flex;gap:4px">
+                        <div class="tf-item-desc">${escapeHtml(dir.path)}</div>
+                        ${hasCtrl ? '<span class="tf-item-badge">✓ Control</span>' : ''}
+                    </div>                    <div style="display:flex;gap:4px">
                         ${writable ? `<button class="tf-btn-sm add" onclick="event.stopPropagation(); TweakFinder.browseAddControl('${dir.path}', 'dir')">➕</button>` : ''}
                     </div>
                 </div>`;
@@ -439,9 +438,9 @@
     function renderResults(paths) {
         const container = document.getElementById('tf-search-results-container');
         if (!container) return;
-        if (!paths.length) {            container.innerHTML = '<div class="tf-empty-state"><div class="icon">📭</div><p>No results</p></div>';
-            return;
-        }
+        if (!paths.length) {
+            container.innerHTML = '<div class="tf-empty-state"><div class="icon">📭</div><p>No results</p></div>';
+            return;        }
         let html = '';
         paths.forEach(p => {
             const name = p.split('/').pop();
@@ -453,7 +452,8 @@
                     <div class="tf-item-desc">${escapeHtml(p)}</div>
                     ${hasCtrl ? '<span class="tf-item-badge">✓ Control</span>' : ''}
                 </div>
-                <div style="display:flex;gap:4px">                    ${writable && !hasCtrl ? `<button class="tf-btn-sm add" onclick="TweakFinder.analyzeFile('${p}')">➕</button>` : ''}
+                <div style="display:flex;gap:4px">
+                    ${writable && !hasCtrl ? `<button class="tf-btn-sm add" onclick="TweakFinder.analyzeFile('${p}')">➕</button>` : ''}
                     ${hasCtrl ? `<button class="tf-btn-sm edit" onclick="TweakFinder.editControlByPath('${p}')">⚙️</button>` : ''}
                     <button class="tf-btn-sm" onclick="TweakFinder.previewFile('${p}')">✏️</button>
                 </div>
@@ -488,8 +488,8 @@
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-shrink:0">
                     <strong style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">📄 ${escapeHtml(name)}</strong>
                     <button onclick="this.closest('.tf-modal').remove()" style="background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;padding:0;width:32px;height:32px">&times;</button>
-                </div>                <pre style="background:#000;padding:12px;border-radius:8px;font-size:9px;color:#0f0;flex:1;overflow-y:auto;overflow-x:auto;white-space:pre;min-height:0;line-height:1.3">${escapeHtml(clean)}</pre>
-                <div style="margin-top:12px;text-align:center;flex-shrink:0;display:flex;gap:8px;justify-content:center">
+                </div>
+                <pre style="background:#000;padding:12px;border-radius:8px;font-size:9px;color:#0f0;flex:1;overflow-y:auto;overflow-x:auto;white-space:pre;min-height:0;line-height:1.3">${escapeHtml(clean)}</pre>                <div style="margin-top:12px;text-align:center;flex-shrink:0;display:flex;gap:8px;justify-content:center">
                     <button onclick="TweakFinder.copyContent('${escapeHtml(clean).replace(/'/g, "\\'")}')" style="padding:10px 16px;background:#0A84FF;color:white;border:none;border-radius:10px;font-weight:600">📋 Copy</button>
                     <button onclick="this.closest('.tf-modal').remove()" style="padding:10px 24px;background:#2c2c2e;color:white;border:none;border-radius:10px;font-weight:600">Close</button>
                 </div>
@@ -537,8 +537,8 @@
 
     async function scanPathForOptions(path) {
         try {
-            const dir = path.substring(0, path.lastIndexOf('/'));            const files = await execFn(`${CFG.BB} ls "${dir}" 2>/dev/null`);
-            const fileList = files.split('\n').filter(f => f.trim());
+            const dir = path.substring(0, path.lastIndexOf('/'));
+            const files = await execFn(`${CFG.BB} ls "${dir}" 2>/dev/null`);            const fileList = files.split('\n').filter(f => f.trim());
             const options = { min: null, max: null, values: [] };
             for (const file of fileList) {
                 const fullPath = `${dir}/${file}`;
@@ -549,7 +549,8 @@
                     if (!isNaN(num)) options.min = num;
                 }
                 if (lower.includes('max')) {
-                    const val = await execFn(`${CFG.BB} cat "${fullPath}" 2>/dev/null`);                    const num = parseFloat(val.trim());
+                    const val = await execFn(`${CFG.BB} cat "${fullPath}" 2>/dev/null`);
+                    const num = parseFloat(val.trim());
                     if (!isNaN(num)) options.max = num;
                 }
                 if (lower.includes('mode') || lower.includes('enable') || lower.includes('state')) {
@@ -597,7 +598,8 @@
             }
             
             let type = 'text', opts = {};
-            const fileName = path.split('/').pop();            if ((fileName === 'governor' || fileName === 'scaling_governor') && !path.includes('available')) {
+            const fileName = path.split('/').pop();
+            if ((fileName === 'governor' || fileName === 'scaling_governor') && !path.includes('available')) {
                 type = 'governor';
                 const governors = await getAvailableGovernors(path);
                 const current = await getCurrentGovernor(path);
@@ -634,8 +636,8 @@
 
     function detectMin(p, cur) { const l = p.toLowerCase(); if (l.includes('min') || l.includes('low')) return Math.min(0, cur); if (l.includes('temp') || l.includes('thermal')) return 0; if (l.includes('freq') || l.includes('mhz')) return 300; if (l.includes('volt') || l.includes('mv')) return 0; return Math.max(0, Math.floor(cur * 0.1)); }
     function detectMax(p, cur) { const l = p.toLowerCase(); if (l.includes('max') || l.includes('high')) return Math.max(100, cur * 2); if (l.includes('temp') || l.includes('thermal')) return 100; if (l.includes('freq') || l.includes('mhz')) return 3000; if (l.includes('volt') || l.includes('mv')) return 1500; if (l.includes('percent') || l.includes('ratio')) return 100; return Math.ceil(cur * 3); }
-    function detectStep(p) { const l = p.toLowerCase(); if (l.includes('freq')) return 50; if (l.includes('volt') || l.includes('mv')) return 25; if (l.includes('percent')) return 5; return 1; }
-    function detectUnit(p) { const l = p.toLowerCase(); if (l.includes('freq') || l.includes('mhz')) return 'MHz'; if (l.includes('volt') || l.includes('mv')) return 'mV'; if (l.includes('temp')) return '°C'; if (l.includes('percent') || l.includes('ratio')) return '%'; if (l.includes('time') || l.includes('ms')) return 'ms'; return ''; }
+    function detectStep(p) { const l = p.toLowerCase(); if (l.includes('freq')) return 50; if (l.includes('volt') || l.includes('mv')) return 25; if (l.includes('percent')) return 5; return 1; }    function detectUnit(p) { const l = p.toLowerCase(); if (l.includes('freq') || l.includes('mhz')) return 'MHz'; if (l.includes('volt') || l.includes('mv')) return 'mV'; if (l.includes('temp')) return '°C'; if (l.includes('percent') || l.includes('ratio')) return '%'; if (l.includes('time') || l.includes('ms')) return 'ms'; return ''; }
+
     // ========== CONTROL CREATOR ==========
     function showCreator() {
         if (!analyzing) return;
@@ -683,8 +685,8 @@
                 <div id="tf-cc-governor-opt" style="display:${type === 'governor' ? 'block' : 'none'}" class="tf-modal-field">
                     <label>Available Governors</label>
                     <select id="tf-cc-governor-select" class="tf-gov-select">
-                        ${options.governors?.map(g => `<option value="${g}" ${g === options.current ? 'selected' : ''}>${g}</option>`).join('') || ''}
-                    </select>                    <div style="font-size:10px;color:var(--text-dim);margin-top:4px">
+                        ${options.governors?.map(g => `<option value="${g}" ${g === options.current ? 'selected' : ''}>${g}</option>`).join('') || ''}                    </select>
+                    <div style="font-size:10px;color:var(--text-dim);margin-top:4px">
                         Current: <strong style="color:var(--green)">${options.current || 'unknown'}</strong>
                     </div>
                 </div>
@@ -693,7 +695,8 @@
                     <div style="max-height:200px;overflow-y:auto;margin-top:8px">
                         ${options.policies?.map(p => `
                             <label style="display:flex;align-items:center;gap:8px;padding:6px;background:rgba(255,255,255,0.03);margin-bottom:4px;border-radius:6px;font-size:11px">
-                                <input type="checkbox" class="tf-ppm-policy-check" value="${p.index}" ${p.enabled ? 'checked' : ''}>                                <span style="color:${p.enabled ? 'var(--green)' : 'var(--text-dim)'}">[${p.index}] ${p.name}</span>
+                                <input type="checkbox" class="tf-ppm-policy-check" value="${p.index}" ${p.enabled ? 'checked' : ''}>
+                                <span style="color:${p.enabled ? 'var(--green)' : 'var(--text-dim)'}">[${p.index}] ${p.name}</span>
                                 <span style="margin-left:auto;font-size:10px">${p.enabled ? 'ON' : 'OFF'}</span>
                             </label>
                         `).join('') || '<div style="color:var(--text-dim);font-size:11px">No policies detected</div>'}
@@ -724,16 +727,16 @@
                 <div class="tf-modal-field">
                     <label>File Path <span style="color:var(--orange);font-size:10px">(editable)</span></label>
                     <input id="tf-cc-path" value="${options.path || path}" style="font-family:monospace;font-size:11px">
-                    <div style="font-size:9px;color:var(--text-dim);margin-top:2px">⚠️ Changing path may break control</div>
+                    <div style="font-size:9px;color:var(--text-dim);margin-top:2px">💡 supports wildcard path "*"</div>
                 </div>
                 <label class="tf-modal-check">
                     <input type="checkbox" id="tf-cc-persist" ${options.persist ? 'checked' : ''}>
                     <span>Save to SD card (persists after reboot)</span>
                 </label>
                 <div class="tf-modal-actions">
-                    ${editingId ? `<button class="delete" onclick="TweakFinder.deleteControl('${options.id}')">🗑️ Delete</button>` : ''}
-                    <button class="cancel" onclick="TweakFinder.closeCreator()">Cancel</button>
-                    <button class="create" onclick="${editingId ? `TweakFinder.updateControl('${options.id}')` : `TweakFinder.createControl('${safeId}')`}">${editingId ? 'Save Changes' : 'Create'}</button>                </div>
+                    ${editingId ? `<button class="delete" onclick="TweakFinder.deleteControl('${options.id}')">🗑️ Delete</button>` : ''}                    <button class="cancel" onclick="TweakFinder.closeCreator()">Cancel</button>
+                    <button class="create" onclick="${editingId ? `TweakFinder.updateControl('${options.id}')` : `TweakFinder.createControl('${safeId}')`}">${editingId ? 'Save Changes' : 'Create'}</button>
+                </div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -741,7 +744,8 @@
             document.getElementById('tf-cc-toggle-opt').style.display = this.value === 'toggle' ? 'block' : 'none';
             document.getElementById('tf-cc-slider-opt').style.display = this.value === 'slider' ? 'block' : 'none';
             document.getElementById('tf-cc-governor-opt').style.display = this.value === 'governor' ? 'block' : 'none';
-            document.getElementById('tf-cc-ppm-opt').style.display = this.value === 'ppm_policy' ? 'block' : 'none';            document.getElementById('tf-cc-permission-opt').style.display = this.value === 'permission' ? 'block' : 'none';
+            document.getElementById('tf-cc-ppm-opt').style.display = this.value === 'ppm_policy' ? 'block' : 'none';
+            document.getElementById('tf-cc-permission-opt').style.display = this.value === 'permission' ? 'block' : 'none';
         };
         const permModeSelect = document.getElementById('tf-cc-permission-mode');
         const permCustomInput = document.getElementById('tf-cc-permission-custom');
@@ -779,17 +783,18 @@
             cfg.current = parseFloat(analyzing.options.current) || cfg.min;
         } else if (type === 'governor') {
             cfg.governors = analyzing.options.governors;
-            cfg.current = document.getElementById('tf-cc-governor-select').value;
-        } else if (type === 'ppm_policy') {
+            cfg.current = document.getElementById('tf-cc-governor-select').value;        } else if (type === 'ppm_policy') {
             const checks = document.querySelectorAll('.tf-ppm-policy-check');
-            cfg.policies = [];            checks.forEach(chk => {
+            cfg.policies = [];
+            checks.forEach(chk => {
                 if (chk.checked) {
                     const idx = parseInt(chk.value);
                     const policy = analyzing.options.policies.find(p => p.index === idx);
                     if (policy) { cfg.policies.push({ index: idx, name: policy.name, enabled: true }); }
                 }
             });
-            cfg.current = cfg.policies.length > 0 ? 'mixed' : 'none';        } else if (type === 'permission') {
+            cfg.current = cfg.policies.length > 0 ? 'mixed' : 'none';
+        } else if (type === 'permission') {
             const modeSelect = document.getElementById('tf-cc-permission-mode');
             const customInput = document.getElementById('tf-cc-permission-custom');
             cfg.permission = modeSelect.value === 'custom' ? customInput.value.trim() : modeSelect.value;
@@ -827,17 +832,18 @@
             if (!newPath.includes('*')) {
                 const wr = await execFn(`test -w "${newPath}" && echo "yes" || echo "no"`);
                 if (wr.trim() !== 'yes') { showStatus(`❌ Path not writable: ${newPath}`, 'error', 4000); return; }
-            }
-            const duplicate = controls.find(c => c.path === newPath && c.id !== cfg.id);
+            }            const duplicate = controls.find(c => c.path === newPath && c.id !== cfg.id);
             if (duplicate) { showStatus(`⚠️ Path already used by "${duplicate.label}"`, 'warning', 4000); if (!confirm('Continue anyway?')) return; }
             cfg.path = newPath;
-        }        cfg.label = label; cfg.persist = persist;
+        }
+        cfg.label = label; cfg.persist = persist;
 
         if (newType === 'toggle') {
             cfg.type = 'toggle'; cfg.off = document.getElementById('tf-cc-off').value; cfg.on = document.getElementById('tf-cc-on').value;
             if (![cfg.off, cfg.on].includes(cfg.current)) cfg.current = cfg.off;
             delete cfg.min; delete cfg.max; delete cfg.step; delete cfg.unit; delete cfg.governors; delete cfg.policies; delete cfg.permission;
-        } else if (newType === 'slider') {            cfg.type = 'slider';
+        } else if (newType === 'slider') {
+            cfg.type = 'slider';
             cfg.min = parseInt(document.getElementById('tf-cc-min').value) || 0; cfg.max = parseInt(document.getElementById('tf-cc-max').value) || 100;
             cfg.step = parseInt(document.getElementById('tf-cc-step').value) || 1; cfg.unit = document.getElementById('tf-cc-unit').value || '';
             const num = parseFloat(cfg.current) || cfg.min; cfg.current = Math.max(cfg.min, Math.min(cfg.max, num));
@@ -876,16 +882,17 @@
             closeCreator(); showStatus(`✅ Updated: ${label}`, 'success');
         } catch (e) { console.error(e); showStatus(`❌ Failed: ${e.message}`, 'error', 4000); }
     }
-
     async function deleteControl(id) {
         if (!rootAvailable) { showStatus('⚠️ Root required', 'error'); return; }
         if (!confirm('Delete this control?')) return;
-        const idx = controls.findIndex(c => c.id === id); if (idx < 0) return;        try {
+        const idx = controls.findIndex(c => c.id === id); if (idx < 0) return;
+        try {
             controls.splice(idx, 1); await saveRegistry();
             const el = document.getElementById(`tf-ctrl-${id}`); if (el) el.remove();
             try { await execFn(`${CFG.BB} rm -f "${CFG.VALUES_DIR}/${id}.val" 2>/dev/null`); } catch (e) {}
             const lastKey = Object.keys(searchCache).pop(); if (lastKey && searchCache[lastKey]) renderResults(searchCache[lastKey]);
-            closeCreator(); showStatus('🗑️ Control deleted', 'info', 2000);        } catch (e) { console.error(e); showStatus(`❌ Failed: ${e.message}`, 'error', 4000); }
+            closeCreator(); showStatus('🗑️ Control deleted', 'info', 2000);
+        } catch (e) { console.error(e); showStatus(`❌ Failed: ${e.message}`, 'error', 4000); }
     }
 
     async function saveRegistry() {
@@ -919,21 +926,23 @@
 
     function renderControl(cfg) {
         const container = document.getElementById('tf-discovered-controls-container');
-        if (!container) return; if (container.querySelector('.tf-empty-state')) container.innerHTML = '';
+        if (!container) return;
+        if (container.querySelector('.tf-empty-state')) container.innerHTML = '';
         const isToggle = cfg.type === 'toggle', isSlider = cfg.type === 'slider', isGov = cfg.type === 'governor', isPPM = cfg.type === 'ppm_policy', isPerm = cfg.type === 'permission';
         let html = `<div class="tf-control-card" id="tf-ctrl-${cfg.id}">
-            <div class="tf-control-header">
-                <div><div class="tf-control-title">${escapeHtml(cfg.label)}</div><div class="tf-control-path">${escapeHtml(cfg.path.split('/').pop())}</div></div>
+            <div class="tf-control-header">                <div><div class="tf-control-title">${escapeHtml(cfg.label)}</div><div class="tf-control-path">${escapeHtml(cfg.path.split('/').pop())}</div></div>
                 <div class="tf-control-actions">
                     <button class="tf-btn-sm edit" onclick="TweakFinder.editControl('${cfg.id}')">⚙️</button>
                     <button class="tf-btn-sm remove" onclick="TweakFinder.removeControl('${cfg.id}')">✕</button>
                 </div>
             </div>`;
-        if (isToggle) {            html += `<div style="display:flex;justify-content:space-between;align-items:center">
+        if (isToggle) {
+            html += `<div style="display:flex;justify-content:space-between;align-items:center">
                 <span id="tf-ts-${cfg.id}" style="font-size:11px;color:${cfg.current === cfg.on ? 'var(--green)' : 'var(--text-dim)'}">${cfg.current === cfg.on ? '✅ ON' : '❌ OFF'}</span>
                 <label class="tf-ios-switch"><input type="checkbox" id="tf-ct-${cfg.id}" ${cfg.current === cfg.on ? 'checked' : ''} onchange="TweakFinder.applyToggle('${cfg.id}',this.checked)"><span class="tf-slider"></span></label>
             </div>`;
-        } else if (isSlider) {            html += `<div style="margin:6px 0">
+        } else if (isSlider) {
+            html += `<div style="margin:6px 0">
                 <div style="display:flex;justify-content:space-between;margin-bottom:4px">
                     <span id="tf-sv-${cfg.id}" style="font-family:monospace;color:var(--blue);font-weight:bold;font-size:12px">${cfg.current}${cfg.unit || ''}</span>
                     <span id="tf-pct-${cfg.id}" style="font-size:9px;color:var(--orange)"></span>
@@ -970,18 +979,19 @@
                 const custom = document.getElementById(`tf-perm-custom-${cfg.id}`);
                 if (sel && custom) {
                     sel.onchange = function () {
-                        custom.style.display = this.value === 'custom' ? 'block' : 'none';
-                        if (this.value !== 'custom') TweakFinder.applyPermission(cfg.id, this.value);
+                        custom.style.display = this.value === 'custom' ? 'block' : 'none';                        if (this.value !== 'custom') TweakFinder.applyPermission(cfg.id, this.value);
                     };
                 }
             }, 100);
         } else {
             html += `<input type="text" class="tf-text-control" id="tf-ctext-${cfg.id}" value="${escapeHtml(cfg.current)}" onchange="TweakFinder.applyText('${cfg.id}',this.value)">`;
         }
-        html += `</div>`;        container.insertAdjacentHTML('afterbegin', html);
+        html += `</div>`;
+        container.insertAdjacentHTML('afterbegin', html);
         refreshControlState(cfg).catch(() => {
             if (cfg.persist) {
-                loadValue(cfg.id, cfg.current).then(saved => {                    if (saved !== cfg.current) {
+                loadValue(cfg.id, cfg.current).then(saved => {
+                    if (saved !== cfg.current) {
                         cfg.current = saved;
                         if (isToggle) {
                             const el = document.getElementById(`tf-ct-${cfg.id}`), st = document.getElementById(`tf-ts-${cfg.id}`);
@@ -1018,8 +1028,7 @@
                 const dir = cfg.path.substring(0, cfg.path.lastIndexOf('/'));
                 const pattern = cfg.path.substring(cfg.path.lastIndexOf('/') + 1);
                 const files = await execFn(`${CFG.BB} ls ${dir}/${pattern} 2>/dev/null`);
-                const fileList = files.split('\n').filter(f => f.trim());
-                let successCount = 0;
+                const fileList = files.split('\n').filter(f => f.trim());                let successCount = 0;
                 for (const file of fileList) {
                     if (await execFn(`test -w "${file}" && echo "yes" || echo "no"`) === 'yes') {
                         await execFn(`${CFG.BB} echo "${val}" > "${file}" 2>/dev/null`);
@@ -1027,9 +1036,11 @@
                     }
                 }
                 showStatus(`✅ Applied to ${successCount}/${fileList.length} paths`, 'success');
-            } else {                await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);
+            } else {
+                await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);
             }
-            if (cfg.persist) await saveValue(id, val);            cfg.current = val;
+            if (cfg.persist) await saveValue(id, val);
+            cfg.current = val;
             if (st) { st.textContent = on ? '✅ ON' : '❌ OFF'; st.style.color = on ? 'var(--green)' : 'var(--text-dim)'; }
             showStatus(`✅ ${cfg.label}: ${on ? 'ON' : 'OFF'}`, 'success');
             setTimeout(async () => {
@@ -1066,8 +1077,7 @@
             if (statusEl) { statusEl.textContent = enabled ? '✅ Enabled' : '❌ Disabled'; statusEl.className = `tf-ppm-status ${enabled ? 'on' : 'off'}`; }
             showStatus(`✅ ${policy ? policy.name : 'Policy'} ${enabled ? 'enabled' : 'disabled'}`, 'success');
             setTimeout(async () => {
-                const content = await readCurrentValue(cfg.path);
-                const policies = parsePPMStatus(content);
+                const content = await readCurrentValue(cfg.path);                const policies = parsePPMStatus(content);
                 const current = policies.find(p => p.index === policyIdx);
                 if (statusEl && current) {
                     statusEl.textContent = current.enabled ? '✅ Enabled' : '❌ Disabled';
@@ -1076,8 +1086,10 @@
                 }
             }, 300);
         } catch (e) {
-            console.error(e);            const toggle = document.getElementById(`tf-ppm-toggle-${ctrlId}-${policyIdx}`);
-            if (toggle) toggle.checked = !enabled;            showStatus(`❌ ${e.message}`, 'error', 4000);
+            console.error(e);
+            const toggle = document.getElementById(`tf-ppm-toggle-${ctrlId}-${policyIdx}`);
+            if (toggle) toggle.checked = !enabled;
+            showStatus(`❌ ${e.message}`, 'error', 4000);
         }
     }
 
@@ -1114,8 +1126,7 @@
             showStatus(`✅ ${cfg.label}: ${num}${cfg.unit || ''}`, 'success');
             setTimeout(async () => {
                 const actual = await readCurrentValue(cfg.path);
-                if (dv) { dv.textContent = `${actual}${cfg.unit || ''}`; dv.style.color = actual == num ? 'var(--green)' : 'var(--orange)'; }
-                const pctEl = document.getElementById(`tf-pct-${id}`);
+                if (dv) { dv.textContent = `${actual}${cfg.unit || ''}`; dv.style.color = actual == num ? 'var(--green)' : 'var(--orange)'; }                const pctEl = document.getElementById(`tf-pct-${id}`);
                 if (pctEl) { const pct = await calculatePercentage(cfg); pctEl.textContent = pct ? `(${pct})` : ''; }
             }, 300);
         } catch (e) {
@@ -1125,7 +1136,9 @@
     }
 
     async function applyGovernor(id, value) {
-        if (!rootAvailable) { showStatus('⚠️ Root required', 'error'); return; }        const cfg = controls.find(c => c.id === id); if (!cfg) { showStatus('❌ Control not found', 'error', 4000); return; }        const sel = document.getElementById(`tf-gov-select-${id}`);
+        if (!rootAvailable) { showStatus('⚠️ Root required', 'error'); return; }
+        const cfg = controls.find(c => c.id === id); if (!cfg) { showStatus('❌ Control not found', 'error', 4000); return; }
+        const sel = document.getElementById(`tf-gov-select-${id}`);
         try {
             if (cfg.path.includes('*')) {
                 const dir = cfg.path.substring(0, cfg.path.lastIndexOf('/'));
@@ -1162,8 +1175,7 @@
         const tx = document.getElementById(`tf-ctext-${id}`);
         try {
             if (cfg.path.includes('*')) {
-                const dir = cfg.path.substring(0, cfg.path.lastIndexOf('/'));
-                const pattern = cfg.path.substring(cfg.path.lastIndexOf('/') + 1);
+                const dir = cfg.path.substring(0, cfg.path.lastIndexOf('/'));                const pattern = cfg.path.substring(cfg.path.lastIndexOf('/') + 1);
                 const files = await execFn(`${CFG.BB} ls ${dir}/${pattern} 2>/dev/null`);
                 const fileList = files.split('\n').filter(f => f.trim());
                 let successCount = 0;
@@ -1174,7 +1186,9 @@
                     }
                 }
                 showStatus(`✅ Applied to ${successCount}/${fileList.length} paths`, 'success');
-            } else {                await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);            }
+            } else {
+                await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);
+            }
             if (cfg.persist) await saveValue(id, val);
             cfg.current = val;
             showStatus(`✅ ${cfg.label} updated`, 'success');
@@ -1210,8 +1224,7 @@
                 if (wr.trim() !== 'yes') throw new Error('Path not writable');
                 await execFn(`${CFG.BB} chmod ${value} "${cfg.path}" 2>/dev/null`);
                 showStatus(`✅ Permission set to ${value}`, 'success');
-            }
-            if (valDisplay) { valDisplay.textContent = value; valDisplay.style.color = 'var(--green)'; setTimeout(() => valDisplay.style.color = 'var(--blue)', 1000); }
+            }            if (valDisplay) { valDisplay.textContent = value; valDisplay.style.color = 'var(--green)'; setTimeout(() => valDisplay.style.color = 'var(--blue)', 1000); }
             if (cfg.persist) await saveValue(id, value);
             cfg.current = value;
             setTimeout(async () => {
@@ -1222,8 +1235,10 @@
                             valDisplay.textContent = actual.trim();
                             if (actual.trim() !== value) { valDisplay.style.color = 'var(--orange)'; showStatus(`⚠️ Kernel has ${actual.trim()}, not ${value}`, 'warning', 4000); }
                         }
-                    }                } catch (e) { /* silent */ }
-            }, 400);        } catch (e) {
+                    }
+                } catch (e) { /* silent */ }
+            }, 400);
+        } catch (e) {
             console.error(e);
             showStatus(`❌ ${e.message}`, 'error', 4000);
             setTimeout(async () => {
@@ -1258,8 +1273,7 @@
             } else { actualValue = await execFn(`${CFG.BB} cat "${cfg.path}" 2>/dev/null`); }
             if (!actualValue) return;
             const actual = actualValue.trim();
-            switch (cfg.type) {
-                case 'toggle': {
+            switch (cfg.type) {                case 'toggle': {
                     const actualNorm = actual.toLowerCase();
                     const onNorm = (cfg.on || '').toString().trim().toLowerCase();
                     const offNorm = (cfg.off || '').toString().trim().toLowerCase();
@@ -1270,9 +1284,11 @@
                     if (toggleEl) toggleEl.checked = isOn;
                     if (statusEl) {
                         if (isOn) { statusEl.textContent = '✅ ON'; statusEl.style.color = 'var(--green)'; }
-                        else if (isOff) { statusEl.textContent = '❌ OFF'; statusEl.style.color = 'var(--text-dim)'; }                        else { statusEl.textContent = `⚠️ ${actual}`; statusEl.style.color = 'var(--orange)'; }
+                        else if (isOff) { statusEl.textContent = '❌ OFF'; statusEl.style.color = 'var(--text-dim)'; }
+                        else { statusEl.textContent = `⚠️ ${actual}`; statusEl.style.color = 'var(--orange)'; }
                     }
-                    cfg.current = actual; break;                }
+                    cfg.current = actual; break;
+                }
                 case 'slider':
                     const num = parseFloat(actual) || cfg.min;
                     const clamped = Math.max(cfg.min, Math.min(cfg.max, num));
@@ -1306,8 +1322,7 @@
                     if (permVal) { permVal.textContent = actual; permVal.style.color = 'var(--blue)'; }
                     cfg.current = actual; break;
                 case 'text':
-                    const textEl = document.getElementById(`tf-ctext-${cfg.id}`);
-                    if (textEl) textEl.value = actual;
+                    const textEl = document.getElementById(`tf-ctext-${cfg.id}`);                    if (textEl) textEl.value = actual;
                     cfg.current = actual; break;
             }
         } catch (e) { console.warn(`Failed to refresh control ${cfg.id}:`, e); }
@@ -1318,10 +1333,12 @@
         for (const cfg of controls) {
             await refreshControlState(cfg);
             await new Promise(resolve => setTimeout(resolve, 50));
-        }    }
+        }
+    }
 
     async function applyAllSavedValues() {
-        if (!rootAvailable) return;        let appliedCount = 0;
+        if (!rootAvailable) return;
+        let appliedCount = 0;
         let failedCount = 0;
         for (const cfg of controls) {
             if (!cfg.persist) continue;
@@ -1354,8 +1371,7 @@
                     }
                     cfg.current = num; appliedCount++;
                 } else if (cfg.type === 'governor') {
-                    for (const file of targetFiles) {
-                        const wr = await execFn(`test -w "${file}" && echo "yes" || echo "no"`);
+                    for (const file of targetFiles) {                        const wr = await execFn(`test -w "${file}" && echo "yes" || echo "no"`);
                         if (wr.trim() === 'yes') { await execFn(`${CFG.BB} echo "${savedValue}" > "${file}" 2>/dev/null`); }
                     }
                     cfg.current = savedValue; appliedCount++;
@@ -1366,11 +1382,13 @@
                         }
                         cfg.current = savedValue; appliedCount++;
                     }
-                } else if (cfg.type === 'text') {                    for (const file of targetFiles) {
+                } else if (cfg.type === 'text') {
+                    for (const file of targetFiles) {
                         const wr = await execFn(`test -w "${file}" && echo "yes" || echo "no"`);
                         if (wr.trim() === 'yes') { await execFn(`${CFG.BB} echo "${savedValue}" > "${file}" 2>/dev/null`); }
                     }
-                    cfg.current = savedValue; appliedCount++;                } else if (cfg.type === 'ppm_policy') {
+                    cfg.current = savedValue; appliedCount++;
+                } else if (cfg.type === 'ppm_policy') {
                     if (cfg.policies && cfg.policies.length > 0) {
                         for (const pol of cfg.policies) {
                             const value = pol.enabled ? '1' : '0';
@@ -1402,8 +1420,7 @@
             for (const file of fileList) {
                 const pkg = file.split('/').pop().replace('.sh', '');
                 const content = await execFn(`${CFG.BB} cat "${file}" 2>/dev/null`);
-                appScripts[pkg] = content.trim();
-            }
+                appScripts[pkg] = content.trim();            }
         } catch (e) { console.warn('Load app scripts failed', e); }
     }
 
@@ -1414,12 +1431,14 @@
             await execFn(`chmod 755 "${CFG.TRIGGERS_DIR}/${pkg}.sh"`);
             appScripts[pkg] = code;
             showStatus(`✅ Script saved for ${pkg}`, 'success');
-        } catch (e) { showStatus(`❌ Save failed: ${e.message}`, 'error', 4000); }    }
+        } catch (e) { showStatus(`❌ Save failed: ${e.message}`, 'error', 4000); }
+    }
 
     async function deleteAppScript(pkg) {
         if (!confirm(`Delete trigger script for ${pkg}?`)) return;
         try {
-            await execFn(`${CFG.BB} rm -f "${CFG.TRIGGERS_DIR}/${pkg}.sh" 2>/dev/null`);            delete appScripts[pkg];
+            await execFn(`${CFG.BB} rm -f "${CFG.TRIGGERS_DIR}/${pkg}.sh" 2>/dev/null`);
+            delete appScripts[pkg];
             showStatus(`🗑️ Script deleted for ${pkg}`, 'info', 2000);
         } catch (e) { showStatus(`❌ Delete failed: ${e.message}`, 'error', 4000); }
     }
@@ -1451,7 +1470,6 @@
             return null;
         } catch (e) { return null; }
     }
-
     function renderAppList(filter = '') {
         const container = document.getElementById('tf-app-list-container');
         if (!container) return;
@@ -1461,14 +1479,16 @@
             container.innerHTML = '<div class="tf-empty-state"><p>No apps found</p></div>';
             return;
         }
-        let html = '';        filtered.forEach(pkg => {
+        let html = '';
+        filtered.forEach(pkg => {
             const hasScript = !!appScripts[pkg];
             html += `<div class="tf-app-item">
                 <div style="display:flex;align-items:center;flex:1;min-width:0" onclick="TweakFinder.openScriptEditor('${pkg}')">
                     <div class="tf-app-icon">📱</div>
                     <div style="flex:1;min-width:0">
                         <div class="tf-app-pkg">${escapeHtml(pkg)}</div>
-                        <div class="tf-app-status ${hasScript ? 'has-script' : ''}">${hasScript ? '✓ Script' : 'No script'}</div>                    </div>
+                        <div class="tf-app-status ${hasScript ? 'has-script' : ''}">${hasScript ? '✓ Script' : 'No script'}</div>
+                    </div>
                 </div>
                 <div style="display:flex;gap:4px">
                     <button class="tf-btn-sm edit" onclick="TweakFinder.openScriptEditor('${pkg}')">✏️</button>
@@ -1498,8 +1518,7 @@
     }
 
     function closeEditor() {
-        document.getElementById('tf-script-editor-modal').classList.remove('active');
-    }
+        document.getElementById('tf-script-editor-modal').classList.remove('active');    }
 
     async function saveAppScriptFromUI() {
         const pkg = document.getElementById('tf-editor-pkg-name').textContent;
@@ -1509,7 +1528,8 @@
         renderAppList(document.getElementById('tf-app-search').value);
     }
 
-    async function deleteAppScriptFromUI() {        const pkg = document.getElementById('tf-editor-pkg-name').textContent;
+    async function deleteAppScriptFromUI() {
+        const pkg = document.getElementById('tf-editor-pkg-name').textContent;
         await deleteAppScript(pkg);
         closeEditor();
         renderAppList(document.getElementById('tf-app-search').value);
@@ -1517,7 +1537,8 @@
 
     async function testAppScriptFromUI() {
         const pkg = document.getElementById('tf-editor-pkg-name').textContent;
-        await testAppScript(pkg);    }
+        await testAppScript(pkg);
+    }
 
     // ========== TABS & UI INIT ==========
     function switchTab(tabName) {
@@ -1540,81 +1561,91 @@
 
     function createUI(container) {
         container.innerHTML = `
-                <div class="tf-search-box"><input type="text" id="tf-search-input" placeholder="Search: boost, freq, thermal..."><button id="tf-btn-search">🔍</button></div>
-                <div class="tf-search-options">
-                    <label><input type="checkbox" id="tf-opt-name" checked> Name</label>
-                    <label><input type="checkbox" id="tf-opt-content"> Content</label>
-                    <label><input type="checkbox" id="tf-opt-path"> Path/Folder</label>
+            <div class="tf-search-box"><input type="text" id="tf-search-input" placeholder="Search: boost, freq, thermal..."><button id="tf-btn-search">🔍</button></div>
+            <div class="tf-search-options">
+                <label><input type="checkbox" id="tf-opt-name" checked> Name</label>
+                <label><input type="checkbox" id="tf-opt-content"> Content</label>
+                <label><input type="checkbox" id="tf-opt-path"> Path/Folder</label>
+            </div>
+            <div class="tf-tab-nav">                <button class="tf-tab-btn active" onclick="TweakFinder.switchTab('search')">🔍 Search</button>
+                <button class="tf-tab-btn" onclick="TweakFinder.switchTab('browse')">📁 Browse</button>
+                <button class="tf-tab-btn" onclick="TweakFinder.switchTab('controls')">🎛️ Controls</button>
+            </div>
+            <div class="tf-cache-info">Cache: <span id="tf-cache-count">0</span> searches <button onclick="TweakFinder.clearCache()">Clear</button></div>
+            <div id="tf-search-status" style="font-size:12px;color:var(--orange);margin:8px 0 12px;display:none"></div>
+            
+            <!-- Search Tab -->
+            <div id="tf-tab-search" class="tf-tab-content active">
+                <div id="tf-search-results-container">
+                    <div class="tf-empty-state"><div class="icon">🔍</div><p><strong>Search for tweakable files</strong></p><p>Enter a keyword to scan /sys, /proc, /dev paths</p></div>
                 </div>
-                <div class="tf-tab-nav">
-                    <button class="tf-tab-btn active" onclick="TweakFinder.switchTab('search')">🔍 Search</button>
-                    <button class="tf-tab-btn" onclick="TweakFinder.switchTab('browse')">📁 Browse</button>
-                    <button class="tf-tab-btn" onclick="TweakFinder.switchTab('controls')">🎛️ Controls</button>
+            </div>
+            
+            <!-- Browse Tab -->
+            <div id="tf-tab-browse" class="tf-tab-content">
+                <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+                    <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/')" style="background:var(--blue)">🏠 Root</button>
+                    <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/sys')">🔧 Sys</button>
+                    <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/proc')">📊 Proc</button>
+                    <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/dev')">⚡ Dev</button>
                 </div>
-                <div class="tf-cache-info">Cache: <span id="tf-cache-count">0</span> searches <button onclick="TweakFinder.clearCache()">Clear</button></div>
-                <div id="tf-search-status" style="font-size:12px;color:var(--orange);margin:8px 0 12px;display:none"></div>
-                <div id="tf-tab-search" class="tf-tab-content active">
-                    <div id="tf-search-results-container">
-                        <div class="tf-empty-state"><div class="icon">🔍</div><p><strong>Search for tweakable files</strong></p><p>Enter a keyword to scan /sys, /proc, /dev paths</p></div>
+                <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px">
+                    📍 Current: <code id="tf-browse-current-path" style="color:var(--blue)">/</code>
+                </div>
+                <div id="tf-browse-results-container">
+                    <div class="tf-empty-state">
+                        <div class="icon">📁</div>
+                        <p><strong>Browse filesystem</strong></p>
+                        <p>Navigate directories to find tweakable files</p>
+                        <button class="tf-btn-sm add" onclick="TweakFinder.browsePath('/')" style="margin-top:12px">Start Browsing</button>
                     </div>
                 </div>
-                <div id="tf-tab-browse" class="tf-tab-content">
-                    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
-                        <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/')" style="background:var(--blue)">🏠 Root</button>
-                        <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/sys')">🔧 Sys</button>
-                        <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/proc')">📊 Proc</button>
-                        <button class="tf-btn-sm" onclick="TweakFinder.browsePath('/dev')">⚡ Dev</button>
-                    </div>
-                    <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px">
-                        📍 Current: <code id="tf-browse-current-path" style="color:var(--blue)">/</code>                    </div>
-                    <div id="tf-browse-results-container">
-    <div class="tf-empty-state">
-        <div class="icon">📁</div>
-        <p><strong>Browse filesystem</strong></p>
-        <p>Navigate directories to find tweakable files</p>
-        <button class="tf-btn-sm add" onclick="TweakFinder.browsePath('/')" style="margin-top:12px">Start Browsing</button>
-    </div>
-</div>
-                <div id="tf-tab-controls" class="tf-tab-content">
-                    <div class="tf-section-title">🎛️ My Controls</div>
-                    <div id="tf-discovered-controls-container">                        <div class="tf-empty-state"><div class="icon">🎛️</div><p>No controls yet</p><p>Search above, then tap <strong>➕ Add Control</strong></p></div>
-                    </div>
+            </div>
+            
+            <!-- Controls Tab -->
+            <div id="tf-tab-controls" class="tf-tab-content">
+                <div class="tf-section-title">🎛️ My Controls</div>
+                <div id="tf-discovered-controls-container">
+                    <div class="tf-empty-state"><div class="icon">🎛️</div><p>No controls yet</p><p>Search above, then tap <strong>➕ Add Control</strong></p></div>
                 </div>
-                <div id="tf-tab-triggers" class="tf-tab-content">
-                    <div class="tf-section-title">🎮 Per-App Trigger Manager</div>
-                    <div class="tf-current-app-box">
-                        <div class="tf-current-app-label">📱 Currently Detected App</div>
-                        <div class="tf-current-app-value" id="tf-current-app-display">Loading...</div>
-                        <button class="tf-btn-sm" style="margin-top:8px" onclick="TweakFinder.refreshCurrentApp()">🔄 Refresh</button>
-                    </div>
-                    <div style="display:flex;gap:8px;margin-bottom:12px">
-                        <input type="text" id="tf-app-search" placeholder="Search package name..." style="flex:1;padding:10px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:13px">
-                        <button class="tf-btn-sm add" onclick="TweakFinder.createNewAppScript()">➕ New</button>
-                    </div>
-                    <div id="tf-app-list-container" class="tf-app-list"></div>
+            </div>
+            
+            <!-- Triggers Tab -->
+            <div id="tf-tab-triggers" class="tf-tab-content">
+                <div class="tf-section-title">🎮 Per-App Trigger Manager</div>
+                <div class="tf-current-app-box">
+                    <div class="tf-current-app-label">📱 Currently Detected App</div>
+                    <div class="tf-current-app-value" id="tf-current-app-display">Loading...</div>
+                    <button class="tf-btn-sm" style="margin-top:8px" onclick="TweakFinder.refreshCurrentApp()">🔄 Refresh</button>                </div>
+                <div style="display:flex;gap:8px;margin-bottom:12px">
+                    <input type="text" id="tf-app-search" placeholder="Search package name..." style="flex:1;padding:10px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:13px">
+                    <button class="tf-btn-sm add" onclick="TweakFinder.createNewAppScript()">➕ New</button>
                 </div>
-                <div id="tf-status-bar" class="tf-status-bar"></div>
-                <div id="tf-script-editor-modal" class="tf-editor-modal">
-                    <div class="tf-editor-card">
-                        <div class="tf-editor-header">
-                            <div><div class="tf-editor-title">✏️ Edit App Trigger Script</div><div class="tf-editor-pkg" id="tf-editor-pkg-name">com.example.app</div></div>
-                            <button onclick="TweakFinder.closeEditor()" style="background:none;border:none;color:var(--text);font-size:24px;cursor:pointer">&times;</button>
-                        </div>
-                        <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px">💡 Script path: <code style="color:var(--blue)">/sdcard/MTK_AI_Engine/triggers/<package>.sh</code></div>
-                        <textarea id="tf-script-code" class="tf-script-editor" placeholder="#!/system/bin/sh
+                <div id="tf-app-list-container" class="tf-app-list"></div>
+            </div>
+            
+            <div id="tf-status-bar" class="tf-status-bar"></div>
+            <div id="tf-script-editor-modal" class="tf-editor-modal">
+                <div class="tf-editor-card">
+                    <div class="tf-editor-header">
+                        <div><div class="tf-editor-title">✏️ Edit App Trigger Script</div><div class="tf-editor-pkg" id="tf-editor-pkg-name">com.example.app</div></div>
+                        <button onclick="TweakFinder.closeEditor()" style="background:none;border:none;color:var(--text);font-size:24px;cursor:pointer">&times;</button>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px">💡 Script path: <code style="color:var(--blue)">/sdcard/MTK_AI_Engine/triggers/<package>.sh</code></div>
+                    <textarea id="tf-script-code" class="tf-script-editor" placeholder="#!/system/bin/sh
 # Your commands here"></textarea>
-                        <div style="font-size:10px;color:var(--text-dim);margin:8px 0">⚠️ Script runs as root. Use #!/system/bin/sh at the top.</div>
-                        <div class="tf-editor-actions">
-                            <button class="tf-btn-delete" onclick="TweakFinder.deleteAppScriptFromUI()">🗑️ Delete</button>
-                            <button class="tf-btn-cancel" onclick="TweakFinder.closeEditor()">Cancel</button>
-                            <button class="tf-btn-test" onclick="TweakFinder.testAppScriptFromUI()">▶️ Test</button>
-                            <button class="tf-btn-save" onclick="TweakFinder.saveAppScriptFromUI()">💾 Save</button>
-                        </div>
+                    <div style="font-size:10px;color:var(--text-dim);margin:8px 0">⚠️ Script runs as root. Use #!/system/bin/sh at the top.</div>
+                    <div class="tf-editor-actions">
+                        <button class="tf-btn-delete" onclick="TweakFinder.deleteAppScriptFromUI()">🗑️ Delete</button>
+                        <button class="tf-btn-cancel" onclick="TweakFinder.closeEditor()">Cancel</button>
+                        <button class="tf-btn-test" onclick="TweakFinder.testAppScriptFromUI()">▶️ Test</button>
+                        <button class="tf-btn-save" onclick="TweakFinder.saveAppScriptFromUI()">💾 Save</button>
                     </div>
                 </div>
             </div>
         `;
     }
+
     async function init(containerId) {
         injectStyles();
         const container = document.getElementById(containerId);
@@ -1625,7 +1656,8 @@
         document.getElementById('tf-btn-search').onclick = doSearch;
         document.getElementById('tf-search-input').onkeydown = e => { if (e.key === 'Enter') doSearch(); };
         document.getElementById('tf-app-search').oninput = e => renderAppList(e.target.value);
-                // Check root
+        
+        // Check root
         updateHeader('Checking root...', 'var(--orange)');
         try {
             const test = await execFn('id');
@@ -1633,8 +1665,7 @@
         } catch (e) { rootAvailable = false; }
         
         if (!rootAvailable) {
-            updateHeader('⚠️ No root access', 'var(--red)');
-            showStatus('⚠️ Root required. Ensure WebView has root permission.', 'warning', 0);
+            updateHeader('⚠️ No root access', 'var(--red)');            showStatus('⚠️ Root required. Ensure WebView has root permission.', 'warning', 0);
             document.getElementById('tf-btn-search').disabled = true;
             document.getElementById('tf-search-input').disabled = true;
             return;
@@ -1663,7 +1694,8 @@
         // Detect current app
         currentApp = await getCurrentApp();
         document.getElementById('tf-current-app-display').textContent = currentApp || 'No app detected';
-                // Auto-apply saved values
+        
+        // Auto-apply saved values
         setTimeout(() => { applyAllSavedValues(); }, 500);
     }
 
@@ -1675,14 +1707,14 @@
         browsePath,
         browseAddControl,
         previewFile,
-        copyContent,        analyzeFile,
+        copyContent,
+        analyzeFile,
         createControl,
         updateControl,
         deleteControl,
         editControl: (id) => { const cfg = controls.find(c => c.id === id); if (cfg) { editingId = id; analyzing = { path: cfg.path, type: cfg.type, options: cfg, content: '' }; showCreator(); } },
         editControlByPath: (path) => { const cfg = controls.find(c => c.path === path); if (cfg) TweakFinder.editControl(cfg.id); },
-        removeControl: (id) => { if (confirm('Remove this control?')) deleteControl(id); },
-        applyToggle,
+        removeControl: (id) => { if (confirm('Remove this control?')) deleteControl(id); },        applyToggle,
         applySlider,
         applyGovernor,
         applyText,
@@ -1710,7 +1742,7 @@
     };
 
     // ==========================================
-    // REPLACEMENT CODE (Paste this at the very bottom of tweakfinder.js)
+    // MODAL SETUP (Paste at very bottom)
     // ==========================================
     function setupTweakFinderModal() {
         const btn = document.getElementById('tweakfinder-btn');
@@ -1731,8 +1763,7 @@
             document.getElementById('tf-close-btn').onclick = () => { modal.style.display = 'none'; };
         }
 
-        btn.onclick = async () => {
-            const modal = document.getElementById('tf-modal');
+        btn.onclick = async () => {            const modal = document.getElementById('tf-modal');
             const root = document.getElementById('tf-modal-root');
             modal.style.display = 'block';
             if (!root.hasChildNodes()) {
