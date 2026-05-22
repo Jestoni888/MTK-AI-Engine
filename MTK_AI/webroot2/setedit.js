@@ -11,7 +11,10 @@
             { id: 'system', name: 'System', cmd: 'settings list system' },
             { id: 'secure', name: 'Secure', cmd: 'settings list secure' },
             { id: 'global', name: 'Global', cmd: 'settings list global' }
-        ]
+        ],
+        SCRIPTS_DIR: '/data/adb/service.d',
+        SCRIPT_PREFIX: 'setedit-',
+        SCRIPT_META_FILE: '/data/adb/setedit-scripts.json'
     };
 
     // ========== STATE ==========
@@ -44,10 +47,10 @@
             } else if (window.rootExec && typeof rootExec === 'function') {
                 try { rootExec(command, (res) => { clearTimeout(timer); resolve(res || ''); }); }
                 catch (e) { clearTimeout(timer); resolve(''); }
-            } else {
-                clearTimeout(timer); if (window[callback]) delete window[callback]; resolve('');
+            } else {                clearTimeout(timer); if (window[callback]) delete window[callback]; resolve('');
             }
-        });    });
+        });
+    });
 
     // ========== STYLES ==========
     const STYLES = `
@@ -93,10 +96,10 @@
     }
     .se-search-input {
         flex: 1; background: var(--input-bg); border: 1px solid var(--input-border);
-        border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 13px;
-        outline: none; transition: border-color 0.2s;
+        border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 13px;        outline: none; transition: border-color 0.2s;
     }
-    .se-search-input:focus { border-color: var(--blue); }    .se-search-input::placeholder { color: var(--text-dim); }
+    .se-search-input:focus { border-color: var(--blue); }
+    .se-search-input::placeholder { color: var(--text-dim); }
     
     .se-btn { 
         padding: 10px 14px; border: none; border-radius: 10px; cursor: pointer; 
@@ -142,10 +145,10 @@
 
     .se-status-box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 32px 24px; text-align: center; margin: 24px 0; }
     .se-status-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.6; }
-
     .se-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 10005; backdrop-filter: blur(8px); padding: 16px; }
     .se-modal-overlay.active { display: flex; }
-    .se-modal { background: var(--card); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,0.6); }    .se-modal-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .se-modal { background: var(--card); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 550px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 8px 32px rgba(0,0,0,0.6); }
+    .se-modal-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
     .se-modal-header h3 { margin: 0; font-size: 15px; color: #fff; }
     .se-modal-body { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
     .se-form-group { display: flex; flex-direction: column; gap: 6px; }
@@ -153,6 +156,8 @@
     .se-form-input, .se-form-select, .se-form-textarea { background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.2s; font-family: 'JetBrains Mono', monospace; }
     .se-form-input:focus, .se-form-select:focus, .se-form-textarea:focus { border-color: var(--blue); }
     .se-form-textarea { min-height: 150px; resize: vertical; font-size: 11px; }
+    .se-form-row { display: flex; gap: 10px; }
+    .se-form-row .se-form-group { flex: 1; }
     .se-modal-footer { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 
     .se-loading { grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim); font-size: 13px; animation: se-pulse 2s infinite; }
@@ -163,6 +168,18 @@
     .se-count-badge { background: var(--input-bg); padding: 4px 10px; border-radius: 20px; font-size: 11px; color: var(--text-dim); margin-left: 8px; }
     .se-script-info { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 10px; font-size: 11px; color: var(--text-dim); border-left: 3px solid var(--orange); margin-bottom: 12px; }
     
+    /* Script Manager Styles */
+    .se-scripts-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+    .se-script-card { background: rgba(0,0,0,0.2); border: 1px solid var(--border); padding: 12px; border-radius: 10px; position: relative; }
+    .se-script-card.active { border-color: var(--green); }
+    .se-script-card.disabled { border-color: var(--red); opacity: 0.7; }
+    .se-script-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .se-script-title { font-weight: 700; font-size: 12px; color: #fff; }
+    .se-script-actions { display: flex; gap: 6px; }
+    .se-category-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: var(--border); color: var(--text-dim); text-transform: uppercase; }
+    .se-script-desc { font-size: 10px; color: var(--text-dim); margin-bottom: 6px; }
+    .se-script-meta { font-size: 9px; color: var(--text-dim); opacity: 0.7; }
+
     @media (max-width: 600px) {
         .se-header { flex-direction: column; align-items: stretch; }
         .se-search-box { flex-direction: column; }
@@ -177,8 +194,7 @@
         if (document.getElementById('se-styles')) return;
         const style = document.createElement('style');
         style.id = 'se-styles';
-        style.textContent = STYLES;
-        document.head.appendChild(style);
+        style.textContent = STYLES;        document.head.appendChild(style);
     }
 
     function toast(msg, type = 'info', duration = 2500) {
@@ -194,7 +210,8 @@
         const v = value.trim();
         if (v === 'true' || v === 'false') return 'boolean';
         if (/^-?\d+$/.test(v)) return 'number';
-        if (/^-?\d+\.\d+$/.test(v)) return 'float';        return 'string';
+        if (/^-?\d+\.\d+$/.test(v)) return 'float';
+        return 'string';
     }
 
     function formatValue(value, type) {
@@ -226,9 +243,8 @@
                         <div class="se-form-group"><label>Value Type</label><select id="se-edit-type" class="se-form-select"><option value="string">String</option><option value="int">Integer</option><option value="long">Long</option><option value="float">Float</option></select></div>
                         <div class="se-form-group"><label>Value</label><input type="text" id="se-edit-value" class="se-form-input" placeholder="Enter value"></div>
                         <div id="se-edit-warning" style="font-size:11px;color:var(--orange);display:none;">⚠️ Changing system properties may cause instability</div>
-                    </div>
-                    <div class="se-modal-footer">
-                        <button class="se-btn se-btn-danger" id="se-btn-delete" style="display:none;" onclick="SetEdit.deleteProperty()">️ Delete</button>
+                    </div>                    <div class="se-modal-footer">
+                        <button class="se-btn se-btn-danger" id="se-btn-delete" style="display:none;" onclick="SetEdit.deleteProperty()">🗑️ Delete</button>
                         <button class="se-btn se-btn-secondary" onclick="SetEdit.closeEditModal()">Cancel</button>
                         <button class="se-btn se-btn-success" onclick="SetEdit.saveProperty()">💾 Save</button>
                     </div>
@@ -243,7 +259,8 @@
         document.getElementById('se-edit-value').value = prop ? '' : '';
         document.getElementById('se-edit-warning').style.display = (table === 'secure' || table === 'global') ? 'block' : 'none';
         document.getElementById('se-btn-delete').style.display = isNew ? 'none' : 'inline-flex';
-        modal.classList.add('active');        setTimeout(() => document.getElementById('se-edit-value').focus(), 100);
+        modal.classList.add('active');
+        setTimeout(() => document.getElementById('se-edit-value').focus(), 100);
     }
 
     function closeEditModal() {
@@ -257,7 +274,7 @@
         const table = document.getElementById('se-edit-table').value;
         const name = document.getElementById('se-edit-name').value.trim();
         const value = document.getElementById('se-edit-value').value;
-        if (!name) { toast(' Property name required', 'error'); return; }
+        if (!name) { toast('❌ Property name required', 'error'); return; }
         if (value === '' && !editTarget.isNew && !confirm('⚠️ Set empty value? This may cause issues.')) return;
         toast(`💾 Saving ${name}...`);
         try {
@@ -275,13 +292,31 @@
         toast(`🗑️ Deleting ${prop}...`);
         try {
             await execFn(`settings delete ${table} '${prop.replace(/'/g, "'\\''")}'`);
-            toast(`✅ "${prop}" deleted`, 'success');
-            closeEditModal();
+            toast(`✅ "${prop}" deleted`, 'success');            closeEditModal();
             await refreshProperties();
         } catch (e) { toast(`❌ Failed: ${e.message || e}`, 'error'); }
     }
 
-    // ========== BOOT SCRIPT GENERATOR & INSTALLER ==========
+    // ========== MULTI-BOOT SCRIPT MANAGER ==========
+    async function loadScriptsMetadata() {
+        try {
+            const meta = await execFn(`cat '${CFG.SCRIPT_META_FILE}' 2>/dev/null`);
+            return meta.trim() ? JSON.parse(meta) : {};
+        } catch { return {}; }
+    }
+
+    async function saveScriptsMetadata(metadata) {
+        const escaped = JSON.stringify(metadata).replace(/'/g, "'\\''");
+        await execFn(`echo '${escaped}' > '${CFG.SCRIPT_META_FILE}'`);
+    }
+
+    async function getInstalledScripts() {
+        try {
+            const result = await execFn(`ls ${CFG.SCRIPTS_DIR}/${CFG.SCRIPT_PREFIX}*.sh 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/${CFG.SCRIPT_PREFIX}//g' | sed 's/.sh//g'`);
+            return result.trim() ? result.trim().split('\n').filter(s => s.trim()) : [];
+        } catch { return []; }
+    }
+
     function openBootScriptModal() {
         let modal = document.getElementById('se-modal-bootscript');
         if (!modal) {
@@ -289,24 +324,63 @@
             modal.id = 'se-modal-bootscript'; modal.className = 'se-modal-overlay';
             modal.onclick = (e) => { if (e.target === modal) closeBootScriptModal(); };
             modal.innerHTML = `
-                <div class="se-modal">
-                    <div class="se-modal-header"><h3>🚀 Boot Script Generator</h3><button class="se-btn se-btn-secondary se-btn-small" onclick="SetEdit.closeBootScriptModal()">✕</button></div>
-                    <div class="se-modal-body">
-                        <div class="se-script-info">📝 Applies current filtered settings at boot via /data/adb/service.d/</div>                        <div id="se-bootscript-status" style="margin-bottom:12px;"></div>
-                        <div class="se-form-group"><label>Script Preview</label><textarea id="se-bootscript-content" class="se-form-textarea" readonly></textarea></div>
+                <div class="se-modal" style="max-width:600px;">
+                    <div class="se-modal-header">
+                        <h3> Boot Script Manager</h3>
+                        <button class="se-btn se-btn-secondary se-btn-small" onclick="SetEdit.closeBootScriptModal()">✕</button>
                     </div>
-                    <div class="se-modal-footer">
+                    <div class="se-modal-body">
+                        <div class="se-form-row">
+                            <div class="se-form-group" style="flex:2;">
+                                <label>Script Name</label>
+                                <input type="text" id="se-script-name" class="se-form-input" placeholder="e.g., gaming-tweaks, battery-saver">
+                            </div>
+                            <div class="se-form-group" style="flex:1;">
+                                <label>Category</label>
+                                <select id="se-script-category" class="se-form-select">
+                                    <option value="general">General</option>
+                                    <option value="gaming">Gaming</option>
+                                    <option value="battery">Battery</option>
+                                    <option value="display">Display</option>                                    <option value="audio">Audio</option>
+                                    <option value="network">Network</option>
+                                    <option value="privacy">Privacy</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="se-form-group">
+                            <label>Description</label>
+                            <input type="text" id="se-script-desc" class="se-form-input" placeholder="Brief description of what this script does...">
+                        </div>
+                        <div class="se-script-info">📝 Applies ${filteredProperties.length} filtered settings at boot</div>
+                        <div id="se-installed-scripts" class="se-scripts-container"></div>
+                        <div class="se-form-group">
+                            <label>Script Preview</label>
+                            <textarea id="se-bootscript-content" class="se-form-textarea" readonly></textarea>
+                        </div>
+                    </div>
+                    <div class="se-modal-footer" style="flex-wrap:wrap;gap:8px;">
                         <button class="se-btn se-btn-secondary" onclick="SetEdit.closeBootScriptModal()">Close</button>
                         <button class="se-btn se-btn-secondary" onclick="SetEdit.copyBootScript()">📋 Copy</button>
                         <button class="se-btn se-btn-primary" onclick="SetEdit.downloadBootScript()">💾 Download</button>
-                        <button class="se-btn se-btn-danger" id="se-btn-uninstall-boot" style="display:none;" onclick="SetEdit.uninstallBootScript()">🗑️ Uninstall</button>
-                        <button class="se-btn se-btn-success" id="se-btn-install-boot" onclick="SetEdit.installBootScript()">⚡ Install to service.d</button>
+                        <button class="se-btn se-btn-success" id="se-btn-create-script" onclick="SetEdit.createBootScript()">✨ Create & Install</button>
                     </div>
                 </div>`;
             document.body.appendChild(modal);
         }
+        
+        // Bind input events for live preview
+        setTimeout(() => {
+            const nameInput = document.getElementById('se-script-name');
+            const descInput = document.getElementById('se-script-desc');
+            if (nameInput) nameInput.removeEventListener('input', generateBootScript);
+            if (descInput) descInput.removeEventListener('input', generateBootScript);
+            if (nameInput) nameInput.addEventListener('input', generateBootScript);
+            if (descInput) descInput.addEventListener('input', generateBootScript);
+        }, 100);
+
         generateBootScript();
-        checkAndShowBootScriptStatus();
+        refreshInstalledScriptsList();
         modal.classList.add('active');
     }
 
@@ -316,14 +390,29 @@
     }
 
     function generateBootScript() {
-        const timestamp = new Date().toISOString();
+        const timestamp = new Date().toISOString();        const nameInput = document.getElementById('se-script-name');
+        const descInput = document.getElementById('se-script-desc');
+        const scriptName = nameInput?.value.trim() || 'custom-script';
+        const description = descInput?.value.trim() || 'Auto-generated boot script';
+        
         let script = `#!/system/bin/sh
-# SetEdit Pro Boot Script
+# ============================================
+# SetEdit Pro Boot Script: ${scriptName}
+# Description: ${description}
 # Generated: ${timestamp}
-# Auto-installed via SetEdit UI
+# Settings: ${filteredProperties.length} properties
+# ============================================
 
-while [ "\$(getprop sys.boot_completed)" != "1" ]; do sleep 5; done
-sleep 10
+# Wait for boot completion
+while [ "\$(getprop sys.boot_completed)" != "1" ]; do
+    sleep 5
+done
+
+# Additional wait for system stability
+sleep 15
+
+log -t SetEdit-Pro "Starting script: ${scriptName}"
+
 `;
         const tables = { system: [], secure: [], global: [] };
         filteredProperties.forEach(p => {
@@ -331,79 +420,222 @@ sleep 10
             const v = p.value.replace(/'/g, "'\\''");
             tables[p.table].push(`settings put ${p.table} '${n}' '${v}'`);
         });
+        
         ['system', 'secure', 'global'].forEach(t => {
             if (tables[t].length) {
-                script += `\n# ${t.toUpperCase()}\n${tables[t].join('\n')}\n`;
+                script += `# === ${t.toUpperCase()} TABLE (${tables[t].length} settings) ===\n`;
+                tables[t].forEach(cmd => { script += `${cmd}\n`; });
+                script += `\n`;
             }
         });
-        script += `log -t SetEdit-Pro "Boot script applied successfully"\n`;
-        document.getElementById('se-bootscript-content').value = script;
+        
+        script += `log -t SetEdit-Pro "Script ${scriptName} completed successfully"\n`;
+        
+        const textarea = document.getElementById('se-bootscript-content');
+        if (textarea) textarea.value = script;
     }
 
-    async function checkBootScriptStatus() {
-        const path = '/data/adb/service.d/setedit-boot.sh';        const exists = (await execFn(`test -f '${path}' && echo yes || echo no`)).trim();
-        const execPerm = (await execFn(`test -x '${path}' && echo yes || echo no`)).trim();
-        return { exists: exists === 'yes', executable: execPerm === 'yes', path };
-    }
-
-    async function checkAndShowBootScriptStatus() {
-        const statusDiv = document.getElementById('se-bootscript-status');
-        const installBtn = document.getElementById('se-btn-install-boot');
-        const uninstallBtn = document.getElementById('se-btn-uninstall-boot');
-        if (!statusDiv || !installBtn || !uninstallBtn) return;
-        try {
-            const s = await checkBootScriptStatus();
-            if (s.exists) {
-                statusDiv.innerHTML = `<div style="background:rgba(50,215,75,0.15);border:1px solid var(--green);padding:10px;border-radius:8px;font-size:11px;color:var(--green);">✅ Installed: <code>${s.path}</code> ${s.executable ? '✓ Executable' : '✗ Not executable'}</div>`;
-                installBtn.style.display = 'none'; uninstallBtn.style.display = 'inline-flex';
-            } else {
-                statusDiv.innerHTML = `<div style="background:rgba(255,159,10,0.15);border:1px solid var(--orange);padding:10px;border-radius:8px;font-size:11px;color:var(--orange);">⚠️ Not installed. Click Install to auto-deploy.</div>`;
-                installBtn.style.display = 'inline-flex'; uninstallBtn.style.display = 'none';
+    async function refreshInstalledScriptsList() {
+        const container = document.getElementById('se-installed-scripts');
+        if (!container) return;
+        
+        try {            const installed = await getInstalledScripts();
+            const metadata = await loadScriptsMetadata();
+            
+            if (!installed.length) {
+                container.innerHTML = `<div style="background:rgba(255,159,10,0.15);border:1px solid var(--orange);padding:10px;border-radius:8px;font-size:11px;color:var(--orange);">⚠️ No boot scripts installed yet.</div>`;
+                return;
             }
-        } catch (e) { statusDiv.innerHTML = ''; }
+
+            let html = `<div style="margin-bottom:4px;font-size:11px;color:var(--text-dim);font-weight:600;">INSTALLED SCRIPTS (${installed.length}):</div>`;
+            
+            for (const scriptName of installed) {
+                const path = `${CFG.SCRIPTS_DIR}/${CFG.SCRIPT_PREFIX}${scriptName}.sh`;
+                const meta = metadata[scriptName] || {};
+                const exists = (await execFn(`test -f '${path}' && echo yes || echo no`)).trim() === 'yes';
+                const executable = (await execFn(`test -x '${path}' && echo yes || echo no`)).trim() === 'yes';
+                
+                const categoryColors = {
+                    gaming: 'var(--purple)',
+                    battery: 'var(--green)',
+                    display: 'var(--blue)',
+                    audio: 'var(--yellow)',
+                    network: 'var(--orange)',
+                    privacy: 'var(--red)',
+                    general: 'var(--text-dim)',
+                    custom: 'var(--text-dim)'
+                };
+                const color = categoryColors[meta.category] || 'var(--text-dim)';
+                const statusClass = executable ? 'active' : 'disabled';
+                
+                html += `
+                    <div class="se-script-card ${statusClass}">
+                        <div class="se-script-header">
+                            <div class="se-script-title">${meta.category ? '<span class="se-category-badge" style="margin-right:6px;background:' + color + ';color:#fff;">' + meta.category + '</span>' : ''}${scriptName}</div>
+                            <div class="se-script-actions">
+                                <button class="se-btn se-btn-secondary se-btn-small" onclick="SetEdit.viewScript('${scriptName}')" style="padding:2px 6px;font-size:9px;">️</button>
+                                <button class="se-btn ${executable ? 'se-btn-warning' : 'se-btn-success'} se-btn-small" onclick="SetEdit.toggleScript('${scriptName}', ${!executable})" style="padding:2px 6px;font-size:9px;">${executable ? '⏸️ Disable' : '▶️ Enable'}</button>
+                                <button class="se-btn se-btn-danger se-btn-small" onclick="SetEdit.deleteScript('${scriptName}')" style="padding:2px 6px;font-size:9px;">🗑️</button>
+                            </div>
+                        </div>
+                        ${meta.description ? `<div class="se-script-desc">${meta.description}</div>` : ''}
+                        <div class="se-script-meta">
+                            📂 ${path} • ${meta.created ? new Date(meta.created).toLocaleDateString() : 'Unknown'}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        } catch (e) {
+            console.error('Load scripts error:', e);
+            container.innerHTML = '';        }
     }
 
-    async function installBootScript() {
+    async function createBootScript() {
         if (!rootAvailable) { toast('❌ Root required', 'error'); return; }
-        if (!confirm('️ Install to /data/adb/service.d/setedit-boot.sh?\nThis will run on every boot.')) return;
-        toast('🚀 Installing...');
+        
+        const nameInput = document.getElementById('se-script-name');
+        const categoryInput = document.getElementById('se-script-category');
+        const descInput = document.getElementById('se-script-desc');
+        
+        let name = nameInput.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+        const category = categoryInput.value;
+        const description = descInput.value.trim();
+        
+        if (!name) {
+            toast('❌ Enter a script name', 'error');
+            nameInput.focus();
+            return;
+        }
+        
+        if (!/^[a-z0-9-]+$/.test(name)) {
+            toast('❌ Name must be lowercase letters, numbers, and hyphens only', 'error');
+            return;
+        }
+        
+        const scriptPath = `${CFG.SCRIPTS_DIR}/${CFG.SCRIPT_PREFIX}${name}.sh`;
+        const content = document.getElementById('se-bootscript-content').value;
+        
+        if (!confirm(`⚠️ Create boot script "${name}"?\n\nLocation: ${scriptPath}\nCategory: ${category}\nSettings: ${filteredProperties.length}\n\nThis will run on every boot.`)) return;
+        
+        toast(' Creating script...');
+        
         try {
-            const content = document.getElementById('se-bootscript-content').value;
-            const path = '/data/adb/service.d/setedit-boot.sh';
-            await execFn(`mkdir -p /data/adb/service.d`);
-            // Safe heredoc write
-            await execFn(`cat > '${path}' << 'SETEOF'\n${content}\nSETEOF`);
-            await execFn(`chmod +x '${path}'`);
-            const verify = (await execFn(`test -f '${path}' && test -x '${path}' && echo OK || echo FAIL`)).trim();
-            if (verify === 'OK') {
-                toast('✅ Boot script installed successfully!', 'success', 3000);
-                await checkAndShowBootScriptStatus();
-            } else { toast('❌ Installation failed', 'error'); }
-        } catch (e) { toast(`❌ Error: ${e.message || e}`, 'error'); }
+            await execFn(`mkdir -p ${CFG.SCRIPTS_DIR}`);
+            await execFn(`cat > '${scriptPath}' << 'SETEOF'\n${content}\nSETEOF`);
+            await execFn(`chmod +x '${scriptPath}'`);
+            
+            const metadata = await loadScriptsMetadata();
+            const now = new Date().toISOString();
+            metadata[name] = {
+                name: name,
+                category: category,
+                description: description,
+                path: scriptPath,
+                settingsCount: filteredProperties.length,
+                created: metadata[name]?.created || now,
+                modified: now
+            };
+            await saveScriptsMetadata(metadata);
+                        toast(`✅ Script "${name}" installed!`, 'success', 3000);
+            await refreshInstalledScriptsList();
+            
+            nameInput.value = '';
+            descInput.value = '';
+            
+        } catch (e) {
+            toast(`❌ Error: ${e.message || e}`, 'error');
+        }
     }
 
-    async function uninstallBootScript() {
+    async function viewScript(name) {
+        try {
+            const path = `${CFG.SCRIPTS_DIR}/${CFG.SCRIPT_PREFIX}${name}.sh`;
+            const content = await execFn(`cat '${path}'`);
+            const metadata = await loadScriptsMetadata();
+            const meta = metadata[name] || {};
+            
+            let modal = document.getElementById('se-modal-viewscript');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'se-modal-viewscript'; modal.className = 'se-modal-overlay';
+                modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
+                modal.innerHTML = `
+                    <div class="se-modal" style="max-width:600px;">
+                        <div class="se-modal-header"><h3> Script Viewer</h3><button class="se-btn se-btn-secondary se-btn-small" onclick="document.getElementById('se-modal-viewscript').classList.remove('active')"></button></div>
+                        <div class="se-modal-body">
+                            <div id="se-viewscript-meta" style="margin-bottom:12px;"></div>
+                            <textarea id="se-viewscript-content" class="se-form-textarea" readonly style="min-height:300px;"></textarea>
+                        </div>
+                        <div class="se-modal-footer">
+                            <button class="se-btn se-btn-secondary" onclick="document.getElementById('se-modal-viewscript').classList.remove('active')">Close</button>
+                            <button class="se-btn se-btn-primary" onclick="SetEdit.copyViewedScript()">📋 Copy</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+            }
+            
+            document.getElementById('se-viewscript-content').value = content;
+            document.getElementById('se-viewscript-meta').innerHTML = `
+                <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">
+                    <strong>${name}</strong>${meta.category ? ` • ${meta.category}` : ''}${meta.description ? ` • ${meta.description}` : ''}<br>
+                    📂 ${path}
+                </div>
+            `;
+            modal.classList.add('active');
+        } catch (e) {
+            toast(`❌ Error: ${e.message || e}`, 'error');
+        }
+    }
+    async function copyViewedScript() {
+        const content = document.getElementById('se-viewscript-content').value;
+        try { await navigator.clipboard.writeText(content); toast('📋 Copied', 'success'); }
+        catch { toast('❌ Copy failed', 'error'); }
+    }
+
+    async function deleteScript(name) {
         if (!rootAvailable) { toast('❌ Root required', 'error'); return; }
-        const path = '/data/adb/service.d/setedit-boot.sh';
-        if (!confirm('🗑️ Remove boot script?\nSettings will stop auto-applying at boot.')) return;
+        if (!confirm(`🗑️ Delete script "${name}"?\n\nThis cannot be undone!`)) return;
+        
+        const path = `${CFG.SCRIPTS_DIR}/${CFG.SCRIPT_PREFIX}${name}.sh`;
         try {
             await execFn(`rm -f '${path}'`);
-            const verify = (await execFn(`test -f '${path}' && echo FAIL || echo OK`)).trim();
-            if (verify === 'OK') {
-                toast('✅ Uninstalled', 'success');                await checkAndShowBootScriptStatus();
-            } else { toast('❌ Failed', 'error'); }
-        } catch (e) { toast(`❌ Error: ${e.message || e}`, 'error'); }
+            const metadata = await loadScriptsMetadata();
+            delete metadata[name];
+            await saveScriptsMetadata(metadata);
+            toast(`✅ Script "${name}" deleted`, 'success');
+            await refreshInstalledScriptsList();
+        } catch (e) {
+            toast(`❌ Error: ${e.message || e}`, 'error');
+        }
     }
 
+    async function toggleScript(name, enable) {
+        if (!rootAvailable) { toast('❌ Root required', 'error'); return; }
+        const path = `${CFG.SCRIPTS_DIR}/${CFG.SCRIPT_PREFIX}${name}.sh`;
+        try {
+            if (enable) {
+                await execFn(`chmod +x '${path}'`);
+                toast(`✅ Script "${name}" enabled`, 'success');
+            } else {
+                await execFn(`chmod -x '${path}'`);
+                toast(`️ Script "${name}" disabled`, 'warning');
+            }
+            await refreshInstalledScriptsList();
+        } catch (e) {
+            toast(`❌ Error: ${e.message || e}`, 'error');
+        }
+    }
+
+    // ========== PUBLIC ACTIONS ==========
     async function copyBootScript() {
         const content = document.getElementById('se-bootscript-content').value;
         try { await navigator.clipboard.writeText(content); toast('📋 Copied', 'success'); }
-        catch { const ta = document.createElement('textarea'); ta.value = content; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('📋 Copied', 'success'); }
+        catch { toast('❌ Copy failed', 'error'); }
     }
 
     function downloadBootScript() {
-        const content = document.getElementById('se-bootscript-content').value;
-        const blob = new Blob([content], { type: 'text/x-shellscript' });
+        const content = document.getElementById('se-bootscript-content').value;        const blob = new Blob([content], { type: 'text/x-shellscript' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = `setedit-boot-${Date.now()}.sh`; a.click(); URL.revokeObjectURL(url);
         toast('💾 Downloaded', 'success');
@@ -439,7 +671,8 @@ sleep 10
             }
             applyFilter(); renderProperties();
             if (!rootAvailable) toast('⚠️ Root recommended', 'warning');
-        } catch (e) { toast('❌ Load failed', 'error'); }        finally { isRefreshing = false; }
+        } catch (e) { toast('❌ Load failed', 'error'); }
+        finally { isRefreshing = false; }
     }
 
     function applyFilter() {
@@ -451,7 +684,6 @@ sleep 10
         });
         if (filteredProperties.length > CFG.MAX_RESULTS) filteredProperties = filteredProperties.slice(0, CFG.MAX_RESULTS);
     }
-
     function renderProperties() {
         const grid = document.getElementById('se-grid');
         if (!grid) return;
@@ -480,7 +712,6 @@ sleep 10
         el.textContent = `${filteredProperties.length}/${total.join('+')} shown`;
     }
 
-    // ========== PUBLIC ACTIONS ==========
     async function copyValue(name, value) {
         try { await navigator.clipboard.writeText(value); } catch { const ta = document.createElement('textarea'); ta.value = value; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
         toast(`📋 "${name}" copied`, 'success', 1500);
@@ -488,7 +719,8 @@ sleep 10
 
     function editProperty(name, table) {
         const prop = allProperties.find(p => p.name === name && p.table === table);
-        if (!prop) return;        openEditModal(prop.name, prop.table, false);
+        if (!prop) return;
+        openEditModal(prop.name, prop.table, false);
         setTimeout(() => {
             document.getElementById('se-edit-value').value = prop.value;
             document.getElementById('se-edit-type').value = {boolean:'string',number:'int',float:'float',string:'string'}[detectValueType(prop.value)] || 'string';
@@ -502,9 +734,8 @@ sleep 10
         applyFilter(); renderProperties();
     }
     function setSearchTerm(term) { searchTerm = term; applyFilter(); renderProperties(); }
-
     async function backupProperties() {
-        toast('📦 Creating backup...');
+        toast(' Creating backup...');
         try {
             const backup = { timestamp: new Date().toISOString(), system: {}, secure: {}, global: {} };
             for (const t of CFG.TABLES) parseSettingsOutput(await execFn(t.cmd), t.id).forEach(p => backup[t.id][p.name] = { value: p.value, type: p.type });
@@ -528,7 +759,7 @@ sleep 10
             }
             toast(`✅ Restored ${ok}${fail ? ` (${fail} failed)` : ''}`, fail ? 'warning' : 'success');
             await refreshProperties();
-        } catch (e) { toast(`❌ ${e.message || e}`, 'error'); }
+        } catch (e) { toast(` ${e.message || e}`, 'error'); }
     }
 
     // ========== UI CREATION ==========
@@ -537,9 +768,10 @@ sleep 10
             <div class="se-root">
                 <div class="se-header">
                     <h1>⚙️ SetEdit Pro</h1>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;">                        <button class="se-btn se-btn-secondary se-btn-small" onclick="SetEdit.backupProperties()">📦 Backup</button>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button class="se-btn se-btn-secondary se-btn-small" onclick="SetEdit.backupProperties()">📦 Backup</button>
                         <label class="se-btn se-btn-secondary se-btn-small" style="cursor:pointer"> Restore<input type="file" accept=".json" style="display:none" onchange="SetEdit.restoreProperties(this.files[0])"></label>
-                        <button class="se-btn se-btn-warning se-btn-small" onclick="SetEdit.openBootScriptModal()">🚀 Boot Script</button>
+                        <button class="se-btn se-btn-warning se-btn-small" onclick="SetEdit.openBootScriptModal()">🚀 Boot Scripts</button>
                     </div>
                 </div>
                 <div class="se-search-box">
@@ -550,8 +782,7 @@ sleep 10
                     <button class="se-tab-btn active" data-table="all" onclick="SetEdit.setTableFilter('all')">All<span class="se-count-badge" id="se-count">0</span></button>
                     ${CFG.TABLES.map(t => `<button class="se-tab-btn" data-table="${t.id}" onclick="SetEdit.setTableFilter('${t.id}')">${t.name}</button>`).join('')}
                 </div>
-                <div id="se-grid" class="se-grid"><div class="se-loading">🔍 Loading...</div></div>
-            </div>`;
+                <div id="se-grid" class="se-grid"><div class="se-loading">🔍 Loading...</div></div>            </div>`;
     }
 
     // ========== INIT & SETUP ==========
@@ -586,7 +817,8 @@ sleep 10
                 try { rootAvailable = (await execFn('id')).includes('uid=0'); } catch { rootAvailable = false; }
                 if (!rootAvailable) toast('⚠️ Root recommended', 'warning', 4000);
                 startAutoRefresh();
-            }        };
+            }
+        };
     }
 
     // ========== PUBLIC API ==========
@@ -599,10 +831,10 @@ sleep 10
             execFn('id').then(t => { rootAvailable = t.includes('uid=0'); if (!rootAvailable) toast('⚠️ Root recommended', 'warning', 4000); });
             startAutoRefresh();
         },
-        refreshProperties, setTableFilter, setSearchTerm, editProperty, addNewProperty, copyValue,
-        backupProperties, restoreProperties, openEditModal, closeEditModal, saveProperty, deleteProperty,
+        refreshProperties, setTableFilter, setSearchTerm, editProperty, addNewProperty, copyValue,        backupProperties, restoreProperties, openEditModal, closeEditModal, saveProperty, deleteProperty,
         openBootScriptModal, closeBootScriptModal, generateBootScript, copyBootScript, downloadBootScript,
-        installBootScript, uninstallBootScript, checkBootScriptStatus,
+        createBootScript, viewScript, copyViewedScript, deleteScript, toggleScript,
+        refreshInstalledScriptsList, loadScriptsMetadata, getInstalledScripts,
         getAllProperties: () => [...allProperties], isRootAvailable: () => rootAvailable
     };
 
