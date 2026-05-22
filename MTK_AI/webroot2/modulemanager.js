@@ -47,8 +47,7 @@
     const STYLES = `
     :root {
         --bg: #000; --card: #1c1c1e; --text: #fff; --text-dim: #86868b;
-        --border: #3a3a3c; --blue: #0A84FF; --green: #32D74B;        --red: #FF453A; --orange: #FF9F0A; --purple: #BF5AF2;
-        --switch-bg: #3a3a3c; --switch-on: #32D74B;
+        --border: #3a3a3c; --blue: #0A84FF; --green: #32D74B; --red: #FF453A; --orange: #FF9F0A; --purple: #BF5AF2;        --switch-bg: #3a3a3c; --switch-on: #32D74B;
     }
     .mm-root { 
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
@@ -96,8 +95,8 @@
     .mm-btn:active { transform: scale(0.96); }
     .mm-btn-primary { 
         background: linear-gradient(135deg, var(--blue), #007AFF); 
-        color: #fff;         box-shadow: 0 4px 12px rgba(10,132,255,0.3); 
-    }
+        color: #fff; 
+        box-shadow: 0 4px 12px rgba(10,132,255,0.3);     }
     .mm-btn-danger { 
         background: linear-gradient(135deg, var(--red), #FF3B30); 
         color: #fff; 
@@ -145,8 +144,8 @@
     }
     
     .mm-badge { 
-        display: inline-block;         padding: 4px 10px; 
-        border-radius: 8px; 
+        display: inline-block; 
+        padding: 4px 10px;         border-radius: 8px; 
         font-size: 11px; 
         font-weight: 700; 
         text-transform: uppercase; 
@@ -191,13 +190,13 @@
 
     .mm-actions { 
         display: grid; 
-        grid-template-columns: 1fr 1fr 1fr; 
+        grid-template-columns: repeat(4, 1fr); 
         gap: 8px; 
         margin-top: 14px; 
-    }    .mm-actions .mm-btn { 
-        justify-content: center; 
-        padding: 10px; 
-        font-size: 12px; 
+    }
+    .mm-actions .mm-btn {         justify-content: center; 
+        padding: 10px 6px; 
+        font-size: 11px; 
     }
     .mm-status-box { 
         background: var(--card); 
@@ -243,8 +242,8 @@
         display: flex; 
         justify-content: space-between; 
         align-items: center; 
-    }    .mm-modal-header h3 { 
-        margin: 0; 
+    }
+    .mm-modal-header h3 {         margin: 0; 
         font-size: 16px; 
         color: #fff; 
         display: flex; 
@@ -292,8 +291,8 @@
     }
     @keyframes mm-pulse { 
         0%, 100% { opacity: 0.6; } 
-        50% { opacity: 1; }     }
-    
+        50% { opacity: 1; } 
+    }    
     .mm-toast { 
         position: fixed; 
         bottom: 16px; 
@@ -320,7 +319,7 @@
     @media (max-width: 600px) {
         .mm-grid { grid-template-columns: 1fr; }
         .mm-header { flex-direction: column; gap: 12px; align-items: flex-start; }
-        .mm-actions { grid-template-columns: 1fr; }
+        .mm-actions { grid-template-columns: repeat(2, 1fr); }
         .mm-root { padding: 10px; padding-bottom: 80px; }
     }
     `;
@@ -341,8 +340,8 @@
             t.id = 'mm-toast';
             t.className = 'mm-toast';
             document.body.appendChild(t);
-        }        t.textContent = msg;
-        t.style.borderColor = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : type === 'warning' ? 'var(--orange)' : 'var(--border)';
+        }
+        t.textContent = msg;        t.style.borderColor = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : type === 'warning' ? 'var(--orange)' : 'var(--border)';
         t.classList.add('show');
         setTimeout(() => t.classList.remove('show'), 2500);
     }
@@ -390,8 +389,8 @@
     // ========== PROCESS DETECTION ==========
     async function isModuleRunning(modName, modPath) {
         const pidFiles = await execFn(`find "${modPath}" -maxdepth 1 -name "*.pid" 2>/dev/null`);
-        if (pidFiles.trim()) {            for (const pf of pidFiles.trim().split('\n')) {
-                if (!pf) continue;
+        if (pidFiles.trim()) {
+            for (const pf of pidFiles.trim().split('\n')) {                if (!pf) continue;
                 const pid = await execFn(`cat '${pf}' 2>/dev/null | tr -cd '0-9'`);
                 if (pid && pid.trim()) {
                     const alive = await execFn(`kill -0 ${pid.trim()} 2>/dev/null && echo "alive" || echo "dead"`);
@@ -439,8 +438,8 @@
             }
         }
         await execFn(`sed -i "/^${modName.replace(/\//g, '\\/')}\\$/d" ${CFG.AUTORUN_FILE} 2>/dev/null`);
-        await new Promise(r => setTimeout(r, 300));    }
-
+        await new Promise(r => setTimeout(r, 300));
+    }
     // ========== START MODULE ==========
     async function startModuleProcess(modName, modPath, script) {
         const logFile = `${modPath}/restart.log`;
@@ -456,6 +455,54 @@
             await execFn(command);
         } catch (e) {
             console.error(`Failed to start ${modName}:`, e);
+        }
+    }
+
+    // ========== DELETE MODULE COMPLETELY ==========
+    async function deleteModule(name, path) {
+        if (!confirm(`⚠️ PERMANENTLY DELETE "${name}"?\n\nThis will:\n• Kill all running processes\n• Remove from /data/adb/modules\n• Delete autorun entries\n• Cannot be undone!\n\nContinue?`)) return;
+        
+        toast(`🗑️ Deleting ${name}...`);
+        
+        try {
+            // 1. Kill any running processes first
+            await killModuleProcess(name, path);
+            await new Promise(r => setTimeout(r, 400));
+            
+            // 2. Remove from autorun/processed files
+            await execFn(`sed -i "/^${name.replace(/\//g, '\\/')}\\$/d" ${CFG.AUTORUN_FILE} 2>/dev/null`);
+            await execFn(`sed -i "/^${name.replace(/\//g, '\\/')}\\$/d" ${CFG.PROCESSED_FILE} 2>/dev/null`);
+            
+            // 3. Remove PID files if any
+            await execFn(`find "${path}" -name "*.pid" -delete 2>/dev/null || true`);
+            
+            // 4. Create remove flag for Magisk/KernelSU unmount on next boot
+            await execFn(`[ -f "${path}/remove" ] || touch "${path}/remove" 2>/dev/null || true`);
+            
+            // 5. Actually delete the module directory
+            const deleteResult = await execFn(`rm -rf "${path}" 2>&1 && echo "SUCCESS" || echo "FAILED"`);
+            
+            if (deleteResult.trim().includes('SUCCESS')) {
+                // 6. Remove card from UI immediately with animation
+                const card = document.getElementById(`mm-card-${name}`);
+                if (card) {
+                    card.style.transition = 'all 0.2s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';                    setTimeout(() => card.remove(), 200);
+                }
+                knownModules.delete(name);
+                toast(`✅ "${name}" deleted successfully`, 'success');
+                
+                // 7. Refresh to ensure list consistency
+                setTimeout(() => refreshModules(), 500);
+            } else {
+                toast(`❌ Delete failed: ${deleteResult.trim()}`, 'error');
+                await refreshModules();
+            }
+        } catch (e) {
+            console.error(`Delete error for ${name}:`, e);
+            toast(`❌ Error: ${e.message || e}`, 'error');
+            await refreshModules();
         }
     }
 
@@ -476,9 +523,10 @@
                     <div>🔗 PID: <span class="mm-pid-line" id="mm-pid-${name}">${pid || 'None'}</span></div>
                 </div>
                 <div class="mm-actions">
-                    <button class="mm-btn mm-btn-secondary" onclick="ModuleManager.viewLogs('${safeName}')">📜</button>
-                    <button class="mm-btn mm-btn-danger" onclick="ModuleManager.killModule('${safeName}', '${safePath}')" ${!pid ? 'disabled' : ''}>KILL ⛔</button>
-                    <button class="mm-btn mm-btn-primary" onclick="ModuleManager.restartModule('${safeName}', '${safePath}')">RESTART 🔄</button>
+                    <button class="mm-btn mm-btn-secondary" onclick="ModuleManager.viewLogs('${safeName}')" title="View Logs">📜Logs</button>
+                    <button class="mm-btn mm-btn-danger" onclick="ModuleManager.killModule('${safeName}', '${safePath}')" ${!pid ? 'disabled' : ''} title="Kill Process">KILL</button>
+                    <button class="mm-btn mm-btn-primary" onclick="ModuleManager.restartModule('${safeName}', '${safePath}')" title="Restart Module">🔄Restart</button>
+                    <button class="mm-btn mm-btn-danger" style="background:linear-gradient(135deg, #8E8E93, #636366)" onclick="ModuleManager.deleteModule('${safeName}', '${safePath}')" title="Delete Completely">🗑️Delete</button>
                 </div>
             </div>`;
     }
@@ -489,8 +537,7 @@
         const killBtn = document.querySelector(`#mm-card-${name} .mm-btn-danger`);
         if (!badge || !pidEl) return false;
         const newClass = isDisabled ? 'mm-badge-disabled' : (isActive ? 'mm-badge-active' : 'mm-badge-inactive');
-        const newText = isDisabled ? 'Disabled' : (isActive ? 'Active' : 'Inactive');
-        if (badge.className !== `mm-badge ${newClass}`) badge.className = `mm-badge ${newClass}`;
+        const newText = isDisabled ? 'Disabled' : (isActive ? 'Active' : 'Inactive');        if (badge.className !== `mm-badge ${newClass}`) badge.className = `mm-badge ${newClass}`;
         if (badge.textContent !== newText) badge.textContent = newText;
 
         const newPidText = pid || 'None';
@@ -537,9 +584,9 @@
                 const existingCard = document.getElementById(`mm-card-${name}`);
                 
                 const disabled = await execFn(`test -f "${path}/disable" && echo "1" || echo "0"`);
-                const isDisabled = disabled.trim() === '1';                const pid = await isModuleRunning(name, path);
-                const isActive = pid && pid.length > 0 && !isDisabled;
-                
+                const isDisabled = disabled.trim() === "1";
+                const pid = await isModuleRunning(name, path);
+                const isActive = pid && pid.length > 0 && !isDisabled;                
                 if (existingCard) {
                     updateModuleCard(name, isDisabled, isActive, pid);
                 } else {
@@ -586,9 +633,9 @@
         if (!currentModule) return;
         const path = `${CFG.MODULES_DIR}/${currentModule}`;
         let logs = `🔴 LIVE LOGS: ${currentModule}\n═══════════════════════════════════════\n\n`;
-                const logcat = await execFn(`logcat -d -t 300 | grep -iE "${currentModule}|${path}" | tail -150`);
-        if (logcat.trim()) logs += `📱 LOGCAT:\n${logcat.trim()}\n\n`;
         
+        const logcat = await execFn(`logcat -d -t 300 | grep -iE "${currentModule}|${path}" | tail -150`);
+        if (logcat.trim()) logs += `📱 LOGCAT:\n${logcat.trim()}\n\n`;        
         const dmesg = await execFn(`dmesg | grep -iE "${currentModule}" | tail -30`);
         if (dmesg.trim()) logs += `🔧 DMESG:\n${dmesg.trim()}\n\n`;
         
@@ -635,8 +682,8 @@
         for (let i = 0; i < 8; i++) {
             await new Promise(r => setTimeout(r, 500));
             newPid = await isModuleRunning(name, path);
-            if (newPid) break;        }
-
+            if (newPid) break;
+        }
         if (newPid) {
             toast(`✅ Restarted (PID: ${newPid})`, 'success');
         } else {
@@ -684,9 +731,9 @@
     // ========== AUTO-REFRESH ==========
     function startAutoRefresh() {
         if (refreshInterval) clearInterval(refreshInterval);
-        refreshModules();        refreshInterval = setInterval(() => {
-            if (!document.hidden) refreshModules();
-        }, CFG.REFRESH_INTERVAL);
+        refreshModules();
+        refreshInterval = setInterval(() => {
+            if (!document.hidden) refreshModules();        }, CFG.REFRESH_INTERVAL);
     }
 
     // ========== MODAL SETUP ==========
@@ -733,8 +780,8 @@
                 
                 startAutoRefresh();
             }
-        };    }
-
+        };
+    }
     // ========== PUBLIC API ==========
     window.ModuleManager = {
         init: (containerId) => {
@@ -757,6 +804,7 @@
         closeModal,
         restartModule,
         killModule,
+        deleteModule,  // <-- Added to public API
         showDebugInfo,
         getKnownModules: () => [...knownModules],
         isRootAvailable: () => rootAvailable
