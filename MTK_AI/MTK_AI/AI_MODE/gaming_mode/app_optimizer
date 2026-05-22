@@ -34,6 +34,21 @@ echo "1" > /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_glove_mode
 
 echo "0" > /proc/sys/kernel/panic
 
+device_config put activity_manager max_phantom_processes 0
+device_config put activity_manager max_cached_processes 0
+device_config put activity_manager use_compaction true
+am set-process-limit 0
+cmd activity trim-memory critical
+cmd activity compact-apps 3 2>/dev/null
+sysctl -w vm.swappiness=50
+sysctl -w vm.vfs_cache_pressure=150
+sysctl -w vm.dirty_ratio=5
+sysctl -w vm.dirty_background_ratio=2
+am kill-all
+settings put global app_standby_enabled 1
+settings put global background_dex_opt_job false 2>/dev/null
+setprop persist.sys.game_mode 1
+
 [ -f "/sdcard/MTK_AI_Engine/enable_disable_thermal" ] && sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal"
 
 settings put global low_power 0
