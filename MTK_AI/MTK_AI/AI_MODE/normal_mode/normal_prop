@@ -24,6 +24,21 @@ echo "1" > /proc/cpufreq/cpufreq_power_mode
 
 echo "0" > /proc/cpufreq/cpufreq_cci_mode
 
+device_config put activity_manager max_phantom_processes 16
+device_config put activity_manager max_cached_processes 32
+device_config put activity_manager use_compaction true
+am set-process-limit -1
+
+cmd activity trim-memory moderate
+sysctl -w vm.swappiness=100
+sysctl -w vm.vfs_cache_pressure=100
+sysctl -w vm.dirty_ratio=20
+sysctl -w vm.dirty_background_ratio=10
+
+settings put global app_standby_enabled 1
+settings put global background_dex_opt_job true
+setprop persist.sys.game_mode 0
+
 start thermal_core
 start vendor.thermal-hal-2-0.mtk
 start vendor.thermal.symlinks
