@@ -1,4 +1,4 @@
-// cputoggle.js - CPU Core Toggle with LIVE status
+// cputoggle.js - CPU Core Toggle with LIVE status + chmod fix
 (function() {
     'use strict';
 
@@ -40,15 +40,14 @@
         console.log('CPUToggle: Button found, attaching click handler');
         btn.addEventListener('click', async () => {
             console.log('CPUToggle: Button clicked');
-            // ✅ Re-load config before showing modal
             await loadConfig();
             showCPUModal();
         });
     }
 
     function showCPUModal() {
-        const existing = document.getElementById('cpu-modal');        if (existing) existing.remove();
-
+        const existing = document.getElementById('cpu-modal');
+        if (existing) existing.remove();
         const modal = document.createElement('div');
         modal.id = 'cpu-modal';
         modal.style.cssText = `
@@ -96,8 +95,8 @@
         }
     }
 
-    async function scanCores() {        const listEl = document.getElementById('cpu-list');
-        const statusEl = document.getElementById('cpu-scan-status');
+    async function scanCores() {
+        const listEl = document.getElementById('cpu-list');        const statusEl = document.getElementById('cpu-scan-status');
         if (!listEl || !statusEl) return;
 
         try {
@@ -119,16 +118,13 @@
                 if (!idMatch) continue;
                 const id = idMatch[1];
                 
-                // ✅ ALWAYS read LIVE status from kernel - NEVER use saved state for display
                 const onlineRaw = await execFn(`cat ${path}/online 2>/dev/null`);
                 const isHotplug = onlineRaw && onlineRaw.trim() !== '' && !onlineRaw.includes('error');
                 const liveOnline = isHotplug ? onlineRaw.trim() === '1' : true;
                 
-                // Read frequency
                 const freqRaw = await execFn(`cat ${path}/cpufreq/scaling_cur_freq 2>/dev/null`);
                 const freq = freqRaw && freqRaw.trim() ? `${Math.floor(parseInt(freqRaw)/1000)} MHz` : 'N/A';
 
-                // ✅ Store the LIVE state, not saved state
                 detectedCores.push({ id, path, liveOnline, isHotplug, freq });
 
                 const canToggle = isHotplug && parseInt(id) > 0;
@@ -145,11 +141,11 @@
                         </div>
                         <div style="color: #666; font-size: 11px; margin-top: 2px;">
                             ${freq} • <span style="color: ${liveOnline ? '#32D74B' : '#FF453A'}">${liveOnline ? 'online' : 'offline'}</span>
-                            ${!canToggle ? ' • <span style="color: #888;">locked</span>' : ''}                        </div>
+                            ${!canToggle ? ' • <span style="color: #888;">locked</span>' : ''}
+                        </div>
                     </div>
                     <button class="cpu-core-toggle" data-id="${id}" data-live="${liveOnline ? '1' : '0'}" ${!canToggle ? 'disabled' : ''} 
-                        style="background: ${liveOnline ? '#FF453A' : '#32D74B'}; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: ${canToggle ? 'pointer' : 'not-allowed'}; opacity: ${canToggle ? '1' : '0.5'}; min-width: 70px;">
-                        ${liveOnline ? 'Offline' : 'Online'}
+                        style="background: ${liveOnline ? '#FF453A' : '#32D74B'}; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: ${canToggle ? 'pointer' : 'not-allowed'}; opacity: ${canToggle ? '1' : '0.5'}; min-width: 70px;">                        ${liveOnline ? 'Offline' : 'Online'}
                     </button>
                 `;
                 listEl.appendChild(coreEl);
@@ -170,9 +166,13 @@
                     e.currentTarget.textContent = '⏳';
                     
                     try {
+                        // ✅ STEP 1: Make the online file writable (chmod 644)
+                        await execFn(`su -c "chmod 644 ${core.path}/online"`);
+                        
+                        // ✅ STEP 2: Write the new state
                         await execFn(`su -c "echo ${newOnline} > ${core.path}/online"`);
                         
-                        // ✅ Save state for persistence
+                        // ✅ Save state for persistence to sdcard
                         savedCoreStates[id] = newOnline;
                         let cfg = '';
                         for (const [cid, state] of Object.entries(savedCoreStates)) {
@@ -182,7 +182,7 @@
                         
                         // ✅ Re-read LIVE status after toggle
                         await new Promise(r => setTimeout(r, 300));
-                        showCPUModal(); // Re-open modal to show fresh status
+                        showCPUModal();
                     } catch (err) {
                         console.error(`CPUToggle: Failed CPU${id}:`, err);
                         e.currentTarget.textContent = currentLive ? 'Offline' : 'Online';
