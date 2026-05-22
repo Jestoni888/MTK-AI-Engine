@@ -106,6 +106,7 @@ webroot/modulemanager.js
 webroot/profile.js
 webroot/renderer.js
 webroot/cpuset.js
+webroot/setedit.js
 lib64/libc++_shared.so
 "
 
