@@ -181,7 +181,7 @@ function renderControls() {
               <div class="setting-icon blue"><i class="fas fa-pause"></i></div>
               <div class="setting-content">
                   <div class="setting-title">Manual CPU Frequency %</div>
-                  <div class="setting-description">CPU frequency when screen is inactive</div>
+                  <div class="setting-description">CPU frequency when inactive in touch</div>
                   <input type="range" id="inactive-freq-slider" min="25" max="50" value="30" style="width:100%;margin-top:10px;" oninput="updateInactiveFreqDisplay(this.value)">
                   <div id="inactive-freq-display" style="color:#3b82f6;font-size:12px;margin-top:4px;">30%</div>
               </div>
@@ -216,7 +216,7 @@ async function applyTouchActiveFreq(e) {
 async function applyInactiveFreq(e) {
     const val = parseInt(e.target.value);
     try {
-        await execFn(`echo "${val}" > /sdcard/MTK_AI_Engine/manual_cpu_freq_pct.txt 2>/dev/null`, 2000);
+        await execFn(`echo "${val}" > /sdcard/MTK_AI_Engine/manual_inactive_freq.txt 2>/dev/null`, 2000);
         showStatus(`✅ Inactive CPU frequency set to ${val}%`);
         await restartService();
     } catch (err) { showStatus('⚠️ Failed to apply setting', true); }
@@ -325,7 +325,7 @@ async function loadTouchControls() {
         const touchSlider = document.getElementById('touch-active-freq-slider');
         if (touchSlider) { touchSlider.value = touchActive; updateTouchActiveFreqDisplay(touchActive); touchSlider.oninput = function() { updateTouchActiveFreqDisplay(this.value); }; touchSlider.onchange = applyTouchActiveFreq; }
         
-        const inactiveVal = await execFn(`cat /sdcard/MTK_AI_Engine/manual_cpu_freq_pct.txt 2>/dev/null`, 1000);
+        const inactiveVal = await execFn(`cat /sdcard/MTK_AI_Engine/manual_inactive_freq.txt 2>/dev/null`, 1000);
         let inactive = parseInt(inactiveVal.trim()) || 30; inactive = Math.max(25, Math.min(50, inactive));
         const inactiveSlider = document.getElementById('inactive-freq-slider');
         if (inactiveSlider) { inactiveSlider.value = inactive; updateInactiveFreqDisplay(inactive); inactiveSlider.oninput = function() { updateInactiveFreqDisplay(this.value); }; inactiveSlider.onchange = applyInactiveFreq; }
