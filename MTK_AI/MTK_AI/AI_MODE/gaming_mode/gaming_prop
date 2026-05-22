@@ -6,6 +6,7 @@
 ###############################
 # Celestial Flinger Flux (@Kzuyoo)
 ###############################
+setprop 'persist.sys.framepredict.enable' 'true'
 setprop sys.surfaceflinger.idle_reduce_framerate_enable no
 
 # HWUI Optimized (Essential)
