@@ -35,6 +35,10 @@ echo "1" > /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_glove_mode
 echo "0" > /proc/sys/kernel/panic
 
 settings put global 'always_finish_activities' '1'
+setprop 'persist.sys.max_background' '0'
+setprop 'persist.sys.framepredict.enable' 'true'
+settings put system 'persist.sys.power_mode_perf' '1'
+settings put global 'sustained_performance_mode_enabled' '1'
 
 device_config put activity_manager max_phantom_processes 0
 device_config put activity_manager max_cached_processes 0
