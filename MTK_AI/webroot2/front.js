@@ -149,6 +149,35 @@
         logcat: ['/dev/log/main']
     };
     const pathStatusCache = {};
+    
+    // ============ STATE FILE MANAGEMENT ============
+const STATE_FILE_PATH = '/sdcard/MTK_AI_Engine/automode';
+
+async function saveServicesState(enabled) {
+    try {
+        // Ensure directory exists
+        await exec(`mkdir -p /sdcard/MTK_AI_Engine 2>/dev/null`);
+        // Write state: 1 = AUTO/enabled, 0 = MANUAL/disabled
+        await exec(`echo "${enabled ? '1' : '0'}" > "${STATE_FILE_PATH}" 2>/dev/null`);
+        return true;
+    } catch (e) {
+        console.error('Failed to save services state:', e);
+        return false;
+    }
+}
+
+async function loadServicesState() {
+    try {
+        const result = await exec(`cat "${STATE_FILE_PATH}" 2>/dev/null`);
+        const val = result.trim();
+        if (val === '1') return true;   // AUTO MODE
+        if (val === '0') return false;  // MANUAL MODE
+        return null; // No saved state
+    } catch (e) {
+        console.error('Failed to load services state:', e);
+        return null;
+    }
+}
 
     // ============ SAFE EXEC WRAPPER ============
     async function exec(command, timeout = 5000) {
@@ -577,33 +606,52 @@
     // ============ MTK SERVICES & OVERLAY ============
     let mtkServicesEnabled = false;
     window.toggleMTKServices = async function() {
-        const txt = document.getElementById('mon_services'), dot = document.getElementById('services-status-dot');
-        try {
-            if (mtkServicesEnabled) {
-                await exec(`pkill -f "MTK_AI.*mtk_ai_engine" 2>/dev/null; pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null; pkill -f "dumpsys2" 2>/dev/null; pkill -f "script_runner.*global" 2>/dev/null; pkill -f "service.sh" 2>/dev/null; killall service.sh mtk_ai_engine 2>/dev/null`);
-                mtkServicesEnabled = false;
-                if (txt) { txt.textContent = 'MANUAL MODE'; txt.style.color = '#FF453A'; }
-                if (dot) { dot.style.background = '#FF453A'; dot.style.display = 'block'; }
-                showStatus('⏹️ MTK AI services disabled', '#FF453A');
-            } else {
-                await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);                mtkServicesEnabled = true;
-                if (txt) { txt.textContent = 'AUTO MODE'; txt.style.color = '#32D74B'; }
-                if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; }
-                showStatus('▶️ MTK AI services enabled', '#32D74B');
-            }
-            setTimeout(() => { if (dot) dot.style.display = 'none'; }, 2000);
-        } catch (e) { showStatus('❌ Toggle failed', '#FF453A'); }
-    };
-    async function checkMTKServicesStatus() {
-        try {
-            const result = await exec('pgrep -f "mtk_ai_engine" 2>/dev/null'), isRunning = result.trim().length > 0;
-            mtkServicesEnabled = isRunning;
-            const txt = document.getElementById('mon_services'), dot = document.getElementById('services-status-dot');
-            if (isRunning) { if (txt) { txt.textContent = 'AUTO MODE'; txt.style.color = '#32D74B'; } if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; } }
-            else { if (txt) { txt.textContent = 'MANUAL MODE'; txt.style.color = '#FF453A'; } if (dot) { dot.style.background = '#FF453A'; dot.style.display = 'block'; } }
-            setTimeout(() => { if (dot) dot.style.display = 'none'; }, 1000);
-        } catch (e) { console.error('Service check error:', e); }
+    const txt = document.getElementById('mon_services'), dot = document.getElementById('services-status-dot');
+    try {
+        if (mtkServicesEnabled) {
+            // Disable services (MANUAL MODE)
+            await exec(`pkill -f "MTK_AI.*mtk_ai_engine" 2>/dev/null; pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null; pkill -f "dumpsys2" 2>/dev/null; pkill -f "script_runner.*global" 2>/dev/null; pkill -f "service.sh" 2>/dev/null; killall service.sh mtk_ai_engine 2>/dev/null`);
+            mtkServicesEnabled = false;
+            await saveServicesState(false); // ✅ Persist to file
+            if (txt) { txt.textContent = 'MANUAL MODE'; txt.style.color = '#FF453A'; }
+            if (dot) { dot.style.background = '#FF453A'; dot.style.display = 'block'; }
+            showStatus('⏹️ MTK AI services disabled - Manual Mode', '#FF453A');
+        } else {
+            // Enable services (AUTO MODE)
+            await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
+            mtkServicesEnabled = true;
+            await saveServicesState(true); // ✅ Persist to file
+            if (txt) { txt.textContent = 'AUTO MODE'; txt.style.color = '#32D74B'; }
+            if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; }
+            showStatus('▶️ MTK AI services enabled - Auto Mode', '#32D74B');
+        }
+        setTimeout(() => { if (dot) dot.style.display = 'none'; }, 2000);
+    } catch (e) { 
+        showStatus('❌ Toggle failed: ' + e.message, '#FF453A'); 
     }
+};
+    async function checkMTKServicesStatus() {
+    try {
+        // Pure process detection
+        const result = await exec('pgrep -f "mtk_ai_engine" 2>/dev/null');
+        const isRunning = result.trim().length > 0;
+        mtkServicesEnabled = isRunning; // Sync internal flag with actual runtime state
+
+        const txt = document.getElementById('mon_services');
+        const dot = document.getElementById('services-status-dot');
+
+        if (isRunning) {
+            if (txt) { txt.textContent = 'AUTO MODE'; txt.style.color = '#32D74B'; }
+            if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; }
+        } else {
+            if (txt) { txt.textContent = 'MANUAL MODE'; txt.style.color = '#FF453A'; }
+            if (dot) { dot.style.background = '#FF453A'; dot.style.display = 'block'; }
+        }
+        setTimeout(() => { if (dot) dot.style.display = 'none'; }, 1000);
+    } catch (e) {
+        console.error('Service check error:', e);
+    }
+}
 
     let isOverlayOn = false;
     window.toggleOverlay = async function() {
@@ -688,27 +736,45 @@
 
     // ============ OPTIMIZED INIT (CLICK-TO-LOAD CONSOLE) ============
     async function init() {
-        console.log('MTK AI Engine initializing...');
-        
-        injectTerminalStyles();
-        
-        // Show placeholder in console (no auto-scan)
-        const consoleEl = document.getElementById('inline-console');
-        if (consoleEl) {
-            consoleEl.innerHTML = '<div class="console-hint">👆 Tap here to load system paths scan</div>';
-        }
-        
-        // Load lightweight info only
-        await loadDeviceInfo();
-        await loadSystemStatus();
-        await checkMTKServicesStatus();
-        
-        setupEventListeners();
-        setupViewDetails();
-        startLiveUpdates(); // Keeps CPU/RAM/battery updates running
-        
-        console.log('MTK AI Engine ready. Console awaits user interaction.');
+    console.log('MTK AI Engine initializing...');
+    
+    injectTerminalStyles();
+    
+    // Show placeholder in console (no auto-scan)
+    const consoleEl = document.getElementById('inline-console');
+    if (consoleEl) {
+        consoleEl.innerHTML = '<div class="console-hint">👆 Tap here to load system paths scan</div>';
     }
+    
+    // Load lightweight info only
+    await loadDeviceInfo();
+    await loadSystemStatus();
+    
+    // ✅ Load and apply saved services state BEFORE checking process
+    const savedState = await loadServicesState();
+    if (savedState !== null) {
+        mtkServicesEnabled = savedState;
+        // Apply UI state immediately
+        const txt = document.getElementById('mon_services');
+        const dot = document.getElementById('services-status-dot');
+        if (mtkServicesEnabled) {
+            if (txt) { txt.textContent = 'AUTO MODE'; txt.style.color = '#32D74B'; }
+            if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; setTimeout(() => dot.style.display = 'none', 1000); }
+        } else {
+            if (txt) { txt.textContent = 'MANUAL MODE'; txt.style.color = '#FF453A'; }
+            if (dot) { dot.style.background = '#FF453A'; dot.style.display = 'block'; setTimeout(() => dot.style.display = 'none', 1000); }
+        }
+    }
+    
+    // Then verify actual process state (optional sync)
+    await checkMTKServicesStatus();
+    
+    setupEventListeners();
+    setupViewDetails();
+    startLiveUpdates();
+    
+    console.log('MTK AI Engine ready. Console awaits user interaction.');
+}
     
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
