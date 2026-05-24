@@ -153,7 +153,7 @@
         const files = findResult.split('\n').filter(f => f && f.trim());
         if (files.length === 0) throw new Error('No I/O tunable files found');
 
-        statusEl.innerHTML = `<span style="color: #4a9eff;">⚡ Applying to ${files.length} entries...</span>`;
+        statusEl.innerHTML = `<span style="color: #4a9eff;">⚡ Applying to ${files.length} entries... Don't close UI while applying</span>`;
         let success = 0;
 
         for (const file of files) {
