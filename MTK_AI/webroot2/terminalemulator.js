@@ -16,6 +16,7 @@
     const PREDEFINED_COMMANDS = [
         { label: '🔍 getprop | grep [keyword]', cmd: 'getprop | grep ', copyOnly: true, hint: 'Paste keyword after' },
         { label: '📱 List all properties', cmd: 'getprop', copyOnly: false },
+        { label: '🔎 Read-ahead & Scheduler', cmd: 'find /sys \\( -name "read_ahead_kb" -o -name "scheduler" \\) ! -type d 2>/dev/null | while IFS= read -r file; do [ -r "$file" ] && echo "$file => $(cat "$file" 2>/dev/null)"; done', copyOnly: false },
         { label: '🔋 Battery stats', cmd: 'dumpsys battery', copyOnly: false },
         { label: '📶 WiFi info', cmd: 'cmd wifi list-networks', copyOnly: false },
         { label: '🧠 CPU info', cmd: 'cat /proc/cpuinfo', copyOnly: false },
