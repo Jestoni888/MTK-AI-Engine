@@ -9,9 +9,12 @@ log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-for q in /sys/block/*/queue; do 
-  echo 4096|tee $q/read_ahead_kb 2>/dev/null
-  echo none|tee $q/scheduler 2>/dev/null
+find /sys \( -name "read_ahead_kb" -o -name "scheduler" \) ! -type d 2>/dev/null | while IFS= read -r file; do
+    chmod 777 "$file" 2>/dev/null
+    case "$file" in
+        *read_ahead_kb) echo 4096 | tee "$file" 2>/dev/null ;;
+        *scheduler)     echo none  | tee "$file" 2>/dev/null ;;
+    esac
 done
 
 echo "3" > /proc/cpufreq/cpufreq_power_mode
