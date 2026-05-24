@@ -1,8 +1,8 @@
 id=MTK_AI
 name=MediaTek AI Engine
-version=0.0.0.77
-versionCode=77
+version=0.0.0.78
+versionCode=78
 author=t.me/mikamisaturo
-description=[📝SetEdit added to edit system properties] MediaTek Engine has a features in performance, normal use & powersaver in a convenient way. Click ▶️ for updates.
+description=[🔥CPU Locking frequency min/max] MediaTek Engine has a features in performance, normal use & powersaver in a convenient way. Click ▶️ for updates.
 updateJson=https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/update.json
 webui=true
