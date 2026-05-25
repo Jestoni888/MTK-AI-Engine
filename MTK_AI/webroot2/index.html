@@ -1625,6 +1625,32 @@ Matches MTK AI Engine Theme
                 <div class="service-subtitle">Toggle FPS Overlay <i class="fas fa-chevron-right"></i></div>
             </div>
         </div>
+        
+        <!-- Master Mode Toggle Section -->
+<div class="status-card full-width" id="master-mode-card" style="grid-column: 1 / -1;">
+    <div class="card-header">
+        <span class="card-icon"></span>
+        <span class="card-title">MASTER MODE</span>
+    </div>
+    
+    <div class="profile-toggle" id="profile-toggle-group">
+        <button class="profile-btn" data-mode="performance" onclick="selectProfile('performance')">
+            PERFORMANCE
+        </button>
+        <button class="profile-btn" data-mode="balance" onclick="selectProfile('balance')">
+            BALANCE
+        </button>
+        <button class="profile-btn" data-mode="powersave" onclick="selectProfile('powersave')">
+            POWERSAVE
+        </button>
+    </div>
+    
+    <div class="profile-desc" id="profile-desc">Select a mode to optimize your device</div>
+    <div class="profile-locked" id="profile-locked">🔒 Applying changes... Please wait</div>
+    <button class="apply-btn" id="apply-profile-btn" onclick="applyProfile()">
+        ACTIVATE
+    </button>
+</div>
 
         <!-- Direct Console Display (Inline) -->
 <div class="service-card">
