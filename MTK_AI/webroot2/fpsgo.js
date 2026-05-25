@@ -635,8 +635,12 @@
         state = { ...state, enable: preset.enable, force: preset.force, customMask: null, preset: Object.keys(FPSGO_PRESETS).find(k => FPSGO_PRESETS[k] === preset) };
         saveState();
         
-        setupMasterControls();         updateSystraceCheckboxes(preset.mask); 
+        setupMasterControls(); 
+        updateSystraceCheckboxes(preset.mask); 
         renderPresets(document.getElementById('preset-list'));
+        
+        // Refresh terminal to show new mask
+        setTimeout(updateTerminalStatus, 200);
     }
 
     function updateSystraceCheckboxes(mask) {
@@ -661,11 +665,22 @@
         box.style.cssText = 'background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #ef4444;border-radius:20px;padding:20px;width:100%;max-width:600px;max-height:95vh;overflow-y:auto;';
 
         box.innerHTML = `
-            <div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:12px;margin-bottom:15px;">
-                <div style="color:#ef4444;font-weight:600;">⚠️ Bootloop Warning</div>
+            <div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:12px;margin-bottom:12px;">
+                <div style="color:#ef4444;font-weight:600;">️ Bootloop Warning</div>
                 <div style="color:#fca5a5;font-size:11px;margin-top:6px;">Incorrect settings can cause bootloops. Delete /data/adb/service.d/fpsgo.sh in recovery if stuck.</div>
             </div>
-            <h3 style="color:#ef4444;margin:0 0 15px;text-align:center;">FPSGO Manager <span style="font-size:12px;color:#888;">v2.2 Fixed</span></h3>
+            
+            <!-- TERMINAL STATUS BOX -->
+            <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;margin-bottom:15px;font-family:'Courier New',monospace;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:6px;">
+                    <span style="color:#8b949e;font-size:11px;font-weight:600;">📟 Live Systrace Status</span>
+                    <button id="refresh-terminal" style="background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;transition:all 0.2s;">↻ Refresh</button>
+                </div>
+                <div id="terminal-output" style="color:#3fb950;font-size:12px;line-height:1.4;min-height:36px;">$ su -c cat /sys/kernel/fpsgo/common/systrace_mask<br>Initializing...</div>
+            </div>
+            <!-- END TERMINAL -->
+
+            <h3 style="color:#ef4444;margin:0 0 15px;text-align:center;">FPSGO Manager <span style="font-size:12px;color:#888;">v2.2 Terminal</span></h3>
         `;
 
         const presetDiv = document.createElement('div'); 
@@ -736,18 +751,66 @@
         modal.appendChild(box); 
         document.body.appendChild(modal);
 
-        document.getElementById('show-unsupported').onchange = () => renderSystraceFlags(document.getElementById('systrace-flags'), state.discoveredFlags);
-        document.getElementById('apply-mask-btn').onclick = () => applyCustomMask();
+        // Terminal refresh button
+        document.getElementById('refresh-terminal').onclick = () => updateTerminalStatus();
+        
+        // Category & unsupported toggles
+        const categoryFilter = document.getElementById('category-filter');
+        const showUnsupported = document.getElementById('show-unsupported');
+        if (categoryFilter) categoryFilter.onchange = () => renderSystraceFlags(document.getElementById('systrace-flags'), state.discoveredFlags);
+        if (showUnsupported) showUnsupported.onchange = () => renderSystraceFlags(document.getElementById('systrace-flags'), state.discoveredFlags);
+        
+        document.getElementById('apply-mask-btn').onclick = async () => {
+            await applyCustomMask();
+            setTimeout(updateTerminalStatus, 300); // Refresh terminal after apply
+        };
 
         renderPresets(document.getElementById('preset-list'));
         setupMasterControls();
         
+        // Initial scan & terminal load
         setTimeout(async () => {
             await detectAndScan();
             renderTweakControls(document.getElementById('tweak-controls'));
             renderSystraceFlags(document.getElementById('systrace-flags'), state.discoveredFlags);
+            await updateTerminalStatus(); // Load terminal status after scan
         }, 100);
     }
+    
+    async function updateTerminalStatus() {
+    const output = document.getElementById('terminal-output');
+    if (!output) return;
+    
+    const targetPath = systraceMaskPath || '/sys/kernel/fpsgo/common/systrace_mask';
+    output.innerHTML = `<span style="color:#8b949e;">$ su -c cat ${targetPath}</span><br><span style="color:#f0883e;">Reading...</span>`;
+    
+    if (!execAvailable) {
+        output.innerHTML += `<br><span style="color:#f85149;">⚠ Root exec not available</span>`;
+        return;
+    }
+    
+    try {
+        const result = await execFn(`cat "${targetPath}" 2>&1`);
+        const clean = result.trim();
+        
+        if (clean && !clean.toLowerCase().includes('no such') && !clean.toLowerCase().includes('permission')) {
+            const mask = parseInt(clean) || 0;
+            const hex = mask.toString(16).toUpperCase();
+            const activeFlags = ALL_SYSTRACE_FLAGS.filter(f => mask & f.value).map(f => f.label);
+            
+            output.innerHTML = `
+                <span style="color:#8b949e;">$ su -c cat ${targetPath}</span><br>
+                <span style="color:#3fb950;font-weight:bold;">${clean}</span><br>
+                <span style="color:#58a6ff;">Hex: 0x${hex} | Decimal: ${mask}</span><br>
+                <span style="color:#d2a8ff;">Flags: ${activeFlags.length ? activeFlags.join(', ') : 'None'}</span>
+            `;
+        } else {
+            output.innerHTML += `<br><span style="color:#f85149;"> ${clean || 'Path not found'}</span>`;
+        }
+    } catch (e) {
+        output.innerHTML += `<br><span style="color:#f85149;">❌ Error: ${e.message}</span>`;
+    }
+}
 
     async function generateBootScript(btnRef) {
         if (!execAvailable || !systraceMaskPath) {
