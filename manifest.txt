@@ -72,4 +72,5 @@ webroot/profile.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/re
 webroot/renderer.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/renderer.js
 webroot/cpuset.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/cpuset.js
 webroot/setedit.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/setedit.js
+webroot/update.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/update.js
 lib64/libc++_shared.so https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib64/libc++_shared.so
