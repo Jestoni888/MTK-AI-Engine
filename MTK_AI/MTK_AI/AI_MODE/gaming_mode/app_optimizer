@@ -176,4 +176,4 @@ done < "$CONFIG_FILE"
             sh /data/adb/service.d/99_mtk_ai_restore_values.sh &
         fi
 
-echo "✅ Devfreq settings loaded successfully!"
+echo "✅ Devfreq settings loaded successfully!!"
