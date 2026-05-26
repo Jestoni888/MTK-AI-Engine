@@ -49,15 +49,41 @@
         }
         return 0;    }
 
-    // Check if file is text-based (safe for SHA256 content check)
-    function isTextFile(path) {
-        return /\.(sh|js|html|prop|txt|cfg|conf|xml|json)$/i.test(path);
+    // 🔧 FIXED: Conservative text detection — extension OR shebang only
+    async function isTextFile(relPath) {
+        // 1. Fast path: Check by extension (original behavior)
+        if (/\.(sh|js|html|prop|txt|cfg|conf|xml|json|css|md)$/i.test(relPath)) {
+            return true;
+        }
+
+        // 2. Known binaries WITHOUT extensions — explicitly exclude from text check
+        // Add any extensionless binaries here to prevent false text detection
+        const knownBinaries = new Set([
+            // Example: "path/to/binary_without_extension"
+            // Currently: lib64/libc++_shared.so has .so, so it's already handled by extension check
+        ]);
+        if (knownBinaries.has(relPath)) {
+            return false;
+        }
+
+        // 3. For extensionless files: Check for shebang (#!) — definitive script indicator
+        const localPath = `${MODDIR}/${relPath}`;
+        try {
+            const shebang = await execCmd(`${BUSYBOX} head -c 2 "${localPath}" 2>/dev/null`, 3000);
+            if (shebang === '#!') {
+                return true; // Confirmed shell/script file
+            }
+        } catch (e) {
+            // On error, conservatively treat as binary
+        }
+
+        // 4. Default: No extension + no shebang = treat as binary (safe default)
+        return false;
     }
 
     // Compute SHA256 of local file using busybox
     const getLocalFileHash = async function(filepath) {
         try {
-            // Returns null if file missing or command fails
             const cmd = `${BUSYBOX} sha256sum "${filepath}" 2>/dev/null | ${BUSYBOX} cut -d' ' -f1`;
             const result = await execCmd(cmd, 8000);
             return result && result.trim() ? result.trim().toLowerCase() : null;
@@ -70,8 +96,7 @@
     const computeSHA256 = async function(content) {
         try {
             const encoder = new TextEncoder();
-            const data = encoder.encode(content);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const data = encoder.encode(content);            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
         } catch (e) {
@@ -120,8 +145,7 @@
         "MTK_AI/AI_MODE/normal_mode/powersavex",
         "MTK_AI/AI_MODE/global_mode/charger_check",
         "MTK_AI/AI_MODE/global_mode/ram_cleaner",
-        "MTK_AI/AI_MODE/global_mode/resources_tweaks",
-        "MTK_AI/AI_MODE/global_mode/trim_memory",
+        "MTK_AI/AI_MODE/global_mode/resources_tweaks",            "MTK_AI/AI_MODE/global_mode/trim_memory",
         "MTK_AI/AI_MODE/global_mode/webview_tweaks",
         "MTK_AI/AI_MODE/global_mode/module_executer",
         "script_runner/display_mode",
@@ -147,7 +171,8 @@
         "webroot/cputoggle.js",
         "webroot/dex2oat.js",
         "webroot/eemvoltage.js",
-        "webroot/fpsgo.js",        "webroot/freeze.js",
+        "webroot/fpsgo.js",        
+        "webroot/freeze.js",
         "webroot/front.js",
         "webroot/gmsdoze.js",
         "webroot/gpu.js",
@@ -170,7 +195,7 @@
         "webroot/profile.js",
         "webroot/renderer.js",
         "webroot/cpuset.js",
-        "webroot/setedit.js",
+        "webroot/setedit.js",        
         "webroot/update.js",
         "lib64/libc++_shared.so"
     ]);
@@ -190,7 +215,8 @@
                 if (!REQUIRED_FILES.has(relPath)) continue;
                 
                 const localPath = `${MODDIR}/${relPath}`;
-                const isText = isTextFile(relPath);
+                // 🔧 FIXED: Await async function, pass only relPath
+                const isText = await isTextFile(relPath);
 
                 // 1. Check Local Existence (Works for both Text and Binary)
                 const localHash = await getLocalFileHash(localPath);
@@ -219,8 +245,7 @@
                         }
                     } catch (e) {
                         changedFilesList.push({ path: relPath, reason: 'Error' });
-                    }
-                } else {
+                    }                } else {
                     // 3. Binary File: Existence Check Only
                     // Since localHash is valid, the file exists.
                     // We assume it's up to date if present.
@@ -228,9 +253,6 @@
                 }
             }
 
-            // ✅ REMOVED EARLY EXIT: Now checks ALL files so update.js is detected
-            // even if backup.sh fails.
-            
             console.log(`[Integrity] Scan complete. ${changedFilesList.length} issues found.`);
             return changedFilesList.length > 0;
 
@@ -272,8 +294,7 @@
                     <span style="color:#fff;font-size:20px;">🔄</span>
                 </div>
                 <div>
-                    <div style="color:#fff;font-size:18px;font-weight:700;">Update Available!</div>
-                    <div style="color:#8b92b4;font-size:12px;">New version of MTK AI Engine</div>
+                    <div style="color:#fff;font-size:18px;font-weight:700;">Update Available!</div>                    <div style="color:#8b92b4;font-size:12px;">New version of MTK AI Engine</div>
                     ${integrityNote}
                 </div>
             </div>
@@ -322,8 +343,7 @@
 
                     if (isRunning) {
                         downloadBtn.innerHTML = '⏳ Updating...';
-                        downloadBtn.style.background = '#FF9F0A';
-                    } else {
+                        downloadBtn.style.background = '#FF9F0A';                    } else {
                         clearInterval(pollInterval);
                         downloadBtn.innerHTML = '✅ Update Complete!';
                         downloadBtn.style.background = '#32D74B';
@@ -372,8 +392,7 @@
             const localContent = await execCmd(`${BUSYBOX} cat "${MODULE_PATH}" 2>/dev/null`, 5000);
             if (localContent && localContent.trim()) {
                 const localProp = parseProp(localContent);
-                const localVer = localProp.version || localProp.versionCode || '0.0.0';
-                if (localVer && localVer !== '0.0.0') currentVersion = localVer;
+                const localVer = localProp.version || localProp.versionCode || '0.0.0';                if (localVer && localVer !== '0.0.0') currentVersion = localVer;
             }
 
             const response = await fetch(ONLINE_URL, { cache: 'no-store' });
