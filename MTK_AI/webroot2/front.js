@@ -171,6 +171,7 @@ for c in /sys/devices/system/cpu/cpu*/core_ctl/enable; do
 echo 1 > /sys/devices/system/cpu/sched/sched_boost 2>/dev/null
 echo 1 > /sys/devices/system/cpu/eas/enable 2>/dev/null
 echo 536870911 > /sys/kernel/fpsgo/common/systrace_mask
+chmod 777 /sys/devices/system/cpu/cpufreq/policy*
 for policy in /sys/devices/system/cpu/cpufreq/policy*; do 
 chmod 777 > $policy/scaling_governor 2>/dev/null;
 echo performance > $policy/scaling_governor 2>/dev/null; done
@@ -205,8 +206,9 @@ echo -1 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
 echo -1 > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
 echo "balance" > /sdcard/MTK_AI_Engine/manual_governor.txt
 echo "1" > /sdcard/MTK_AI_Engine/automode
+for f in /proc/*/*/*offset; do echo "-10" > "$f" 2>/dev/null; done
+rm -f /sdcard/MTK_AI_Engine/enable_limiter
 pkill -f mtk_ai_engine
-su -c 'for f in /proc/*/*/*offset; do echo "-10" > "$f" 2>/dev/null; done'
 su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'
 `
         },
