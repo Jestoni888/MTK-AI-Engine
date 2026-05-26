@@ -203,7 +203,7 @@ fi
 echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
 
 for q in /sys/block/*/queue; do 
-  echo 4096|tee $q/read_ahead_kb 2>/dev/null
+  echo 8192|tee $q/read_ahead_kb 2>/dev/null
   echo none|tee $q/scheduler 2>/dev/null
 done
 
@@ -216,6 +216,9 @@ for PROC in $(ps -e | grep thermal | grep -v grep | awk "{print \$NF}"); do
     echo "Stopping service $PROC"
     stop $PROC 2>/dev/null
 done
+
+echo performance > /sys/class/devfreq/13000000.mali/governor 2>/dev/null
+echo performance > /sys/class/devfreq/mtk-dvfsrc-devfreq/governor 2>/dev/null
 
 # ==============================
 # ✅ Done
