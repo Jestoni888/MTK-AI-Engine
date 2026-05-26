@@ -12,7 +12,7 @@ log_msg() {
 find /sys \( -name "read_ahead_kb" -o -name "scheduler" \) ! -type d 2>/dev/null | while IFS= read -r file; do
     chmod 777 "$file" 2>/dev/null
     case "$file" in
-        *read_ahead_kb) echo 4096 | tee "$file" 2>/dev/null ;;
+        *read_ahead_kb) echo 8192 | tee "$file" 2>/dev/null ;;
         *scheduler)     echo none  | tee "$file" 2>/dev/null ;;
     esac
 done
