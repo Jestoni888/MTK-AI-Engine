@@ -157,7 +157,7 @@
         performance: {
             label: 'PERFORMANCE',
             color: '#FF3B30', // Red
-            desc: 'Max clocks • Thermal disabled • Aggressive boost • Automode stops',
+            desc: 'Max clocks • Thermal disabled • Aggressive boost • Can cause auto reboot • Automode stops',
             commands: `
 export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
 exec /data/adb/modules/MTK_AI/main_control/mode "performance mode"
