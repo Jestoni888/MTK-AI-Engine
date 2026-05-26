@@ -157,7 +157,7 @@
         performance: {
             label: 'PERFORMANCE',
             color: '#FF3B30', // Red
-            desc: 'Max clocks • Thermal disabled • Aggressive boost',
+            desc: 'Max clocks • Thermal disabled • Aggressive boost • Automode stops',
             commands: `
 rm -f /sdcard/MTK_AI_Engine/enable_limiter
 touch /sdcard/MTK_AI_Engine/enable_performance
@@ -200,7 +200,7 @@ pkill -f mtk_ai_engine
         balance: {
             label: 'BALANCE',
             color: '#FF9500', // Orange
-            desc: 'schedutil • Normal thermal • Default behavior',
+            desc: 'schedutil • Normal thermal • Smart switch on gaming/normal',
             commands: `
 for policy in /sys/devices/system/cpu/cpufreq/policy*; do echo schedutil > $policy/scaling_governor 2>/dev/null; done
 echo -1 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
@@ -217,7 +217,7 @@ su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/mo
         powersave: {
             label: 'POWERSAVE',
             color: '#34C759', // Green
-            desc: 'schedutil • Limiter enabled • Offset -10 • Restart AI',
+            desc: 'schedutil • Limiter enabled • Offset -10 • Smart switch on gaming/normal',
             commands: `
 for policy in /sys/devices/system/cpu/cpufreq/policy*; do echo schedutil > $policy/scaling_governor 2>/dev/null; done
 touch /sdcard/MTK_AI_Engine/enable_limiter
