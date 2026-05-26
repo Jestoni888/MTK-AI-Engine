@@ -159,42 +159,8 @@
             color: '#FF3B30', // Red
             desc: 'Max clocks • Thermal disabled • Aggressive boost • Automode stops',
             commands: `
-rm -f /sdcard/MTK_AI_Engine/enable_limiter
-touch /sdcard/MTK_AI_Engine/enable_performance
-sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer
-sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/performance
-sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal
-touch /sdcard/MTK_AI_Engine/enable_disable_thermal
-echo "performance" > /sdcard/MTK_AI_Engine/manual_governor.txt
-for c in /sys/devices/system/cpu/cpu*/core_ctl/enable; do
-  echo 0 > "$c" 2>/dev/null; done
-echo 1 > /sys/devices/system/cpu/sched/sched_boost 2>/dev/null
-echo 1 > /sys/devices/system/cpu/eas/enable 2>/dev/null
-echo 536870911 > /sys/kernel/fpsgo/common/systrace_mask
-chmod 777 /sys/devices/system/cpu/cpufreq/policy*
-for policy in /sys/devices/system/cpu/cpufreq/policy*; do 
-chmod 777 > $policy/scaling_governor 2>/dev/null;
-echo performance > $policy/scaling_governor 2>/dev/null; done
-chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_max_freq 2>/dev/null
-chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_min_freq 2>/dev/null
-for cpu in /sys/devices/system/cpu/cpu[0-9]*; do [ -f "$cpu/cpufreq/scaling_max_freq" ] && cat "$cpu/cpufreq/scaling_max_freq" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null; done
-echo performance > /sys/class/devfreq/13000000.mali/governor 2>/dev/null
-echo 0 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
-echo 0 > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
-su -c '
-SYS=$(grep -n "PPM_POLICY_SYS_BOOST" /proc/ppm/policy_status | cut -d: -f1)
-SYS=$((SYS-1))
-for i in $(seq 0 20); do
-    if [ "$i" -eq "$SYS" ]; then echo "$i 1" > /proc/ppm/policy_status
-    else echo "$i 0" > /proc/ppm/policy_status; fi
-done'
-service call SurfaceFlinger 1035 i32 0
-su -c 'for f in /proc/*/*/*offset; do echo "+10" > "$f" 2>/dev/null; done'
-chmod 777 /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null
-echo disabled > /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null
-echo "0" > /sdcard/MTK_AI_Engine/automode
-settings put global 'always_finish_activities' '0'
-pkill -f mtk_ai_engine
+export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
+exec /data/adb/modules/MTK_AI/main_control/mode "performance mode"
 `
         },
         balance: {
@@ -202,16 +168,8 @@ pkill -f mtk_ai_engine
             color: '#FF9500', // Orange
             desc: 'schedutil • Normal thermal • Smart switch on gaming/normal',
             commands: `
-for policy in /sys/devices/system/cpu/cpufreq/policy*; do echo schedutil > $policy/scaling_governor 2>/dev/null; done
-echo -1 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
-echo -1 > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
-echo 0 > /proc/driver/thermal/sspm_thermal_throttle 2>/dev/null
-echo "balance" > /sdcard/MTK_AI_Engine/manual_governor.txt
-echo "1" > /sdcard/MTK_AI_Engine/automode
-for f in /proc/*/*/*offset; do echo "-10" > "$f" 2>/dev/null; done
-rm -f /sdcard/MTK_AI_Engine/enable_limiter
-pkill -f mtk_ai_engine
-su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'
+export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
+exec /data/adb/modules/MTK_AI/main_control/mode "balance mode"
 `
         },
         powersave: {
@@ -219,16 +177,8 @@ su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/mo
             color: '#34C759', // Green
             desc: 'schedutil • Limiter enabled • Offset -10 • Smart switch on gaming/normal',
             commands: `
-for policy in /sys/devices/system/cpu/cpufreq/policy*; do echo schedutil > $policy/scaling_governor 2>/dev/null; done
-touch /sdcard/MTK_AI_Engine/enable_limiter
-echo -1 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
-echo -1 > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
-su -c 'for i in $(seq 0 20); do echo "$i 1" > /proc/ppm/policy_status 2>/dev/null; done'
-su -c 'for f in /proc/*/*/*offset; do echo "-10" > "$f" 2>/dev/null; done'
-echo "schedutil" > /sdcard/MTK_AI_Engine/manual_governor.txt
-echo "1" > /sdcard/MTK_AI_Engine/automode
-pkill -f mtk_ai_engine
-su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'
+export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
+exec /data/adb/modules/MTK_AI/main_control/mode "powersaver mode"
 `
         }
     };
