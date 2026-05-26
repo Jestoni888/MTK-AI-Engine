@@ -219,6 +219,20 @@ done
 
 echo performance > /sys/class/devfreq/13000000.mali/governor 2>/dev/null
 echo performance > /sys/class/devfreq/mtk-dvfsrc-devfreq/governor 2>/dev/null
+for c in /sys/devices/system/cpu/cpu*/core_ctl/enable; do
+  echo 0 > "$c" 2>/dev/null; done
+echo 1 > /sys/devices/system/cpu/sched/sched_boost 2>/dev/null
+echo 1 > /sys/devices/system/cpu/eas/enable 2>/dev/null
+echo 536870911 > /sys/kernel/fpsgo/common/systrace_mask
+chmod 777 /sys/devices/system/cpu/cpufreq/policy*
+for policy in /sys/devices/system/cpu/cpufreq/policy*; do 
+chmod 777 > $policy/scaling_governor 2>/dev/null;
+echo performance > $policy/scaling_governor 2>/dev/null; done
+chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_max_freq 2>/dev/null
+chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_min_freq 2>/dev/null
+echo 0 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
+echo 0 > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
+for cpu in /sys/devices/system/cpu/cpu[0-9]*; do [ -f "$cpu/cpufreq/scaling_max_freq" ] && cat "$cpu/cpufreq/scaling_max_freq" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null; done
 
 # ==============================
 # ✅ Done
