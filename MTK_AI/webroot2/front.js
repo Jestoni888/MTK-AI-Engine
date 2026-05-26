@@ -204,6 +204,7 @@ pkill -f mtk_ai_engine
 for policy in /sys/devices/system/cpu/cpufreq/policy*; do echo schedutil > $policy/scaling_governor 2>/dev/null; done
 echo -1 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
 echo -1 > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
+echo 0 > /proc/driver/thermal/sspm_thermal_throttle 2>/dev/null
 echo "balance" > /sdcard/MTK_AI_Engine/manual_governor.txt
 echo "1" > /sdcard/MTK_AI_Engine/automode
 for f in /proc/*/*/*offset; do echo "-10" > "$f" 2>/dev/null; done
