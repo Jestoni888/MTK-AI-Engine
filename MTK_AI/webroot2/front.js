@@ -193,6 +193,7 @@ su -c 'for f in /proc/*/*/*offset; do echo "+10" > "$f" 2>/dev/null; done'
 chmod 777 /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null
 echo disabled > /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null
 echo "0" > /sdcard/MTK_AI_Engine/automode
+settings put global 'always_finish_activities' '0'
 pkill -f mtk_ai_engine
 `
         },
