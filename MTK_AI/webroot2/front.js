@@ -220,6 +220,8 @@ su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/mo
             commands: `
 for policy in /sys/devices/system/cpu/cpufreq/policy*; do echo schedutil > $policy/scaling_governor 2>/dev/null; done
 touch /sdcard/MTK_AI_Engine/enable_limiter
+echo -1 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
+echo -1 > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
 su -c 'for i in $(seq 0 20); do echo "$i 1" > /proc/ppm/policy_status 2>/dev/null; done'
 su -c 'for f in /proc/*/*/*offset; do echo "-10" > "$f" 2>/dev/null; done'
 echo "schedutil" > /sdcard/MTK_AI_Engine/manual_governor.txt
