@@ -179,7 +179,7 @@ export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/M
         powersave: {
             label: 'POWERSAVE',
             color: '#34C759', // Green
-            desc: 'schedutil • Limiter enabled • Offset -10 • Smart switch on gaming/normal',
+            desc: 'schedutil • Frequency relax • Offset -10 • Smart switch on gaming/normal',
             commands: `
             pkill -f "MTK_AI.*mtk_ai_engine" 2>/dev/null; pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null; pkill -f "dumpsys2" 2>/dev/null; pkill -f "script_runner.*global" 2>/dev/null; pkill -f "service.sh" 2>/dev/null; killall service.sh mtk_ai_engine 2>/dev/null
             export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
