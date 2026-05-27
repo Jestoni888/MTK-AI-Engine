@@ -33,6 +33,7 @@ for cpu in /sys/devices/system/cpu/cpu[0-9]*; do [ -f "$cpu/cpufreq/scaling_max_
 echo 0 > /proc/driver/thermal/sspm_thermal_throttle 2>/dev/null
 settings put system 'persist.sys.power_mode_perf' '1'
 setprop 'persist.sys.power_mode_perf' '1'
+settings put global 'sustained_performance_mode_enabled' '1'
 
 # --- Detect DVFSRC path ---
 dvfsrc_a=/sys/devices/platform/soc/1c00f000.dvfsrc
