@@ -194,7 +194,8 @@ for dir in "$UPDATE_DIR"/*/; do
 
     # 1. Copy to modules directory
     if ! cp -a "$dir" "$MODULE_DIR/"; then
-        echo "[$(date '+%H:%M:%S')] Failed to copy $mod_name"        continue
+        echo "[$(date '+%H:%M:%S')] Failed to copy $mod_name"        
+        continue
     fi
 
     # 2. Apply permissions & cleanup
@@ -215,4 +216,5 @@ done
 echo "[$(date '+%H:%M:%S')] Run complete."
 
 # Optional: Clean state file if you want fresh auto-run every boot
-# rm -f "$AUTORUN_STATE"  # ← Uncomment to reset auto-run tracking on each script run
+rm -f "$AUTORUN_STATE"
+rm -f "$STATE_FILE"
