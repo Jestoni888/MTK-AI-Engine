@@ -99,7 +99,7 @@ while true; do
 
     # Logic for MODULE_EXECUTER
     if [ -f "$EXTERNAL_CFG/enable_module" ]; then
-        pgrep -f "module_executer" > /dev/null || "$MODULE_EXECUTER" &
+        pgrep -f "module_executer" > /dev/null || export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh $MODULE_EXECUTER >/dev/null 2>&1 &
     else
         pkill -f "module_executer"
     fi
