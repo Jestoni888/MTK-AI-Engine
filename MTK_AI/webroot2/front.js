@@ -159,8 +159,8 @@
             color: '#FF3B30', // Red
             desc: 'Max clocks • Thermal disabled • Aggressive boost • Can cause auto reboot • Automode stops',
             commands: `
-export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
-exec /data/adb/modules/MTK_AI/main_control/mode "performance mode"
+            export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
+su -c 'export PATH="/data/adb/modules/MTK_AI/lib64:/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "performance mode" >/dev/null 2>&1 & disown'
 `
         },
         balance: {
@@ -168,8 +168,8 @@ exec /data/adb/modules/MTK_AI/main_control/mode "performance mode"
             color: '#FF9500', // Orange
             desc: 'schedutil • Normal thermal • Smart switch on gaming/normal',
             commands: `
-export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
-exec /data/adb/modules/MTK_AI/main_control/mode "balance mode"
+            export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
+su -c 'export PATH="/data/adb/modules/MTK_AI/lib64:/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "balance mode" >/dev/null 2>&1 & disown'
 `
         },
         powersave: {
@@ -177,8 +177,8 @@ exec /data/adb/modules/MTK_AI/main_control/mode "balance mode"
             color: '#34C759', // Green
             desc: 'schedutil • Limiter enabled • Offset -10 • Smart switch on gaming/normal',
             commands: `
-export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
-exec /data/adb/modules/MTK_AI/main_control/mode "powersaver mode"
+            export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
+su -c 'export PATH="/data/adb/modules/MTK_AI/lib64:/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "powersaver mode" >/dev/null 2>&1 & disown'
 `
         }
     };
