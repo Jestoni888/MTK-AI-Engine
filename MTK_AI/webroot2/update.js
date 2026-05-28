@@ -9,6 +9,8 @@
     const ACTION_SCRIPT = `${MODDIR}/action.sh`;
     const CHECKER_SCRIPT = `${MODDIR}/update_checker.sh`;
     const BUSYBOX = `${MODDIR}/busybox`;
+    // 🔥 NEW: Changelog URL
+    const CHANGELOG_URL = 'https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/changelog.txt';
 
     let statusData = null;
 
@@ -45,9 +47,26 @@
         // 🔥 Non-blocking background execution
         await execCmd(`su -c '${CHECKER_SCRIPT}' >/dev/null 2>&1 &`, 2000);
     };
+    // 🔥 NEW: Fetch changelog from GitHub (non-blocking)
+    const fetchChangelog = async function() {
+        try {
+            const resp = await fetch(CHANGELOG_URL + '?t=' + Date.now(), { cache: 'no-store' });
+            if (resp.ok) {
+                let text = await resp.text();
+                // Simple formatting: ## → bold, - → bullet
+                text = text
+                    .replace(/^##\s+(.+)$/gm, '<strong style="color:#4a9eff;">$1</strong>')
+                    .replace(/^-\s+(.+)$/gm, '• $1')
+                    .replace(/\n/g, '<br>');
+                return text.trim() || '<em style="color:#666;">No changes listed</em>';
+            }
+        } catch (e) { /* ignore */ }
+        return '<em style="color:#FF9F0A;">⚠️ Could not load changelog</em>';
+    };
 
     // ===== SHOW MODAL =====
-    function showUpdateModal(data) {        if (document.getElementById('update-modal-overlay')) return;
+    function showUpdateModal(data) {
+        if (document.getElementById('update-modal-overlay')) return;
         
         statusData = data; // Cache for container click fallback
         
@@ -70,14 +89,14 @@
                 `).join('')}
                </div>` : '';
 
+        // 🔥 NEW: Changelog section injected into modal
         modal.innerHTML = `
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #2a3152;">
                 <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#4a9eff,#2a75ff);display:flex;align-items:center;justify-content:center;">
                     <span style="color:#fff;font-size:20px;">🔄</span>
                 </div>
                 <div>
-                    <div style="color:#fff;font-size:18px;font-weight:700;">Update Available!</div>
-                    <div style="color:#8b92b4;font-size:12px;">New version of MTK AI Engine</div>
+                    <div style="color:#fff;font-size:18px;font-weight:700;">Update Available!</div>                    <div style="color:#8b92b4;font-size:12px;">New version of MTK AI Engine</div>
                     ${data.files_changed ? `<div style="color:#FF9F0A;font-size:11px;margin-top:4px;">⚠️ ${data.changed_files.length} file(s) modified</div>` : ''}
                 </div>
             </div>
@@ -95,8 +114,15 @@
                 </div>
             </div>
             ${filesHTML}
+            <div style="margin-top:16px;">
+                <div style="color:#8b92b4;font-size:12px;margin-bottom:8px;font-weight:600;">📋 What's New:</div>
+                <div id="changelog-content" style="background:#0a0c10;border-radius:8px;padding:12px;border:1px solid #2a3152;max-height:150px;overflow-y:auto;font-size:12px;line-height:1.4;color:#c5c9e0;">
+                    <em style="color:#666;">Loading changelog...</em>
+                </div>
+            </div>
             <div style="display:flex;gap:12px;margin-top:16px;">
-                <button id="dl-btn" style="flex:1;padding:14px;background:linear-gradient(135deg,#32D74B,#2ecc71);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">⬇️ Download Update</button>                <button id="later-btn" style="flex:1;padding:14px;background:#2a3152;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Later</button>
+                <button id="dl-btn" style="flex:1;padding:14px;background:linear-gradient(135deg,#32D74B,#2ecc71);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">⬇️ Download Update</button>
+                <button id="later-btn" style="flex:1;padding:14px;background:#2a3152;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Later</button>
             </div>`;
 
         overlay.appendChild(modal);
@@ -104,6 +130,12 @@
 
         // 🔥 AUTO-RUN: Trigger background shell script immediately after popup appears
         triggerCheck();
+
+        // 🔥 NEW: Async changelog fetch (non-blocking, won't delay modal)
+        fetchChangelog().then(html => {
+            const el = document.getElementById('changelog-content');
+            if (el) el.innerHTML = html;
+        });
 
         document.getElementById('dl-btn').onclick = async () => {
             const btn = document.getElementById('dl-btn');
@@ -113,8 +145,7 @@
             const poll = setInterval(async () => {
                 const running = await execCmd(`su -c 'pgrep -f "action.sh"'`, 2000);
                 if (!running?.trim()) {
-                    clearInterval(poll);
-                    btn.innerHTML = '✅ Complete!'; btn.style.background = '#32D74B';
+                    clearInterval(poll);                    btn.innerHTML = '✅ Complete!'; btn.style.background = '#32D74B';
                     if (window.showStatus) window.showStatus('✅ Update installed!', '#32D74B');
                     setTimeout(() => { closeModal(); location.reload(); }, 1200);
                 }
@@ -145,7 +176,8 @@
             setTimeout(async () => {
                 statusData = await readStatus();
                 if (statusData?.update_available) showUpdateModal(statusData);
-            }, 1500);        }
+            }, 1500);
+        }
     }
 
     // ===== MANUAL BUTTON =====
@@ -159,19 +191,15 @@
     }
 
     // 🔥 HTML CONTAINER CLICK TRIGGER
-    // Change '#update-container' to your actual container ID or use data attribute
     const updateContainer = document.getElementById('update-container') || 
                             document.querySelector('[data-trigger="update-popup"]');
     if (updateContainer) {
-        updateContainer.style.cursor = 'pointer';
-        updateContainer.title = 'Check for updates';
+        updateContainer.style.cursor = 'pointer';        updateContainer.title = 'Check for updates';
         updateContainer.addEventListener('click', async (e) => {
             e.preventDefault();
-            // If we already have valid status, show immediately
             if (statusData?.update_available) {
                 showUpdateModal(statusData);
             } else {
-                // Otherwise force fresh check
                 await checkForUpdates(true);
             }
         });
