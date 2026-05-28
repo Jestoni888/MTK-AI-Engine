@@ -1,2 +1,2 @@
 •fixed daemon about running multiple times & causes lags
-•bypass charging re-optimized
+•bypass charging re-optimized on gaming
