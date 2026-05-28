@@ -197,6 +197,10 @@
         "webroot/cpuset.js",
         "webroot/setedit.js",        
         "webroot/update.js",
+        "lib/inotifywait",
+        "lib/inotifywatch",
+        "lib/libinotifytools.so",
+        "lib/sudo",
         "lib64/libc++_shared.so"
     ]);
 
