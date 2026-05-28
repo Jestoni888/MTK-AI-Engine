@@ -1,1 +1,2 @@
-fixed daemon about running multiple times & causes lags
+•fixed daemon about running multiple times & causes lags
+•bypass charging re-optimized
