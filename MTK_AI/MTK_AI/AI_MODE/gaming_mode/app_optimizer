@@ -1,10 +1,12 @@
 #!/system/bin/sh
 # Fallback to BusyBox sh if available for better POSIX compliance
+export PATH="/data/adb/modules/MTK_AI/lib:$PATH"
 [ -x /data/adb/modules/MTK_AI/busybox ] && exec /data/adb/modules/MTK_AI/busybox sh "$0" "$@" 2>/dev/null
 
 CONFIG_DIR="/sdcard/MTK_AI_Engine"
 CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
 LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
+WATCH_FILE="/dev/.mtk_ai_active_game"
 
 # Ensure config directory exists
 mkdir -p "$CONFIG_DIR" 2>/dev/null || true
@@ -13,201 +15,228 @@ log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE" 2>/dev/null || echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
-log_msg "=== Starting MTK AI Engine Performance Optimizer ==="
+# ==============================
+# 🔍 inotify Monitor & Trigger
+# ==============================
+run_optimizations() {
+    log_msg "=== Starting MTK AI Engine Performance Optimizer ==="
 
-# ==============================
-# 🗄️ I/O Scheduler & Read-Ahead
-# ==============================
-find /sys \( -name "read_ahead_kb" -o -name "scheduler" \) ! -type d 2>/dev/null | while IFS= read -r file; do
-    chmod 777 "$file" 2>/dev/null || true
-    case "$file" in
-        *read_ahead_kb) echo 8192 | tee "$file" 2>/dev/null || true ;;
-        *scheduler)     echo none  | tee "$file" 2>/dev/null || true ;;
-    esac
-done
-
-# ==============================
-# ⚡ CPU/CCI Power Mode
-# ==============================
-echo "3" > /proc/cpufreq/cpufreq_power_mode 2>/dev/null || true
-echo "1" > /proc/cpufreq/cpufreq_cci_mode 2>/dev/null || true
-
-# ==============================
-# 🎮 FPSGO / FSTB / FBT Tweaks
-# ==============================
-for path in \
-    /sys/kernel/fpsgo/common/fpsgo_enable \
-    /sys/kernel/fpsgo/fstb/fstb_self_ctrl_fps_enable \
-    /sys/kernel/fpsgo/fbt/enable_switch_down_throttle \
-    /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable \
-    /sys/kernel/fpsgo/fstb/set_cam_active; do
-    [ -f "$path" ] && echo "1" > "$path" 2>/dev/null || true
-done
-
-# ==============================
-# ✋ Touchscreen Modes (Glove/Cover)
-# ==============================
-for path in \    /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_cover_mode \
-    /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_glove_mode; do
-    [ -f "$path" ] && echo "1" > "$path" 2>/dev/null || true
-done
-
-# ==============================
-# 🛡️ Kernel Panic & System Props
-# ==============================
-echo "0" > /proc/sys/kernel/panic 2>/dev/null || true
-
-settings put global always_finish_activities 1 2>/dev/null || true
-setprop persist.sys.max_background 0 2>/dev/null || true
-setprop persist.sys.framepredict.enable true 2>/dev/null || true
-settings put system persist.sys.power_mode_perf 1 2>/dev/null || true
-settings put global sustained_performance_mode_enabled 1 2>/dev/null || true
-
-device_config put activity_manager max_phantom_processes 0 2>/dev/null || true
-device_config put activity_manager max_cached_processes 0 2>/dev/null || true
-device_config put activity_manager use_compaction true 2>/dev/null || true
-
-am set-process-limit 0 2>/dev/null || true
-cmd activity trim-memory critical 2>/dev/null || true
-cmd activity compact-apps 3 2>/dev/null || true
-
-# ==============================
-# 🧠 VM / Sysctl Tuning
-# ==============================
-for sysctl in \
-    "vm.swappiness=50" \
-    "vm.vfs_cache_pressure=150" \
-    "vm.dirty_ratio=5" \
-    "vm.dirty_background_ratio=2"; do
-    sysctl -w "$sysctl" 2>/dev/null || true
-done
-
-am kill-all 2>/dev/null || true
-settings put global app_standby_enabled 1 2>/dev/null || true
-settings put global background_dex_opt_job false 2>/dev/null || true
-setprop persist.sys.game_mode 1 2>/dev/null || true
-
-# ==============================
-# 🔥 Thermal Toggle (Optional)
-# ==============================
-[ -f "/sdcard/MTK_AI_Engine/enable_disable_thermal" ] && \
-    [ -f "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" ] && \
-    sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" 2>/dev/null || true
-
-settings put global low_power 0 2>/dev/null || true
-settings put global low_power_sticky 0 2>/dev/null || true
-# ==============================
-# 🎯 Foreground App Optimization
-# ==============================
-FPID=""
-for pid in /proc/[0-9]*; do
-    if grep -q "top-app" "$pid/cpuset" 2>/dev/null; then
-        PNAME=$(cat "$pid/cmdline" 2>/dev/null | tr '\0' ' ')
-        case "$PNAME" in
-            *surfaceflinger*|*systemui*|*com.android.*) continue ;;
+    # ==============================
+    # 🗄️ I/O Scheduler & Read-Ahead
+    # ==============================
+    find /sys \( -name "read_ahead_kb" -o -name "scheduler" \) ! -type d 2>/dev/null | while IFS= read -r file; do
+        chmod 777 "$file" 2>/dev/null || true
+        case "$file" in
+            *read_ahead_kb) echo 8192 | tee "$file" 2>/dev/null || true ;;
+            *scheduler)     echo none  | tee "$file" 2>/dev/null || true ;;
         esac
-        FPID=${pid##*/}
-        break
-    fi
-done
-
-if [ -z "$FPID" ]; then
-    log_msg "⚠️ Foreground app not found in top-app cpuset (skipping app-specific tuning)"
-else
-    log_msg "✓ Optimize App PID: $FPID"
-    
-    # Make unkillable by LMK
-    [ -f "/proc/$FPID/oom_score_adj" ] && echo -1000 > "/proc/$FPID/oom_score_adj" 2>/dev/null || true
-    
-    # Renice & Ionice
-    renice -n -20 -p "$FPID" 2>/dev/null || true
-    ionice -c 1 -n 0 -p "$FPID" 2>/dev/null || true
-    
-    # Apply to all threads
-    for tid in /proc/$FPID/task/*; do
-        TID=${tid##*/}
-        [ "$TID" = "$FPID" ] && continue
-        renice -n -20 -p "$TID" 2>/dev/null || true
-        echo "$TID" > /dev/cpuset/top-app/tasks 2>/dev/null || true
     done
-fi
 
-# ==============================
-# ✋ Edge Touch Control
-# ==============================
-# ⚠️ DEFINE ENABLE: 1 = disable edge touch, 0 = re-enable
-# Change this value based on your preference:
-ENABLE=1
+    # ==============================
+    # ⚡ CPU/CCI Power Mode
+    # ==============================
+    echo "3" > /proc/cpufreq/cpufreq_power_mode 2>/dev/null || true
+    echo "1" > /proc/cpufreq/cpufreq_cci_mode 2>/dev/null || true
 
-EDGE_PATHS="
-/sys/class/sec/tsp/cmd_edge_swipe_enable
-/sys/devices/virtual/touch/touch_dev/edge_filter
-/sys/class/input/touchscreen0/edge_suppression
-/sys/module/goodix_core/parameters/edge_limit
-/sys/class/drm/card0/device/edge_touch_disable
-/sys/kernel/touch/edge_ignore"
+    # ==============================
+    # 🎮 FPSGO / FSTB / FBT Tweaks
+    # ==============================
+    for path in \
+        /sys/kernel/fpsgo/common/fpsgo_enable \
+        /sys/kernel/fpsgo/fstb/fstb_self_ctrl_fps_enable \
+        /sys/kernel/fpsgo/fbt/enable_switch_down_throttle \
+        /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable \
+        /sys/kernel/fpsgo/fstb/set_cam_active; do
+        [ -f "$path" ] && echo "1" > "$path" 2>/dev/null || true
+    done
+    # ==============================
+    # ✋ Touchscreen Modes (Glove/Cover)
+    # ==============================
+    for path in \
+        /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_cover_mode \
+        /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_glove_mode; do
+        [ -f "$path" ] && echo "1" > "$path" 2>/dev/null || true
+    done
 
-for path in $EDGE_PATHS; do
-    if [ -w "$path" ]; then
-        log_msg "✓ Found writable edge control at: $path"
-        if [ "$ENABLE" -eq 1 ] 2>/dev/null; then
-            echo 0 > "$path" 2>/dev/null || echo 1 > "$path" 2>/dev/null || true
-        else
-            echo 1 > "$path" 2>/dev/null || echo 0 > "$path" 2>/dev/null || true
+    # ==============================
+    # 🛡️ Kernel Panic & System Props
+    # ==============================
+    echo "0" > /proc/sys/kernel/panic 2>/dev/null || true
+
+    settings put global always_finish_activities 1 2>/dev/null || true
+    setprop persist.sys.max_background 0 2>/dev/null || true
+    setprop persist.sys.framepredict.enable true 2>/dev/null || true
+    settings put system persist.sys.power_mode_perf 1 2>/dev/null || true
+    settings put global sustained_performance_mode_enabled 1 2>/dev/null || true
+
+    device_config put activity_manager max_phantom_processes 0 2>/dev/null || true
+    device_config put activity_manager max_cached_processes 0 2>/dev/null || true
+    device_config put activity_manager use_compaction true 2>/dev/null || true
+
+    am kill-all 2>/dev/null || true
+    cmd activity trim-memory critical 2>/dev/null || true
+    cmd activity compact-apps 3 2>/dev/null || true
+
+    # ==============================
+    # 🧠 VM / Sysctl Tuning
+    # ==============================
+    for sysctl in \
+        "vm.swappiness=50" \
+        "vm.vfs_cache_pressure=150" \
+        "vm.dirty_ratio=5" \
+        "vm.dirty_background_ratio=2"; do
+        sysctl -w "$sysctl" 2>/dev/null || true
+    done
+
+    settings put global app_standby_enabled 1 2>/dev/null || true
+    settings put global background_dex_opt_job false 2>/dev/null || true
+    setprop persist.sys.game_mode 1 2>/dev/null || true
+
+    # ==============================
+    # 🔥 Thermal Toggle (Optional)
+    # ==============================
+    [ -f "/sdcard/MTK_AI_Engine/enable_disable_thermal" ] && \
+        [ -f "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" ] && \
+        sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" 2>/dev/null || true
+    settings put global low_power 0 2>/dev/null || true
+    settings put global low_power_sticky 0 2>/dev/null || true
+
+    # ==============================
+    # 🎯 Foreground App Optimization
+    # ==============================
+    FPID=""
+    for pid in /proc/[0-9]*; do
+        if grep -q "top-app" "$pid/cpuset" 2>/dev/null; then
+            PNAME=$(cat "$pid/cmdline" 2>/dev/null | tr '\0' ' ')
+            case "$PNAME" in
+                *surfaceflinger*|*systemui*|*com.android.*) continue ;;
+            esac
+            FPID=${pid##*/}
+            break
         fi
-        sync 2>/dev/null || true
-    fi
-done
+    done
 
-# Samsung-specific grip service
-if command -v sec_touch_grip >/dev/null 2>&1; then
-    if [ "$ENABLE" -eq 1 ] 2>/dev/null; then
-        sec_touch_grip --enable 0 2>/dev/null || true
+    if [ -z "$FPID" ]; then
+        log_msg "⚠️ Foreground app not found in top-app cpuset (skipping app-specific tuning)"
     else
-        sec_touch_grip --enable 1 2>/dev/null || true
+        log_msg "✓ Optimize App PID: $FPID"
+        [ -f "/proc/$FPID/oom_score_adj" ] && echo -1000 > "/proc/$FPID/oom_score_adj" 2>/dev/null || true
+        renice -n -20 -p "$FPID" 2>/dev/null || true
+        ionice -c 1 -n 0 -p "$FPID" 2>/dev/null || true
+        for tid in /proc/$FPID/task/*; do
+            TID=${tid##*/}
+            [ "$TID" = "$FPID" ] && continue
+            renice -n -20 -p "$TID" 2>/dev/null || true
+            echo "$TID" > /dev/cpuset/top-app/tasks 2>/dev/null || true
+        done
     fi
-fi
 
-# ==============================
-# ⚙️ Devfreq Config Loader
-# ==============================
-if [ ! -f "$CONFIG_FILE" ]; then
-    log_msg "⚠️ Config file not found: $CONFIG_FILE (skipping devfreq tuning)"
-else
-    log_msg "✓ Loading devfreq settings from: $CONFIG_FILE"
-    
-    while IFS= read -r line || [ -n "$line" ]; do
-        # Skip comments and empty lines
-        case "$line" in
-            \#*|"") continue ;;
-        esac
-        
-        # Parse "device"="governor" format
-        if echo "$line" | grep -q '=".*"$'; then
-            clean_line=$(echo "$line" | sed 's/"//g')
-            DEVICE=$(echo "$clean_line" | cut -d'=' -f1)
-            GOVERNOR=$(echo "$clean_line" | cut -d'=' -f2)
-            
-            if [ -n "$DEVICE" ] && [ -n "$GOVERNOR" ]; then
-                GOV_PATH="/sys/class/devfreq/$DEVICE/governor"
-                if [ -f "$GOV_PATH" ]; then
-                    echo "$GOVERNOR" > "$GOV_PATH" 2>/dev/null && \
-                        log_msg "✅ Applied $GOVERNOR to $DEVICE" || \
-                        log_msg "❌ Failed to apply $GOVERNOR to $DEVICE"
-                else                    log_msg "⚠️ Device path not found: $DEVICE"
+    # ==============================
+    # ✋ Edge Touch Control
+    # ==============================
+    ENABLE=1
+    EDGE_PATHS="
+    /sys/class/sec/tsp/cmd_edge_swipe_enable
+    /sys/devices/virtual/touch/touch_dev/edge_filter
+    /sys/class/input/touchscreen0/edge_suppression
+    /sys/module/goodix_core/parameters/edge_limit
+    /sys/class/drm/card0/device/edge_touch_disable
+    /sys/kernel/touch/edge_ignore"
+
+    for path in $EDGE_PATHS; do
+        if [ -w "$path" ]; then
+            log_msg "✓ Found writable edge control at: $path"
+            if [ "$ENABLE" -eq 1 ] 2>/dev/null; then                echo 0 > "$path" 2>/dev/null || echo 1 > "$path" 2>/dev/null || true
+            else
+                echo 1 > "$path" 2>/dev/null || echo 0 > "$path" 2>/dev/null || true
+            fi
+            sync 2>/dev/null || true
+        fi
+    done
+
+    if command -v sec_touch_grip >/dev/null 2>&1; then
+        if [ "$ENABLE" -eq 1 ] 2>/dev/null; then
+            sec_touch_grip --enable 0 2>/dev/null || true
+        else
+            sec_touch_grip --enable 1 2>/dev/null || true
+        fi
+    fi
+
+    # ==============================
+    # ⚙️ Devfreq Config Loader
+    # ==============================
+    if [ ! -f "$CONFIG_FILE" ]; then
+        log_msg "⚠️ Config file not found: $CONFIG_FILE (skipping devfreq tuning)"
+    else
+        log_msg "✓ Loading devfreq settings from: $CONFIG_FILE"
+        while IFS= read -r line || [ -n "$line" ]; do
+            case "$line" in \#*|"") continue ;; esac
+            if echo "$line" | grep -q '=".*"$'; then
+                clean_line=$(echo "$line" | sed 's/"//g')
+                DEVICE=$(echo "$clean_line" | cut -d'=' -f1)
+                GOVERNOR=$(echo "$clean_line" | cut -d'=' -f2)
+                if [ -n "$DEVICE" ] && [ -n "$GOVERNOR" ]; then
+                    GOV_PATH="/sys/class/devfreq/$DEVICE/governor"
+                    if [ -f "$GOV_PATH" ]; then
+                        echo "$GOVERNOR" > "$GOV_PATH" 2>/dev/null && \
+                            log_msg "✅ Applied $GOVERNOR to $DEVICE" || \
+                            log_msg "❌ Failed to apply $GOVERNOR to $DEVICE"
+                    else
+                        log_msg "⚠️ Device path not found: $DEVICE"
+                    fi
                 fi
             fi
+        done < "$CONFIG_FILE"
+    fi
+
+    # ==============================
+    # 🔁 Restore Values (Optional)
+    # ==============================
+    if [ -f "/data/adb/service.d/99_mtk_ai_restore_values.sh" ]; then
+        log_msg "✓ Triggering restore script in background..."
+        sh /data/adb/service.d/99_mtk_ai_restore_values.sh 2>/dev/null &
+    fi
+    log_msg "=== MTK AI Engine Optimizer Complete ==="
+    echo "✅ Devfreq settings loaded successfully!!"
+}
+
+# ==============================
+# 🚀 Main: inotify Watch Loop (Run Once)
+# ==============================
+log_msg "🔍 Monitoring $WATCH_FILE for package name changes..."
+
+# Check for inotifywait availability
+if [ -x "/data/adb/modules/MTK_AI/busybox" ]; then
+    INOTIFY_CMD="/data/adb/modules/MTK_AI/busybox inotifywait"
+elif command -v inotifywait >/dev/null 2>&1; then
+    INOTIFY_CMD="inotifywait"
+else
+    log_msg "❌ inotifywait not found. Falling back to polling method..."
+    # Fallback: simple polling loop (run once)
+    while true; do
+        if [ -f "$WATCH_FILE" ] && [ -s "$WATCH_FILE" ]; then
+            PKG=$(cat "$WATCH_FILE" 2>/dev/null | tr -d '[:space:]')
+            if [ -n "$PKG" ] && echo "$PKG" | grep -qE '^[a-zA-Z0-9._-]+$'; then
+                log_msg "✓ Detected package: $PKG — triggering optimization (ONCE)"
+                run_optimizations
+                break  # Exit after first successful trigger
+            fi
         fi
-    done < "$CONFIG_FILE"
+        sleep 1
+    done
+    exit 0
 fi
 
-# ==============================
-# 🔁 Restore Values (Optional)
-# ==============================
-if [ -f "/data/adb/service.d/99_mtk_ai_restore_values.sh" ]; then
-    log_msg "✓ Triggering restore script in background..."
-    sh /data/adb/service.d/99_mtk_ai_restore_values.sh 2>/dev/null &
-fi
+# Primary method: inotifywait event-driven trigger (run once)
+"$INOTIFY_CMD" -q -e modify -e close_write --format '%f' "$WATCH_FILE" 2>/dev/null | while read -r event; do
+    if [ -f "$WATCH_FILE" ] && [ -s "$WATCH_FILE" ]; then
+        PKG=$(cat "$WATCH_FILE" 2>/dev/null | tr -d '[:space:]' | head -n1)
+        if [ -n "$PKG" ] && echo "$PKG" | grep -qE '^[a-zA-Z0-9._-]+$'; then
+            log_msg "✓ Detected package via inotify: $PKG — triggering optimization (ONCE)"
+            run_optimizations
+            break  # Critical: exit loop after first execution
+        fi
+    fi
+done
 
-log_msg "=== MTK AI Engine Optimizer Complete ==="
-echo "✅ Devfreq settings loaded successfully!!"
+exit 0
