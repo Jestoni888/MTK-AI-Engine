@@ -4,38 +4,53 @@
 # Based on your kr-script/mtk XML logic
 # Targets: mt6983, mt6895, and gpufreqv2-based Dimensity SoCs
 
-set -e
+# ⚠️ Removed `set -e` to guarantee continuation on failure.
+# Added `|| true` to all critical writes to enforce "skip if fail" behavior.
 
 echo "[+] Applying MAXIMUM PERFORMANCE CONFIG..."
 
-echo performance > /sys/class/devfreq/13000000.mali/governor 2>/dev/null
-echo performance > /sys/class/devfreq/mtk-dvfsrc-devfreq/governor 2>/dev/null
+# --- CPU & Governor Tweaks ---
+echo performance > /sys/class/devfreq/13000000.mali/governor 2>/dev/null || true
+echo performance > /sys/class/devfreq/mtk-dvfsrc-devfreq/governor 2>/dev/null || true
+
 for c in /sys/devices/system/cpu/cpu*/core_ctl/enable; do
-  echo 0 > "$c" 2>/dev/null; done
-echo 1 > /sys/devices/system/cpu/sched/sched_boost 2>/dev/null
-echo 1 > /sys/devices/system/cpu/eas/enable 2>/dev/null
-echo 536870911 > /sys/kernel/fpsgo/common/systrace_mask
-chmod 777 /sys/devices/system/cpu/cpufreq/policy*
+  echo 0 > "$c" 2>/dev/null || true
+done
+
+echo 1 > /sys/devices/system/cpu/sched/sched_boost 2>/dev/null || true
+echo 1 > /sys/devices/system/cpu/eas/enable 2>/dev/null || true
+echo 536870911 > /sys/kernel/fpsgo/common/systrace_mask 2>/dev/null || true
+
+chmod 777 /sys/devices/system/cpu/cpufreq/policy* 2>/dev/null || true
 for policy in /sys/devices/system/cpu/cpufreq/policy*; do 
-chmod 777 > $policy/scaling_governor 2>/dev/null;
-echo performance > $policy/scaling_governor 2>/dev/null; done
-chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_max_freq 2>/dev/null
-chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_min_freq 2>/dev/null
+  chmod 777 "$policy/scaling_governor" 2>/dev/null || true
+  echo performance > "$policy/scaling_governor" 2>/dev/null || true
+done
+
+chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_max_freq 2>/dev/null || true
+chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_min_freq 2>/dev/null || true
+
 for d in /sys/devices/system/cpu/cpu[0-9]*/cpufreq; do
   [ -d "$d" ] || continue
-  H_MAX=$(cat "$d/cpuinfo_max_freq" 2>/dev/null)
-  H_MIN=$(cat "$d/cpuinfo_min_freq" 2>/dev/null || echo 0)
-  [ -n "$H_MAX" ] && { echo "$H_MAX" > "$d/scaling_max_freq" 2>/dev/null; echo "$H_MIN" > "$d/scaling_min_freq" 2>/dev/null; }
+  H_MAX=$(cat "$d/cpuinfo_max_freq" 2>/dev/null) || continue
+  H_MIN=$(cat "$d/cpuinfo_min_freq" 2>/dev/null) || echo 0
+  [ -n "$H_MAX" ] && { echo "$H_MAX" > "$d/scaling_max_freq" 2>/dev/null || true; echo "$H_MIN" > "$d/scaling_min_freq" 2>/dev/null || true; }
 done
-echo 0 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
-echo 0 > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
-for cpu in /sys/devices/system/cpu/cpu[0-9]*; do [ -f "$cpu/cpufreq/scaling_max_freq" ] && cat "$cpu/cpufreq/scaling_max_freq" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null; done
-echo 0 > /proc/driver/thermal/sspm_thermal_throttle 2>/dev/null
-settings put system 'persist.sys.power_mode_perf' '1'
-setprop 'persist.sys.power_mode_perf' '1'
-settings put global 'sustained_performance_mode_enabled' '1'
-setprop 'vendor.perf.framepacing.enable' '1'
-setprop 'persist.sys.sf.frame_rate_multiple_threshold' '1'
+
+echo 0 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null || true
+echo 0 > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null || true
+
+for cpu in /sys/devices/system/cpu/cpu[0-9]*; do 
+  [ -f "$cpu/cpufreq/scaling_max_freq" ] && cat "$cpu/cpufreq/scaling_max_freq" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null || true
+done
+
+echo 0 > /proc/driver/thermal/sspm_thermal_throttle 2>/dev/null || true
+
+# --- System Properties ---
+settings put system persist.sys.power_mode_perf 1 2>/dev/null || truesetprop persist.sys.power_mode_perf 1 2>/dev/null || true
+settings put global sustained_performance_mode_enabled 1 2>/dev/null || true
+setprop vendor.perf.framepacing.enable 1 2>/dev/null || true
+setprop persist.sys.sf.frame_rate_multiple_threshold 1 2>/dev/null || true
 
 # --- Detect DVFSRC path ---
 dvfsrc_a=/sys/devices/platform/soc/1c00f000.dvfsrc
@@ -67,33 +82,23 @@ if [ -f "$pandora_feas" ]; then
   perfmgr="$pandora_feas"
 fi
 
-# --- Helper: lock_value ---
+# --- Helper: lock_value (Fail-safe) ---
 lock_value() {
-  chmod 664 "$2" 2>/dev/null
-  echo "$1" > "$2"
-  chmod 444 "$2" 2>/dev/null
+  chmod 664 "$2" 2>/dev/null || true
+  echo "$1" > "$2" 2>/dev/null || true
+  chmod 444 "$2" 2>/dev/null || true
 }
 
 # ==============================
 # 🔧 1. Enable Performance Subsystems
 # ==============================
 
-if [ -f "$fpsgo" ]; then
-  echo "[+] Enabling FPSGO..."
-  lock_value 1 "$fpsgo"
-fi
+[ -f "$fpsgo" ] && lock_value 1 "$fpsgo"
+[ -f "$fbt_ceiling" ] && lock_value 1 "$fbt_ceiling"
 
-if [ -f "$fbt_ceiling" ]; then
-  echo "[+] Enabling FBT Ceiling..."
-  lock_value 1 "$fbt_ceiling"
-fi
-
-if [ -f "$perfmgr" ]; then
-  echo "[+] Enabling PerfMgr (FEAS)..."
-  # Ensure FPSGO is on first
-  if [ "$(cat "$fpsgo" 2>/dev/null)" != "1" ]; then
-    lock_value 1 "$fpsgo"
-  fi
+if [ -f "$perfmgr" ]; then  # Ensure FPSGO is on first
+  [ "$(cat "$fpsgo" 2>/dev/null)" != "1" ] && [ -f "$fpsgo" ] && lock_value 1 "$fpsgo"
+  
   # GED KPI should be ON unless hybrid governor is used
   if [ ! -d /data/adb/modules/dimensity_hybrid_governor ] && [ -f "$ged_kpi" ]; then
     lock_value 1 "$ged_kpi"
@@ -106,22 +111,13 @@ fi
 # ==============================
 
 if [ -f /proc/gpufreqv2/stack_signed_opp_table ]; then
-  # Get highest frequency (first line = highest OPP)
-  MAX_FREQ=$(head -n1 /proc/gpufreqv2/stack_signed_opp_table | awk '{print $3}' | cut -d',' -f1)
+  MAX_FREQ=$(head -n1 /proc/gpufreqv2/stack_signed_opp_table 2>/dev/null | awk '{print $3}' | cut -d',' -f1) || true
   if [ -n "$MAX_FREQ" ] && [ "$MAX_FREQ" != "0" ]; then
     echo "[+] Locking GPU to max: ${MAX_FREQ}KHz"
-
-    # Set custom upbound (via GED)
     lock_value "$MAX_FREQ" /sys/kernel/ged/hal/custom_upbound_gpu_freq
-
-    # Also disable fixed freq (let upbound control it)
     echo -1 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null || true
     echo 0 0 > /proc/gpufreqv2/fix_custom_freq_volt 2>/dev/null || true
-
-    # Disable GPT thermal throttle if present
-    if [ -f /sys/kernel/thermal/gpt ]; then
-      echo disable > /sys/kernel/thermal/gpt
-    fi
+    [ -f /sys/kernel/thermal/gpt ] && echo disable > /sys/kernel/thermal/gpt 2>/dev/null || true
   fi
 fi
 
@@ -132,12 +128,10 @@ fi
 if [ -n "$dvfsrc_dir" ]; then
   dvfsrc="$dvfsrc_dir/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq"
   if [ -f "$dvfsrc/max_freq" ] && [ -f "$dvfsrc/min_freq" ]; then
-    MAX_DDR=$(cat "$dvfsrc/max_freq")
+    MAX_DDR=$(cat "$dvfsrc/max_freq" 2>/dev/null) || true
     if [ -n "$MAX_DDR" ]; then
       echo "[+] Setting DDR min freq to max: $MAX_DDR Hz"
-      chmod 664 "$dvfsrc/min_freq" 2>/dev/null
-      echo "$MAX_DDR" > "$dvfsrc/min_freq"
-      chmod 444 "$dvfsrc/min_freq" 2>/dev/null
+      lock_value "$MAX_DDR" "$dvfsrc/min_freq"
     fi
   fi
 fi
@@ -146,104 +140,64 @@ fi
 # 🚫 4. Disable Power-Saving Features
 # ==============================
 
-# Disable DCS (Dynamic Core Scaling) — keeps all GPU cores active
-if [ -f "$dcs_mode" ]; then
-  echo "[+] Disabling DCS (keep all GPU cores active)..."
-  lock_value 0 "$dcs_mode"
-fi
+[ -f "$dcs_mode" ] && lock_value 0 "$dcs_mode"
 
-# Disable GED KPI throttling (if not using hybrid governor)
 if [ -f "$ged_kpi" ] && [ ! -d /data/adb/modules/dimensity_hybrid_governor ]; then
   echo "[+] Ensuring GED KPI is ENABLED (required for PerfMgr)..."
   lock_value 1 "$ged_kpi"
 fi
-
 # ==============================
-# 🚀 PPM Policy Configuration (Fixed for /system/bin/sh)
+# 🚀 PPM Policy Configuration
 # ==============================
 
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 PPM_PATH="/proc/ppm/policy_status"
 
-# Ensure directory exists for logging
-mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null
+mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
 
 log_action() {
-    echo "[$(date +"%Y-%m-%d %H:%M:%S")] $1" >> "$LOG_FILE"
+  echo "[$(date +"%Y-%m-%d %H:%M:%S")] $1" >> "$LOG_FILE" 2>/dev/null || true
 }
 
 log_action "Starting PPM Policy Application..."
 
-# Root Check (POSIX Compliant)
-if [ "$(id -u)" -ne 0 ]; then
-   echo "[!] Root access required."
-   log_action "ERROR: No root access."
-   exit 1
+if [ "$(id -u)" -ne 0 ] 2>/dev/null; then
+   echo "[!] Root access required (or not fully active)."
+   log_action "WARNING: UID is not 0"
 fi
 
 echo "--- Checking PPM Path ---"
 if [ ! -f "$PPM_PATH" ]; then
     echo "[!] PPM Path not found: $PPM_PATH"
-    log_action "ERROR: PPM Path not found."
-    # Do not exit, continue with other optimizations
+    log_action "WARNING: PPM Path not found."
+elif [ ! -w "$PPM_PATH" ]; then
+    echo "[!] PPM Path is Read-Only. Kernel may block userspace writes."
+    log_action "WARNING: PPM Path is read-only."
 else
-    # Check if writable
-    if [ ! -w "$PPM_PATH" ]; then
-        echo "[!] PPM Path is Read-Only. Cannot apply policies directly."
-        log_action "WARNING: PPM Path is read-only. Kernel may block userspace writes."
-    else
-        echo "[+] PPM Path is writable. Applying policies..."
-        
-        # Define policies manually (No Arrays)
-        # Format: Index Status
-        # 0=PTPOD, 1=UT, 2=FORCE_LIMIT, 3=PWR_THRO, 4=THERMAL, 5=DLPT, 6=HARD_USER, 7=USER_LIMIT, 8=LCM_OFF, 9=SYS_BOOST
-        
-        # Disable Power Saving Policies (0-8)
-        for i in 0 1 2 3 4 5 6 7 8; do
-            echo "$i 0" > "$PPM_PATH" 2>/dev/null
-            if [ $? -eq 0 ]; then
-                echo "   [-] Policy $i Disabled"
-                log_action "Policy $i Disabled"
-            else
-                echo "   [!] Failed to disable Policy $i"
-                log_action "Failed to disable Policy $i"
-            fi
-        done
-
-        # Enable Sys Boost (9)
-        echo "9 1" > "$PPM_PATH" 2>/dev/null
-        if [ $? -eq 0 ]; then
-            echo "   [+] Policy 9 (SYS_BOOST) Enabled"
-            log_action "Policy 9 Enabled"
-        else
-            echo "   [!] Failed to enable Policy 9"
-            log_action "Failed to enable Policy 9"
-        fi
-    fi
+    echo "[+] PPM Path is writable. Applying policies..."
+    for i in 0 1 2 3 4 5 6 7 8; do
+        echo "$i 0" > "$PPM_PATH" 2>/dev/null && echo "   [-] Policy $i Disabled" || echo "   [!] Failed Policy $i (skipped)"
+    done
+    echo "9 1" > "$PPM_PATH" 2>/dev/null && echo "   [+] Policy 9 (SYS_BOOST) Enabled" || echo "   [!] Failed Policy 9 (skipped)"
 fi
 
-# Verify Status
-if [ -f "$PPM_PATH" ]; then
-    echo "--- New PPM Status ---"
-    cat "$PPM_PATH"
-    log_action "Final PPM Status:\n$(cat "$PPM_PATH")"
-fi
+[ -f "$PPM_PATH" ] && { echo "--- New PPM Status ---"; cat "$PPM_PATH" 2>/dev/null; }
 
-echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
+# --- I/O & Thermal Tweaks ---
+echo disabled | tee /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null || true
 
 for q in /sys/block/*/queue; do 
-  echo 8192|tee $q/read_ahead_kb 2>/dev/null
-  echo none|tee $q/scheduler 2>/dev/null
+  echo 8192 | tee "$q/read_ahead_kb" 2>/dev/null || true
+  echo none | tee "$q/scheduler" 2>/dev/null || true
 done
 
 for d in /sys/class/devfreq/*/; do
-  f=$(awk '{print $NF}' "$d/available_frequencies" 2>/dev/null)
-  [ -n "$f" ] && echo $f | tee "$d/min_freq" 2>/dev/null
+  f=$(awk '{print $NF}' "$d/available_frequencies" 2>/dev/null) || true
+  [ -n "$f" ] && echo "$f" | tee "$d/min_freq" 2>/dev/null || true
 done
-
-for PROC in $(ps -e | grep thermal | grep -v grep | awk "{print \$NF}"); do
-    echo "Stopping service $PROC"
-    stop $PROC 2>/dev/null
+# Stop thermal throttling services safely
+ps -A 2>/dev/null | grep -i thermal | grep -v grep | awk '{print $NF}' | while read -r svc; do
+  stop "$svc" 2>/dev/null || true
 done
 
 # ==============================
@@ -256,5 +210,6 @@ echo "   - PerfMgr / FPSGO / FBT: enabled"
 echo "   - GPU: locked to max frequency"
 echo "   - DDR: min freq = max"
 echo "   - DCS: disabled"
+echo "   - All failures safely skipped"
 echo ""
 echo "⚠️  Monitor temperature! Reboot to restore defaults."
