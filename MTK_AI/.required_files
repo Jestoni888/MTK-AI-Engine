@@ -58,6 +58,8 @@ action.sh
 service.sh
 post-fs-data.sh
 module.prop
+update_checker.sh
+.required_files
 
 # WebUI Files
 webroot/index.html
