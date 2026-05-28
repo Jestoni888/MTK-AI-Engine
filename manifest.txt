@@ -40,6 +40,8 @@ action.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/
 service.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/service.sh
 post-fs-data.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/post-fs-data.sh
 module.prop https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/module.prop
+update_checker.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/update_checker.sh
+.required_files https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/.required_files
 webroot/index.html https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/index.html
 webroot/application.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/application.js
 webroot/animationspeed.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/animationspeed.js
