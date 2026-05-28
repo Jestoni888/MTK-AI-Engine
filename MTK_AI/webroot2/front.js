@@ -159,9 +159,9 @@
             color: '#FF3B30', // Red
             desc: 'Max clocks • Thermal disabled • Aggressive boost • Can cause auto reboot • Automode stops',
             commands: `
-            export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
-su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "performance mode" >/dev/null 2>&1 &'
-pkill -f "MTK_AI.*mtk_ai_engine" 2>/dev/null; pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null; pkill -f "dumpsys2" 2>/dev/null; pkill -f "script_runner.*global" 2>/dev/null; pkill -f "service.sh" 2>/dev/null; killall service.sh mtk_ai_engine 2>/dev/null
+            pgrep -f "MTK_AI|dumpsys2|mtk_ai_engine|service.sh" 2>/dev/null | while read -r pid; do kill -9 "$pid" 2>/dev/null; done
+export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
+su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "performance mode" >/dev/null 2>&1 & disown'
 `
         },
         balance: {
@@ -169,10 +169,13 @@ pkill -f "MTK_AI.*mtk_ai_engine" 2>/dev/null; pkill -9 -f "/data/adb/modules/MTK
             color: '#FF9500', // Orange
             desc: 'schedutil • Normal thermal • Smart switch on gaming/normal',
             commands: `
-            pkill -f "MTK_AI.*mtk_ai_engine" 2>/dev/null; pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null; pkill -f "dumpsys2" 2>/dev/null; pkill -f "script_runner.*global" 2>/dev/null; pkill -f "service.sh" 2>/dev/null; killall service.sh mtk_ai_engine 2>/dev/null
+            # Kill matching processes but SKIP main_control/mode binary
+SKIP="/data/adb/modules/MTK_AI/main_control/mode"
+pgrep -f "MTK_AI|dumpsys2|mtk_ai_engine|service.sh" 2>/dev/null | grep -vF "$SKIP" | while read -r pid; do kill -9 "$pid" 2>/dev/null; done
             export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
 su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "balance mode" >/dev/null 2>&1 &'
 rm -f /sdcard/MTK_AI_Engine/enable_limiter
+echo "1" > /sdcard/MTK_AI_Engine/automode 2>/dev/null
 export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown
 `
         },
@@ -181,9 +184,12 @@ export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/M
             color: '#34C759', // Green
             desc: 'schedutil • Frequency relax • Offset -10 • Smart switch on gaming/normal',
             commands: `
-            pkill -f "MTK_AI.*mtk_ai_engine" 2>/dev/null; pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null; pkill -f "dumpsys2" 2>/dev/null; pkill -f "script_runner.*global" 2>/dev/null; pkill -f "service.sh" 2>/dev/null; killall service.sh mtk_ai_engine 2>/dev/null
+            # Kill matching processes but SKIP main_control/mode binary
+SKIP="/data/adb/modules/MTK_AI/main_control/mode"
+pgrep -f "MTK_AI|dumpsys2|mtk_ai_engine|service.sh" 2>/dev/null | grep -vF "$SKIP" | while read -r pid; do kill -9 "$pid" 2>/dev/null; done
             export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
 su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "powersaver mode" >/dev/null 2>&1 &'
+echo "1" > /sdcard/MTK_AI_Engine/automode 2>/dev/null
 export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown
 `
         }
