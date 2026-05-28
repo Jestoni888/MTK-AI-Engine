@@ -1,1 +1,1 @@
-fixed daemon about running multiple that causes lags
+fixed daemon about running multiple times & causes lags
