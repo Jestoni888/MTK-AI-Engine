@@ -74,5 +74,7 @@ webroot/renderer.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/r
 webroot/cpuset.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/cpuset.js
 webroot/setedit.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/setedit.js
 webroot/update.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/update.js
+lib/libinotifytools.so https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/libinotifytools.so
+lib/inotifywatch https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/inotifywatch
 lib/inotifywait https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/inotifywait
 lib64/libc++_shared.so https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib64/libc++_shared.so
