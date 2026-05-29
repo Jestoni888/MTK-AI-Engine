@@ -96,6 +96,7 @@ webroot/renderer.js
 webroot/cpuset.js
 webroot/setedit.js
 webroot/update.js
+webroot/hibernator.js
 
 # Libraries
 lib64/libc++_shared.so
