@@ -273,19 +273,35 @@ async function syncWhitelistFromGameList() {
         const gameSet = new Set(gameList);
         const whitelistRaw = await execFn(`cat ${WHITELIST_FILE} 2>/dev/null`);
         const existingWhitelist = new Set(whitelistRaw.split('\n').map(l => l.trim()).filter(l => l));
-        const pkgResult = await execFn('pm list packages -3 2>/dev/null');
-        const allPkgs = pkgResult.split('\n').map(p => p.replace('package:', '').trim()).filter(p => p);
+        
+        // Include system apps, exclude launcher packages
+        const pkgResult = await execFn("pm list packages 2>/dev/null | grep -vi 'launcher'");
+        const allPkgs = pkgResult.split('\n')
+            .map(p => p.replace('package:', '').trim())
+            .filter(p => p);
+            
         let added = 0, removed = 0;
         for (const pkg of allPkgs) {
             if (gameSet.has(pkg)) {
-                if (existingWhitelist.has(pkg)) { await execFn(`sed -i "/^${pkg}$/d" ${WHITELIST_FILE} 2>/dev/null`); removed++; }
+                if (existingWhitelist.has(pkg)) { 
+                    await execFn(`sed -i "/^${pkg}$/d" ${WHITELIST_FILE} 2>/dev/null`); 
+                    removed++; 
+                }
             } else {
-                if (!existingWhitelist.has(pkg)) { await execFn(`echo "${pkg}" >> ${WHITELIST_FILE}`); added++; }
+                if (!existingWhitelist.has(pkg)) { 
+                    await execFn(`echo "${pkg}" >> ${WHITELIST_FILE}`); 
+                    added++; 
+                }
             }
         }
         showStatus(`✅ Sync: +${added} whitelisted, -${removed} removed`, '#32D74B');
-        if (allApps.length > 0) { allApps.forEach(app => { app.isInGameList = !gameSet.has(app.pkg); }); renderAppList(allApps); }
-    } catch (e) { showStatus('❌ Sync failed', '#FF453A'); }
+        if (allApps.length > 0) { 
+            allApps.forEach(app => { app.isInGameList = !gameSet.has(app.pkg); }); 
+            renderAppList(allApps); 
+        }
+    } catch (e) { 
+        showStatus('❌ Sync failed', '#FF453A'); 
+    }
 }
 
 // === APP LIST LOADING ===
