@@ -13,24 +13,21 @@ LAST=$(cat "$RUN_TS_FILE" 2>/dev/null || echo 0)
 COUNT=$(cat "$COUNT_FILE" 2>/dev/null || echo 0)
 
 # --- rate limits ---
-MIN_INTERVAL=5      # seconds between runs
-MAX_RUNS=5          # max runs per minute
+MIN_INTERVAL=5
+MAX_RUNS=5
 WINDOW=60
 
-# Too soon? exit silently
 [ $((NOW - LAST)) -lt $MIN_INTERVAL ] && exit 0
 
-# Count runs in window
 if [ $((NOW - LAST)) -lt $WINDOW ]; then
   COUNT=$((COUNT + 1))
 else
   COUNT=1
 fi
 
-# Too many executions? hard stop
 if [ "$COUNT" -gt "$MAX_RUNS" ]; then
   echo "[FLOOD-GUARD] $SCRIPT_NAME blocked" \
-    >> /sdcard/MTK_AI_Engine/flood_guard.log
+    >> /sdcard/MTK_AI_Engine/flood_guard.log 2>/dev/null
   exit 0
 fi
 
@@ -42,49 +39,211 @@ echo "$COUNT" > "$COUNT_FILE"
 # -------------------------
 # RAM AUTO-CLEANER
 # -------------------------
-LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+LOG_DIR="/sdcard/MTK_AI_Engine"
+LOG_FILE="$LOG_DIR/MTK_AI_Engine.log"
+mkdir -p "$LOG_DIR"
+
 RAM_THRESHOLD=50
+
+# --- CRITICAL SYSTEM PACKAGES (Never kill) ---
+CRITICAL_PACKAGES="
+com.android.systemui
+com.google.android.gms
+com.google.android.gsf
+com.android.phone
+com.android.settings
+com.android.launcher
+com.google.android.inputmethod.latin
+com.google.android.packageinstaller
+android
+"
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
-    [ "$(wc -l < $LOG_FILE)" -gt 200 ] &&
+    [ "$(wc -l < "$LOG_FILE")" -gt 200 ] &&
         tail -n 200 "$LOG_FILE" > "$LOG_FILE.tmp" &&
         mv "$LOG_FILE.tmp" "$LOG_FILE"
 }
 
+# -------------------------
+# BUILD INSTALLED PACKAGES LIST
+# -------------------------
+get_installed_packages() {
+    # Get all installed packages (user + system)
+    pm list packages 2>/dev/null | cut -d':' -f2 | sort -u
+}
+
+# -------------------------
+# CHECK IF PACKAGE IS INSTALLED
+# -------------------------
+is_package_installed() {
+    local pkg="$1"
+    echo "$INSTALLED_PACKAGES" | grep -qx "$pkg"
+}
+
+# -------------------------
+# CHECK IF PACKAGE IS CRITICAL
+# -------------------------
+is_critical_package() {
+    local pkg="$1"
+    echo "$CRITICAL_PACKAGES" | grep -qx "$pkg"
+}
+
+# -------------------------
+# EXTRACT PACKAGE FROM CMDLINE
+# -------------------------
+extract_package_from_cmdline() {
+    local cmdline="$1"
+    
+    # 1. Priority: Standard Android prefixes
+    local pkg=$(echo "$cmdline" | grep -oiE '(com|org|net|io)\.[a-z0-9_.]+' | head -1)
+        # 2. Fallback: Activity path pattern
+    if [ -z "$pkg" ]; then
+        pkg=$(echo "$cmdline" | grep -oE '[a-z0-9_.]+/[A-Za-z0-9_.]+' | head -1 | cut -d'/' -f1)
+    fi
+    
+    # 3. Fallback: Generic dotted pattern
+    if [ -z "$pkg" ]; then
+        pkg=$(echo "$cmdline" | grep -oE '[a-z][a-z0-9_]*\.[a-z][a-z0-9_.]+' | head -1)
+    fi
+    
+    echo "$pkg"
+}
+
+# -------------------------
+# ACCURATE BACKGROUND KILLER (PM-BASED)
+# -------------------------
+force_kill_cgroup_safe() {
+    log_msg "🕵️ Building installed packages list..."
+    
+    # Get all installed packages once
+    INSTALLED_PACKAGES=$(get_installed_packages)
+    local total_packages=$(echo "$INSTALLED_PACKAGES" | wc -l)
+    log_msg "ℹ️ Found $total_packages installed packages"
+    
+    log_msg "🕵️ Scanning /dev/cpuset/background/cgroup.procs..."
+    
+    local PIDS_FILE="/tmp/bg_pids_$$.txt"
+    cat /dev/cpuset/background/cgroup.procs > "$PIDS_FILE" 2>/dev/null
+    
+    if [ ! -s "$PIDS_FILE" ]; then
+        log_msg " Background CGroup is empty."
+        rm -f "$PIDS_FILE"
+        return
+    fi
+
+    local killed_count=0
+    local protected_count=0
+    local skipped_count=0
+
+    while read -r pid; do
+        [ -z "$pid" ] && continue
+        
+        local proc_name=$(ps -o comm= -p "$pid" 2>/dev/null | tr -d ' ')
+        [ -z "$proc_name" ] && continue
+
+        local pkg=""
+        
+        # Resolve package name
+        if [ "$proc_name" = "app_process" ] || [ "$proc_name" = "app_process64" ]; then
+            local cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')            pkg=$(extract_package_from_cmdline "$cmdline")
+        elif echo "$proc_name" | grep -qE '\.'; then
+            pkg="$proc_name"
+        else
+            local cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')
+            pkg=$(extract_package_from_cmdline "$cmdline")
+        fi
+
+        # Validate package name format
+        if [ -z "$pkg" ] || ! echo "$pkg" | grep -qE '^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+'; then
+            log_msg "   ⏭️ Skipping invalid package: $pkg (PID: $pid)"
+            skipped_count=$((skipped_count + 1))
+            continue
+        fi
+
+        # Check if package is installed (PM verification)
+        if ! is_package_installed "$pkg"; then
+            log_msg "   ⏭️ Skipping not-installed: $pkg (PID: $pid)"
+            skipped_count=$((skipped_count + 1))
+            continue
+        fi
+
+        # Check if package is critical
+        if is_critical_package "$pkg"; then
+            log_msg "   🛡️ Protected Critical: $pkg (PID: $pid)"
+            protected_count=$((protected_count + 1))
+            continue
+        fi
+
+        # Verify background state via OOM Adj
+        local adj=$(cat /proc/$pid/oom_score_adj 2>/dev/null)
+        if [ -n "$adj" ] && [ "$adj" -lt 900 ]; then
+            log_msg "   ⏭️ Not background: $pkg (adj: $adj)"
+            skipped_count=$((skipped_count + 1))
+            continue
+        fi
+
+        # Protect system HAL/vendor services
+        case "$pkg" in
+            android.hardware.*|android.system.*|vendor.*)
+                log_msg "   🛡️ Protected System Service: $pkg (PID: $pid)"
+                protected_count=$((protected_count + 1))
+                continue
+                ;;
+        esac
+
+        # --- KILL LOGIC ---
+        log_msg "   🎯 Killing: $pkg (PID: $pid adj: ${adj:-?})"
+        
+        am force-stop "$pkg" 2>/dev/null        sleep 0.5
+        
+        if ps -p "$pid" >/dev/null 2>&1; then
+            log_msg "   ⚠️ Force-stop failed, using SIGKILL..."
+            kill -9 "$pid" 2>/dev/null
+            sleep 0.3
+            
+            if ps -p "$pid" >/dev/null 2>&1; then
+                log_msg "   ❌ FAILED: $pkg (PID: $pid)"
+            else
+                log_msg "   ✅ Killed via SIGKILL: $pkg"
+                killed_count=$((killed_count + 1))
+            fi
+        else
+            log_msg "   ✅ Killed via am force-stop: $pkg"
+            killed_count=$((killed_count + 1))
+        fi
+        
+        sleep 0.2
+    done < "$PIDS_FILE"
+
+    rm -f "$PIDS_FILE"
+    log_msg "✅ Cleanup Finished: $killed_count killed, $protected_count protected, $skipped_count skipped"
+}
+
 auto_focus_ram() {
-    # 1. Get Memory Stats
     local MEM_TOTAL=$(grep MemTotal /proc/meminfo | awk '{print $2}')
     local MEM_AVAIL_START=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
     local MEM_USED_PCT=$(((MEM_TOTAL - MEM_AVAIL_START) * 100 / MEM_TOTAL))
 
-    # Always log status to verify the script is running
     log_msg "ℹ️ RAM Check: ${MEM_USED_PCT}% usage."
 
     if [ "$MEM_USED_PCT" -gt "$RAM_THRESHOLD" ]; then
         log_msg "🚨 High RAM usage! Prioritizing Foreground/Top-App..."
+        force_kill_cgroup_safe
 
-            # 4. Kernel Level Cleanup
         sync
         echo 3 > /proc/sys/vm/drop_caches
         echo 1 > /proc/sys/vm/compact_memory
 
-        # 5. Verify Results
         local MEM_AVAIL_END=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
         local FREED=$(((MEM_AVAIL_END - MEM_AVAIL_START) / 1024))
         log_msg "✅ RAM Focused. Freed ${FREED}MB. Foreground protected."
     fi
 }
 
-# -------------------------
-# MAIN EXECUTION LOOP
-# -------------------------
 log_msg "🚀 RAM Focus Service Started (Path: $LOG_FILE)"
 
 while true; do
-    # Execute the focus logic
-    auto_focus_ram
-    
-    # Wait 60 seconds before the next check
+    auto_focus_ram    
     sleep 60
 done
