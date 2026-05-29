@@ -15,7 +15,6 @@ const scriptPaths = {
     fast_reboot: { on: null, off: null, isDaemon: false, critical: false },
     enable_trim: { on: null, off: null, isDaemon: false, critical: false },
     enable_bypass: { on: null, off: null, isDaemon: false, critical: false },
-    enable_cleaner: { on: null, off: null, isDaemon: false, critical: false },
     enable_screen_off_throttle: { on: null, off: null, isDaemon: false, critical: false },
     low_power_mode: { on: null, off: null, isDaemon: false, critical: false },
     enable_notifications: { on: null, off: null, isDaemon: false, critical: false },
@@ -31,7 +30,6 @@ const scriptPaths = {
 const toggleConfig = {
     enable_trim: { title:  "Enable TRIM ", desc:  "Optimize storage performance  & lifespan ", group:  "System " },
     enable_bypass: { title:  "Charging Bypass ", desc:  "Bypass battery while plugged in ", group:  "Gaming " },
-    enable_cleaner: { title:  "Auto Ram Cleaner ", desc:  "Periodically clean ram & force-stop background apps", group:  "System " },
     disable_zram: { title:  "Disable ZRAM ", desc:  "Free up RAM by disabling compressed swap ", group:  "Memory " },
     selinux_mode: { 
         title: "SELinux Permissive", 
