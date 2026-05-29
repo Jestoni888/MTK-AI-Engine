@@ -128,9 +128,6 @@
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
-        // 🔥 AUTO-RUN: Trigger background shell script immediately after popup appears
-        triggerCheck();
-
         // 🔥 NEW: Async changelog fetch (non-blocking, won't delay modal)
         fetchChangelog().then(html => {
             const el = document.getElementById('changelog-content');
@@ -162,23 +159,23 @@
         if (el) { el.style.display = 'none'; document.body.style.overflow = ''; }
     }
 
-    // ===== MAIN CHECK LOGIC =====
-    async function checkForUpdates(refresh = false) {
-        statusData = await readStatus();
-        
-        if (statusData?.update_available) {
-            const age = Date.now()/1000 - (statusData.last_check || 0);
-            if (age < 3600 || refresh) { showUpdateModal(statusData); return; }
-        }
-        
-        if (refresh || !statusData) {
-            await triggerCheck();
-            setTimeout(async () => {
-                statusData = await readStatus();
-                if (statusData?.update_available) showUpdateModal(statusData);
-            }, 1500);
-        }
+    // ===== MAIN CHECK LOGIC (REVISED) =====
+async function checkForUpdates(refresh = false) {
+    // Always trigger background checker when page is active
+    await triggerCheck();
+    
+    // Small delay to let checker write status file
+    await new Promise(res => setTimeout(res, refresh ? 100 : 800));
+    
+    // Read updated status
+    statusData = await readStatus();
+    
+    // Only show modal if update is actually available
+    if (statusData?.update_available) {
+        showUpdateModal(statusData);
     }
+    // ✅ No update? Silent exit. No popup, no noise.
+}
 
     // ===== MANUAL BUTTON =====
     const btn = document.getElementById('update-btn');
@@ -205,10 +202,19 @@
         });
     }
 
-    // ===== INIT =====
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => checkForUpdates(false), 500);
-    });
+    // ===== PAGE VISIBILITY: Re-check when tab becomes active =====
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        // Page just became visible → trigger fresh check
+        checkForUpdates(false);
+    }
+});
+
+// ===== INIT: Run on DOM load =====
+document.addEventListener('DOMContentLoaded', () => {
+    // Initial check when HTML is first active
+    checkForUpdates(false);
+});
 
     // ===== PUBLIC API =====
     window.MTKUpdate = {
