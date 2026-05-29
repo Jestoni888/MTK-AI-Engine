@@ -1,2 +1,3 @@
 •fixed daemon about running multiple times & causes lags
 •bypass charging re-optimized on gaming
+•swipe to home launcher in order to switch between normal & gaming mode
