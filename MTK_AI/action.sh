@@ -112,6 +112,7 @@ webroot/renderer.js
 webroot/cpuset.js
 webroot/setedit.js
 webroot/update.js
+webroot/hibernator.js
 lib/inotifywait
 lib/inotifywatch
 lib/libinotifytools.so
