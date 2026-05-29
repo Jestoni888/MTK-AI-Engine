@@ -31,7 +31,7 @@ const scriptPaths = {
 const toggleConfig = {
     enable_trim: { title:  "Enable TRIM ", desc:  "Optimize storage performance  & lifespan ", group:  "System " },
     enable_bypass: { title:  "Charging Bypass ", desc:  "Bypass battery while plugged in ", group:  "Gaming " },
-    enable_cleaner: { title:  "Auto Cleaner ", desc:  "Periodically clear cache  & temp files ", group:  "System " },
+    enable_cleaner: { title:  "Auto Ram Cleaner ", desc:  "Periodically clean ram & force-stop background apps", group:  "System " },
     disable_zram: { title:  "Disable ZRAM ", desc:  "Free up RAM by disabling compressed swap ", group:  "Memory " },
     selinux_mode: { 
         title: "SELinux Permissive", 
