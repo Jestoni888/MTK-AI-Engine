@@ -218,3 +218,4 @@ echo "[$(date '+%H:%M:%S')] Run complete."
 # Optional: Clean state file if you want fresh auto-run every boot
 rm -f "$AUTORUN_STATE"
 rm -f "$STATE_FILE"
+pkill -f module_executer
