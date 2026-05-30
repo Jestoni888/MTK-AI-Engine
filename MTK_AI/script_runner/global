@@ -99,13 +99,21 @@ while true; do
         pkill -f "cpu7"
     fi
 
-    # Logic for MODULE_EXECUTER
     if [ -f "$EXTERNAL_CFG/enable_module" ]; then
-        pgrep -f "module_executer" > /dev/null || export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh $MODULE_EXECUTER >/dev/null 2>&1 &
-    else
-        pkill -f "module_executer"
-    fi
+    # 1. Kill existing instances (exclude current script PID to avoid self-termination)
+    pgrep -f "module_executer" 2>/dev/null | grep -vw "$$" | while read -r pid; do
+        kill -9 "$pid" 2>/dev/null
+    done
+    sleep 0.2 # Brief pause for clean termination
 
+    # 2. Set environment & launch fresh instance
+    export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"
+    cd /data/adb/modules/MTK_AI || exit 1
+    nohup sh "$MODULE_EXECUTER" >/dev/null 2>&1 &
+else
+    # Module disabled: kill any running instances
+    pkill -f "module_executer" 2>/dev/null
+    fi
     # Wait for 30 seconds before running again
     sleep 30
 done
