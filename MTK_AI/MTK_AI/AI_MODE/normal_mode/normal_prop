@@ -24,8 +24,6 @@ echo "1" > /proc/cpufreq/cpufreq_power_mode
 
 echo "0" > /proc/cpufreq/cpufreq_cci_mode
 
-settings put global 'always_finish_activities' '0'
-
 setprop 'dalvik.vm.usap_pool_enabled' 'true'
 
 device_config put activity_manager max_phantom_processes 16
