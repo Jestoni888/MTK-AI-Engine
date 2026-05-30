@@ -63,7 +63,6 @@ run_optimizations() {
     # ==============================
     echo "0" > /proc/sys/kernel/panic 2>/dev/null || true
 
-    settings put global always_finish_activities 1 2>/dev/null || true
     setprop persist.sys.max_background 0 2>/dev/null || true
     setprop persist.sys.framepredict.enable true 2>/dev/null || true
     settings put system persist.sys.power_mode_perf 1 2>/dev/null || true
