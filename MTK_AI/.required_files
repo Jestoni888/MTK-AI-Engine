@@ -104,3 +104,4 @@ lib/inotifywait
 lib/inotifywatch
 lib/libinotifytools.so
 lib/sudo
+lib/cpulimit
