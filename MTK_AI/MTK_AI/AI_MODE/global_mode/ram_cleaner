@@ -47,6 +47,12 @@ LOG_FILE="$LOG_DIR/MTK_AI_Engine.log"
 RAM_THRESHOLD_FILE="$CONFIG_DIR/ram_threshold.txt"
 FORCE_KILL_FILE="$CONFIG_DIR/force_kill.list"
 NEVER_KILL_FILE="$CONFIG_DIR/never_kill.list"
+# CPU Limit Config (10 = 10% of ONE core, 0 = disabled)
+CPU_LIMIT_FILE="$CONFIG_DIR/cpu_limit_per_core.txt"
+[ -f "$CPU_LIMIT_FILE" ] || echo "0" > "$CPU_LIMIT_FILE"  # 0 = disabled by default
+
+# cpulimit binary path (adjust if you installed it elsewhere)
+CPULIMIT_BIN="/data/adb/modules/MTK_AI/lib/cpulimit"
 # Initialize config files if missing (WebUI can overwrite these later)
 [ -f "$RAM_THRESHOLD_FILE" ] || echo "50" > "$RAM_THRESHOLD_FILE"
 [ -f "$FORCE_KILL_FILE" ] || printf "# Force Kill List\n# Packages here are ALWAYS killed when background (bypasses all protections)\n# One package per line\n" > "$FORCE_KILL_FILE"
@@ -200,21 +206,113 @@ force_kill_cgroup_safe() {
 }
 
 # -------------------------
+# CPU LIMITER FOR BACKGROUND PROCESSES
+# -------------------------
+limit_cpu_background() {
+    local limit="$1"
+    [ "$limit" -le 0 ] && return  # Disabled
+    
+    log_msg "🎛️ Applying CPU limit: ${limit}% per core to background processes..."
+    
+    local PIDS_FILE="/tmp/bg_cpu_pids_$$.txt"
+    cat /dev/cpuset/background/cgroup.procs > "$PIDS_FILE" 2>/dev/null
+    
+    [ ! -s "$PIDS_FILE" ] && { rm -f "$PIDS_FILE"; return; }
+    
+    local limited_count=0
+    local skipped_count=0
+    
+    while read -r pid; do
+        [ -z "$pid" ] && continue
+        
+        # Skip if process died
+        kill -0 "$pid" 2>/dev/null || continue
+        
+        local proc_name=$(ps -o comm= -p "$pid" 2>/dev/null | tr -d ' ')
+        [ -z "$proc_name" ] && continue
+        
+        # Extract package name (same logic as your killer)
+        local pkg=""
+        if [ "$proc_name" = "app_process" ] || [ "$proc_name" = "app_process64" ]; then
+            local cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')
+            pkg=$(extract_package_from_cmdline "$cmdline")
+        elif echo "$proc_name" | grep -qE '\.'; then
+            pkg="$proc_name"
+        else
+            local cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')
+            pkg=$(extract_package_from_cmdline "$cmdline")
+        fi
+        
+        # Skip if invalid package
+        [ -z "$pkg" ] && { skipped_count=$((skipped_count + 1)); continue; }
+        
+        # Respect NEVER_KILL list (protected apps shouldn't be throttled either)
+        if [ -n "$NEVER_KILL_LIST" ] && echo "$NEVER_KILL_LIST" | grep -qx "$pkg"; then
+            skipped_count=$((skipped_count + 1))
+            continue
+        fi
+        
+        # Skip system packages (same whitelist as your killer)
+        case "$pkg" in
+            android.hardware.*|android.system.*|vendor.*|com.android.systemui|com.google.android.gms|com.google.android.gsf|com.android.phone|com.android.settings|com.android.launcher3|com.google.android.inputmethod.latin|android|bluetooth|com.google.android.webview)
+                skipped_count=$((skipped_count + 1))
+                continue
+                ;;
+        esac
+        
+        # Apply cpulimit if binary exists
+        if [ -x "$CPULIMIT_BIN" ]; then
+            # Check if already limited (avoid duplicate cpulimit processes)
+            if ! pgrep -f "cpulimit.*-p $pid" >/dev/null 2>&1; then
+                log_msg "   🐌 Limiting $pkg (PID:$pid) to ${limit}%/core"
+                # -z: exit if process dies, -i: include children, & : background
+                $CPULIMIT_BIN -l "$limit" -z -i -p "$pid" >/dev/null 2>&1 &
+                limited_count=$((limited_count + 1))
+                sleep 0.1  # Small delay to avoid spawning too fast
+            fi
+        else
+            log_msg "   ⚠️ cpulimit not found at $CPULIMIT_BIN"
+            break
+        fi
+    done < "$PIDS_FILE"
+    
+    rm -f "$PIDS_FILE"
+    log_msg "✅ CPU Limit Applied: $limited_count processes limited, $skipped_count skipped"
+}
+
+# -------------------------
 # MAIN RAM FOCUS LOOP
 # -------------------------
 auto_focus_ram() {
-    # Reload configs every cycle so WebUI changes apply immediately
     load_configs
+    
+    # Load CPU limit setting
+    CPU_LIMIT=$(cat "$CPU_LIMIT_FILE" 2>/dev/null | tr -d '[:space:]')
+    echo "$CPU_LIMIT" | grep -qE '^[0-9]+$' || CPU_LIMIT=0
     
     local MEM_TOTAL=$(grep MemTotal /proc/meminfo | awk '{print $2}')
     local MEM_AVAIL_START=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
     local MEM_USED_PCT=$(((MEM_TOTAL - MEM_AVAIL_START) * 100 / MEM_TOTAL))
 
-    log_msg "️ RAM Check: ${MEM_USED_PCT}% usage (Threshold: ${RAM_THRESHOLD}%)"
+    log_msg "️ RAM Check: ${MEM_USED_PCT}% usage (Threshold: ${RAM_THRESHOLD}%, CPU Limit: ${CPU_LIMIT}%/core)"
 
     if [ "$MEM_USED_PCT" -gt "$RAM_THRESHOLD" ]; then
         log_msg "🚨 High RAM usage! Prioritizing Foreground/Top-App..."
+        
+        # Option A: Kill first, then limit remaining background processes
         force_kill_cgroup_safe
+        
+        # Then apply CPU limit to whatever is still running in background
+        if [ "$CPU_LIMIT" -gt 0 ]; then
+            limit_cpu_background "$CPU_LIMIT"
+        fi
+        
+        # Option B (alternative): Skip killing, ONLY throttle:
+        # if [ "$CPU_LIMIT" -gt 0 ]; then
+        #     limit_cpu_background "$CPU_LIMIT"
+        # else
+        #     force_kill_cgroup_safe
+        # fi
 
         sync
         echo 3 > /proc/sys/vm/drop_caches
@@ -223,6 +321,11 @@ auto_focus_ram() {
         local MEM_AVAIL_END=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
         local FREED=$(((MEM_AVAIL_END - MEM_AVAIL_START) / 1024))
         log_msg "✅ RAM Focused. Freed ${FREED}MB. Foreground protected."
+    else
+        # Optional: Apply light CPU limit even when RAM is OK
+        if [ "$CPU_LIMIT" -gt 0 ] && [ "$CPU_LIMIT" -lt 20 ]; then
+            limit_cpu_background "$CPU_LIMIT"
+        fi
     fi
 }
 
