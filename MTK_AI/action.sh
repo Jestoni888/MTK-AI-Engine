@@ -117,6 +117,7 @@ lib/inotifywait
 lib/inotifywatch
 lib/libinotifytools.so
 lib/sudo
+lib/cpulimit
 lib64/libc++_shared.so
 "
 
