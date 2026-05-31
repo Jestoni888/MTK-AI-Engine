@@ -13,6 +13,9 @@ echo "[+] Applying MAXIMUM PERFORMANCE CONFIG..."
 echo performance > /sys/class/devfreq/13000000.mali/governor 2>/dev/null || true
 echo performance > /sys/class/devfreq/mtk-dvfsrc-devfreq/governor 2>/dev/null || true
 
+for f in /proc/*/*/*offset; do 
+    echo "+10" > "$f" 2>/dev/null || true
+
 for c in /sys/devices/system/cpu/cpu*/core_ctl/enable; do
   echo 0 > "$c" 2>/dev/null || true
 done
