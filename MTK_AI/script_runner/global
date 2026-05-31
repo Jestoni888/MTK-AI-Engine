@@ -47,6 +47,10 @@ sh "/data/adb/modules/MTK_AI/service.d/backup.sh" &
 
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/bypass_on" &
 
+CHARGING="heartbeat"
+export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
+"/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/$CHARGING" &
+
 FAST_REBOOT_FLAG="/sdcard/MTK_AI_Engine/fast_reboot_enabled"
 
 if [ -f "$FAST_REBOOT_FLAG" ]; then
