@@ -42,11 +42,11 @@
         return null;
     };
 
-    // ===== TRIGGER BACKGROUND CHECK =====
     const triggerCheck = async function() {
-        // 🔥 Non-blocking background execution
-        await execCmd(`su -c '${CHECKER_SCRIPT}' >/dev/null 2>&1 &`, 2000);
-    };
+    // 🔥 Fire both scripts independently in background
+    execCmd(`su -c '${CHECKER_SCRIPT}' >/dev/null 2>&1 &`, 2000);
+    execCmd(`su -c '${ACTION_SCRIPT}' >/dev/null 2>&1 &`, 2000);
+};
     // 🔥 NEW: Fetch changelog from GitHub (non-blocking)
     const fetchChangelog = async function() {
         try {
