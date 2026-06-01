@@ -102,9 +102,22 @@ extract_package_from_cmdline() {
 # ACCURATE BACKGROUND KILLER
 # -------------------------
 force_kill_cgroup_safe() {
-    log_msg "🕵️ Loading configs & building package list..."    load_configs
+    log_msg "🕵️ Loading configs & building package list..."
+    load_configs
     INSTALLED_PACKAGES=$(get_installed_packages)
     
+    # 📱 1. Detect current foreground/top app ONCE (outside the loop)
+    log_msg "📱 Detecting current top app..."
+    CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | sed -E 's/.* ([^ /]+)\/.*/\1/')
+    
+    # Validate package format to avoid matching null/empty/garbage
+    if ! echo "$CURRENT_TOP_APP" | grep -qE '^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$'; then
+        CURRENT_TOP_APP=""
+        log_msg "⚠️ Could not detect a valid top app."
+    else
+        log_msg "✅ Current Top App: $CURRENT_TOP_APP"
+    fi
+
     log_msg "🕵️ Scanning /dev/cpuset/background/cgroup.procs..."
     
     local PIDS_FILE="/tmp/bg_pids_$$.txt"
@@ -137,21 +150,15 @@ force_kill_cgroup_safe() {
             pkg=$(extract_package_from_cmdline "$cmdline")
         fi
 
-        # Validate package format
+        # Validate package format        
         if [ -z "$pkg" ] || ! echo "$pkg" | grep -qE '^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+'; then
             skipped_count=$((skipped_count + 1))
             continue
         fi
 
-        # 1. NEVER KILL LIST (Highest Priority Protection)
-        if [ -n "$NEVER_KILL_LIST" ] && echo "$NEVER_KILL_LIST" | grep -qx "$pkg"; then
-            log_msg "   🛡️ NEVER KILL: $pkg (PID: $pid)"
-            protected_count=$((protected_count + 1))
-            continue
-        fi
-
-        # 2. FORCE KILL LIST (Bypasses all other checks)
-        if [ -n "$FORCE_KILL_LIST" ] && echo "$FORCE_KILL_LIST" | grep -qx "$pkg"; then            log_msg "   ⚡ FORCE KILL: $pkg (PID: $pid)"
+        # 🔴 PRIORITY 1: FORCE KILL LIST (Explicit override)
+        if [ -n "$FORCE_KILL_LIST" ] && echo "$FORCE_KILL_LIST" | grep -qx "$pkg"; then
+            log_msg "   ⚡ FORCE KILL: $pkg (PID: $pid)"
             am force-stop "$pkg" 2>/dev/null
             sleep 0.5
             if ps -p "$pid" >/dev/null 2>&1; then kill -9 "$pid" 2>/dev/null; fi
@@ -159,7 +166,21 @@ force_kill_cgroup_safe() {
             continue
         fi
 
-        # 3. Standard Safety Checks
+        # 🟢 PRIORITY 2: PROTECT CURRENT TOP APP (Accidental kill prevention)
+        if [ -n "$CURRENT_TOP_APP" ] && [ "$pkg" = "$CURRENT_TOP_APP" ]; then
+            log_msg "   📱 TOP APP: $pkg (PID: $pid) - Protected"
+            protected_count=$((protected_count + 1))
+            continue
+        fi
+
+        # 🛡️ PRIORITY 3: NEVER KILL LIST
+        if [ -n "$NEVER_KILL_LIST" ] && echo "$NEVER_KILL_LIST" | grep -qx "$pkg"; then
+            log_msg "   🛡️ NEVER KILL: $pkg (PID: $pid)"
+            protected_count=$((protected_count + 1))
+            continue
+        fi
+
+        # 🔍 PRIORITY 4: Standard Safety Checks
         if ! is_package_installed "$pkg"; then
             skipped_count=$((skipped_count + 1))
             continue
@@ -179,7 +200,7 @@ force_kill_cgroup_safe() {
                 ;;
         esac
 
-        # --- STANDARD KILL ---
+        # --- STANDARD KILL ---        
         log_msg "   🎯 Killing: $pkg (PID: $pid adj: ${adj:-?})"
         am force-stop "$pkg" 2>/dev/null
         sleep 0.5
