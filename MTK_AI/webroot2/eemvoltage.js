@@ -1,4 +1,5 @@
 // eemvoltage.js - EEM Voltage Offset Manager (Individual Sliders)
+// Updated: Check path availability + read actual system values
 (function() {
     'use strict';
 
@@ -13,6 +14,7 @@
     ];
     
     let currentOffsets = {};
+    let availablePaths = []; // Filtered list of paths that exist on device
 
     // Safe exec wrapper
     const execFn = typeof window.exec === 'function' ? window.exec : async function(cmd, timeout = 3000) {
@@ -26,16 +28,42 @@
     };
 
     async function init() {
+        await checkPathAvailability();
         await loadAllOffsets();
         bindClickHandler();
     }
 
-    async function loadAllOffsets() {
-        // Initialize with defaults
-        EEM_PATHS.forEach(p => currentOffsets[p.id] = 0);
-        
-        // Try to load saved values
+    // Check which EEM paths actually exist on this device
+    async function checkPathAvailability() {
+        availablePaths = [];
         for (const path of EEM_PATHS) {
+            try {
+                const result = await execFn(`test -f "${path.path}" && echo "exists" || echo "missing"`);
+                if (result?.trim() === 'exists') {
+                    availablePaths.push(path);
+                }
+            } catch (e) {
+                console.warn(`Could not check path ${path.path}:`, e);
+            }
+        }
+        // Initialize offsets for available paths only
+        availablePaths.forEach(p => currentOffsets[p.id] = 0);    }
+
+    async function loadAllOffsets() {
+        // First, try to read ACTUAL values from proc nodes
+        for (const path of availablePaths) {
+            try {
+                const raw = await execFn(`cat "${path.path}" 2>/dev/null`);
+                const val = parseInt(raw?.trim());
+                if (!isNaN(val) && val >= -100 && val <= 100) { // Wider range for actual hardware values
+                    currentOffsets[path.id] = val;
+                    continue; // Successfully read from system
+                }
+            } catch (e) {
+                console.warn(`Failed to read actual value for ${path.id}:`, e);
+            }
+            
+            // Fallback: load saved value from sdcard if proc read failed
             try {
                 const saved = await execFn(`cat ${CONFIG_DIR}/${path.id}.txt 2>/dev/null`);
                 const val = parseInt(saved?.trim());
@@ -43,19 +71,21 @@
                     currentOffsets[path.id] = val;
                 }
             } catch (e) {
-                console.warn(`Failed to load offset for ${path.id}:`, e);
+                console.warn(`Failed to load fallback for ${path.id}:`, e);
             }
         }
         updateCardDisplay();
     }
+
     function updateCardDisplay() {
         const valEl = document.querySelector('#eem-voltage-item .setting-value');
-        if (valEl) {
-            // Show average or first non-zero value
-            const values = Object.values(currentOffsets);
+        if (valEl && availablePaths.length > 0) {
+            const values = availablePaths.map(p => currentOffsets[p.id]);
             const avg = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
             const sign = avg > 0 ? '+' : '';
             valEl.innerHTML = `${sign}${avg} mV <i class="fas fa-chevron-right"></i>`;
+        } else if (valEl) {
+            valEl.innerHTML = `N/A <i class="fas fa-chevron-right"></i>`;
         }
     }
 
@@ -63,13 +93,68 @@
         const item = document.getElementById('eem-voltage-item');
         if (!item) return;
         
-        item.style.cursor = 'pointer';
+        item.style.cursor = availablePaths.length > 0 ? 'pointer' : 'not-allowed';
         item.addEventListener('click', () => {
+            if (availablePaths.length === 0) {
+                showNoPathsMessage();                return;
+            }
             showEemModal();
         });
     }
 
+    function showNoPathsMessage() {
+        const existing = document.getElementById('eem-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'eem-modal';
+        modal.style.cssText = `
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(5px);
+        `;
+
+        const box = document.createElement('div');
+        box.style.cssText = `
+            background: linear-gradient(135deg, #1a1f3a, #2d3561);
+            border: 2px solid #FF9F0A;
+            border-radius: 20px;
+            padding: 24px; width: 95%; max-width: 450px;
+            box-shadow: 0 0 40px rgba(255, 159, 10, 0.2);
+            text-align: center;
+        `;
+
+        box.innerHTML = `
+            <h3 style="color: #FF9F0A; margin: 0 0 15px;">⚠️ EEM Not Available</h3>
+            <p style="color: #8b92b4; font-size: 14px; line-height: 1.5;">
+                No EEM control paths were found on this device.<br><br>
+                This may mean:
+                <ul style="text-align: left; margin: 10px 0; color: #aaa; font-size: 13px;">
+                    <li>Your kernel doesn't expose EEM interfaces</li>
+                    <li>EEM is disabled in your ROM</li>
+                    <li>Device doesn't support per-domain voltage offsets</li>
+                </ul>
+            </p>
+            <button id="eem-close-btn" style="
+                margin-top: 15px; padding: 10px 30px;
+                background: rgba(255,159,10,0.2); color: #FF9F0A;
+                border: 1px solid #FF9F0A; border-radius: 10px;
+                font-size: 13px; cursor: pointer;
+            ">OK</button>
+        `;
+
+        modal.appendChild(box);
+        document.body.appendChild(modal);
+                document.getElementById('eem-close-btn').onclick = () => modal.remove();
+        modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    }
+
     function showEemModal() {
+        if (availablePaths.length === 0) {
+            showNoPathsMessage();
+            return;
+        }
+
         const existing = document.getElementById('eem-modal');
         if (existing) existing.remove();
 
@@ -96,18 +181,20 @@
         header.style.cssText = 'text-align: center; margin-bottom: 20px;';
         header.innerHTML = `
             <h3 style="color: #FF9F0A; margin: 0; font-size: 20px;">⚡ EEM Voltage Offsets</h3>
-            <p style="color: #8b92b4; font-size: 12px; margin: 5px 0 0;">Individual control for each EEM domain</p>        `;
+            <p style="color: #8b92b4; font-size: 12px; margin: 5px 0 0;">
+                ${availablePaths.length} of ${EEM_PATHS.length} domains available • Live values from system
+            </p>
+        `;
 
-        // Create sliders for each EEM path
-        EEM_PATHS.forEach(path => {
+        // Create sliders for each AVAILABLE EEM path
+        availablePaths.forEach(path => {
             const sliderSection = document.createElement('div');
             sliderSection.style.cssText = 'margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);';
             
             const labelRow = document.createElement('div');
             labelRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;';
             labelRow.innerHTML = `
-                <span style="color: #fff; font-size: 13px; font-weight: 600;">${path.name}</span>
-                <span id="eem-val-${path.id}" style="color: #FF9F0A; font-size: 16px; font-weight: 700;">${currentOffsets[path.id] > 0 ? '+' : ''}${currentOffsets[path.id]} mV</span>
+                <span style="color: #fff; font-size: 13px; font-weight: 600;">${path.name}</span>                <span id="eem-val-${path.id}" style="color: #FF9F0A; font-size: 16px; font-weight: 700;">${formatOffset(currentOffsets[path.id])}</span>
             `;
             
             const slider = document.createElement('input');
@@ -124,7 +211,7 @@
             slider.oninput = (e) => {
                 currentOffsets[path.id] = parseInt(e.target.value);
                 const valEl = document.getElementById(`eem-val-${path.id}`);
-                if (valEl) valEl.textContent = `${currentOffsets[path.id] > 0 ? '+' : ''}${currentOffsets[path.id]} mV`;
+                if (valEl) valEl.textContent = formatOffset(currentOffsets[path.id]);
             };
 
             sliderSection.append(labelRow, slider);
@@ -145,18 +232,18 @@
         // Info Box
         const infoBox = document.createElement('div');
         infoBox.style.cssText = `
-            background: rgba(255,159,10,0.1); border: 1px solid rgba(255,159,10,0.3);            border-radius: 10px; padding: 12px; margin: 15px 0; font-size: 11px; color: #FF9F0A;
+            background: rgba(255,159,10,0.1); border: 1px solid rgba(255,159,10,0.3);
+            border-radius: 10px; padding: 12px; margin: 15px 0; font-size: 11px; color: #FF9F0A;
         `;
         infoBox.innerHTML = `
-            <strong>💡 Tip:</strong> Adjust each domain independently.<br>
+            <strong>💡 Tip:</strong> Values shown are read LIVE from system.<br>
             Negative = undervolt (cooler), Positive = overvolt (more stable)
         `;
         box.appendChild(infoBox);
 
         // Status Text
         const statusEl = document.createElement('div');
-        statusEl.id = 'eem-status';
-        statusEl.style.cssText = 'text-align: center; font-size: 13px; color: #666; margin-bottom: 16px; min-height: 20px;';
+        statusEl.id = 'eem-status';        statusEl.style.cssText = 'text-align: center; font-size: 13px; color: #666; margin-bottom: 16px; min-height: 20px;';
         statusEl.textContent = 'Status: Ready';
         box.appendChild(statusEl);
 
@@ -185,7 +272,7 @@
             font-size: 13px; cursor: pointer;
         `;
         resetBtn.onclick = async () => {
-            EEM_PATHS.forEach(p => {
+            availablePaths.forEach(p => {
                 currentOffsets[p.id] = 0;
                 const slider = document.getElementById(`eem-slider-${p.id}`);
                 const valEl = document.getElementById(`eem-val-${p.id}`);
@@ -195,6 +282,7 @@
             await applyAllOffsets(statusEl, applyBtn);
         };
         box.appendChild(resetBtn);
+
         // Cancel Button
         const cancelBtn = document.createElement('button');
         cancelBtn.textContent = 'Cancel';
@@ -205,10 +293,14 @@
         `;
         cancelBtn.onclick = () => modal.remove();
         box.appendChild(cancelBtn);
-
         modal.appendChild(box);
         document.body.appendChild(modal);
         modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    }
+
+    function formatOffset(val) {
+        const sign = val > 0 ? '+' : '';
+        return `${sign}${val} mV`;
     }
 
     async function applyAllOffsets(statusEl, applyBtn) {
@@ -225,15 +317,17 @@
             // Create config directory
             await execFn(`mkdir -p ${CONFIG_DIR}`);
             
-            // Apply each offset
-            for (const path of EEM_PATHS) {
+            let successCount = 0;
+            // Apply each offset for available paths
+            for (const path of availablePaths) {
                 const offset = currentOffsets[path.id];
                 
-                // Save to config
+                // Save to config (for persistence)
                 await execFn(`echo '${offset}' > ${CONFIG_DIR}/${path.id}.txt`);
                 
-                // Apply to system
-                await execFn(`su -c "echo '${offset}' > '${path.path}' 2>/dev/null || true"`);
+                // Apply to system (with error suppression per-path)
+                const result = await execFn(`su -c "echo '${offset}' > '${path.path}' 2>/dev/null" && echo "ok" || echo "fail"`);
+                if (result?.trim() === 'ok') successCount++;
             }
             
             // Update card display
@@ -241,16 +335,26 @@
             
             // Success feedback
             if (statusEl) {
-                statusEl.textContent = '✅ All offsets applied successfully!';
-                statusEl.style.color = '#32D74B';
-            }            if (window.showStatus) {
-                window.showStatus('✅ EEM offsets applied', '#FF9F0A');
+                if (successCount === availablePaths.length) {
+                    statusEl.textContent = `✅ All ${successCount} offsets applied!`;
+                    statusEl.style.color = '#32D74B';
+                } else {
+                    statusEl.textContent = `⚠️ ${successCount}/${availablePaths.length} applied (check root)`;
+                    statusEl.style.color = '#FF9F0A';
+                }            }
+            if (window.showStatus) {
+                const msg = successCount === availablePaths.length 
+                    ? `✅ EEM offsets applied` 
+                    : `⚠️ Partial apply: ${successCount}/${availablePaths.length}`;
+                window.showStatus(msg, successCount === availablePaths.length ? '#32D74B' : '#FF9F0A');
             }
             
-            // Close modal after delay
-            setTimeout(() => {
-                document.getElementById('eem-modal')?.remove();
-            }, 1000);
+            // Close modal after delay on full success
+            if (successCount === availablePaths.length) {
+                setTimeout(() => {
+                    document.getElementById('eem-modal')?.remove();
+                }, 1200);
+            }
             
         } catch (e) {
             console.error('EEM apply failed:', e);
