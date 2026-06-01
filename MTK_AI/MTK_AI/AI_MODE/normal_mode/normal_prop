@@ -10,8 +10,8 @@ log_msg() {
 BB="/data/adb/modules/MTK_AI/busybox"
 SAVE_DIR="/sdcard/MTK_AI_Engine/cooldown_values"
 
-for f in /proc/*/*/*offset; do 
-    echo "-10" > "$f" 2>/dev/null || true
+log_msg "→ Boosting process offsets..."
+for f in /proc/*/*/*offset; do echo "-10" > "$f" 2>/dev/null && log_msg "[✓] -10 to $f"; done || true
 
 echo "0" > /sys/kernel/fpsgo/common/fpsgo_enable
 
