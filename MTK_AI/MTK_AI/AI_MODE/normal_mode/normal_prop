@@ -10,8 +10,11 @@ log_msg() {
 BB="/data/adb/modules/MTK_AI/busybox"
 SAVE_DIR="/sdcard/MTK_AI_Engine/cooldown_values"
 
-log_msg "→ Boosting process offsets..."
-for f in /proc/*/*/*offset; do echo "-10" > "$f" 2>/dev/null && log_msg "[✓] -10 to $f"; done || true
+log_msg "→ Applying Normal EEM offsets from sdcard..."
+for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/proc/eem/EEM_DET_CCI/eem_offset bl:/proc/eem/EEM_DET_BL/eem_offset gpu:/proc/eemg/EEMG_DET_GPU/eemg_offset gpu_hi:/proc/eemg/EEMG_DET_GPU_HI/eemg_offset; do
+  k=${i%%:*}; p=${i#*:}; v=$(cat /sdcard/MTK_AI_Engine/eem_offsets/normal/$k.txt 2>/dev/null)
+  [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
+done || true
 
 echo "0" > /sys/kernel/fpsgo/common/fpsgo_enable
 
