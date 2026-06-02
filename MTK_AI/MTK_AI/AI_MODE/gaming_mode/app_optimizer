@@ -1,24 +1,17 @@
 #!/system/bin/sh
 # Fallback to BusyBox sh if available for better POSIX compliance
-export PATH="/data/adb/modules/MTK_AI/lib:$PATH"
-[ -x /data/adb/modules/MTK_AI/busybox ] && exec /data/adb/modules/MTK_AI/busybox sh "$0" "$@" 2>/dev/null
 
 CONFIG_DIR="/sdcard/MTK_AI_Engine"
 CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
 LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
-WATCH_FILE="/dev/.mtk_ai_active_game"
-
-# Ensure config directory exists
-mkdir -p "$CONFIG_DIR" 2>/dev/null || true
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE" 2>/dev/null || echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
 # ==============================
-# 🔍 inotify Monitor & Trigger
+# 🔍 Performance Optimizations
 # ==============================
-run_optimizations() {
     log_msg "=== Starting MTK AI Engine Performance Optimizer ==="
 
     # ==============================
@@ -31,6 +24,12 @@ run_optimizations() {
             *scheduler)     echo none  | tee "$file" 2>/dev/null || true ;;
         esac
     done
+
+log_msg "→ Applying Gaming EEM offsets from sdcard..."
+for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/proc/eem/EEM_DET_CCI/eem_offset bl:/proc/eem/EEM_DET_BL/eem_offset gpu:/proc/eemg/EEMG_DET_GPU/eemg_offset gpu_hi:/proc/eemg/EEMG_DET_GPU_HI/eemg_offset; do
+  k=${i%%:*}; p=${i#*:}; v=$(cat /sdcard/MTK_AI_Engine/eem_offsets/gaming/$k.txt 2>/dev/null)
+  [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
+done || true
 
     # ==============================
     # ⚡ CPU/CCI Power Mode
@@ -48,7 +47,7 @@ run_optimizations() {
         /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable \
         /sys/kernel/fpsgo/fstb/set_cam_active; do
         [ -f "$path" ] && echo "1" > "$path" 2>/dev/null || true
-    done
+    done    
     # ==============================
     # ✋ Touchscreen Modes (Glove/Cover)
     # ==============================
@@ -97,8 +96,7 @@ run_optimizations() {
     [ -f "/sdcard/MTK_AI_Engine/enable_disable_thermal" ] && \
         [ -f "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" ] && \
         sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" 2>/dev/null || true
-    settings put global low_power 0 2>/dev/null || true
-    settings put global low_power_sticky 0 2>/dev/null || true
+    settings put global low_power 0 2>/dev/null || true    settings put global low_power_sticky 0 2>/dev/null || true
 
     # ==============================
     # 🎯 Foreground App Optimization
@@ -145,9 +143,9 @@ run_optimizations() {
     for path in $EDGE_PATHS; do
         if [ -w "$path" ]; then
             log_msg "✓ Found writable edge control at: $path"
-            if [ "$ENABLE" -eq 1 ] 2>/dev/null; then                echo 0 > "$path" 2>/dev/null || echo 1 > "$path" 2>/dev/null || true
-            else
-                echo 1 > "$path" 2>/dev/null || echo 0 > "$path" 2>/dev/null || true
+            if [ "$ENABLE" -eq 1 ] 2>/dev/null; then
+                echo 0 > "$path" 2>/dev/null || echo 1 > "$path" 2>/dev/null || true
+            else                echo 1 > "$path" 2>/dev/null || echo 0 > "$path" 2>/dev/null || true
             fi
             sync 2>/dev/null || true
         fi
@@ -195,47 +193,5 @@ run_optimizations() {
         log_msg "✓ Triggering restore script in background..."
         sh /data/adb/service.d/99_mtk_ai_restore_values.sh 2>/dev/null &
     fi
-    log_msg "=== MTK AI Engine Optimizer Complete ==="
-    echo "✅ Devfreq settings loaded successfully!!"
-}
-
-# ==============================
-# 🚀 Main: inotify Watch Loop (Run Once)
-# ==============================
-log_msg "🔍 Monitoring $WATCH_FILE for package name changes..."
-
-# Check for inotifywait availability
-if [ -x "/data/adb/modules/MTK_AI/busybox" ]; then
-    INOTIFY_CMD="/data/adb/modules/MTK_AI/busybox inotifywait"
-elif command -v inotifywait >/dev/null 2>&1; then
-    INOTIFY_CMD="inotifywait"
-else
-    log_msg "❌ inotifywait not found. Falling back to polling method..."
-    # Fallback: simple polling loop (run once)
-    while true; do
-        if [ -f "$WATCH_FILE" ] && [ -s "$WATCH_FILE" ]; then
-            PKG=$(cat "$WATCH_FILE" 2>/dev/null | tr -d '[:space:]')
-            if [ -n "$PKG" ] && echo "$PKG" | grep -qE '^[a-zA-Z0-9._-]+$'; then
-                log_msg "✓ Detected package: $PKG — triggering optimization (ONCE)"
-                run_optimizations
-                break  # Exit after first successful trigger
-            fi
-        fi
-        sleep 1
-    done
-    exit 0
-fi
-
-# Primary method: inotifywait event-driven trigger (run once)
-"$INOTIFY_CMD" -q -e modify -e close_write --format '%f' "$WATCH_FILE" 2>/dev/null | while read -r event; do
-    if [ -f "$WATCH_FILE" ] && [ -s "$WATCH_FILE" ]; then
-        PKG=$(cat "$WATCH_FILE" 2>/dev/null | tr -d '[:space:]' | head -n1)
-        if [ -n "$PKG" ] && echo "$PKG" | grep -qE '^[a-zA-Z0-9._-]+$'; then
-            log_msg "✓ Detected package via inotify: $PKG — triggering optimization (ONCE)"
-            run_optimizations
-            break  # Critical: exit loop after first execution
-        fi
-    fi
-done
-
-exit 0
+    
+    log_msg "=== MTK AI Engine Optimizer Complete ==="    echo "✅ All optimizations applied successfully!!"
