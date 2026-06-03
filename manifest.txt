@@ -78,6 +78,7 @@ webroot/cpuset.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/ref
 webroot/setedit.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/setedit.js
 webroot/update.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/update.js
 webroot/hibernator.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/hibernator.js
+webroot/wifi.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/wifi.js
 lib/libinotifytools.so https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/libinotifytools.so
 lib/inotifywatch https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/inotifywatch
 lib/inotifywait https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/inotifywait
