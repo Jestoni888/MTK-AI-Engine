@@ -98,6 +98,7 @@ webroot/cpuset.js
 webroot/setedit.js
 webroot/update.js
 webroot/hibernator.js
+webroot/wifi.js
 
 # Libraries
 lib64/libc++_shared.so
