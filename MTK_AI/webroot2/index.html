@@ -1876,6 +1876,18 @@ Matches MTK AI Engine Theme
     <div class="setting-value">Configure <i class="fas fa-chevron-right"></i></div>
 </div>
 
+<!-- WIFI CARD -->
+<div class="setting-item" id="wifi-item" style="cursor: pointer;">
+    <div class="setting-icon blue"><i class="fas fa-wifi"></i></div>
+    <div class="setting-content">
+        <div class="setting-title">WiFi Manager</div>
+        <div class="setting-description">Scan networks & lock to 5GHz</div>
+    </div>
+    <div class="setting-value blue" id="wifi-val">
+        Not Connected <i class="fas fa-chevron-right"></i>
+    </div>
+</div>
+
 <!-- GMS Doze Manager Card -->
 <div class="setting-item" id="gmsdoze-btn" style="cursor: pointer;">
     <div class="setting-icon green">
@@ -2139,6 +2151,7 @@ Matches MTK AI Engine Theme
     <script src="cpuset.js"></script>
     <script src="setedit.js"></script>
     <script src="hibernator.js"></script>
+    <script src="wifi.js"></script>
     <script>
 // Theme Management
 function changeTheme(themeName) {
