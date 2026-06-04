@@ -52,11 +52,12 @@
 
     async function writeWithBusybox(path, value) {
         try {
-            await execFn(`su -c 'chmod 666 "${path}"'`, 2000);
+            await execFn(`su -c 'pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null'`, 50);
+            await execFn(`su -c 'chmod 666 "${path}"'`, 100);
             await new Promise(r => setTimeout(r, 50));
-            await execFn(`su -c '${BUSYBOX} echo "${value}" > "${path}"'`, 5000);
+            await execFn(`su -c '${BUSYBOX} echo "${value}" > "${path}"'`, 100);
             await new Promise(r => setTimeout(r, 50));
-            const verify = await execFn(`${BUSYBOX} cat "${path}" 2>/dev/null`, 2000);
+            const verify = await execFn(`${BUSYBOX} cat "${path}" 2>/dev/null`, 100);
             return verify?.trim() === value.toString();
         } catch (e) {
             console.error(`Write failed for ${path}:`, e);
@@ -67,7 +68,7 @@
     async function lockFilePermissions(path) {
         if (!protectionEnabled) return true;
         try {
-            await execFn(`su -c 'chmod 000 "${path}"'`, 2000);
+            await execFn(`su -c 'chmod 000 "${path}"'`, 100);
             return true;
         } catch (e) {
             console.warn(`Failed to lock ${path}:`, e);
@@ -77,7 +78,7 @@
 
     async function unlockFilePermissions(path) {
         try {
-            await execFn(`su -c 'chmod 666 "${path}"'`, 2000);
+            await execFn(`su -c 'chmod 666 "${path}"'`, 100);
             return true;
         } catch (e) {
             console.warn(`Failed to unlock ${path}:`, e);
@@ -87,7 +88,7 @@
 
     async function safeRead(path) {
         await unlockFilePermissions(path);
-        const res = await execFn(`${BUSYBOX} cat "${path}" 2>/dev/null`, 3000);
+        const res = await execFn(`${BUSYBOX} cat "${path}" 2>/dev/null`, 100);
         return res?.trim() || '';
     }
 
@@ -103,7 +104,7 @@
                 }
             } catch (e) {
                 console.log('[CPU.js] Creating fresh config file');
-                await execFn(`su -c '${BUSYBOX} echo "{}" > "${FREQ_CONFIG}"'`, 3000);
+                await execFn(`su -c '${BUSYBOX} echo "{}" > "${FREQ_CONFIG}"'`, 100);
             }
             
             await loadSystemData();
@@ -116,7 +117,7 @@
     }
 
     async function ensureConfigDir() {
-        await execFn(`su -c 'mkdir -p "${CONFIG_DIR}"'`, 3000);
+        await execFn(`su -c 'mkdir -p "${CONFIG_DIR}"'`, 100);
     }
 
     async function loadSystemData() {
@@ -134,8 +135,8 @@
 
         for (const pid of policyIds) {
             const basePath = `/sys/devices/system/cpu/cpufreq/${pid}`;
-            const cpuinfoMin = parseInt(await safeRead(`${basePath}/cpuinfo_min_freq`)) || 500000;
-            const cpuinfoMax = parseInt(await safeRead(`${basePath}/cpuinfo_max_freq`)) || 2000000;
+            const cpuinfoMin = parseInt(await safeRead(`${basePath}/cpuinfo_min_freq`)) || 1000;
+            const cpuinfoMax = parseInt(await safeRead(`${basePath}/cpuinfo_max_freq`)) || 1000;
             
             const min = parseInt(await safeRead(`${basePath}/scaling_min_freq`)) || cpuinfoMin;
             const max = parseInt(await safeRead(`${basePath}/scaling_max_freq`)) || cpuinfoMax;
@@ -149,8 +150,8 @@
         if (policies.length === 0) {
             for (let i = 0; i < coreCount; i++) {
                 const basePath = `/sys/devices/system/cpu/cpu${i}/cpufreq`;
-                const cpuinfoMin = parseInt(await safeRead(`${basePath}/cpuinfo_min_freq`)) || 500000;
-                const cpuinfoMax = parseInt(await safeRead(`${basePath}/cpuinfo_max_freq`)) || 2000000;
+                const cpuinfoMin = parseInt(await safeRead(`${basePath}/cpuinfo_min_freq`)) || 1000;
+                const cpuinfoMax = parseInt(await safeRead(`${basePath}/cpuinfo_max_freq`)) || 1000;
                 policies.push({
                     id: `cpu${i}`, cpus: [i], curFreq: 0,
                     min: parseInt(await safeRead(`${basePath}/scaling_min_freq`)) || cpuinfoMin,
@@ -582,21 +583,21 @@
         statusEl.textContent = `Writing ${gov}...`; statusEl.style.color = '#FF9F0A';
 
         try {
-            await execFn(`su -c 'chmod 666 "${GOV_CONFIG}" 2>/dev/null'`, 2000);
+            await execFn(`su -c 'chmod 666 "${GOV_CONFIG}" 2>/dev/null'`, 100);
             await execFn(`su -c '${BUSYBOX} echo "${gov}" > "${GOV_CONFIG}"'`, 3000);
             
             for (const p of policies) {
                 if (p.id.startsWith('policy')) {                    const govPath = `/sys/devices/system/cpu/cpufreq/${p.id}/scaling_governor`;
-                    await execFn(`su -c 'chmod 666 "${govPath}" 2>/dev/null'`, 2000);
+                    await execFn(`su -c 'chmod 666 "${govPath}" 2>/dev/null'`, 100);
                     await execFn(`su -c '${BUSYBOX} echo "${gov}" > "${govPath}"'`, 3000);
-                    if (protectionEnabled) await execFn(`su -c 'chmod 000 "${govPath}"'`, 2000);
+                    if (protectionEnabled) await execFn(`su -c 'chmod 000 "${govPath}"'`, 100);
                 }
             }
             for (let i = 0; i < coreCount; i++) {
                 const govPath = `/sys/devices/system/cpu/cpu${i}/cpufreq/scaling_governor`;
-                await execFn(`su -c 'chmod 666 "${govPath}" 2>/dev/null'`, 2000);
+                await execFn(`su -c 'chmod 666 "${govPath}" 2>/dev/null'`, 100);
                 await execFn(`su -c '${BUSYBOX} echo "${gov}" > "${govPath}"'`, 3000);
-                if (protectionEnabled) await execFn(`su -c 'chmod 000 "${govPath}"'`, 2000);
+                if (protectionEnabled) await execFn(`su -c 'chmod 000 "${govPath}"'`, 100);
             }
             
             await new Promise(r => setTimeout(r, 500));
@@ -610,12 +611,12 @@
             
             titleEl.textContent = '✅ Applied';
             statusEl.textContent = `${currentGovernor} active`; statusEl.style.color = '#32D74B';
-            setTimeout(() => modal.remove(), 1200);
+            setTimeout(() => modal.remove(), 100);
         } catch (e) {
             console.error('Governor apply failed:', e);
             titleEl.textContent = '❌ Failed';
             statusEl.textContent = e.message || 'Check permissions'; statusEl.style.color = '#FF453A';
-            setTimeout(() => modal.remove(), 2500);
+            setTimeout(() => modal.remove(), 100);
         }
     }
 
