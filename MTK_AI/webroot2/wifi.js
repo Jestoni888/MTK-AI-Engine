@@ -311,7 +311,10 @@
                 if (boostStatus) boostStatus.innerHTML = '<span style="color: #FF9F0A;">⚡ Applying boost...</span>';
                 if (typeof showStatus === 'function') showStatus('⚡ Boosting Wi-Fi...', '#FF9F0A');
                 
+                await execFn('su -c "cmd wifi force-hi-perf-mode enabled"');
+                await execFn('su -c "cmd wifi force-low-latency-mode enabled"');
                 await execFn('su -c "iw dev wlan0 set power_save off"');
+                await execFn('su -c "cmd wifi set-poll-rssi-interval-msecs 1000"');
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 
                 const verifyRes = await execFn('su -c "iw dev wlan0 get power_save"');
