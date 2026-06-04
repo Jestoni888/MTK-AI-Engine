@@ -1,4 +1,4 @@
-// wifi.js - WiFi Network Manager with Boost Status & DNS Display
+// wifi.js - Fixed: Saved network detection on reopen
 (function() {
     'use strict';
     
@@ -13,7 +13,6 @@
     let currentDNS = null;
     let wifiBoosted = false;
 
-    // DNS Providers (Android Private DNS hostnames)
     const DNS_PROVIDERS = {
         'Cloudflare (Fast & Private)': '1dot1dot1dot1.cloudflare-dns.com',
         'Google Public DNS': 'dns.google',
@@ -22,7 +21,6 @@
         'Disable Private DNS': 'off'
     };
 
-    // Use global exec if available (KernelSU / MagiskSU)
     const execFn = typeof exec === 'function' ? exec : async function(cmd, timeout = 8000) {
         return new Promise(resolve => {
             const cb = `wifi_exec_${Date.now()}_${Math.random().toString(36).substring(2)}`;
@@ -47,23 +45,43 @@
         try { await execFn(`su -c "mkdir -p ${CONFIG_DIR}"`); } catch (e) {}
     }
 
-    async function loadSavedPasswordsFromXML() {        try {
-            const cmd = `su -c "grep -E 'name=\\"(SSID|PreSharedKey)\\"' ${XML_PATH} 2>/dev/null | sed 's/.*>\\"\\(.*\\)\\"<.*/\\1/' | paste - - | sed 's/\\t/|/' || grep -E 'name=\\"(SSID|PreSharedKey)\\"' ${LEGACY_XML_PATH} 2>/dev/null | sed 's/.*>\\"\\(.*\\)\\"<.*/\\1/' | paste - - | sed 's/\\t/|/'"`;
+    // IMPROVED: More robust XML parsing using toybox grep
+    async function loadSavedPasswordsFromXML() {
+        try {            // Try to find which XML file exists first
+            let xmlFile = XML_PATH;
+            const checkLegacy = await execFn(`su -c "test -f ${XML_PATH} && echo exists || echo missing"`);
+            if (checkLegacy.trim() === 'missing') {
+                xmlFile = LEGACY_XML_PATH;
+            }
             
+            console.log(`📂 Using XML file: ${xmlFile}`);
+            
+            // Simpler parsing: extract SSID and PreSharedKey pairs
+            const cmd = `su -c "grep -A1 'name=\\\"SSID\\\"' ${xmlFile} 2>/dev/null | grep 'PreSharedKey' | head -50"`;
             const result = await execFn(cmd);
-            const lines = result.trim().split('\n');
-            let count = 0;
             
-            lines.forEach(line => {
-                if (line.includes('|')) {
-                    const [ssid, password] = line.split('|');
-                    if (ssid && password) {
-                        savedNetworks[ssid] = password;
-                        count++;
-                    }
+            console.log(`📋 Raw grep result length: ${result.length}`);
+            
+            // Alternative simpler approach - just get all SSIDs and passwords separately
+            const ssidCmd = `su -c "grep 'name=\\\"SSID\\\"' ${xmlFile} 2>/dev/null | sed 's/.*>\\\"\\(.*\\)\\\"<.*/\\1/'"`;
+            const pwCmd = `su -c "grep 'name=\\\"PreSharedKey\\\"' ${xmlFile} 2>/dev/null | sed 's/.*>\\\"\\(.*\\)\\\"<.*/\\1/'"`;
+            
+            const ssids = (await execFn(ssidCmd)).trim().split('\n').filter(s => s.length > 0);
+            const passwords = (await execFn(pwCmd)).trim().split('\n').filter(p => p.length > 0);
+            
+            console.log(` Found ${ssids.length} SSIDs and ${passwords.length} passwords`);
+            
+            // Pair them up
+            const count = Math.min(ssids.length, passwords.length);
+            for (let i = 0; i < count; i++) {
+                if (ssids[i] && passwords[i]) {
+                    savedNetworks[ssids[i]] = passwords[i];
                 }
-            });
-            console.log(`✅ Loaded ${count} saved networks from system XML`);
+            }
+            
+            console.log(`✅ Loaded ${Object.keys(savedNetworks).length} saved networks from XML`);
+            console.log('📋 Saved SSIDs:', Object.keys(savedNetworks));
+            
         } catch (e) {
             console.error("Failed to load from XML:", e);
         }
@@ -75,10 +93,10 @@
             if (raw.trim()) {
                 const localNetworks = JSON.parse(raw);
                 savedNetworks = { ...savedNetworks, ...localNetworks };
+                console.log(`✅ Loaded ${Object.keys(savedNetworks).length} total saved networks`);
             }
         } catch (e) { 
-            console.error('Failed to load local JSON:', e); 
-        }
+            console.error('Failed to load local JSON:', e);         }
     }
 
     async function saveNetworks() {
@@ -96,7 +114,8 @@
         try {
             const dump = await execFn('su -c "dumpsys wifi"');
             const ssidMatch = dump.match(/mWifiInfo.*SSID: "([^"]+)"/);
-            const bssidMatch = dump.match(/BSSID: ([0-9a-f:]+)/i);            const freqMatch = dump.match(/Frequency: (\d+)/);
+            const bssidMatch = dump.match(/BSSID: ([0-9a-f:]+)/i);
+            const freqMatch = dump.match(/Frequency: (\d+)/);
             
             if (ssidMatch && bssidMatch) {
                 currentNetwork = {
@@ -104,6 +123,13 @@
                     bssid: bssidMatch[1],
                     frequency: freqMatch ? parseInt(freqMatch[1]) : 0
                 };
+                
+                // CRITICAL FIX: Auto-mark connected network as saved
+                if (currentNetwork.ssid && !savedNetworks[currentNetwork.ssid]) {
+                    savedNetworks[currentNetwork.ssid] = '[CONNECTED]';
+                    console.log(`🔗 Auto-marked connected network as saved: ${currentNetwork.ssid}`);
+                }
+                
                 updateDisplay();
             } else {
                 currentNetwork = null;
@@ -115,13 +141,11 @@
         }
     }
 
-    // NEW: Load current DNS setting
     async function loadCurrentDNS() {
         try {
             const modeResult = await execFn('su -c "settings get global private_dns_mode"');
             const mode = modeResult.trim();
-            
-            if (mode === 'off' || mode === '') {
+                        if (mode === 'off' || mode === '') {
                 currentDNS = 'off';
             } else if (mode === 'hostname') {
                 const specifierResult = await execFn('su -c "settings get global private_dns_specifier"');
@@ -135,16 +159,17 @@
         }
     }
 
-    // NEW: Check Wi-Fi Boost status
     async function checkWifiBoostStatus() {
         try {
             const statusRes = await execFn('su -c "iw dev wlan0 get power_save"');
             wifiBoosted = statusRes.toLowerCase().includes('power save: off');
+            console.log(`⚡ Wi-Fi Boost status: ${wifiBoosted ? 'ON' : 'OFF'}`);
             updateBoostDisplay();
         } catch (e) {
             console.error('Failed to check boost status:', e);
         }
     }
+
     function updateDisplay() {
         const valEl = document.getElementById('wifi-val');
         if (!valEl) return;
@@ -160,7 +185,6 @@
         }
     }
 
-    // NEW: Update DNS display in UI
     function updateDNSDisplay() {
         const dnsSelect = document.getElementById('dns-select');
         const dnsStatus = document.getElementById('dns-status');
@@ -169,10 +193,8 @@
             if (currentDNS === 'off' || !currentDNS) {
                 dnsSelect.value = '';
             } else {
-                // Find the provider name that matches this hostname
                 for (const [name, hostname] of Object.entries(DNS_PROVIDERS)) {
-                    if (hostname === currentDNS) {
-                        dnsSelect.value = name;
+                    if (hostname === currentDNS) {                        dnsSelect.value = name;
                         break;
                     }
                 }
@@ -193,14 +215,13 @@
         }
     }
 
-    // NEW: Update Boost button display
-    function updateBoostDisplay() {        
-    const boostBtn = document.getElementById('boost-btn');
+    function updateBoostDisplay() {
+        const boostBtn = document.getElementById('boost-btn');
         const boostStatus = document.getElementById('boost-status');
         
         if (boostBtn) {
             if (wifiBoosted) {
-                boostBtn.innerHTML = '⚡ Wi-Fi Boosted ✓';
+                boostBtn.innerHTML = ' Wi-Fi Boosted ✓';
                 boostBtn.style.background = 'linear-gradient(135deg, #32D74B, #28a745)';
             } else {
                 boostBtn.innerHTML = '⚡ Enable Wi-Fi Boost';
@@ -222,8 +243,7 @@
         if (!item) return;
         item.style.cursor = 'pointer';
         item.addEventListener('click', async () => {
-            showNetworkSelector();
-            const scanBtn = document.getElementById('auto-scan-btn');
+            showNetworkSelector();            const scanBtn = document.getElementById('auto-scan-btn');
             if (scanBtn) scanBtn.click();
         });
     }
@@ -244,7 +264,8 @@
                 
                 let ssid = null, frequency = 0, signal = -75, bssid = null, security = 'Open';
                 
-                const standardMatch = line.match(/([0-9a-f:]{17})\s+(\d{4,5})\s+(-?\d+)\s+(.+?)\s+(\[.+\])/);                if (standardMatch) {
+                const standardMatch = line.match(/([0-9a-f:]{17})\s+(\d{4,5})\s+(-?\d+)\s+(.+?)\s+(\[.+\])/);
+                if (standardMatch) {
                     bssid = standardMatch[1];
                     frequency = parseInt(standardMatch[2]);
                     signal = parseInt(standardMatch[3]);
@@ -271,8 +292,7 @@
                     seenSSIDs.add(ssid);
                     availableNetworks.push({ 
                         ssid, 
-                        bssid: bssid || '', 
-                        frequency, 
+                        bssid: bssid || '',                         frequency, 
                         signal, 
                         security, 
                         hasPassword: !!savedNetworks[ssid] 
@@ -286,8 +306,7 @@
                 return b.signal - a.signal;
             });
             
-            showPasswordModal();
-            
+            console.log(`📡 Scan found ${availableNetworks.length} networks`);
             if (typeof showStatus === 'function') showStatus(`✅ Found ${availableNetworks.length} networks`, '#32D74B');
         } catch (e) { 
             console.error('Scan failed:', e); 
@@ -295,7 +314,6 @@
         }
     }
 
-    // UPDATED: Wi-Fi Boost with visual feedback    
     async function checkAndToggleWifiBoost() {
         const boostBtn = document.getElementById('boost-btn');
         const boostStatus = document.getElementById('boost-status');
@@ -323,11 +341,10 @@
                 const verifyRes = await execFn('su -c "iw dev wlan0 get power_save"');
                 if (verifyRes.toLowerCase().includes('power save: off')) {
                     wifiBoosted = true;
-                    if (boostStatus) boostStatus.innerHTML = '<span style="color: #32D74B;">✓ Boost Applied Successfully!</span>';
-                    if (typeof showStatus === 'function') showStatus('✅ Wi-Fi Boosted Successfully!', '#32D74B');
+                    if (boostStatus) boostStatus.innerHTML = '<span style="color: #32D74B;">✓ Boost Applied Successfully!</span>';                    if (typeof showStatus === 'function') showStatus('✅ Wi-Fi Boosted Successfully!', '#32D74B');
                 } else {
                     if (boostStatus) boostStatus.innerHTML = '<span style="color: #FF9F0A;">⚠️ Command ran, but kernel may have overridden it</span>';
-                    if (typeof showStatus === 'function') showStatus('⚠️ Boost may not be active', '#FF9F0A');
+                    if (typeof showStatus === 'function') showStatus('️ Boost may not be active', '#FF9F0A');
                 }
             }
             
@@ -344,8 +361,8 @@
         }
     }
 
-    // UPDATED: DNS with visual feedback
-    async function setGlobalDNS(providerName) {        const hostname = DNS_PROVIDERS[providerName];
+    async function setGlobalDNS(providerName) {
+        const hostname = DNS_PROVIDERS[providerName];
         if (!hostname) return;
 
         const dnsSelect = document.getElementById('dns-select');
@@ -373,8 +390,7 @@
             if (dnsStatus) dnsStatus.innerHTML = '<span style="color: #FF3B30;">❌ Failed to apply DNS</span>';
             if (typeof showStatus === 'function') showStatus('❌ Failed to apply DNS', '#FF3B30');
             console.error(e);
-            
-            if (dnsSelect) dnsSelect.value = '';
+                        if (dnsSelect) dnsSelect.value = '';
         } finally {
             if (dnsSelect) dnsSelect.disabled = false;
         }
@@ -394,6 +410,7 @@
         const title = document.createElement('h3');
         title.textContent = 'WiFi Manager';
         title.style.cssText = 'color: #fff; margin: 0 0 16px; font-size: 18px; font-weight: 600; text-align: center;';
+
         const info = document.createElement('div');
         info.style.cssText = 'color: #8b92b4; font-size: 13px; margin-bottom: 20px; text-align: center;';
         info.innerHTML = currentNetwork 
@@ -408,7 +425,7 @@
         scanBtn.textContent = '📡 Scan Networks';
         scanBtn.style.cssText = `padding: 12px; background: linear-gradient(135deg, #4a9eff, #2980b9); color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;`;
         scanBtn.onclick = async () => {
-            scanBtn.disabled = true; scanBtn.textContent = '⏳ Scanning...';
+            scanBtn.disabled = true; scanBtn.textContent = ' Scanning...';
             await scanNetworks();
             scanBtn.disabled = false; scanBtn.textContent = '📡 Scan Networks';
             renderNetworkList();
@@ -422,7 +439,6 @@
 
         actionsGrid.append(scanBtn, boostBtn);
         box.append(title, info, actionsGrid);
-
         const boostStatus = document.createElement('div');
         boostStatus.id = 'boost-status';
         boostStatus.style.cssText = 'margin-bottom: 20px; padding: 10px; background: #151b2d; border-radius: 8px; font-size: 12px; text-align: center;';
@@ -443,7 +459,8 @@
             opt.textContent = provider;
             dnsSelect.appendChild(opt);
         });
-        dnsSelect.onchange = (e) => {            if (e.target.value) {
+        dnsSelect.onchange = (e) => {
+            if (e.target.value) {
                 setGlobalDNS(e.target.value);
             }
         };
@@ -471,11 +488,23 @@
         modal.onclick = e => { if (e.target === modal) modal.remove(); };
 
         const style = document.createElement('style');
-        style.textContent = `@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`;
-        document.head.appendChild(style);
+        style.textContent = `@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`;        document.head.appendChild(style);
         document.body.appendChild(modal);
 
+        // CRITICAL: Refresh hasPassword status before rendering
+        refreshNetworkPasswordStatus();
         renderNetworkList();
+    }
+
+    // NEW: Refresh password status before rendering
+    function refreshNetworkPasswordStatus() {
+        console.log('🔄 Refreshing network password status...');
+        console.log('📋 Current savedNetworks:', Object.keys(savedNetworks));
+        
+        availableNetworks.forEach(network => {
+            network.hasPassword = !!savedNetworks[network.ssid];
+            console.log(`  ${network.ssid}: ${network.hasPassword ? '✓ Saved' : '✗ Not saved'}`);
+        });
     }
 
     function renderNetworkList() {
@@ -492,7 +521,8 @@
             const item = document.createElement('div');
             item.style.cssText = `padding: 16px; background: #151b2d; border: 1px solid #2a3152; border-radius: 12px; cursor: pointer; transition: all 0.2s ease;`;
             
-            let actionHtml = '';            if (network.hasPassword) {
+            let actionHtml = '';
+            if (network.hasPassword) {
                 actionHtml = `
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <span style="color: #32D74B; font-size: 13px; font-weight: 600;">✓ Saved</span>
@@ -507,8 +537,7 @@
             
             item.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #FF9F0A; font-size: 16px;">🔒</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">                        <span style="color: #FF9F0A; font-size: 16px;">🔒</span>
                         <span style="color: #fff; font-weight: 700; font-size: 17px;">${network.ssid}</span>
                         <span style="color: #8b92b4; font-size: 11px; background: #2a3152; padding: 2px 6px; border-radius: 4px;">${band}</span>
                     </div>
@@ -541,14 +570,15 @@
         if (confirm(`Forget saved password for "${ssid}"?`)) {
             delete savedNetworks[ssid];
             saveNetworks();
-            const network = availableNetworks.find(n => n.ssid === ssid);            if (network) network.hasPassword = false;
+            const network = availableNetworks.find(n => n.ssid === ssid);
+            if (network) network.hasPassword = false;
             renderNetworkList();
             if (typeof showStatus === 'function') showStatus(`🗑️ Password forgotten for ${ssid}`, '#FF9F0A');
         }
     }
 
     async function handleNetworkClick(network) {
-        if (savedNetworks[network.ssid]) {
+        if (savedNetworks[network.ssid] && savedNetworks[network.ssid] !== '[CONNECTED]') {
             await executeConnection(network, savedNetworks[network.ssid], false, true);
         } else {
             showPasswordModal(network, false);
@@ -556,8 +586,7 @@
     }
 
     function showPasswordModal(network, isRetry, lastPassword = '') {
-        const existing = document.getElementById('password-modal');
-        if (existing) existing.remove();
+        const existing = document.getElementById('password-modal');        if (existing) existing.remove();
 
         const modal = document.createElement('div');
         modal.id = 'password-modal';
@@ -566,14 +595,14 @@
         const box = document.createElement('div');
         box.style.cssText = `background: #1a1f3a; border: 1px solid #2a3152; border-radius: 16px; padding: 24px; width: 90%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);`;
 
-        const errorMsg = isRetry ? `<div style="color: #FF3B30; font-size: 13px; margin-bottom: 12px; text-align: center; font-weight: 600;">❌ Wrong password. Please try again.</div>` : '';
+        const errorMsg = isRetry ? `<div style="color: #FF3B30; font-size: 13px; margin-bottom: 12px; text-align: center; font-weight: 600;"> Wrong password. Please try again.</div>` : '';
 
         box.innerHTML = `
             ${errorMsg}
             <h4 style="color: #fff; margin: 0 0 16px; text-align: center;">Enter Password for ${network.ssid}</h4>
             <div style="position: relative;">
                 <input type="password" id="wifi-pass-input" placeholder="WiFi Password" value="${lastPassword}" style="width: 100%; padding: 14px 45px 14px 14px; background: #151b2d; border: 1px solid #2a3152; color: #fff; border-radius: 10px; font-size: 16px; margin-bottom: 16px; box-sizing: border-box; outline: none;">
-                <button id="toggle-pass-btn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #8b92b4; cursor: pointer; font-size: 16px; padding: 5px;">️</button>
+                <button id="toggle-pass-btn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #8b92b4; cursor: pointer; font-size: 16px; padding: 5px;">👁️</button>
             </div>
             <label style="display: flex; align-items: center; gap: 10px; color: #8b92b4; font-size: 14px; margin-bottom: 20px; cursor: pointer;">
                 <input type="checkbox" id="save-pass-check" checked style="width: 18px; height: 18px; accent-color: #4a9eff;">
@@ -590,7 +619,8 @@
 
         const input = document.getElementById('wifi-pass-input');
         const toggleBtn = document.getElementById('toggle-pass-btn');
-                setTimeout(() => {
+        
+        setTimeout(() => {
             input.focus();
             if (isRetry) input.select();
         }, 100);
@@ -605,7 +635,6 @@
             }
             input.focus();
         };
-
         document.getElementById('pass-cancel-btn').onclick = () => modal.remove();
         document.getElementById('pass-connect-btn').onclick = () => {
             const password = input.value.trim();
@@ -639,7 +668,8 @@
             await new Promise(resolve => setTimeout(resolve, 3000));
             await execFn('su -c "svc wifi disable"');
             await new Promise(resolve => setTimeout(resolve, 2000));
-            await execFn('su -c "svc wifi enable"');            await new Promise(resolve => setTimeout(resolve, 4000));
+            await execFn('su -c "svc wifi enable"');
+            await new Promise(resolve => setTimeout(resolve, 4000));
             await loadCurrentNetwork();
             
             if (currentNetwork && currentNetwork.ssid === network.ssid) {
@@ -654,8 +684,7 @@
                     console.log(`✅ Password saved for ${network.ssid}`);
                 }
                 if (typeof showStatus === 'function') {
-                    const saveMsg = (shouldSave && !isSavedPassword) ? ' (Password saved)' : '';
-                    showStatus(`✅ Connected to ${network.ssid}${saveMsg}`, '#32D74B');
+                    const saveMsg = (shouldSave && !isSavedPassword) ? ' (Password saved)' : '';                    showStatus(`✅ Connected to ${network.ssid}${saveMsg}`, '#32D74B');
                 }
                 renderNetworkList();
             } else {
