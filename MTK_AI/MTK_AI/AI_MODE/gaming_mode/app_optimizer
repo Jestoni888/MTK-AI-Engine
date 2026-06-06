@@ -62,6 +62,7 @@ done || true
     # ==============================
     echo "0" > /proc/sys/kernel/panic 2>/dev/null || true
 
+    settings put global 'activity_manager_constants' 'max_cached_processes=0,background_settle_time=0,fgs_start_deny_exposure_time=10000,fgservice_min_show_time=0,fgservice_bg_start_timeout=0,max_phantom_processes=0,process_limit=-1,enable_fg_boost=true'
     setprop persist.sys.max_background 0 2>/dev/null || true
     setprop persist.sys.framepredict.enable true 2>/dev/null || true
     settings put system persist.sys.power_mode_perf 1 2>/dev/null || true
