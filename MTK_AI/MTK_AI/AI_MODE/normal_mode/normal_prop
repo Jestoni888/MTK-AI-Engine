@@ -16,7 +16,7 @@ for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/
   [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
 done || true
 
-settings put global 'activity_manager_constants' 'max_cached_processes=32,background_settle_time=60000,fgs_start_deny_exposure_time=10000'
+settings put global 'activity_manager_constants' 'max_cached_processes=32,background_settle_time=60000,fgs_start_deny_exposure_time=10000,fgservice_min_show_time=5000,fgservice_bg_start_timeout=30000,max_phantom_processes=32,process_limit=-1,enable_fg_boost=false'
 
 echo "0" > /sys/kernel/fpsgo/common/fpsgo_enable
 
