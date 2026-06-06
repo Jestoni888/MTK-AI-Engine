@@ -159,6 +159,8 @@ done || true
         fi
     fi
 
+    [ -f /sdcard/MTK_AI_Engine/enable_gaming_prop2 ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 || true
+
     # ==============================
     # ⚙️ Devfreq Config Loader
     # ==============================
