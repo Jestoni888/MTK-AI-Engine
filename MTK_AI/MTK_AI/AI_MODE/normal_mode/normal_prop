@@ -111,6 +111,8 @@ setprop debug.sf.early_phase_offset_ns 0
 setprop debug.sf.early_gl_phase_offset_ns 0
 setprop debug.sf.high_fps_early_phase_offset_ns 0
 setprop debug.sf.high_fps_early_gl_phase_offset_ns 0
+setprop debug.hwui.disable_vsync false
+setprop debug.sf.enable_hwc_vds 0
 
 # Powersaving in normal use
 setprop persist.sys.batterysaver true
