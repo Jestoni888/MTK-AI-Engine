@@ -317,6 +317,18 @@
                 await execFn('su -c "iw phy phy0 set retry short 7 long 7"');
                 await execFn('su -c "ifconfig wlan0 txqueuelen 100"');
                 await execFn('su -c "cmd wifi set-poll-rssi-interval-msecs 1000"');
+                await execFn('su -c "cmd wifi set-wifi-sleep-policy never"');
+                await execFn('su -c "settings put global wifi_sleep_policy 0"');
+                await execFn('su -c "cmd wifi set-roaming-scan-interval 30"');
+                await execFn('su -c "settings put global wifi_watchdog_poor_network_test_enabled 0"');
+                await execFn('su -c "settings put global wifi_watchdog_ap_count 10"');
+                await execFn('su -c "settings put global wifi_watchdog_max_ap_checks 3"');
+                await execFn('su -c "settings put global wifi_framework_enabled 1"');
+                await execFn('su -c "cmd wifi reassociate"');
+                // Disable WiFi power saving at the driver level
+                await execFn('su -c "echo Y > /sys/module/wlan/parameters/ps"');
+                // Set WiFi to performance mode (vendor-specific)
+                await execFn('su -c "echo 1 > /sys/module/wlan/parameters/wlm"');
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 
                 const verifyRes = await execFn('su -c "iw dev wlan0 get power_save"');
