@@ -315,6 +315,7 @@
                 await execFn('su -c "cmd wifi force-low-latency-mode enabled"');
                 await execFn('su -c "iw dev wlan0 set power_save off"');
                 await execFn('su -c "iw phy phy0 set retry short 7 long 7"');
+                await execFn('su -c "ifconfig wlan0 txqueuelen 100"');
                 await execFn('su -c "cmd wifi set-poll-rssi-interval-msecs 1000"');
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 
