@@ -98,7 +98,8 @@ done || true
     [ -f "/sdcard/MTK_AI_Engine/enable_disable_thermal" ] && \
         [ -f "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" ] && \
         sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" 2>/dev/null || true
-    settings put global low_power 0 2>/dev/null || true    settings put global low_power_sticky 0 2>/dev/null || true
+    settings put global low_power 0 2>/dev/null || true    
+    settings put global low_power_sticky 0 2>/dev/null || true
 
     # ==============================
     # 🎯 Foreground App Optimization
