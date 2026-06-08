@@ -47,8 +47,7 @@ function parseSizeString(sizeStr) {
         bindClickHandler();
     }
 
-    async function detectPhysicalRam() {
-        try {
+    async function detectPhysicalRam() {        try {
             const memTotal = await execFn("cat /proc/meminfo | grep MemTotal | awk '{print $2}'");
             physicalRamMB = Math.floor(parseInt(memTotal) / 1024) || 4096;
         } catch (e) {
@@ -62,9 +61,16 @@ function parseSizeString(sizeStr) {
             const zramDev = (swapInfo.trim() || "/dev/block/zram0").split("/").pop();
             
             const disksize = await execFn(`cat /sys/block/${zramDev}/disksize 2>/dev/null`);
-            if (disksize && disksize.trim() !== "0") {                currentZramMB = Math.floor(parseInt(disksize) / 1024 / 1024);
+            if (disksize && disksize.trim() !== "" && parseInt(disksize) > 0) {                
+                currentZramMB = Math.floor(parseInt(disksize) / 1024 / 1024);
             } else {
-                currentZramMB = Math.min(Math.floor(0.5 * physicalRamMB), 8192);
+                // Check if it was explicitly disabled by user previously
+                const savedSize = await execFn(`grep '^SIZE=' ${CONFIG_FILE} 2>/dev/null | cut -d= -f2`);
+                if (savedSize && savedSize.trim() === "0M") {
+                    currentZramMB = 0;
+                } else {
+                    currentZramMB = Math.min(Math.floor(0.5 * physicalRamMB), 8192);
+                }
             }
 
             const swappiness = await execFn("cat /proc/sys/vm/swappiness 2>/dev/null");
@@ -84,12 +90,13 @@ function parseSizeString(sizeStr) {
     function updateCardDisplay() {
         const valEl = document.querySelector('#zram-manager-item .setting-value');
         if (valEl) {
-            valEl.innerHTML = `${currentZramMB} MB <i class="fas fa-chevron-right"></i>`;
+            valEl.innerHTML = currentZramMB === 0 
+                ? `Disabled <i class="fas fa-chevron-right"></i>` 
+                : `${currentZramMB} MB <i class="fas fa-chevron-right"></i>`;
         }
     }
 
-    function bindClickHandler() {
-        const item = document.getElementById('zram-manager-item');
+    function bindClickHandler() {        const item = document.getElementById('zram-manager-item');
         if (!item) {
             console.warn('ZRAM: ID #zram-manager-item not found');
             return;
@@ -125,14 +132,20 @@ function parseSizeString(sizeStr) {
             <h3 style="color: #007AFF; margin: 0; font-size: 20px;">🗄️ ZRAM Manager</h3>
             <p style="color: #8b92b4; font-size: 12px; margin: 5px 0 0;">Physical RAM: ${(physicalRamMB/1024).toFixed(1)} GB</p>
         `;
+        box.appendChild(header);
 
         // ZRAM Size Slider
         const sizeSection = createSection('💾 ZRAM Size');
-        const sizeSlider = createSlider(currentZramMB, 256, Math.min(20480, physicalRamMB * 4), 128, (val) => {
+        const sizeSlider = createSlider(currentZramMB, 0, Math.min(20480, physicalRamMB * 4), 128, (val) => {
             currentZramMB = val;
-            sizeSection.querySelector('.slider-value').textContent = val >= 1024 ? `${(val/1024).toFixed(1)} GB` : `${val} MB`;
+            sizeSection.querySelector('.slider-value').textContent = val === 0 ? 'Disabled' : (val >= 1024 ? `${(val/1024).toFixed(1)} GB` : `${val} MB`);
             checkSizeWarning(val);
         });
+        
+        // If currentZramMB is 0, ensure slider reflects it
+        if (currentZramMB === 0) {
+            sizeSlider.querySelector('input').value = 0;
+            sizeSection.querySelector('.slider-value').textContent = 'Disabled';        }
         sizeSection.appendChild(sizeSlider);
         box.appendChild(sizeSection);
 
@@ -160,7 +173,8 @@ function parseSizeString(sizeStr) {
         box.appendChild(algoSection);
 
         // Swappiness Slider
-        const swapSection = createSection('🔄 Swappiness');        const swapSlider = createSlider(currentSwappiness, 0, 200, 10, (val) => {
+        const swapSection = createSection('🔄 Swappiness');        
+        const swapSlider = createSlider(currentSwappiness, 0, 200, 10, (val) => {
             currentSwappiness = val;
             swapSection.querySelector('.slider-value').textContent = val;
         });
@@ -179,8 +193,8 @@ function parseSizeString(sizeStr) {
 
         // Apply Button
         const applyBtn = document.createElement('button');
-        applyBtn.textContent = '💾 Apply & Save';
-        applyBtn.style.cssText = `
+        applyBtn.id = 'zram-apply-btn'; // Added ID for reliable selection
+        applyBtn.textContent = '💾 Apply & Save';        applyBtn.style.cssText = `
             width: 100%; padding: 14px; margin-top: 10px;
             background: linear-gradient(135deg, #007AFF, #0056b3);
             color: #fff; border: none; border-radius: 12px;
@@ -188,6 +202,18 @@ function parseSizeString(sizeStr) {
         `;
         applyBtn.onclick = () => applyZram(algoSelect.value);
         box.appendChild(applyBtn);
+
+        // Disable Button
+        const disableBtn = document.createElement('button');
+        disableBtn.textContent = '🚫 Disable ZRAM';
+        disableBtn.style.cssText = `
+            width: 100%; padding: 14px; margin-top: 10px;
+            background: linear-gradient(135deg, #FF453A, #b30000);
+            color: #fff; border: none; border-radius: 12px;
+            font-size: 14px; font-weight: 700; cursor: pointer;
+        `;
+        disableBtn.onclick = () => disableZram();
+        box.appendChild(disableBtn);
 
         // Cancel Button
         const cancelBtn = document.createElement('button');
@@ -209,15 +235,15 @@ function parseSizeString(sizeStr) {
 
     function createSection(title) {
         const section = document.createElement('div');
-        section.style.cssText = 'margin-bottom: 16px;';        section.innerHTML = `<div style="color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 8px;">${title} <span class="slider-value" style="color: #8b92b4; font-weight: 400;"></span></div>`;
+        section.style.cssText = 'margin-bottom: 16px;';        
+        section.innerHTML = `<div style="color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 8px;">${title} <span class="slider-value" style="color: #8b92b4; font-weight: 400;"></span></div>`;
         return section;
     }
 
     function createSlider(value, min, max, step, onChange) {
         const container = document.createElement('div');
         container.style.cssText = 'padding: 8px 0;';
-        const slider = document.createElement('input');
-        slider.type = 'range'; slider.min = min; slider.max = max; slider.step = step; slider.value = value;
+        const slider = document.createElement('input');        slider.type = 'range'; slider.min = min; slider.max = max; slider.step = step; slider.value = value;
         slider.style.cssText = `
             width: 100%; height: 6px; background: rgba(255,255,255,0.2);
             border-radius: 3px; outline: none; -webkit-appearance: none;
@@ -231,87 +257,140 @@ function parseSizeString(sizeStr) {
         const warnEl = document.getElementById('zram-warning');
         if (!warnEl) return;
         warnEl.style.display = 'none';
-        if (mb > physicalRamMB) {
+        
+        if (mb === 0) {
+            warnEl.innerHTML = `ℹ️ ZRAM will be disabled. System will rely solely on physical RAM.`;
+            warnEl.style.display = 'block';
+            warnEl.style.color = '#8b92b4';
+        } else if (mb > physicalRamMB) {
             warnEl.innerHTML = `⚠️ zRAM (${(mb/1024).toFixed(1)} GB) exceeds physical RAM. May cause thrashing.`;
             warnEl.style.display = 'block';
+            warnEl.style.color = '#FFCC00';
         } else if (mb > 0.75 * physicalRamMB && mb > 8192) {
             warnEl.innerHTML = `💡 Large allocation. Ensure sufficient free RAM.`;
             warnEl.style.display = 'block';
+            warnEl.style.color = '#FFCC00';
         }
     }
 
     async function applyZram(algo) {
-    const sizeMB = currentZramMB;
-    const sizeBytes = sizeMB * 1024 * 1024; // Convert to bytes for disksize
-    const swappiness = currentSwappiness;
-
-    if (sizeMB > 16384 && !confirm(`⚠️ Creating ${sizeMB/1024}GB zRAM may cause instability.\nPhysical RAM: ${physicalRamMB/1024}GB\nContinue?`)) return;
-
-    const applyBtn = document.querySelector('#zram-modal button[onclick]');
-    const statsBox = document.getElementById('zram-stats-box');
-    if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = '⏳ Applying...'; }
-    if (statsBox) statsBox.textContent = 'Resetting zRAM...';
-
-    try {
-        // Step 1: Find zram device
-        let zramDev = await execFn("grep '/zram' /proc/swaps | awk '{print $1}' | head -1");
-        zramDev = zramDev.trim() || "/dev/block/zram0";
-        const zramName = zramDev.split("/").pop(); // e.g., "zram0"
-
-        // Step 2: Disable swap first
-        await execFn(`swapoff ${zramDev} 2>/dev/null`);
+        const sizeMB = currentZramMB;
         
-        // Small delay to ensure swapoff completes
-        await new Promise(r => setTimeout(r, 100));
+        // If user slid to 0, just call disableZram
+        if (sizeMB === 0) {
+            disableZram();
+            return;
+        }
 
-        // Step 3: Reset zram device
-        await execFn(`echo 1 > /sys/block/${zramName}/reset`);
-        
-        // Delay for reset to complete (critical!)
-        await new Promise(r => setTimeout(r, 200));
+        const sizeBytes = sizeMB * 1024 * 1024; // Convert to bytes for disksize
+        const swappiness = currentSwappiness;
 
-        // Step 4: Set compression algorithm (AFTER reset)
-        await execFn(`echo ${algo} > /sys/block/${zramName}/comp_algorithm 2>/dev/null`);
+        if (sizeMB > 16384 && !confirm(`⚠️ Creating ${sizeMB/1024}GB zRAM may cause instability.\nPhysical RAM: ${physicalRamMB/1024}GB\nContinue?`)) return;
 
-        // Step 5: Set disksize in BYTES (not MB string!)
-        await execFn(`echo ${sizeBytes} > /sys/block/${zramName}/disksize`);
+        const applyBtn = document.getElementById('zram-apply-btn');
+        const statsBox = document.getElementById('zram-stats-box');
+        if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = '⏳ Applying...'; }
+        if (statsBox) statsBox.textContent = 'Resetting zRAM...';
 
-        // Step 6: Create swap and enable
-        await execFn(`mkswap ${zramDev} >/dev/null 2>&1`);
-        await execFn(`swapon -p 100 ${zramDev} 2>/dev/null || swapon ${zramDev}`);
+        try {            // Step 1: Find zram device
+            let zramDev = await execFn("grep '/zram' /proc/swaps | awk '{print $1}' | head -1");
+            zramDev = zramDev.trim() || "/dev/block/zram0";
+            const zramName = zramDev.split("/").pop(); // e.g., "zram0"
 
-        // Step 7: Set swappiness
-        await execFn(`echo ${swappiness} > /proc/sys/vm/swappiness`);
+            // Step 2: Disable swap first
+            await execFn(`swapoff ${zramDev} 2>/dev/null`);
+            
+            // Small delay to ensure swapoff completes
+            await new Promise(r => setTimeout(r, 100));
 
-        // Step 8: Save config persistently
-        await execFn(`mkdir -p ${CONFIG_DIR}`);
-        await execFn(`echo "SIZE=${sizeMB}M" > ${CONFIG_FILE}`);
-        await execFn(`echo "ALGO=${algo}" >> ${CONFIG_FILE}`);
-        await execFn(`echo "SWAP=${swappiness}" >> ${CONFIG_FILE}`);
+            // Step 3: Reset zram device
+            await execFn(`echo 1 > /sys/block/${zramName}/reset`);
+            
+            // Delay for reset to complete (critical!)
+            await new Promise(r => setTimeout(r, 200));
 
-        // Update local state
-        currentZramMB = sizeMB;
-        currentSwappiness = swappiness;
-        currentAlgo = algo;
-        updateCardDisplay();
-        
-        if (statsBox) statsBox.innerHTML = '<span style="color:#32D74B">✅ Applied successfully!</span>';
-        
-        // Close modal after success
-        setTimeout(() => { 
-            document.getElementById('zram-modal')?.remove(); 
-            stopLiveStats(); 
-        }, 800);
+            // Step 4: Set compression algorithm (AFTER reset)
+            await execFn(`echo ${algo} > /sys/block/${zramName}/comp_algorithm 2>/dev/null`);
 
-    } catch (e) {
-        console.error('ZRAM apply failed:', e);
-        if (statsBox) statsBox.innerHTML = '<span style="color:#FF453A">❌ Failed. Check root/logs.</span>';
-        if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = '💾 Apply & Save'; }
-        
-        // Show debug info
-        alert(`Error applying ZRAM:\n${e.message || e}\n\nEnsure:\n• Device is rooted\n• KSU has shell permissions\n• No other process is using zram`);
+            // Step 5: Set disksize in BYTES (not MB string!)
+            await execFn(`echo ${sizeBytes} > /sys/block/${zramName}/disksize`);
+
+            // Step 6: Create swap and enable
+            await execFn(`mkswap ${zramDev} >/dev/null 2>&1`);
+            await execFn(`swapon -p 100 ${zramDev} 2>/dev/null || swapon ${zramDev}`);
+
+            // Step 7: Set swappiness
+            await execFn(`echo ${swappiness} > /proc/sys/vm/swappiness`);
+
+            // Step 8: Save config persistently
+            await execFn(`mkdir -p ${CONFIG_DIR}`);
+            await execFn(`echo "SIZE=${sizeMB}M" > ${CONFIG_FILE}`);
+            await execFn(`echo "ALGO=${algo}" >> ${CONFIG_FILE}`);
+            await execFn(`echo "SWAP=${swappiness}" >> ${CONFIG_FILE}`);
+
+            // Update local state
+            currentZramMB = sizeMB;
+            currentSwappiness = swappiness;
+            currentAlgo = algo;
+            updateCardDisplay();
+            
+            if (statsBox) statsBox.innerHTML = '<span style="color:#32D74B">✅ Applied successfully!</span>';
+            
+            // Close modal after success
+            setTimeout(() => { 
+                document.getElementById('zram-modal')?.remove(); 
+                stopLiveStats(); 
+            }, 800);
+        } catch (e) {
+            console.error('ZRAM apply failed:', e);
+            if (statsBox) statsBox.innerHTML = '<span style="color:#FF453A">❌ Failed. Check root/logs.</span>';
+            if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = '💾 Apply & Save'; }
+            
+            // Show debug info
+            alert(`Error applying ZRAM:\n${e.message || e}\n\nEnsure:\n• Device is rooted\n• KSU has shell permissions\n• No other process is using zram`);
+        }
     }
-}
+
+    async function disableZram() {
+        if (!confirm('Are you sure you want to disable ZRAM? This will turn off virtual memory compression.')) return;
+
+        const statsBox = document.getElementById('zram-stats-box');
+        if (statsBox) statsBox.textContent = 'Disabling ZRAM...';
+
+        try {
+            let zramDev = await execFn("grep '/zram' /proc/swaps | awk '{print $1}' | head -1");
+            zramDev = zramDev.trim() || "/dev/block/zram0";
+            const zramName = zramDev.split("/").pop();
+
+            // Disable swap
+            await execFn(`swapoff ${zramDev} 2>/dev/null`);
+            await new Promise(r => setTimeout(r, 100));
+
+            // Reset and set disksize to 0
+            await execFn(`echo 1 > /sys/block/${zramName}/reset`);
+            await new Promise(r => setTimeout(r, 200));
+            await execFn(`echo 0 > /sys/block/${zramName}/disksize 2>/dev/null`);
+
+            // Save config persistently (Size = 0)
+            await execFn(`mkdir -p ${CONFIG_DIR}`);
+            await execFn(`echo "SIZE=0M" > ${CONFIG_FILE}`);
+            await execFn(`echo "ALGO=${currentAlgo}" >> ${CONFIG_FILE}`);
+            await execFn(`echo "SWAP=${currentSwappiness}" >> ${CONFIG_FILE}`);
+
+            currentZramMB = 0;
+            updateCardDisplay();
+
+            if (statsBox) statsBox.innerHTML = '<span style="color:#FF453A">🚫 ZRAM Disabled</span>';
+            
+            setTimeout(() => { 
+                document.getElementById('zram-modal')?.remove(); 
+                stopLiveStats(); 
+            }, 800);
+
+        } catch (e) {
+            console.error('ZRAM disable failed:', e);
+            if (statsBox) statsBox.innerHTML = '<span style="color:#FF453A">❌ Failed to disable.</span>';
+        }    }
 
     function startLiveStats() {
         stopLiveStats();
@@ -326,12 +405,13 @@ function parseSizeString(sizeStr) {
                 const mmStat = await execFn(`cat /sys/block/${zramDev}/mm_stat`, 1000);
                 const disksize = await execFn(`cat /sys/block/${zramDev}/disksize`, 1000);
                 
-                if (mmStat && mmStat.trim() !== "" && mmStat !== "TIMEOUT") {
+                if (mmStat && mmStat.trim() !== "" && mmStat !== "TIMEOUT" && parseInt(disksize) > 0) {
                     const parts = mmStat.trim().split(/\s+/);
                     const usedMB = (parseInt(parts[1]) / 1024 / 1024).toFixed(2);
                     const totalGB = (parseInt(disksize) / 1024 / 1024 / 1024).toFixed(2);
-                    statsEl.innerHTML = `<span style="color:#32D74B">● ACTIVE</span> | ${usedMB} MB used / ${totalGB} GB total`;                } else {
-                    statsEl.textContent = 'Inactive or not mounted';
+                    statsEl.innerHTML = `<span style="color:#32D74B">● ACTIVE</span> | ${usedMB} MB used / ${totalGB} GB total`;                
+                } else {
+                    statsEl.innerHTML = `<span style="color:#FF453A">● INACTIVE</span> | ZRAM is disabled`;
                 }
             } catch (e) {
                 statsEl.textContent = 'Stats unavailable';
