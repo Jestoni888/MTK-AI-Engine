@@ -201,6 +201,11 @@ ps -A 2>/dev/null | grep -i thermal | grep -v grep | awk '{print $NF}' | while r
 done
 
 # ==============================
+# 🔍 Maximum CPU Cores on the current app
+# ==============================
+PKG=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | sed -E 's/.* ([^ /]+)\/.*/\1/') && echo "📱 Current App: $PKG" && for PID in $(ps -A | grep -w "$PKG" | awk '{print $2}'); do nohup /data/adb/modules/MTK_AI/lib/cpulimit -l 100 -z -i -p "$PID" >/dev/null 2>&1 & done || true
+
+# ==============================
 # ✅ Done
 # ==============================
 
