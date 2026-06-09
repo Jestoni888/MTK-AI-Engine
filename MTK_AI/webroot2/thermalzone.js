@@ -96,7 +96,7 @@
         document.body.appendChild(modal);
         
         modal.onclick = e => { 
-            if (e.target === modal) modal.remove();         };
+            if (e.target === modal) modal.remove();        };
 
         // Scan zones after modal renders
         scanZones();
@@ -145,8 +145,7 @@
                     execFn(`cat ${path}/mode 2>/dev/null`),
                     execFn(`cat ${path}/temp 2>/dev/null`)
                 ]);
-                const type = (typeRaw || '').trim() || 'Unknown';
-                const mode = (modeRaw || '').trim().toLowerCase() || 'enabled';
+                const type = (typeRaw || '').trim() || 'Unknown';                const mode = (modeRaw || '').trim().toLowerCase() || 'enabled';
                 const tempVal = parseInt(tempRaw) || 0;
                 const temp = tempVal > 0 ? `${(tempVal / 1000).toFixed(1)}°C` : 'N/A';
 
@@ -179,7 +178,9 @@
                     
                     const zone = detectedZones.find(z => z.id === id);
                     if (zone) {
-                        await execFn(`su -c "echo ${newMode} > ${zone.path}/mode"`);
+                        // --- CHANGED: Added chmod 777 before writing ---
+                        await execFn(`su -c "chmod 777 ${zone.path}/mode && echo ${newMode} > ${zone.path}/mode"`);
+                        
                         // Refresh UI
                         setTimeout(() => showThermalModal(), 300);
                     }
@@ -193,8 +194,7 @@
     }
 
     async function toggleAllThermals() {
-        const toggleBtn = document.getElementById('thermal-toggle-btn');
-        const statusEl = document.getElementById('thermal-scan-status');        
+        const toggleBtn = document.getElementById('thermal-toggle-btn');        const statusEl = document.getElementById('thermal-scan-status');        
         if (!toggleBtn || !statusEl) return;
 
         toggleBtn.disabled = true;
@@ -207,7 +207,8 @@
             
             // Apply to all zones
             for (const zone of detectedZones) {
-                await execFn(`su -c "echo ${newMode} > ${zone.path}/mode"`);
+                // --- CHANGED: Added chmod 777 before writing ---
+                await execFn(`su -c "chmod 777 ${zone.path}/mode && echo ${newMode} > ${zone.path}/mode"`);
             }
 
             // Update state & save config
@@ -242,5 +243,5 @@
         init();
     }
 
-    // Expose for debugging
-    window.ThermalZoneManager = { init, showThermalModal, toggleAllThermals };})();
+    // Expose for debugging    window.ThermalZoneManager = { init, showThermalModal, toggleAllThermals };
+})();
