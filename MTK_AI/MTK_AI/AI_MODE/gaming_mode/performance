@@ -186,7 +186,7 @@ fi
 # --- I/O & Thermal Tweaks ---
 for zone in /sys/devices/virtual/thermal/thermal_zone*/mode; do
     chmod 777 "$zone" || true
-    echo enabled | tee "$zone" || true
+    echo disabled | tee "$zone" || true
 done
 
 for q in /sys/block/*/queue; do 
