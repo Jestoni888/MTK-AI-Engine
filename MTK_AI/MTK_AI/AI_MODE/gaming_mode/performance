@@ -184,7 +184,10 @@ fi
 [ -f "$PPM_PATH" ] && { echo "--- New PPM Status ---"; cat "$PPM_PATH" 2>/dev/null; }
 
 # --- I/O & Thermal Tweaks ---
-echo disabled | tee /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null || true
+for zone in /sys/devices/virtual/thermal/thermal_zone*/mode; do
+    chmod 777 "$zone" || true
+    echo enabled | tee "$zone" || true
+done
 
 for q in /sys/block/*/queue; do 
   echo 8192 | tee "$q/read_ahead_kb" 2>/dev/null || true
