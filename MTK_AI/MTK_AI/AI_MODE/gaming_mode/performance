@@ -195,9 +195,37 @@ for d in /sys/class/devfreq/*/; do
   f=$(awk '{print $NF}' "$d/available_frequencies" 2>/dev/null) || true
   [ -n "$f" ] && echo "$f" | tee "$d/min_freq" 2>/dev/null || true
 done
-# Stop thermal throttling services safely
-ps -A 2>/dev/null | grep -i thermal | grep -v grep | awk '{print $NF}' | while read -r svc; do
-  stop "$svc" 2>/dev/null || true
+
+# Stop thermal throttling services safely (Combined Multi-Layer Approach)
+ps -A -w 2>/dev/null | grep -i thermal | grep -v grep | awk '{print $NF}' | while read -r svc_path; do
+  
+  # 1. Extract clean service name (strip directory paths like /vendor/bin/hw/)
+  clean_svc="${svc_path##*/}"
+  
+  # 2. Apply your rule: if name is long (>12 chars) and contains "thermal", append *thermal*
+  target_svc="$clean_svc"
+  if [[ ${#clean_svc} -gt 12 && "$clean_svc" == *"thermal"* ]]; then
+    target_svc="${clean_svc}*thermal*"
+  fi
+  
+  # --- LAYER 1: Graceful Stop ---
+  # Tells Android 'init' to stop it, which is the official way to prevent respawn
+  setprop ctl.stop "$clean_svc" 2>/dev/null || true
+  stop "$target_svc" 2>/dev/null || true
+  
+  # --- LAYER 2: SIGSTOP (The Freeze) ---
+  # Suspends the process entirely (0% CPU). 'init' sees the PID is still alive, 
+  # so it usually does not trigger a respawn. (Uses clean_svc to ensure it finds the real process)
+  pkill -STOP -f "$clean_svc" 2>/dev/null || true
+  
+  # --- LAYER 3: cpulimit (The Neuter) ---
+  # If the process somehow wakes up or wasn't fully stopped, this restricts it to 1% CPU.
+  # (Silently fails if cpulimit isn't installed, which is safe)
+  pid=$(pgrep -f "$clean_svc" | head -n 1)
+  if [ -n "$pid" ]; then
+    nohup /data/adb/modules/MTK_AI/lib/cpulimit -p "$pid" -l 1 -z 2>/dev/null &
+  fi
+  
 done
 
 # ==============================
