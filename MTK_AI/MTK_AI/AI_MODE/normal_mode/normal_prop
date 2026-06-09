@@ -4,7 +4,7 @@
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 
 log_msg() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE" || true
 }
 
 BB="/data/adb/modules/MTK_AI/busybox"
@@ -20,260 +20,252 @@ pkill -f cpulimit || true
 setprop 'persist.sys.power_mode_perf' '0' || true
 settings put system persist.sys.power_mode_perf 0 2>/dev/null || true
 
-settings put global 'activity_manager_constants' 'max_cached_processes=32,background_settle_time=60000,fgs_start_deny_exposure_time=10000,fgservice_min_show_time=5000,fgservice_bg_start_timeout=30000,max_phantom_processes=32,process_limit=-1,enable_fg_boost=false'
+settings put global 'activity_manager_constants' 'max_cached_processes=32,background_settle_time=60000,fgs_start_deny_exposure_time=10000,fgservice_min_show_time=5000,fgservice_bg_start_timeout=30000,max_phantom_processes=32,process_limit=-1,enable_fg_boost=false' || true
 
-echo "0" > /sys/kernel/fpsgo/common/fpsgo_enable
+echo "0" > /sys/kernel/fpsgo/common/fpsgo_enable || true
+echo "0" > /sys/kernel/fpsgo/fstb/fstb_self_ctrl_fps_enable || true
+echo "0" > /sys/kernel/fpsgo/fbt/enable_switch_down_throttle || true
+echo "0" > /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable || true
+echo "0" > /sys/kernel/fpsgo/fstb/set_cam_active || true
 
-echo "0" > /sys/kernel/fpsgo/fstb/fstb_self_ctrl_fps_enable
+echo "1" > /proc/cpufreq/cpufreq_power_mode || true
+echo "0" > /proc/cpufreq/cpufreq_cci_mode || true
 
-echo "0" > /sys/kernel/fpsgo/fbt/enable_switch_down_throttle
+setprop 'dalvik.vm.usap_pool_enabled' 'true' || true
 
-echo "0" > /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable
+device_config put activity_manager max_phantom_processes 16 || true
+device_config put activity_manager max_cached_processes 32 || true
+device_config put activity_manager use_compaction true || true
+am set-process-limit -1 || true
 
-echo "0" > /sys/kernel/fpsgo/fstb/set_cam_active
+cmd activity trim-memory moderate || true
+sysctl -w vm.swappiness=100 || true
+sysctl -w vm.vfs_cache_pressure=100 || true
+sysctl -w vm.dirty_ratio=20 || true
+sysctl -w vm.dirty_background_ratio=10 || true
 
-echo "1" > /proc/cpufreq/cpufreq_power_mode
+settings put global app_standby_enabled 1 || true
+settings put global background_dex_opt_job true || true
+setprop persist.sys.game_mode 0 || true
+# --- Generic Android / AOSP ---
+start thermal || true
+start thermald || true
+start thermalloadalgod || true
+start thermalservice || true
+start android.hardware.thermal@1.0-service || true
+start android.hardware.thermal@2.0-service || true
+start android.hardware.thermal@3.0-service || true
+start android.hardware.thermal-service || true
+start android.thermal-hal || true
 
-echo "0" > /proc/cpufreq/cpufreq_cci_mode
+# --- Qualcomm (QTI) ---
+start vendor.qti.thermal-engine || true
+start vendor.thermal-engine || true
+start thermal-engine || true
+start vendor.thermal_manager || true
+start vendor.thermal-manager || true
+start vendor.thermal-hal || true
+start vendor.thermal-hal-1-0 || true
+start vendor.thermal-hal-2-0 || true
+start vendor.thermal-hal-3-0 || true
+start vendor.qti.hardware.thermal@1.0-service || true
+start vendor.qti.hardware.thermal@2.0-service || true
+start vendor.qti.hardware.thermal@3.0-service || true
+start vendor-thermal-1-0 || true
 
-setprop 'dalvik.vm.usap_pool_enabled' 'true'
+# --- MediaTek (MTK) ---
+start vendor.thermal-hal-2.0.mtk || true
+start vendor.mediatek.hardware.thermal@1.0-service || true
+start vendor.mediatek.hardware.thermal@2.0-service || true
+start mtk_thermal_manager || true
+start mtk_thermal_hal || true
+start thermal_mtk || true
+start thermal_core || true
+start thermal_manager || true
 
-device_config put activity_manager max_phantom_processes 16
-device_config put activity_manager max_cached_processes 32
-device_config put activity_manager use_compaction true
-am set-process-limit -1
+# --- Samsung (Exynos & QTI variants) ---
+start sec-thermal-1-0 || true
+start debug_pid.sec-thermal-1-0 || true
+start exynos-thermal || true
+start samsung-thermal || true
+start vendor.samsung.hardware.thermal@1.0-service || true
+start vendor.samsung.hardware.thermal@2.0-service || true
+start thermald-samsung || true
 
-cmd activity trim-memory moderate
-sysctl -w vm.swappiness=100
-sysctl -w vm.vfs_cache_pressure=100
-sysctl -w vm.dirty_ratio=20
-sysctl -w vm.dirty_background_ratio=10
+# --- Xiaomi / Redmi / POCO (MIUI/HyperOS) ---
+start mi_thermald || true
+start xiaomi_thermal || true
+start vendor.xiaomi.hardware.thermal@1.0-service || true
+start vendor.xiaomi.hardware.thermal@2.0-service || true
+# --- Oppo / Realme / OnePlus (BBK family) ---
+start oppo_thermal || true
+start realme_thermal || true
+start oneplus_thermal || true
+start vendor.oppo.hardware.thermal@1.0-service || true
+start vendor.realme.hardware.thermal@1.0-service || true
 
-settings put global app_standby_enabled 1
-settings put global background_dex_opt_job true
-setprop persist.sys.game_mode 0
+# --- Huawei / Honor ---
+start huawei_thermal || true
+start hi_thermal || true
+start vendor.huawei.hardware.thermal@1.0-service || true
 
-// --- Generic Android / AOSP ---
-start thermal
-start thermald
-start thermalloadalgod
-start thermalservice
-start android.hardware.thermal@1.0-service
-start android.hardware.thermal@2.0-service
-start android.hardware.thermal@3.0-service
-start android.hardware.thermal-service
-start android.thermal-hal
+# --- Sony, LG, Motorola ---
+start sony_thermal || true
+start lg_thermal_daemon || true
+start motorola_thermal || true
 
-// --- Qualcomm (QTI) ---
-start vendor.qti.thermal-engine
-start vendor.thermal-engine
-start thermal-engine
-start vendor.thermal_manager
-start vendor.thermal-manager
-start vendor.thermal-hal
-start vendor.thermal-hal-1-0
-start vendor.thermal-hal-2-0
-start vendor.thermal-hal-3-0
-start vendor.qti.hardware.thermal@1.0-service
-start vendor.qti.hardware.thermal@2.0-service
-start vendor.qti.hardware.thermal@3.0-service
-start vendor-thermal-1-0
+# --- Google Pixel ---
+start pixel-thermal || true
+start google-thermal-hal || true
+start vendor.google.hardware.thermal@1.0-service || true
 
-// --- MediaTek (MTK) ---
-start vendor.thermal-hal-2-0.mtk
-start vendor.mediatek.hardware.thermal@1.0-service
-start vendor.mediatek.hardware.thermal@2.0-service
-start mtk_thermal_manager
-start mtk_thermal_hal
-start thermal_mtk
-start thermal_core
-start thermal_manager
-
-// --- Samsung (Exynos & QTI variants) ---
-start sec-thermal-1-0
-start debug_pid.sec-thermal-1-0
-start exynos-thermal
-start samsung-thermal
-start vendor.samsung.hardware.thermal@1.0-service
-start vendor.samsung.hardware.thermal@2.0-service
-start thermald-samsung
-
-// --- Xiaomi / Redmi / POCO (MIUI/HyperOS) ---
-start mi_thermald
-start xiaomi_thermal
-start vendor.xiaomi.hardware.thermal@1.0-service
-start vendor.xiaomi.hardware.thermal@2.0-service
-
-// --- Oppo / Realme / OnePlus (BBK family) ---
-start oppo_thermal
-start realme_thermal
-start oneplus_thermal
-start vendor.oppo.hardware.thermal@1.0-service
-start vendor.realme.hardware.thermal@1.0-service
-
-// --- Huawei / Honor ---
-start huawei_thermal
-start hi_thermal
-start vendor.huawei.hardware.thermal@1.0-service
-
-// --- Sony, LG, Motorola ---
-start sony_thermal
-start lg_thermal_daemon
-start motorola_thermal
-
-// --- Google Pixel ---
-start pixel-thermal
-start google-thermal-hal
-start vendor.google.hardware.thermal@1.0-service
-
-// --- Legacy / Miscellaneous / Symlinks ---
-start vendor.thermal-symlinks
-start vendor.thermal.symlinks
-start thermal_mnt_hal_service
-start thermal-hal
-start thermal_server
-start thermal_daemon
-start thermal_monitor
-start thermal_control
-start thermal_repeater
-start thermal_notify
+# --- Legacy / Miscellaneous / Symlinks ---
+start vendor.thermal-symlinks || true
+start vendor.thermal.symlinks || true
+start thermal_mnt_hal_service || true
+start thermal-hal || true
+start thermal_server || true
+start thermal_daemon || true
+start thermal_monitor || true
+start thermal_control || true
+start thermal_repeater || true
+start thermal_notify || true
 
 for zone in /sys/devices/virtual/thermal/thermal_zone*/mode; do
     chmod 777 "$zone" || true
     echo enabled | tee "$zone" || true
-done
+done || true
 
 # Loop through all saved config files
 for conf in $SAVE_DIR/*.conf; do
     [ -f "$conf" ] || continue
     
     # Read line (format: PATH=VALUE)
-    line=$($BB cat "$conf")
+    line=$($BB cat "$conf") || true
     
     # Extract Path and Value
-    fpath=$(echo "$line" | $BB cut -d'=' -f1)
-    fval=$(echo "$line" | $BB cut -d'=' -f2-)
-    
+    fpath=$(echo "$line" | $BB cut -d'=' -f1) || true
+    fval=$(echo "$line" | $BB cut -d'=' -f2-) || true    
     # Apply if path exists
     if [ -f "$fpath" ]; then
-        echo "$fval" > "$fpath" 2>/dev/null && log_msg "Restored: $fpath"
+        echo "$fval" > "$fpath" 2>/dev/null && log_msg "Restored: $fpath" || true
     fi
-done
+done || true
 
-log_msg "MTK AI Values Restored."
-
-echo "0" > /proc/sys/kernel/panic
+log_msg "MTK AI Values Restored." || true
+echo "0" > /proc/sys/kernel/panic || true
     
 # 1. Apply Properties (Fast)
-setprop debug.hwui.render_ahead 0
-setprop persist.sys.miravision.vivid.mode 0
-setprop persist.sys.force_vivid 0
-setprop persist.sys.framepredict.enable false
-setprop debug.sf.latch_unsignaled false
-setprop debug.cpurendering false
-setprop debug.egl.force_msaa false
-setprop persist.sys.ui.hw true
-setprop persist.sys.use_dithering 0
-setprop debug.sf.early_phase_offset_ns 0
-setprop debug.sf.early_gl_phase_offset_ns 0
-setprop debug.sf.high_fps_early_phase_offset_ns 0
-setprop debug.sf.high_fps_early_gl_phase_offset_ns 0
-setprop debug.hwui.disable_vsync false
-setprop debug.sf.enable_hwc_vds 0
+setprop debug.hwui.render_ahead 0 || true
+setprop persist.sys.miravision.vivid.mode 0 || true
+setprop persist.sys.force_vivid 0 || true
+setprop persist.sys.framepredict.enable false || true
+setprop debug.sf.latch_unsignaled false || true
+setprop debug.cpurendering false || true
+setprop debug.egl.force_msaa false || true
+setprop persist.sys.ui.hw true || true
+setprop persist.sys.use_dithering 0 || true
+setprop debug.sf.early_phase_offset_ns 0 || true
+setprop debug.sf.early_gl_phase_offset_ns 0 || true
+setprop debug.sf.high_fps_early_phase_offset_ns 0 || true
+setprop debug.sf.high_fps_early_gl_phase_offset_ns 0 || true
+setprop debug.hwui.disable_vsync false || true
+setprop debug.sf.enable_hwc_vds 0 || true
 
 # Powersaving in normal use
-setprop persist.sys.batterysaver true
-setprop persist.sys.doze_mode true
+setprop persist.sys.batterysaver true || true
+setprop persist.sys.doze_mode true || true
 
 # OpenGL Default (Skia OpenGL ES)
-setprop debug.hwui.renderer skiagl
-setprop debug.renderengine.backend skiaglthreaded
-setprop debug.hwui.shadow.renderer skiagl
-setprop ro.ui.pipeline opengl
-setprop debug.hwui.use_vulkan false
-setprop debug.hwui.force_vulkan false
-setprop ro.hwui.use_vulkan false
-setprop ro.hwui.hardware.vulkan false
-setprop debug.composition.type gpu
+setprop debug.hwui.renderer skiagl || true
+setprop debug.renderengine.backend skiaglthreaded || true
+setprop debug.hwui.shadow.renderer skiagl || true
+setprop ro.ui.pipeline opengl || true
+setprop debug.hwui.use_vulkan false || true
+setprop debug.hwui.force_vulkan false || true
+setprop ro.hwui.use_vulkan false || true
+setprop ro.hwui.hardware.vulkan false || true
+setprop debug.composition.type gpu || true
 
 # Limit background process
-setprop persist.sys.max_background 10
+setprop persist.sys.max_background 10 || true
+setprop persist.sys.wifi.suspend_opt 1 || true # Enable Wi-Fi suspend optimization
 
-setprop persist.sys.wifi.suspend_opt 1  # Enable Wi-Fi suspend optimization
-
-service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1
+service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1 || true
         
-    log_msg "🟢 NORMAL MODE PROPS applied"
- 
-[ "$(id -u)" != "0" ] && { echo "Root required"; exit 1; }
-while read -r line; do
-  case "$line" in \#*|"") continue ;; esac
-  idx=$(echo "$line" | sed 's/policies\[\([0-9]*\)\]=.*/\1/')
-  val=$(echo "$line" | sed 's/.*=\([0-9]*\).*/\1/')
-  echo "$idx $val" > /proc/ppm/policy_status
-done < /sdcard/MTK_AI_Engine/ppm_config.conf
-echo "Done"
+log_msg "🟢 NORMAL MODE PROPS applied" || true
 
-log -t "NetTweak" "Starting network tweaks..."
+[ "$(id -u)" != "0" ] && { echo "Root required"; exit 1; } || true
+
+# Enable all PPM policies dynamically
+if [ -f /proc/ppm/policy_status ]; then
+  # Extract existing policy indices and set them to 1 (enabled)
+  grep -oE '\[[0-9]+\]' /proc/ppm/policy_status | grep -oE '[0-9]+' | while read -r idx; do
+    echo "$idx 1" > /proc/ppm/policy_status 2>/dev/null || true
+  done
+fi
+
+echo "Done" || true
+
+log -t "NetTweak" "Starting network tweaks..." || true
 
 # === Universal Kernel Tweaks ===
 if [ -f /proc/sys/net/ipv4/tcp_congestion_control ]; then
   echo bbr > /proc/sys/net/ipv4/tcp_congestion_control 2>/dev/null || \
-  echo cubic > /proc/sys/net/ipv4/tcp_congestion_control 2>/dev/null
-  log -t "NetTweak" "TCP congestion control set"
+  echo cubic > /proc/sys/net/ipv4/tcp_congestion_control 2>/dev/null || true
+  log -t "NetTweak" "TCP congestion control set" || true
 fi
 
 if [ -f /proc/sys/net/ipv4/tcp_window_scaling ]; then
-  echo 1 > /proc/sys/net/ipv4/tcp_window_scaling
+  echo 1 > /proc/sys/net/ipv4/tcp_window_scaling || true
 fi
 
 if [ -f /proc/sys/net/ipv4/tcp_low_latency ]; then
-  echo 1 > /proc/sys/net/ipv4/tcp_low_latency
+  echo 1 > /proc/sys/net/ipv4/tcp_low_latency || true
 fi
 
 # === Platform Detection & Runtime Props ===
-PLATFORM=$(getprop ro.board.platform)
-BASEBAND=$(getprop ro.baseband)
+PLATFORM=$(getprop ro.board.platform) || true
+BASEBAND=$(getprop ro.baseband) || true
 
 # --- MediaTek ---
 if echo "$PLATFORM" | grep -qiE "mt[0-9]+|mt6[0-9]+"; then
-  log -t "NetTweak" "Detected MediaTek. Applying MTK runtime tweaks."
-  setprop persist.radio.mtksms 1
-  setprop persist.meta.dumpdata 0
-  setprop persist.radio.custom.ecc 1
+  log -t "NetTweak" "Detected MediaTek. Applying MTK runtime tweaks." || true
+  setprop persist.radio.mtksms 1 || true
+  setprop persist.meta.dumpdata 0 || true
+  setprop persist.radio.custom.ecc 1 || true
 
 # --- Qualcomm ---
 elif echo "$PLATFORM" | grep -qiE "msm[0-9]+|sdm[0-9]+|sm[0-9]+|kona|lito|lahaina"; then
-  log -t "NetTweak" "Detected Qualcomm. Applying QMI runtime tweaks."
-  setprop persist.data.netmgrd.qos.enable true
-  setprop persist.data.mode concurrent
-  setprop persist.rmnet.data.enable true
-  setprop persist.data.iwlan.enable true
+  log -t "NetTweak" "Detected Qualcomm. Applying QMI runtime tweaks." || true
+  setprop persist.data.netmgrd.qos.enable true || true
+  setprop persist.data.mode concurrent || true
+  setprop persist.rmnet.data.enable true || true
+  setprop persist.data.iwlan.enable true || true
 
 # --- Samsung/Exynos ---
 elif echo "$BASEBAND" | grep -qiE "exynos"; then
-  log -t "NetTweak" "Detected Exynos. Applying Samsung runtime tweaks."
-  setprop persist.data.mode concurrent
-
+  log -t "NetTweak" "Detected Exynos. Applying Samsung runtime tweaks." || true
+  setprop persist.data.mode concurrent || true
 # --- Universal Fallback ---
 else
-  log -t "NetTweak" "Unknown Platform. Applying universal runtime tweaks."
+  log -t "NetTweak" "Unknown Platform. Applying universal runtime tweaks." || true
 fi
 
 # === Interface Route Tweaks ===
-sleep 5
+sleep 5 || true
 for iface in rmnet0 rmnet_data0 pdp0 ccmni0; do
   if ip link show $iface >/dev/null 2>&1; then
-    log -t "NetTweak" "Applying route tweaks to $iface"
-    ip route change default dev $iface initcwnd 30 initrwnd 30 2>/dev/null
+    log -t "NetTweak" "Applying route tweaks to $iface" || true
+    ip route change default dev $iface initcwnd 30 initrwnd 30 2>/dev/null || true
     break
   fi
-done
+done || true
 
 # === Flush DNS Cache ===
-ndc resolver flushdefaultif 2>/dev/null
-ndc resolver flushif 2>/dev/null
+ndc resolver flushdefaultif 2>/dev/null || true
+ndc resolver flushif 2>/dev/null || true
 
-sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off"
+sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
 
-log -t "NetTweak" "Network Tweaks Applied Successfully."
+log -t "NetTweak" "Network Tweaks Applied Successfully." || true
