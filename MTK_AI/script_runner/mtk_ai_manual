@@ -54,7 +54,12 @@ if [ -f "$CONFIG_DIR/manual_governor.txt" ]; then
         for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
             if [ -f "$cpu/cpufreq/scaling_available_governors" ]; then
                 if grep -q "$GOVERNOR" "$cpu/cpufreq/scaling_available_governors"; then
+                    # Grant write permissions first to prevent permission denied errors
+                    su -c "chmod 777 '$cpu/cpufreq/scaling_governor'" 2>/dev/null
+                    
+                    # Apply the governor
                     su -c "echo '$GOVERNOR' > '$cpu/cpufreq/scaling_governor'" 2>/dev/null
+                    
                     if [ $? -eq 0 ]; then
                         echo "✓ Governor applied to $cpu"
                     else
