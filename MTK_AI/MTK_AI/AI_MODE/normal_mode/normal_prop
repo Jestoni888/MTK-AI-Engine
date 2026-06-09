@@ -138,7 +138,10 @@ start thermal_control
 start thermal_repeater
 start thermal_notify
 
-echo enabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
+for zone in /sys/devices/virtual/thermal/thermal_zone*/mode; do
+    chmod 777 "$zone" || true
+    echo enabled | tee "$zone" || true
+done
 
 # Loop through all saved config files
 for conf in $SAVE_DIR/*.conf; do
