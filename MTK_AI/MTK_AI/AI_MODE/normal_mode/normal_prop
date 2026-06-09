@@ -53,30 +53,90 @@ settings put global app_standby_enabled 1
 settings put global background_dex_opt_job true
 setprop persist.sys.game_mode 0
 
-start thermal_core
-start vendor.thermal-hal-2-0.mtk
-start vendor.thermal.symlinks
-start mi_thermald
-start vendor.thermal-engine
-start vendor.thermal_manager
-start vendor.thermal-manager
-start vendor.thermal-hal-2-0
-start vendor.thermal-symlinks
-start vendor.thermal-hal
-start thermal_mnt_hal_service
+// --- Generic Android / AOSP ---
 start thermal
 start thermald
 start thermalloadalgod
 start thermalservice
-start sec-thermal-1-0
+start android.hardware.thermal@1.0-service
+start android.hardware.thermal@2.0-service
+start android.hardware.thermal@3.0-service
+start android.hardware.thermal-service
+start android.thermal-hal
+
+// --- Qualcomm (QTI) ---
+start vendor.qti.thermal-engine
+start vendor.thermal-engine
 start thermal-engine
+start vendor.thermal_manager
+start vendor.thermal-manager
+start vendor.thermal-hal
 start vendor.thermal-hal-1-0
-start android.thermal-hal
+start vendor.thermal-hal-2-0
+start vendor.thermal-hal-3-0
+start vendor.qti.hardware.thermal@1.0-service
+start vendor.qti.hardware.thermal@2.0-service
+start vendor.qti.hardware.thermal@3.0-service
 start vendor-thermal-1-0
-start thermal-hal
-start android.thermal-hal
+
+// --- MediaTek (MTK) ---
+start vendor.thermal-hal-2-0.mtk
+start vendor.mediatek.hardware.thermal@1.0-service
+start vendor.mediatek.hardware.thermal@2.0-service
+start mtk_thermal_manager
+start mtk_thermal_hal
+start thermal_mtk
+start thermal_core
 start thermal_manager
-start android.hardware.thermal
+
+// --- Samsung (Exynos & QTI variants) ---
+start sec-thermal-1-0
+start debug_pid.sec-thermal-1-0
+start exynos-thermal
+start samsung-thermal
+start vendor.samsung.hardware.thermal@1.0-service
+start vendor.samsung.hardware.thermal@2.0-service
+start thermald-samsung
+
+// --- Xiaomi / Redmi / POCO (MIUI/HyperOS) ---
+start mi_thermald
+start xiaomi_thermal
+start vendor.xiaomi.hardware.thermal@1.0-service
+start vendor.xiaomi.hardware.thermal@2.0-service
+
+// --- Oppo / Realme / OnePlus (BBK family) ---
+start oppo_thermal
+start realme_thermal
+start oneplus_thermal
+start vendor.oppo.hardware.thermal@1.0-service
+start vendor.realme.hardware.thermal@1.0-service
+
+// --- Huawei / Honor ---
+start huawei_thermal
+start hi_thermal
+start vendor.huawei.hardware.thermal@1.0-service
+
+// --- Sony, LG, Motorola ---
+start sony_thermal
+start lg_thermal_daemon
+start motorola_thermal
+
+// --- Google Pixel ---
+start pixel-thermal
+start google-thermal-hal
+start vendor.google.hardware.thermal@1.0-service
+
+// --- Legacy / Miscellaneous / Symlinks ---
+start vendor.thermal-symlinks
+start vendor.thermal.symlinks
+start thermal_mnt_hal_service
+start thermal-hal
+start thermal_server
+start thermal_daemon
+start thermal_monitor
+start thermal_control
+start thermal_repeater
+start thermal_notify
 
 echo enabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
 
