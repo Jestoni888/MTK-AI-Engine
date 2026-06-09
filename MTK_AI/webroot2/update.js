@@ -10,7 +10,7 @@
     const CHECKER_SCRIPT = `${MODDIR}/update_checker.sh`;
     const BUSYBOX = `${MODDIR}/busybox`;
     // 🔥 NEW: Changelog URL
-    const CHANGELOG_URL = 'https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/changelog.txt';
+    const CHANGELOG_URL = 'https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/changelog.md';
 
     let statusData = null;
 
