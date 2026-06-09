@@ -1,3 +1,5 @@
+•auto use of this module after installing update (no need reboot)
+
 •fixed daemon about running multiple times & causes lags
 
 •bypass charging re-optimized on gaming (settings tab)
