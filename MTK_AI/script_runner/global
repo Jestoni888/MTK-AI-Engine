@@ -43,6 +43,8 @@ chmod +x "$MODULE_EXECUTER"
 
 sh "/data/adb/modules/MTK_AI/script_runner/boost_color_apply.sh" &
 
+sh "/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual" &
+
 sh "/data/adb/modules/MTK_AI/service.d/backup.sh" &
 
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/bypass_on" &
