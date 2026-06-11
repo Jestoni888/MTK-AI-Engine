@@ -465,6 +465,7 @@
     async function saveCache() {
         try {
             const json = JSON.stringify(searchCache).replace(/"/g, '\\"');
+            await execFn(`${CFG.BB} chmod 777 "${CFG.CACHE_FILE}" 2>/dev/null`);
             await execFn(`${CFG.BB} echo "${json}" > "${CFG.CACHE_FILE}"`);
         } catch (e) { console.warn('Cache save failed', e); }
     }
@@ -899,6 +900,7 @@
         try {
             await execFn(`${CFG.BB} mkdir -p "${CFG.VALUES_DIR}" 2>/dev/null`);
             const json = JSON.stringify(controls).replace(/"/g, '\\"');
+            await execFn(`${CFG.BB} chmod 777 "${CFG.REGISTRY_FILE}" 2>/dev/null`);
             await execFn(`${CFG.BB} echo "${json}" > "${CFG.REGISTRY_FILE}"`);
         } catch (e) { console.warn('Registry save failed', e); }
     }
@@ -913,7 +915,9 @@
     }
 
     async function saveValue(id, val) {
-        try { await execFn(`${CFG.BB} echo "${val}" > "${CFG.VALUES_DIR}/${id}.val"`); } catch (e) { console.warn('Value save failed', e); }
+        try {
+         await execFn(`${CFG.BB} chmod 777 "${CFG.VALUES_DIR}/${id}.val" 2>/dev/null`);
+         await execFn(`${CFG.BB} echo "${val}" > "${CFG.VALUES_DIR}/${id}.val"`); } catch (e) { console.warn('Value save failed', e); }
     }
 
     async function loadValue(id, def) {
@@ -1043,6 +1047,7 @@ async function applyToggle(id, on) {
             for (const file of fileList) {
                 const writable = await execFn(`test -w "${file}" && echo "yes" || echo "no"`);
                 if (writable.trim() === 'yes') {
+                    await execFn(`${CFG.BB} chmod 777 "${file}" 2>/dev/null`);
                     await execFn(`${CFG.BB} echo "${val}" > "${file}" 2>/dev/null`);
                     // Verify each file immediately
                     const actual = await execFn(`${CFG.BB} cat "${file}" 2>/dev/null`);
@@ -1078,6 +1083,7 @@ async function applyToggle(id, on) {
             
         } else {
             // Single path handling (original logic)
+            await execFn(`${CFG.BB} chmod 777 "${cfg.path}" 2>/dev/null`);
             await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);
             
             // Verify single path
@@ -1141,6 +1147,7 @@ async function applyToggle(id, on) {
         const statusEl = document.getElementById(`tf-ppm-status-${ctrlId}-${policyIdx}`);
         const policy = cfg.policies.find(p => p.index === policyIdx);
         try {
+            await execFn(`${CFG.BB} chmod 777 "${cfg.path}" 2>/dev/null`);
             await execFn(`${CFG.BB} echo "${policyIdx} ${value}" > "${cfg.path}" 2>/dev/null`);
             if (policy) policy.enabled = enabled;
             if (statusEl) { statusEl.textContent = enabled ? '✅ Enabled' : '❌ Disabled'; statusEl.className = `tf-ppm-status ${enabled ? 'on' : 'off'}`; }
@@ -1180,6 +1187,7 @@ async function applyToggle(id, on) {
                 const files = await execFn(`${CFG.BB} ls ${dir}/${pattern} 2>/dev/null`);
                 const fileList = files.split('\n').filter(f => f.trim());
                 for (const file of fileList) {
+                    await execFn(`${CFG.BB} chmod 777 "${file}" 2>/dev/null`);
                     await execFn(`${CFG.BB} echo "${num}" > "${file}" 2>/dev/null`);
                 }
                 showStatus(`✅ Applied to ${fileList.length} paths`, 'success');
@@ -1188,6 +1196,7 @@ async function applyToggle(id, on) {
                     const wr = await execFn(`test -w "${cfg.path}" && echo "yes" || echo "no"`);
                     if (wr.trim() !== 'yes') { showStatus(`❌ Path not writable: ${cfg.path}`, 'error', 4000); return; }
                 }
+                await execFn(`${CFG.BB} chmod 777 "${cfg.path}" 2>/dev/null`);
                 await execFn(`${CFG.BB} echo "${num}" > "${cfg.path}" 2>/dev/null`);
             }
             if (cfg.persist) await saveValue(id, num);
@@ -1215,6 +1224,7 @@ async function applyToggle(id, on) {
                 const files = await execFn(`${CFG.BB} ls ${dir}/${pattern} 2>/dev/null`);
                 const fileList = files.split('\n').filter(f => f.trim());
                 for (const file of fileList) {
+                    await execFn(`${CFG.BB} chmod 777 "${file}" 2>/dev/null`);
                     await execFn(`${CFG.BB} echo "${value}" > "${file}" 2>/dev/null`);
                 }
                 showStatus(`✅ Governor applied to ${fileList.length} paths`, 'success');
@@ -1223,6 +1233,7 @@ async function applyToggle(id, on) {
                     const wr = await execFn(`test -w "${cfg.path}" && echo "yes" || echo "no"`);
                     if (wr.trim() !== 'yes') { showStatus(`❌ Path not writable: ${cfg.path}`, 'error', 4000); return; }
                 }
+                await execFn(`${CFG.BB} chmod 777 "${cfg.path}" 2>/dev/null`);
                 await execFn(`${CFG.BB} echo "${value}" > "${cfg.path}" 2>/dev/null`);
             }
             cfg.current = value;
@@ -1250,12 +1261,14 @@ async function applyToggle(id, on) {
                 let successCount = 0;
                 for (const file of fileList) {
                     if (await execFn(`test -w "${file}" && echo "yes" || echo "no"`) === 'yes') {
+                        await execFn(`${CFG.BB} chmod 777 "${file}" 2>/dev/null`);
                         await execFn(`${CFG.BB} echo "${val}" > "${file}" 2>/dev/null`);
                         successCount++;
                     }
                 }
                 showStatus(`✅ Applied to ${successCount}/${fileList.length} paths`, 'success');
             } else {
+                await execFn(`${CFG.BB} chmod 777 "${cfg.path}" 2>/dev/null`);
                 await execFn(`${CFG.BB} echo "${val}" > "${cfg.path}" 2>/dev/null`);
             }
             if (cfg.persist) await saveValue(id, val);
@@ -1429,19 +1442,25 @@ async function applyToggle(id, on) {
                     const val = savedValue === cfg.on ? cfg.on : cfg.off;
                     for (const file of targetFiles) {
                         const wr = await execFn(`test -w "${file}" && echo "yes" || echo "no"`);
-                        if (wr.trim() === 'yes') { await execFn(`${CFG.BB} echo "${val}" > "${file}" 2>/dev/null`); }
+                        if (wr.trim() === 'yes') { 
+                        await execFn(`${CFG.BB} chmod 777 "${file}" 2>/dev/null`);
+                        await execFn(`${CFG.BB} echo "${val}" > "${file}" 2>/dev/null`); }
                     }
                     cfg.current = val; appliedCount++;
                 } else if (cfg.type === 'slider') {
                     const num = parseFloat(savedValue) || cfg.min;
                     for (const file of targetFiles) {
                         const wr = await execFn(`test -w "${file}" && echo "yes" || echo "no"`);
-                        if (wr.trim() === 'yes') { await execFn(`${CFG.BB} echo "${num}" > "${file}" 2>/dev/null`); }
+                        if (wr.trim() === 'yes') { 
+                        await execFn(`${CFG.BB} chmod 777 "${file}" 2>/dev/null`);
+                        await execFn(`${CFG.BB} echo "${num}" > "${file}" 2>/dev/null`); }
                     }
                     cfg.current = num; appliedCount++;
                 } else if (cfg.type === 'governor') {
                     for (const file of targetFiles) {                        const wr = await execFn(`test -w "${file}" && echo "yes" || echo "no"`);
-                        if (wr.trim() === 'yes') { await execFn(`${CFG.BB} echo "${savedValue}" > "${file}" 2>/dev/null`); }
+                        if (wr.trim() === 'yes') { 
+                        await execFn(`${CFG.BB} chmod 777 "${file}" 2>/dev/null`);
+                        await execFn(`${CFG.BB} echo "${savedValue}" > "${file}" 2>/dev/null`); }
                     }
                     cfg.current = savedValue; appliedCount++;
                 } else if (cfg.type === 'permission') {
@@ -1454,7 +1473,9 @@ async function applyToggle(id, on) {
                 } else if (cfg.type === 'text') {
                     for (const file of targetFiles) {
                         const wr = await execFn(`test -w "${file}" && echo "yes" || echo "no"`);
-                        if (wr.trim() === 'yes') { await execFn(`${CFG.BB} echo "${savedValue}" > "${file}" 2>/dev/null`); }
+                        if (wr.trim() === 'yes') { 
+                        await execFn(`${CFG.BB} chmod 777 "${file}" 2>/dev/null`);
+                        await execFn(`${CFG.BB} echo "${savedValue}" > "${file}" 2>/dev/null`); }
                     }
                     cfg.current = savedValue; appliedCount++;
                 } else if (cfg.type === 'ppm_policy') {
@@ -1463,7 +1484,9 @@ async function applyToggle(id, on) {
                             const value = pol.enabled ? '1' : '0';
                             for (const file of targetFiles) {
                                 const wr = await execFn(`test -w "${file}" && echo "yes" || echo "no"`);
-                                if (wr.trim() === 'yes') { await execFn(`${CFG.BB} echo "${pol.index} ${value}" > "${file}" 2>/dev/null`); }
+                                if (wr.trim() === 'yes') { 
+                                await execFn(`${CFG.BB} chmod 777 "${file}" 2>/dev/null`);
+                                await execFn(`${CFG.BB} echo "${pol.index} ${value}" > "${file}" 2>/dev/null`); }
                             }
                         }
                         appliedCount++;
@@ -1496,6 +1519,7 @@ async function applyToggle(id, on) {
     async function saveAppScript(pkg, code) {
         try {
             await execFn(`${CFG.BB} mkdir -p "${CFG.TRIGGERS_DIR}" 2>/dev/null`);
+            await execFn(`${CFG.BB} chmod 777 "${CFG.TRIGGERS_DIR}/${pkg}.sh" 2>/dev/null`);
             await execFn(`${CFG.BB} echo '${code.replace(/'/g, "'\\''")}' > "${CFG.TRIGGERS_DIR}/${pkg}.sh" 2>/dev/null`);
             await execFn(`chmod 755 "${CFG.TRIGGERS_DIR}/${pkg}.sh"`);
             appScripts[pkg] = code;
