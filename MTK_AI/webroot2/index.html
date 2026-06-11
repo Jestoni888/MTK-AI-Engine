@@ -2283,16 +2283,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     page.classList.add('active');
                     // Scroll to top when switching tabs
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                }            });
-            
-            // Handle header visibility for Advanced page
-            if (this.dataset.page === 'advanced') {
-                if (mainHeader) mainHeader.style.display = 'none';
-                if (advancedHeader) advancedHeader.style.display = 'flex';
-            } else {
-                if (mainHeader) mainHeader.style.display = 'flex';
-                if (advancedHeader) advancedHeader.style.display = 'none';
-            }
+                }            });       
             
             // Always show nav when switching tabs
             const bottomNav = document.querySelector('.bottom-nav');
@@ -2304,14 +2295,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Save state to localStorage
             localStorage.setItem('activeTab', this.dataset.page);
         });    });
-    
-    // Restore active tab on page load
-    const savedTab = localStorage.getItem('activeTab') || 'home';
-    const savedItem = document.querySelector(`.nav-item[data-page="${savedTab}"]`);
-    if (savedItem) {
-        // Small delay to ensure DOM is ready
-        setTimeout(() => savedItem.click(), 100);
-    }
     
     // Initialize nav as visible
     const bottomNav = document.querySelector('.bottom-nav');
