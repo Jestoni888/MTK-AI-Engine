@@ -7,7 +7,9 @@
     let currentReadAhead = 4096;
     let currentScheduler = 'none';
     let installPersistent = false;
-    const SCHEDULERS = ['none', 'mq-deadline', 'bfq', 'kyber'];
+    
+    // Fallback list in case fetching from sysfs fails
+    let availableSchedulers = ['none', 'mq-deadline', 'bfq', 'kyber'];
 
     const execFn = window.exec || async function(cmd, timeout = 10000) {
         return new Promise((resolve, reject) => {
@@ -29,7 +31,31 @@
 
     async function init() {
         await loadConfig();
+        await fetchSchedulers();
         bindClickHandler();
+    }
+
+    // Dynamically fetch available I/O schedulers from the device
+    async function fetchSchedulers() {
+        try {
+            const cmd = `su -c 'cat /sys/block/*/queue/scheduler 2>/dev/null | tr " " "\\n" | tr -d "[]" | sort -u'`;
+            const content = await execFn(cmd).catch(() => '');
+            
+            if (content) {
+                // Parse the newline-separated list of unique schedulers
+                const scheds = content.split('\n').map(s => s.trim()).filter(s => s);
+                if (scheds.length > 0) {
+                    availableSchedulers = scheds;
+                    
+                    // Ensure the currently saved scheduler is in the list                    
+                    if (!availableSchedulers.includes(currentScheduler)) {
+                        availableSchedulers.unshift(currentScheduler);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('I/O Tweaks: Failed to fetch schedulers dynamically, using fallback.', e);
+        }
     }
 
     async function loadConfig() {
@@ -47,7 +73,8 @@
         } catch (e) { console.warn('I/O Tweaks: Config load failed:', e); }
     }
 
-    function bindClickHandler() {        const btn = document.getElementById('io-tweaks-btn');
+    function bindClickHandler() {
+        const btn = document.getElementById('io-tweaks-btn');
         if (btn) btn.addEventListener('click', () => showIOModal());
     }
 
@@ -70,8 +97,7 @@
         }
 
         const modal = document.createElement('div');
-        modal.id = 'io-modal';
-        modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);`;
+        modal.id = 'io-modal';        modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);`;
 
         const box = document.createElement('div');
         box.style.cssText = `background: linear-gradient(135deg, #1a1f3a, #2d3561); border: 2px solid #4a9eff; border-radius: 20px; padding: 24px; width: 95%; max-width: 480px; box-shadow: 0 0 40px rgba(74, 158, 255, 0.2);`;
@@ -90,13 +116,14 @@
             <div style="margin-bottom: 20px;">
                 <div style="color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 8px;">I/O Scheduler</div>
                 <select id="io-sched-select" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px;">
-                    ${SCHEDULERS.map(s => `<option value="${s}" ${s === currentScheduler ? 'selected' : ''}>${s.toUpperCase()}</option>`).join('')}
+                    ${availableSchedulers.map(s => `<option value="${s}" ${s === currentScheduler ? 'selected' : ''}>${s.toUpperCase()}</option>`).join('')}
                 </select>
             </div>
             <div style="margin-bottom: 20px; padding: 12px; background: rgba(74,158,255,0.1); border-radius: 12px; border: 1px solid rgba(74,158,255,0.3);">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <div>
-                        <div style="color: #fff; font-size: 13px; font-weight: 600;">🔄 Persistent on Boot</div>                        <div style="color: #8b92b4; font-size: 11px;">Install to service.d for auto-apply after reboot</div>
+                        <div style="color: #fff; font-size: 13px; font-weight: 600;">🔄 Persistent on Boot</div>
+                        <div style="color: #8b92b4; font-size: 11px;">Install to service.d for auto-apply after reboot</div>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="io-persist-toggle" ${installPersistent ? 'checked' : ''}>
@@ -119,7 +146,6 @@
 
         const persistToggle = document.getElementById('io-persist-toggle');
         if (persistToggle) persistToggle.onchange = () => { installPersistent = persistToggle.checked; };
-
         document.getElementById('io-apply-btn').onclick = async () => {
             currentScheduler = document.getElementById('io-sched-select')?.value || currentScheduler;
             await applyTweaks();
@@ -145,7 +171,8 @@
             statusEl.innerHTML = `<span style="color: #FF453A;">❌ ${e.message}</span><br><small style="color: #8b92b4;">Ensure root access & check dmesg for SELinux</small>`;
             applyBtn.disabled = false;
             applyBtn.textContent = '💾 Apply I/O Tweaks';
-        }    }
+        }
+    }
 
     async function applyImmediate() {
         const statusEl = document.getElementById('io-status');
@@ -168,8 +195,7 @@
             } catch (e) { console.warn(`Failed ${file}:`, e); }
         }
 
-        if (success > 0) {
-            statusEl.innerHTML = `<span style="color: #32D74B;">✅ Applied to ${success}/${files.length}</span><br><small>${currentReadAhead} KB | ${currentScheduler}</small>`;
+        if (success > 0) {            statusEl.innerHTML = `<span style="color: #32D74B;">✅ Applied to ${success}/${files.length}</span><br><small>${currentReadAhead} KB | ${currentScheduler}</small>`;
             window.showStatus?.(`✅ I/O Tweaks: ${success} entries updated`, '#4a9eff');
         } else {
             throw new Error('All writes failed (check root/SELinux)');
@@ -218,6 +244,5 @@ exit 0`;
         await applyImmediate();
     }
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-    else init();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);    else init();
 })();
