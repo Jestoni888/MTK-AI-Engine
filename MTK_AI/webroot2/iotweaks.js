@@ -78,6 +78,34 @@
         if (btn) btn.addEventListener('click', () => showIOModal());
     }
 
+    async function updateLogBox(prefix) {
+        const logBox = document.getElementById('io-log-box');
+        if (!logBox) return;
+        
+        logBox.innerHTML += `<span style="color: #8b949e; font-weight: bold;">--- ${prefix} ---</span><br>`;
+        logBox.scrollTop = logBox.scrollHeight;
+        
+        try {
+            const cmd = 'find /sys \\( -name "read_ahead_kb" -o -name "scheduler" \\) ! -type d 2>/dev/null | while IFS= read -r file; do [ -r "$file" ] && echo "$file => $(cat "$file" 2>/dev/null)"; done';
+            const result = await execFn(cmd).catch(() => '');
+            
+            if (result && result.trim()) {
+                const lines = result.trim().split('\n');
+                lines.forEach(line => {
+                    const safeLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    // Highlight scheduler lines differently for readability
+                    const isScheduler = line.includes('scheduler');
+                    const color = isScheduler ? '#79c0ff' : '#3fb950';
+                    logBox.innerHTML += `<div style="color: ${color};">${safeLine}</div>`;
+                });            } else {
+                logBox.innerHTML += `<span style="color: #f85149;">No readable I/O files found.</span><br>`;
+            }
+        } catch (e) {
+            logBox.innerHTML += `<span style="color: #f85149;">Error: ${e.message}</span><br>`;
+        }
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
     function showIOModal() {
         document.getElementById('io-modal')?.remove();
 
@@ -97,7 +125,8 @@
         }
 
         const modal = document.createElement('div');
-        modal.id = 'io-modal';        modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);`;
+        modal.id = 'io-modal';
+        modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);`;
 
         const box = document.createElement('div');
         box.style.cssText = `background: linear-gradient(135deg, #1a1f3a, #2d3561); border: 2px solid #4a9eff; border-radius: 20px; padding: 24px; width: 95%; max-width: 480px; box-shadow: 0 0 40px rgba(74, 158, 255, 0.2);`;
@@ -117,8 +146,7 @@
                 <div style="color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 8px;">I/O Scheduler</div>
                 <select id="io-sched-select" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px;">
                     ${availableSchedulers.map(s => `<option value="${s}" ${s === currentScheduler ? 'selected' : ''}>${s.toUpperCase()}</option>`).join('')}
-                </select>
-            </div>
+                </select>            </div>
             <div style="margin-bottom: 20px; padding: 12px; background: rgba(74,158,255,0.1); border-radius: 12px; border: 1px solid rgba(74,158,255,0.3);">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <div>
@@ -134,10 +162,15 @@
             <div id="io-status" style="text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; min-height: 40px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px;"></div>
             <button id="io-apply-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #4a9eff, #2980b9); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">💾 Apply I/O Tweaks</button>
             <button id="io-cancel-btn" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 10px; font-size: 13px; cursor: pointer;">Cancel</button>
+            <div id="io-log-box" style="margin-top: 15px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 10px; max-height: 180px; overflow-y: auto; font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #3fb950; text-align: left; line-height: 1.4; word-break: break-all;"></div>
         `;
 
         modal.appendChild(box);
         document.body.appendChild(modal);
+        
+        // Initial terminal log load
+        updateLogBox('Initial Scan');
+
         modal.onclick = e => { if (e.target === modal) modal.remove(); };
 
         const slider = document.getElementById('io-ra-slider');
@@ -146,6 +179,7 @@
 
         const persistToggle = document.getElementById('io-persist-toggle');
         if (persistToggle) persistToggle.onchange = () => { installPersistent = persistToggle.checked; };
+
         document.getElementById('io-apply-btn').onclick = async () => {
             currentScheduler = document.getElementById('io-sched-select')?.value || currentScheduler;
             await applyTweaks();
@@ -161,7 +195,6 @@
         applyBtn.disabled = true;
         applyBtn.textContent = installPersistent ? '⏳ Installing & Applying...' : '⏳ Applying...';
         statusEl.innerHTML = '<span style="color: #FF9F0A;">🔍 Scanning /sys for I/O files...</span>';
-
         await execFn(`mkdir -p /sdcard/MTK_AI_Engine && printf 'read_ahead=%s\\nscheduler=%s\\n' '${currentReadAhead}' '${currentScheduler}' > "${CONFIG_FILE}" 2>/dev/null`).catch(() => {});
 
         try {
@@ -176,6 +209,13 @@
 
     async function applyImmediate() {
         const statusEl = document.getElementById('io-status');
+        const logBox = document.getElementById('io-log-box');
+        
+        if (logBox) {
+            logBox.innerHTML += `<br><span style="color: #ffa657;">[${new Date().toLocaleTimeString()}] Applying tweaks...</span><br>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
         const findResult = await execFn(`find /sys -type f \\( -name "read_ahead_kb" -o -name "scheduler" \\) 2>/dev/null`).catch(() => '');
         const files = findResult.split('\n').filter(f => f && f.trim());
         if (files.length === 0) throw new Error('No I/O tunable files found');
@@ -195,16 +235,29 @@
             } catch (e) { console.warn(`Failed ${file}:`, e); }
         }
 
-        if (success > 0) {            statusEl.innerHTML = `<span style="color: #32D74B;">✅ Applied to ${success}/${files.length}</span><br><small>${currentReadAhead} KB | ${currentScheduler}</small>`;
+        if (success > 0) {
+            statusEl.innerHTML = `<span style="color: #32D74B;">✅ Applied to ${success}/${files.length}</span><br><small>${currentReadAhead} KB | ${currentScheduler}</small>`;
             window.showStatus?.(`✅ I/O Tweaks: ${success} entries updated`, '#4a9eff');
-        } else {
-            throw new Error('All writes failed (check root/SELinux)');
+            
+            if (logBox) {
+                logBox.innerHTML += `<span style="color: #3fb950;">[${new Date().toLocaleTimeString()}] Applied successfully. Refreshing logs...</span><br>`;
+                // Refresh logs after applying to show new values
+                await updateLogBox('Post-Apply Scan');
+            }
+        } else {            throw new Error('All writes failed (check root/SELinux)');
         }
         setTimeout(() => document.getElementById('io-modal')?.remove(), 2000);
     }
 
     async function installPersistentService() {
         const statusEl = document.getElementById('io-status');
+        const logBox = document.getElementById('io-log-box');
+        
+        if (logBox) {
+            logBox.innerHTML += `<br><span style="color: #ffa657;">[${new Date().toLocaleTimeString()}] Installing persistent service...</span><br>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+        
         statusEl.innerHTML = '<span style="color: #4a9eff;">📦 Generating service script...</span>';
         
         // Hardened POSIX script for Android service.d
@@ -240,9 +293,9 @@ exit 0`;
         const verify = await execFn(`su -c "[ -x '${SERVICE_SCRIPT}' ] && echo ok || echo fail"`);
         if (verify !== 'ok') throw new Error('Service installation failed');
         
-        statusEl.innerHTML = `<span style="color: #32D74B;">✅ Service installed</span><br><small>Auto-applies on boot</small>`;
-        await applyImmediate();
+        statusEl.innerHTML = `<span style="color: #32D74B;">✅ Service installed</span><br><small>Auto-applies on boot</small>`;        await applyImmediate();
     }
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);    else init();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
 })();
