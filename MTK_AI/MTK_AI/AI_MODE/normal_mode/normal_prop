@@ -16,7 +16,6 @@ for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/
   [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
 done || true
 
-pkill -f cpulimit || true
 setprop 'persist.sys.power_mode_perf' '0' || true
 settings put system persist.sys.power_mode_perf 0 2>/dev/null || true
 
