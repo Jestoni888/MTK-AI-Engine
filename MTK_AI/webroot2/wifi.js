@@ -1,4 +1,4 @@
-// wifi.js - Fixed: Gray button when power save is ON + Free 5GHz Detection
+// wifi.js - Fixed: Gray button, Free 5GHz Detection, Block 2.4GHz Open, + System-wide 2.4GHz Disable
 (function() {
     'use strict';
     
@@ -338,8 +338,8 @@
                 await execFn('su -c "settings put global wifi_watchdog_max_ap_checks 3"');
                 await execFn('su -c "settings put global wifi_framework_enabled 1"');
                 await execFn('su -c "cmd wifi reassociate"');
-                await execFn('su -c "echo Y > /sys/module/wlan/parameters/ps"');
-                await execFn('su -c "echo 1 > /sys/module/wlan/parameters/wlm"');
+                await execFn('su -c "echo Y > /sys/module/wlan/parameters/ps || true"');
+                await execFn('su -c "echo 1 > /sys/module/wlan/parameters/wlm || true"');
                 await new Promise(resolve => setTimeout(resolve, 1000));
                                 const verifyRes = await execFn('su -c "iw dev wlan0 get power_save"');
                 if (verifyRes.toLowerCase().includes('power save: off')) {
@@ -361,6 +361,57 @@
             if (boostBtn) {
                 boostBtn.disabled = false;
                 updateBoostDisplay();
+            }
+        }
+    }
+
+    async function disable24GHz() {
+        const bandBtn = document.getElementById('disable-24g-btn');
+        if (bandBtn) {
+            bandBtn.disabled = true;
+            bandBtn.textContent = '⏳ Applying system-wide...';
+        }
+        
+        if (typeof showStatus === 'function') showStatus('⚙️ Disabling 2.4GHz across all layers...', '#9b59b6');
+        
+        try {
+            // 1. Android Framework Level (Android 11+)
+            await execFn('su -c "cmd wifi set-band-preference 5ghz"');
+            
+            // 2. Global Settings Level
+            await execFn('su -c "settings put global wifi_band_preferred 2"');
+            await execFn('su -c "settings put global preferred_network_mode 5ghz"');
+            await execFn('su -c "settings put secure wifi_band 2"');
+            
+            // 3. iw (mac80211) Level - Force 5GHz channel
+            await execFn('su -c "iw dev wlan0 set freq 5180 || true"');
+            
+            // 4. MediaTek (MTK) Specific Paths
+            await execFn('su -c "echo 5 > /proc/net/wlan/band || true"');
+            await execFn('su -c "echo 5G_ONLY > /proc/net/wlan/band_mode || true"');
+            await execFn('su -c "echo 1 > /proc/net/wlan/disable_2g || true"');
+                        // 5. Qualcomm / Generic Kernel Module Parameters
+            await execFn('su -c "echo 0 > /sys/module/wlan/parameters/g_mode || true"');
+            await execFn('su -c "echo 5 > /sys/module/wlan/parameters/band || true"');
+            await execFn('su -c "echo 1 > /sys/module/qca_cld3_wlan/parameters/g_mode || true"');
+            
+            // 6. Force disconnect and toggle WiFi to ensure driver reloads settings
+            await execFn('su -c "cmd wifi disconnect"');
+            await new Promise(r => setTimeout(r, 1000));
+            await execFn('su -c "svc wifi disable"');
+            await new Promise(r => setTimeout(r, 1500));
+            await execFn('su -c "svc wifi enable"');
+            await new Promise(r => setTimeout(r, 2000));
+            
+            if (typeof showStatus === 'function') showStatus('✅ 2.4GHz Disabled (5GHz Only Mode Active)', '#32D74B');
+        } catch (e) {
+            console.error('Failed to disable 2.4GHz:', e);
+            if (typeof showStatus === 'function') showStatus('⚠️ Some commands failed, but 5GHz preference set', '#FF9F0A');
+        } finally {
+            if (bandBtn) {
+                bandBtn.disabled = false;
+                bandBtn.textContent = '✅ 5GHz System Active';
+                setTimeout(() => { bandBtn.textContent = '📶 Disable 2.4GHz (System)'; }, 4000);
             }
         }
     }
@@ -388,9 +439,9 @@
                 if (typeof showStatus === 'function') showStatus(`✅ ${providerName} DNS applied!`, '#32D74B');
             }
             
-            updateDNSDisplay();
-        } catch (e) {
-            if (dnsStatus) dnsStatus.innerHTML = '<span style="color: #FF3B30;">❌ Failed to apply DNS</span>';            if (typeof showStatus === 'function') showStatus('❌ Failed to apply DNS', '#FF3B30');
+            updateDNSDisplay();        } catch (e) {
+            if (dnsStatus) dnsStatus.innerHTML = '<span style="color: #FF3B30;">❌ Failed to apply DNS</span>';
+            if (typeof showStatus === 'function') showStatus('❌ Failed to apply DNS', '#FF3B30');
             console.error(e);
             if (dnsSelect) dnsSelect.value = '';
         } finally {
@@ -438,10 +489,10 @@
         boostBtn.textContent = wifiBoosted ? '⚡ Wi-Fi Boosted ✓' : '⚡ Enable Wi-Fi Boost';
         boostBtn.style.cssText = `padding: 12px; background: ${wifiBoosted ? 'linear-gradient(135deg, #32D74B, #28a745)' : 'linear-gradient(135deg, #8E8E93, #636366)'}; color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;`;
         boostBtn.onclick = checkAndToggleWifiBoost;
-
-        const free5gBtn = document.createElement('button');        free5gBtn.id = 'free-5g-btn';
-        free5gBtn.textContent = '🆓 Free 5GHz Only';
-        free5gBtn.style.cssText = `grid-column: span 2; padding: 12px; background: linear-gradient(135deg, #FF9F0A, #ff7f50); color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;`;
+        const free5gBtn = document.createElement('button');
+        free5gBtn.id = 'free-5g-btn';
+        free5gBtn.textContent = showOnlyFree5GHz ? '📡 Show All Networks' : '🆓 Free 5GHz Only';
+        free5gBtn.style.cssText = `grid-column: span 2; padding: 12px; background: ${showOnlyFree5GHz ? 'linear-gradient(135deg, #32D74B, #28a745)' : 'linear-gradient(135deg, #FF9F0A, #ff7f50)'}; color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;`;
         free5gBtn.onclick = () => {
             showOnlyFree5GHz = !showOnlyFree5GHz;
             free5gBtn.textContent = showOnlyFree5GHz ? '📡 Show All Networks' : '🆓 Free 5GHz Only';
@@ -449,7 +500,13 @@
             renderNetworkList();
         };
 
-        actionsGrid.append(scanBtn, boostBtn, free5gBtn);
+        const disable24gBtn = document.createElement('button');
+        disable24gBtn.id = 'disable-24g-btn';
+        disable24gBtn.textContent = '📶 Disable 2.4GHz (System)';
+        disable24gBtn.style.cssText = `grid-column: span 2; padding: 12px; background: linear-gradient(135deg, #9b59b6, #8e44ad); color: #fff; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;`;
+        disable24gBtn.onclick = disable24GHz;
+
+        actionsGrid.append(scanBtn, boostBtn, free5gBtn, disable24gBtn);
         box.append(title, info, actionsGrid);
 
         const boostStatus = document.createElement('div');
@@ -480,14 +537,14 @@
         
         const dnsStatus = document.createElement('div');
         dnsStatus.id = 'dns-status';
-        dnsStatus.style.cssText = 'font-size: 12px; text-align: center;';
-        dnsSection.appendChild(dnsStatus);
+        dnsStatus.style.cssText = 'font-size: 12px; text-align: center;';        dnsSection.appendChild(dnsStatus);
         
         box.appendChild(dnsSection);
 
         const networkList = document.createElement('div');
         networkList.id = 'wifi-network-list';
         networkList.style.cssText = 'display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;';
+
         const closeBtn = document.createElement('button');
         closeBtn.textContent = 'Close';
         closeBtn.style.cssText = `width: 100%; padding: 14px; background: #2a3152; color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer;`;
@@ -529,31 +586,41 @@
 
         if (networksToRender.length === 0) {
             const msg = showOnlyFree5GHz 
-                ? 'No free 5GHz networks found. Click "Show All Networks" to see others.' 
-                : 'Click "Scan Networks" to find available WiFi';
+                ? 'No free 5GHz networks found. Click "Show All Networks" to see others.'                 : 'Click "Scan Networks" to find available WiFi';
             list.innerHTML = `<div style="color: #8b92b4; text-align: center; padding: 20px;">${msg}</div>`;
             return;
         }
 
         networksToRender.forEach(network => {
             const item = document.createElement('div');
-            item.style.cssText = `padding: 16px; background: #151b2d; border: 1px solid #2a3152; border-radius: 12px; cursor: pointer; transition: all 0.2s ease;`;            
-            let actionHtml = '';
-            if (network.hasPassword) {
-                actionHtml = `
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span style="color: #32D74B; font-size: 13px; font-weight: 600;">✓ Saved</span>
-                        <button class="forget-btn" style="background: none; border: none; color: #FF3B30; cursor: pointer; font-size: 12px; padding: 0;">Forget</button>
-                    </div>
-                `;
-            } else {
-                actionHtml = `<div style="color: #4a9eff; font-weight: 600; font-size: 14px;">Connect →</div>`;
-            }
+            item.style.cssText = `padding: 16px; background: #151b2d; border: 1px solid #2a3152; border-radius: 12px; cursor: pointer; transition: all 0.2s ease;`;
             
             const band = network.frequency >= 5000 ? '5GHz' : '2.4GHz';
             const isOpen = isNetworkOpen(network.security);
-            const icon = isOpen ? '🆓' : '🔒';
-            const secText = isOpen ? 'Open Network' : network.security;
+            const is24Open = isOpen && network.frequency < 5000;
+            
+            let icon = '🔒';
+            let secText = network.security;
+            let actionHtml = '';
+
+            if (is24Open) {
+                icon = '🚫';
+                secText = 'Web Sign-in Required (Blocked)';
+                actionHtml = `<div style="color: #FF3B30; font-weight: 600; font-size: 14px;">🚫 Blocked</div>`;
+            } else {
+                icon = isOpen ? '🆓' : '🔒';
+                secText = isOpen ? 'Open Network' : network.security;
+                if (network.hasPassword) {
+                    actionHtml = `
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="color: #32D74B; font-size: 13px; font-weight: 600;">✓ Saved</span>
+                            <button class="forget-btn" style="background: none; border: none; color: #FF3B30; cursor: pointer; font-size: 12px; padding: 0;">Forget</button>
+                        </div>
+                    `;
+                } else {
+                    actionHtml = `<div style="color: #4a9eff; font-weight: 600; font-size: 14px;">Connect →</div>`;
+                }
+            }
             
             item.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -568,8 +635,7 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #2a3152; margin-top: 10px;">
                     <div style="color: #6b7280; font-size: 11px;">${secText}</div>
-                    ${actionHtml}
-                </div>
+                    ${actionHtml}                </div>
             `;
             
             item.onmouseenter = () => { item.style.borderColor = '#4a9eff'; item.style.background = '#1e2540'; };
@@ -586,6 +652,7 @@
             list.appendChild(item);
         });
     }
+
     function forgetPassword(ssid) {
         if (confirm(`Forget saved password for "${ssid}"?`)) {
             delete savedNetworks[ssid];
@@ -598,7 +665,12 @@
     }
 
     async function handleNetworkClick(network) {
-        if (isNetworkOpen(network.security)) {
+        const isOpen = isNetworkOpen(network.security);
+        if (isOpen) {
+            if (network.frequency < 5000) {
+                if (typeof showStatus === 'function') showStatus('❌ 2.4GHz Open WiFi blocked (Requires web sign-in)', '#FF3B30');
+                return;
+            }
             await executeConnection(network, '', false, false);
             return;
         }
@@ -612,7 +684,6 @@
     function showPasswordModal(network, isRetry, lastPassword = '') {
         const existing = document.getElementById('password-modal');
         if (existing) existing.remove();
-
         const modal = document.createElement('div');
         modal.id = 'password-modal';
         modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10001; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);`;
@@ -635,7 +706,8 @@
             </label>
             <div style="display: flex; gap: 10px;">
                 <button id="pass-cancel-btn" style="flex: 1; padding: 14px; background: #2a3152; color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">Cancel</button>
-                <button id="pass-connect-btn" style="flex: 1; padding: 14px; background: #4a9eff; color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">Connect</button>            </div>
+                <button id="pass-connect-btn" style="flex: 1; padding: 14px; background: #4a9eff; color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">Connect</button>
+            </div>
         `;
         modal.appendChild(box);
         document.body.appendChild(modal);
@@ -661,8 +733,7 @@
 
         document.getElementById('pass-cancel-btn').onclick = () => modal.remove();
         document.getElementById('pass-connect-btn').onclick = () => {
-            const password = input.value.trim();
-            const shouldSave = document.getElementById('save-pass-check').checked;
+            const password = input.value.trim();            const shouldSave = document.getElementById('save-pass-check').checked;
             if (!password) { 
                 input.style.borderColor = '#FF3B30'; 
                 input.focus();
@@ -684,7 +755,8 @@
 
     async function executeConnection(network, password, shouldSave, isSavedPassword) {
         try {
-            if (typeof showStatus === 'function') showStatus(`🔗 Connecting to ${network.ssid}...`, '#4a9eff');            
+            if (typeof showStatus === 'function') showStatus(`🔗 Connecting to ${network.ssid}...`, '#4a9eff');
+            
             let cmd;
             if (isNetworkOpen(network.security) || !password) {
                 cmd = `su -c 'cmd wifi connect-network "${network.ssid}" open "" -b ${network.bssid}'`;
@@ -710,8 +782,7 @@
                         availableNetworks[netIndex].hasPassword = true;
                     }
                 }
-                if (typeof showStatus === 'function') {
-                    const saveMsg = (shouldSave && !isSavedPassword && password) ? ' (Password saved)' : '';
+                if (typeof showStatus === 'function') {                    const saveMsg = (shouldSave && !isSavedPassword && password) ? ' (Password saved)' : '';
                     showStatus(`✅ Connected to ${network.ssid}${saveMsg}`, '#32D74B');
                 }
                 renderNetworkList();
@@ -734,12 +805,15 @@
             setTimeout(() => showPasswordModal(network, true, password), 500);
         }
     }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }    
+    
     window.scanNetworks = scanNetworks;
     window.checkAndToggleWifiBoost = checkAndToggleWifiBoost;
     window.setGlobalDNS = setGlobalDNS;
+    window.disable24GHz = disable24GHz;
 })();
