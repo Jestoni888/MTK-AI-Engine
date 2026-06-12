@@ -3,6 +3,7 @@
     'use strict';
 
     const CONFIG_FILE = '/sdcard/MTK_AI_Engine/gmsdoze.conf';
+    const CPULIMIT_PATH = '/data/adb/modules/MTK_AI/lib/cpulimit';
     const GMS_PACKAGES = [
         'com.google.android.gms',
         'com.google.android.gsf',
@@ -11,7 +12,9 @@
         'com.google.android.partnersetup',
         'com.google.android.setupwizard'
     ];
+    
     let isGmsEnabled = true;
+    let isCpuLimitEnabled = false;
     let detectedGms = [];
 
     // Safe exec wrapper - EXACT COPY from iotweaks.js
@@ -34,11 +37,27 @@
         try {
             const raw = await execFn(`cat ${CONFIG_FILE} 2>/dev/null`);
             if (raw && raw.trim()) {
-                const [key, val] = raw.trim().split('=');
-                if (key === 'state') isGmsEnabled = val.trim() === '1';
-            }
-        } catch (e) { 
+                const lines = raw.trim().split('\n');
+                for (const line of lines) {
+                    const parts = line.split('=');
+                    if (parts.length === 2) {
+                        const key = parts[0].trim();
+                        const val = parts[1].trim();
+                        if (key === 'state') isGmsEnabled = val === '1';
+                        if (key === 'cpulimit') isCpuLimitEnabled = val === '1';
+                    }
+                }
+            }        } catch (e) { 
             console.warn('GMSDoze: Config load failed:', e); 
+        }
+    }
+
+    async function saveConfig() {
+        try {
+            // Safely write multiple lines using standard echo redirection
+            await execFn(`mkdir -p /sdcard/MTK_AI_Engine && echo "state=${isGmsEnabled ? 1 : 0}" > ${CONFIG_FILE} && echo "cpulimit=${isCpuLimitEnabled ? 1 : 0}" >> ${CONFIG_FILE}`);
+        } catch (e) {
+            console.warn('GMSDoze: Config save failed:', e);
         }
     }
 
@@ -47,7 +66,8 @@
         if (!btn) {
             console.warn('GMSDoze: #gmsdoze-btn not found');
             return;
-        }        console.log('GMSDoze: Button found, attaching click handler');
+        }        
+        console.log('GMSDoze: Button found, attaching click handler');
         btn.addEventListener('click', () => {
             console.log('GMSDoze: Button clicked');
             showGMSModal();
@@ -73,10 +93,10 @@
             border-radius: 20px;
             padding: 24px; width: 95%; max-width: 450px;
             box-shadow: 0 0 40px rgba(34, 197, 94, 0.2);
+            max-height: 90vh; overflow-y: auto;
         `;
 
-        box.innerHTML = `
-            <h3 style="color: #22c55e; margin: 0 0 5px; font-size: 20px; text-align: center;">🔋 GMS Doze Manager</h3>
+        box.innerHTML = `            <h3 style="color: #22c55e; margin: 0 0 5px; font-size: 20px; text-align: center;">🔋 GMS Doze Manager</h3>
             <p style="color: #8b92b4; font-size: 12px; text-align: center; margin-bottom: 20px;">Disable Google Play Services to save battery & RAM</p>
 
             <div id="gms-scan-status" style="text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; min-height: 40px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px;">
@@ -90,19 +110,27 @@
                 <i class="fas fa-exclamation-triangle"></i> Disabling GMS breaks Play Store, push notifications, location services & backups.
             </div>
 
+            <button id="gms-cpulimit-btn" style="width: 100%; padding: 12px; background: ${isCpuLimitEnabled ? 'linear-gradient(135deg, #22c55e, #16a34a)' : 'rgba(255,255,255,0.1)'}; color: #fff; border: none; border-radius: 10px; font-size: 13px; cursor: pointer; margin-bottom: 10px;">
+                ⚡ ${isCpuLimitEnabled ? 'CPU Limit: 1% (ON)' : 'Limit GMS CPU to 1% (OFF)'}
+            </button>
+
             <button id="gms-toggle-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">
                 🔄 ${isGmsEnabled ? 'Disable GMS' : 'Enable GMS'}
             </button>
             <button id="gms-cancel-btn" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 10px; font-size: 13px; cursor: pointer;">Cancel</button>
         `;
 
-        modal.appendChild(box);        document.body.appendChild(modal);
+        modal.appendChild(box);        
+        document.body.appendChild(modal);
         modal.onclick = e => { if (e.target === modal) modal.remove(); };
 
         setTimeout(() => scanGMSStatus(), 100);
 
         document.getElementById('gms-toggle-btn').onclick = async () => {
             await toggleGMS();
+        };
+        document.getElementById('gms-cpulimit-btn').onclick = async () => {
+            await toggleCpuLimit();
         };
         document.getElementById('gms-cancel-btn').onclick = () => modal.remove();
     }
@@ -118,7 +146,6 @@
 
             detectedGms = [];
             let foundCount = 0;
-
             for (const pkg of GMS_PACKAGES) {
                 const pathRaw = await execFn(`pm path ${pkg} 2>/dev/null`);
                 if (pathRaw && pathRaw.includes('.apk')) {
@@ -167,8 +194,7 @@
     }
 
     async function toggleGMS() {
-        const toggleBtn = document.getElementById('gms-toggle-btn');
-        const statusEl = document.getElementById('gms-scan-status');
+        const toggleBtn = document.getElementById('gms-toggle-btn');        const statusEl = document.getElementById('gms-scan-status');
         
         if (!toggleBtn || !statusEl) return;
 
@@ -192,7 +218,7 @@
             }
 
             isGmsEnabled = !targetDisabled;
-            await execFn(`mkdir -p /sdcard/MTK_AI_Engine && echo "state=${isGmsEnabled ? 1 : 0}" > ${CONFIG_FILE}`);
+            await saveConfig();
 
             statusEl.innerHTML = `<span style="color: #32D74B;">✅ ${successPkgs.length}/${detectedGms.length} packages ${targetDisabled ? 'disabled' : 'enabled'}</span>`;            
             if (window.showStatus) {
@@ -212,6 +238,52 @@
         }
     }
 
+    async function toggleCpuLimit() {
+        const btn = document.getElementById('gms-cpulimit-btn');
+        if (!btn) return;
+        
+        btn.disabled = true;
+        btn.textContent = '⏳ Applying...';        
+        try {
+            isCpuLimitEnabled = !isCpuLimitEnabled;
+            
+            if (isCpuLimitEnabled) {
+                // Kill existing cpulimit for gms just in case
+                await execFn(`su -c "pkill -f 'MTK_AI/lib/cpulimit' 2>/dev/null || killall cpulimit 2>/dev/null"`);
+                
+                // Fallback to main GMS package if scan hasn't populated detectedGms yet
+                const pkgsToLimit = detectedGms.length > 0 ? detectedGms.map(g => g.pkg) : ['com.google.android.gms'];
+                
+                // Start cpulimit for each detected GMS package in the background
+                for (const pkg of pkgsToLimit) {
+                    await execFn(`su -c "nohup ${CPULIMIT_PATH} -e ${pkg} -l 1 >/dev/null 2>&1 &"`);
+                }
+                
+                btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                btn.textContent = '⚡ CPU Limit: 1% (ON)';
+            } else {
+                // Kill cpulimit processes
+                await execFn(`su -c "pkill -f 'MTK_AI/lib/cpulimit' 2>/dev/null || killall cpulimit 2>/dev/null"`);
+                btn.style.background = 'rgba(255,255,255,0.1)';
+                btn.textContent = '⚡ Limit GMS CPU to 1% (OFF)';
+            }
+            
+            await saveConfig();
+            
+            if (window.showStatus) {
+                window.showStatus(`✅ GMS CPU Limit: ${isCpuLimitEnabled ? 'Enabled' : 'Disabled'}`, isCpuLimitEnabled ? '#22c55e' : '#ef4444');
+            }
+        } catch (e) {
+            console.error('GMSDoze: CPU Limit toggle failed:', e);
+            isCpuLimitEnabled = !isCpuLimitEnabled; // revert on failure
+            if (window.showStatus) {
+                window.showStatus(`❌ CPU Limit Failed: ${e.message}`, '#ef4444');
+            }
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
     // Initialize
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
@@ -219,5 +291,5 @@
         init();
     }
 
-    window.GMSDozeManager = { init, showGMSModal, toggleGMS };
+    window.GMSDozeManager = { init, showGMSModal, toggleGMS, toggleCpuLimit };
 })();
