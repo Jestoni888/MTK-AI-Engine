@@ -1,5 +1,6 @@
 # Mediatek AI Engine
-MTK AI Engine is logcat/touch based module
+MTK AI Engine is Magisk/Kernel root based modules to optimize devices to full capabilities. 
+It uses logcat/touch based module
 with near zero usages of cpu power because it has no loop/sleep commands, just automatically triggers anything you do in your device.
 also gives full features of your android device in all scenarios such as gaming , daily use & screen off to save power
 
