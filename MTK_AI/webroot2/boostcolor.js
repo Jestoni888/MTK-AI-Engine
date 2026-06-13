@@ -390,8 +390,6 @@
         customContainer.style.cssText = 'min-height:40px;';
         presetsDiv.appendChild(customContainer);
         
-        // Render after DOM insertion        setTimeout(renderCustomPresets, 0);
-        
         return presetsDiv;
     }
 
@@ -495,7 +493,9 @@
         cs.appendChild(ci); box.appendChild(cs);
 
         // 2. ⚡ ALL Presets + 💾 Custom Presets (TOP)
-        box.appendChild(createPresetsSection());
+box.appendChild(createPresetsSection());
+// ✅ Render custom presets AFTER element is in DOM
+setTimeout(() => renderCustomPresets(), 50);
 
         // 3. 💧 Saturation
         const ss = document.createElement('div'); ss.style.cssText='margin-bottom:8px;';
