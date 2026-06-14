@@ -605,7 +605,7 @@ if (!termuxInstalled) {
         content.innerHTML = `
             <div style="text-align: center; padding: 20px;">                <div style="font-size: 48px; margin-bottom: 16px;">⚙️</div>
                 <div style="color: #4a9eff; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Setup Required/grant termux as root</div>
-                <button id="setup-wipwn-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #32D74B, #28a745); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;">🚀 Auto Setup</button>
+                <button id="setup-wipwn-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #32D74B, #28a745); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;">Click 5-10 times</button>
             </div>
         `;
         document.getElementById('setup-wipwn-btn').onclick = () => runSetup(network);
