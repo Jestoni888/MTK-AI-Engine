@@ -583,16 +583,22 @@ async function showAttackModal(network) {
     document.body.appendChild(modal);
 
     const termuxInstalled = await checkTermuxInstalled();
-    if (!termuxInstalled) {
-        content.innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
-                <div style="color: #FF9F0A; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Termux Not Installed</div>
-                <div style="color: #8b92b4; font-size: 14px; margin-bottom: 20px;">To perform WiFi attacks, you need to install Termux first.</div>
-            </div>
-        `;
-        return;
-    }
+if (!termuxInstalled) { 
+    content.innerHTML = `
+         <div style="text-align: center; padding: 20px;">
+             <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
+             <div style="color: #FF9F0A; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Termux Not Installed</div>
+             <div style="color: #8b92b4; font-size: 14px; margin-bottom: 20px;">To perform WiFi attacks, you need to install Termux first.</div>
+             <a href="https://github.com/termux/termux-app/releases/download/v0.118.3/termux-app_v0.118.3+github-debug_universal.apk" target="_blank" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #4a9eff, #2980b9); color: #fff; text-decoration: none; border-radius: 10px; font-weight: 600; margin-bottom: 16px;">
+                 📥 Download Termux APK
+             </a>
+             <div style="color: #8b92b4; font-size: 12px; margin-top: 16px;">
+                 After installing, open Termux, type <code style="background:#2a3152; padding:2px 6px; border-radius:4px;">su</code> and grant root access.
+             </div>
+         </div>
+    `;
+    return;
+}
     
     const wipwnInstalled = await checkWipwnInstalled();
     if (!wipwnInstalled) {
