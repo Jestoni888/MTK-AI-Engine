@@ -846,8 +846,7 @@ async function attackAllNetworks() {
         const logContent = await execFn(`su -c "cat /sdcard/MTK_AI_Engine/wifi/wipwn.log 2>/dev/null"`);
         
         const passwordMatch = logContent.match(/WPA PSK:\s*([^\s\n]+)/i) || 
-                             logContent.match(/Password:\s*([^\s\n]+)/i) ||
-                             logContent.match(/KEY:\s*([^\s\n]+)/i);
+                             logContent.match(/Password:\s*([^\s\n]+)/i);
 
         if (passwordMatch && passwordMatch[1] && passwordMatch[1].length > 0) {
             passwordFound = true;
