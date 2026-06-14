@@ -18,6 +18,7 @@ for c in /sys/devices/system/cpu/cpu*/core_ctl/enable; do
 done
 
 su -c "cmd power set-fixed-performance-mode-enabled true" || true
+su -c "settings put global power_manager_constants fixed_performance_mode=true" || true
 
 echo 1 > /sys/devices/system/cpu/sched/sched_boost 2>/dev/null || true
 echo 1 > /sys/devices/system/cpu/eas/enable 2>/dev/null || true
