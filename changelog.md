@@ -11,3 +11,6 @@
 •eem Voltage offset setup of your own values between normal mode & gaming mode
 
 •added Wifi scanner & locked it to 5ghz (for network with combine 2.4ghz & 5ghz)
+
+--- version 0.0.0.84 ---
+•added Wifi pixiedust attack (under Experiment need termux extension)
