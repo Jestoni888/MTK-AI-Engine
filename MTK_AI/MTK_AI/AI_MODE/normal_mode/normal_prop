@@ -20,6 +20,7 @@ setprop 'persist.sys.power_mode_perf' '0' || true
 settings put system persist.sys.power_mode_perf 0 2>/dev/null || true
 
 su -c "cmd power set-fixed-performance-mode-enabled false" || true
+su -c "settings put global power_manager_constants fixed_performance_mode=false" || true
 
 settings put global 'activity_manager_constants' 'max_cached_processes=32,background_settle_time=60000,fgs_start_deny_exposure_time=10000,fgservice_min_show_time=5000,fgservice_bg_start_timeout=30000,max_phantom_processes=32,process_limit=-1,enable_fg_boost=false' || true
 
