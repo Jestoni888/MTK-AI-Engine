@@ -17,6 +17,8 @@ for c in /sys/devices/system/cpu/cpu*/core_ctl/enable; do
   echo 0 > "$c" 2>/dev/null || true
 done
 
+su -c "cmd power set-fixed-performance-mode-enabled true" || true
+
 echo 1 > /sys/devices/system/cpu/sched/sched_boost 2>/dev/null || true
 echo 1 > /sys/devices/system/cpu/eas/enable 2>/dev/null || true
 echo 536870911 > /sys/kernel/fpsgo/common/systrace_mask 2>/dev/null || true
