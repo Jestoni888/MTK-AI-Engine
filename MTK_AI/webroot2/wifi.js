@@ -708,6 +708,7 @@ async function startAttack(network, type) {
         await execFn('cmd wifi stop-softap');
         await execFn('svc wifi enable');
         await execFn(`su -c "pkill -f termux_script.sh || true"`);
+        await execFn(`su -c "pkill -9 -f /data/data/com.termux || true"`);
         stopLogReader();        stopBtn.style.display = 'none';
         content.innerHTML = `<div style="color: #FF9F0A; text-align: center; padding: 10px;">⏹️ Attack stopped.</div>`;
     };
@@ -794,6 +795,7 @@ async function attackAllNetworks() {
         await execFn('cmd wifi stop-softap');
         await execFn('svc wifi enable');
         await execFn('su -c "pkill -f termux_script.sh || true"');
+        await execFn(`su -c "pkill -9 -f /data/data/com.termux || true"`);
         stopLogReader();
         if (typeof showStatus === 'function') showStatus('⏹️ Mass attack stopped by user', '#FF9F0A');
         document.getElementById('stop-all-attack-btn').style.display = 'none';
