@@ -641,13 +641,7 @@ async function runSetup(network) {
     stopBtn.style.display = 'block';    
     content.innerHTML = '<div style="color: #4a9eff; text-align: center; padding: 10px;">⏳ Opening Termux to setup WiPwn...</div>';
 
-    const setupCmd = `pkg update && pkg upgrade -y
-pkg install root-repo -y
-pkg install git python wpa-supplicant pixiewps iw openssl -y
-pkg install tsu -y || pkg install sudo -y
-git clone https://github.com/anbuinfosec/wipwn
-cd wipwn
-chmod +x main.py`;
+    const setupCmd = `pkg update && pkg upgrade -y && pkg install root-repo -y && pkg install git python wpa-supplicant pixiewps iw openssl -y && pkg install tsu -y || pkg install sudo -y && git clone https://github.com/anbuinfosec/wipwn && cd wipwn && chmod +x main.py`;
 
     // Launch Termux and auto-paste the command
     const launchCmd = `
