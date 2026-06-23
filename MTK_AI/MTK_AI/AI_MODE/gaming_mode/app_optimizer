@@ -4,6 +4,7 @@
 CONFIG_DIR="/sdcard/MTK_AI_Engine"
 CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
 LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
+CPULIMIT="/data/adb/modules/MTK_AI/lib/cpulimit"
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE" 2>/dev/null || echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
@@ -13,6 +14,35 @@ log_msg() {
 # 🔍 Performance Optimizations
 # ==============================
     log_msg "=== Starting MTK AI Engine Performance Optimizer ==="
+
+    # ==============================
+    # 🗄️ CPUlimit on Certain process to focus on gaming
+    # ==============================
+     nohup $CPULIMIT -e com.google.android.gms -l 1
+     nohup $CPULIMIT -e com.google.android.gsf -l 1
+     nohup $CPULIMIT -e com.google.android.gsf.login -l 1
+     nohup $CPULIMIT -e com.google.android.gms.persistent -l 1
+     nohup $CPULIMIT -e com.google.android.backuptransport -l 1
+     nohup $CPULIMIT -e com.google.android.partnersetup -l 1
+     nohup $CPULIMIT -e com.google.android.setupwizard -l 1
+     nohup $CPULIMIT -e com.android.systemui -l 400
+     nohup $CPULIMIT -e system_server -l 400
+
+ps -A -w 2>/dev/null | grep -i thermal | grep -v grep | awk '{print $NF}' | while read -r svc_path; do
+  
+  clean_svc="${svc_path##*/}"
+  
+  target_svc="$clean_svc"
+  if [[ ${#clean_svc} -gt 12 && "$clean_svc" == *"thermal"* ]]; then
+    target_svc="${clean_svc}*thermal*"
+  fi
+  
+  pid=$(pgrep -f "$clean_svc" | head -n 1)
+  if [ -n "$pid" ]; then
+    nohup /data/adb/modules/MTK_AI/lib/cpulimit -p "$pid" -l 1 -z 2>/dev/null &
+  fi
+  
+done
 
     # ==============================
     # 🗄️ I/O Scheduler & Read-Ahead
