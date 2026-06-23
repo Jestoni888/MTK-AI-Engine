@@ -39,7 +39,7 @@ ps -A -w 2>/dev/null | grep -i thermal | grep -v grep | awk '{print $NF}' | whil
   
   pid=$(pgrep -f "$clean_svc" | head -n 1)
   if [ -n "$pid" ]; then
-    nohup /data/adb/modules/MTK_AI/lib/cpulimit -p "$pid" -l 1 -z 2>/dev/null &
+    nohup $CPULIMIT -p "$pid" -l 1 -z 2>/dev/null &
   fi
   
 done
