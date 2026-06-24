@@ -29,6 +29,18 @@ setprop debug.hwui.force_vulkan true
 setprop ro.hwui.use_vulkan true
 setprop ro.hwui.hardware.vulkan true
 setprop debug.composition.type c2d
+setprop persist.graphics.vulkan true
+setprop persist.sys.force_vulkan 1
+setprop ro.hardware.vulkan.optimization 1
+setprop persist.sys.vulkan.experimental 1
+setprop debug.vulkan.disable_fog 1
+setprop debug.vulkan.disable_reflections 1
+setprop debug.vulkan.disable_lensflares 1
+setprop debug.vulkan.disable_shadows 1
+setprop debug.vulkan.low_latency_mode 1
+setprop debug.vulkan.optimized_rendering true
+setprop debug.vulkan.async_compute true
+setprop debug.vulkan.skip_validation_layers 1
 
 # Rendering Engine
 setprop debug.hwui.render_dirty_regions true
