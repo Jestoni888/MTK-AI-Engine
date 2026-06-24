@@ -29,6 +29,17 @@ setprop debug.hwui.render_ahead 1
 setprop debug.hwui.disable_vsync true
 setprop debug.hwui.use_buffer_age false
 setprop debug.hwui.profile false
+setprop debug.hwui.texture_cache_size 0
+setprop debug.hwui.layer_cache_size 0
+setprop debug.hwui.gradient_cache_size 0
+setprop debug.hwui.path_cache_size 1
+setprop debug.hwui.shape_cache_size 0
+setprop debug.hwui.drop_shadow_cache_size 0
+setprop debug.hwui.texture_filter_aniso 0
+setprop debug.sf.disable_hwc 1
+setprop debug.disable.bloom true
+setprop debug.disable.motion_blur true
+setprop debug.rendering.effects off
 
 log "🎮 SurfaceFlinger & HWUI unlocked"
 
@@ -39,6 +50,17 @@ setprop debug.egl.force_msaa true
 setprop debug.egl.hw 1
 setprop debug.egl.swapinterval -1
 setprop debug.gr.swapinterval -1
+setprop ro.surface_flinger.running_without_sync 1
+setprop debug.hwui.overdraw false
+setprop debug.performance.tuning 1
+setprop debug.cpu.performance_boost 1
+setprop debug.gpu.turbo_mode 1
+setprop debug.rendering.optimize_performance true
+setprop debug.rendering.force_low_latency 1
+setprop debug.sf.disable_vsync 1
+setprop debug.sf.enable_frame_rate_capping 0
+setprop ro.config.disable_hw_accel true
+setprop persist.sys.disable_lmk 1
 
 log "🖥 GPU pipeline forced"
 
@@ -50,7 +72,8 @@ setprop sched.colocate.affinity 1
 setprop sched.prefer_idle.enable 0
 setprop sched.upmigrate 90
 setprop sched.downmigrate 85
-
+setprop sys.perfmtk.current_profile performance
+setprop sys.perfmtk.thermal_state enabled
 setprop debug.cpurendering true
 
 log "⚡ Scheduler biased for foreground load"
