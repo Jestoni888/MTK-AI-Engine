@@ -71,6 +71,13 @@ MTK_AI_ENGINE="$MODDIR/main_control/mtk_ai_engine.sh"
             sh /data/adb/service.d/99_mtk_ai_restore_values.sh &
         fi
 
+
+GLOBAL="$MODDIR/script_runner/global"
+nohup "$GLOBAL" > /dev/null 2>&1 &
+
+export MTK_AI_PATH=/data/adb/modules/MTK_AI/main_control:$MTK_AI_PATH
+nohup "/data/adb/modules/MTK_AI/main_control/mtk_ai_engine.sh"  > /dev/null 2>&1 &
+
 grep -qx "performance" /sdcard/MTK_AI_Engine/current_profile && {
   setsid sh /data/adb/modules/MTK_AI/main_control/performance.sh </dev/null >/dev/null 2>&1 &
 } && {
@@ -78,9 +85,3 @@ grep -qx "performance" /sdcard/MTK_AI_Engine/current_profile && {
   export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"
   cd /data/adb/modules/MTK_AI && setsid ./main_control/mode "performance mode" </dev/null >/dev/null 2>&1 &
 }
-
-GLOBAL="$MODDIR/script_runner/global"
-nohup "$GLOBAL" > /dev/null 2>&1 &
-
-export MTK_AI_PATH=/data/adb/modules/MTK_AI/main_control:$MTK_AI_PATH
-nohup "/data/adb/modules/MTK_AI/main_control/mtk_ai_engine.sh"  > /dev/null 2>&1 &
