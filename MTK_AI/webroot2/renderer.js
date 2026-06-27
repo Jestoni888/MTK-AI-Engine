@@ -120,35 +120,31 @@
 
     // === SAFE PERSISTENT PROP SETTING (ro.* protected) ===
     async function setPropPersistent(prop, value, skipRo = false) {
-        // 🛡️ NEVER set ro.* props at runtime without explicit override
-        if (prop.startsWith('ro.') && !skipRo) {
-            console.warn(`[Renderer] Blocked runtime set of ro.* prop: ${prop}`);
-            return false;
-        }
-        
-        const commands = [];
-        
-        // For persist.* props: write to property file + setprop
-        if (prop.startsWith('persist.')) {
-            const propFile = `/data/property/${prop.replace(/\./g, '_')}`;
-            commands.push(`mkdir -p /data/property 2>/dev/null`);
-            commands.push(`echo -n "${value}" > ${propFile} 2>/dev/null`);
-            commands.push(`chmod 600 ${propFile} 2>/dev/null`);
-            commands.push(`chown root:root ${propFile} 2>/dev/null`);
-        }
-        
-        // Always apply via setprop for immediate effect
-        commands.push(`setprop ${prop} "${value}"`);
-        
-        for (const cmd of commands) {
-            try { 
-                const result = await execFn(cmd);
-                console.log(`[Renderer] Exec: ${cmd} → ${result.substring(0, 100)}`);
-            } catch (e) { 
-                console.warn(`[Renderer] Cmd failed: ${cmd}`, e);             }
-        }
-        return true;
+    // 🛡️ NEVER set ro.* props at runtime without explicit override
+    if (prop.startsWith('ro.') && !skipRo) {
+        console.warn(`[Renderer] Blocked runtime set of ro.* prop: ${prop}`);
+        return false;
     }
+    
+    const commands = [];
+    
+    // ✅ SAFE PERSISTENCE: 
+    // Removed manual /data/property/ writes to prevent bootloops.
+    // Android's `setprop` natively handles `persist.*` properties safely 
+    // via the init property service. Manual file manipulation breaks 
+    // SELinux contexts and property workspace integrity.
+    commands.push(`setprop ${prop} "${value}"`);
+    
+    for (const cmd of commands) {
+        try { 
+            const result = await execFn(cmd);
+            console.log(`[Renderer] Exec: ${cmd} → ${result.substring(0, 100)}`);
+        } catch (e) { 
+            console.warn(`[Renderer] Cmd failed: ${cmd}`, e);             
+        }
+    }
+    return true;
+}
 
     async function getProp(prop) {
         try {
