@@ -1,4 +1,7 @@
 MTK_AI/AI_MODE/auto_frequency/auto_frequency https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/auto_frequency
+system/etc/auto_frequency/auto_frequency.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/system/etc/auto_frequency/auto_frequency.sh
+system/etc/cooler/cooler.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/system/etc/auto_frequency/auto_frequency.sh
+system/etc/disable_thermal/disable_thermal.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/system/etc/disable_thermal/disable_thermal.sh
 MTK_AI/AI_MODE/auto_frequency/cpu6 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/cpu6
 MTK_AI/AI_MODE/auto_frequency/cpu7 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/cpu7
 MTK_AI/AI_MODE/auto_frequency/surfaceflinger https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/surfaceflinger
