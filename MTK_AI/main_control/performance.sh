@@ -461,7 +461,7 @@ log_msg "⚠ powersave not supported on $g"
             # ----------------- Non-gaming mode boosts -----------------
             
             # automatic frequency 
-                [ -f /data/adb/modules/MTK_AIsystem/etc/auto_frequency/auto_frequency.sh ] &&
+                [ -f /data/adb/modules/MTK_AI/system/etc/auto_frequency/auto_frequency.sh ] &&
                     su -c "sh /data/adb/modules/MTK_AI/system/etc/auto_frequency/auto_frequency.sh" &&
                     log_msg "↕️ Automatic frequency based on temperature"
             
