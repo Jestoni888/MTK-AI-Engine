@@ -88,4 +88,36 @@ rm -f "$SAFE_FLAG" 2>/dev/null
 log "🗑️ Safe boot marker consumed."
 
 log "Backup process complete."
+
+########################################
+# 1. Copy cooler.sh into system overlay
+########################################
+
+TARGET_DIR="/data/adb/modules/$(basename $MODDIR)/system/etc/cooler"
+TARGET_FILE="$TARGET_DIR/cooler.sh"
+
+mkdir -p "$TARGET_DIR"
+
+cp -af "$MODDIR/cooler/cooler.sh" "$TARGET_FILE"
+
+chmod 0755 "$TARGET_FILE"
+chown 0:0 "$TARGET_FILE"
+
+
+########################################
+# 2. Extra script you provided
+########################################
+
+# Create backup folder
+mkdir -p /data/local/tmp/cooler_backup
+chmod 755 /data/local/tmp/cooler_backup
+
+# Unlock settings XML for editing (ROM protection workarounds)
+chmod 0666 /data/system/users/0/settings_system.xml 2>/dev/null
+chmod 0666 /data/system/users/0/settings_global.xml 2>/dev/null
+
+# Some ROMs like MIUI / ColorOS / RealmeUI enforce vendor config restrictions
+chmod -R 0777 /data/vendor/ 2>/dev/null
+chmod -R 0777 /mnt/vendor/ 2>/dev/null
+exit 0
 exit 0
