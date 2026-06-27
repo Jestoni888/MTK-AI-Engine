@@ -161,7 +161,7 @@
             commands: `
             su -c "pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null"
 export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
-su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "performance mode" >/dev/null 2>&1 & disown'
+su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "performance mode" >/dev/null 2>&1 && nohup sh /data/adb/modules/MTK_AI/service.sh'
 `
         },
         balance: {
