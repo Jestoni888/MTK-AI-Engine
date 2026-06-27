@@ -1,149 +1,13 @@
 #!/system/bin/sh
 
-chmod 0755 /system/etc/cooler/cooler.sh 2>/dev/null
-chown 0:0 /system/etc/cooler/cooler.sh 2>/dev/null
-
-chcon u:object_r:system_file:s0 /system/etc/cooler/cooler.sh 2>/dev/null
-
-COOLER_SCRIPT="/system/etc/cooler/cooler.sh"
-LOG="/sdcard/MTK_AI_Engine/cooler_mtk.log"
-sleep 20
-sh "$COOLER_SCRIPT" apply >> "$LOG" 2>&1
-echo "MTK Cooling Active at $(date)" >> "$LOG"
-
-# Force schedutil governor for all CPUs + tune it
-
-GOV_PATH="/sys/devices/system/cpu"
-
-for cpu in $GOV_PATH/cpu[0-9]*; do
-    GOV_FILE="$cpu/cpufreq/scaling_governor"
-    if [ -f "$GOV_FILE" ]; then
-        echo "schedutil" > "$GOV_FILE"
-    fi
-
-    TUNABLE_DIR="$cpu/cpufreq/schedutil"
-    if [ -d "$TUNABLE_DIR" ]; then
-        echo 26000 > "$TUNABLE_DIR/up_rate_limit_us"       # instant ramp up
-        echo 0 > "$TUNABLE_DIR/down_rate_limit_us" # slower ramp down
-        echo 1 > "$TUNABLE_DIR/iowait_boost_enable"    # smoother app launches
-    fi
-done
-
-#Mediatek battery saver
-
-for g in /sys/class/devfreq/*/governor; do
-    [ -f "$g" ] || continue
-
-    # Check supported governors
-    SUP=$(cat "$(dirname "$g")/available_governors" 2>/dev/null)
-
-    echo "Node: $g"
-    echo "Available: $SUP"
-
-    if echo "$SUP" | grep -q powersave; then
-        echo powersave > "$g"
-        echo "→ Set to powersave"
-    else
-        echo "→ powersave not supported on this node"
-    fi
-done
-
-# voltage_offset &
-
-echo "-12" > /proc/eem/EEM_DET_B/eem_offset     # Big cores (performance cores)
-echo "-12" > /proc/eem/EEM_DET_BL/eem_offset    # Big-Little cluster
-echo "-12" > /proc/eem/EEM_DET_L/eem_offset     # Little cores (efficiency cores)
-echo "-12"  > /proc/eem/EEM_DET_CCI/eem_offset   # Cache / interconnect
-
-# Delay to allow SystemUI + display HAL to initialize
-sleep 60
-
-FORCE120() {
-    # Standard Android refresh rate keys
-    settings put system min_refresh_rate 120.0
-    settings put global min_refresh_rate 120.0
-
-    settings put system peak_refresh_rate 120.0
-    settings put global peak_refresh_rate 120.0
-
-    settings put system user_refresh_rate 120
-    settings put global user_refresh_rate 120
-
-    # Max refresh override (OEM dependent)
-    settings put system max_refresh_rate 120
-    settings put global max_refresh_rate 120
-
-    # MIUI/ColorOS Dynamic Throttle Keys
-    settings put system display_refresh_rate 120
-    settings put global display_refresh_rate 120
-
-    settings put system dynamic_refresh_rate 0   # disable dynamic refresh
-    settings put global dynamic_refresh_rate 0
-
-    settings put system adaptive_refresh_rate 0
-    settings put global adaptive_refresh_rate 0
-
-    # Common OEM power-saving refresh throttles
-    settings put system refresh_rate_mode 0
-    settings put global refresh_rate_mode 0
-
-    # Force disable "smart refresh rate"
-    settings put system smart_refresh_enable 0
-    settings put global smart_refresh_enable 0
-
-    # Apply again after delay (some ROMs override once)
-}
-
-# Run 3 times to defeat aggressive ROM overrides
-FORCE120
-sleep 5
-FORCE120
-sleep 10
-FORCE120
-
-# Log
-echo "[120Hz Lock] Applied fully." > /data/local/tmp/120hz_lock.log
-
-    # ----------------- THERMAL RESTORE -----------------
-    if [ -f /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh ]; then
-        sh /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh
-        log_msg "♻ Thermal restored (cooler.sh)"
-    else
-        log_msg "⚠ Thermal restore script not found!"
-    fi
-    
-# ----------------- CPUSET RESTORE -----------------
-CPUSET_PATH="/dev/cpuset"
-for DIR in $(ls $CPUSET_PATH); do
-    [ -d "$CPUSET_PATH/$DIR" ] || continue
-
-    # top-app and camera → full cores 0–7
-    if [ "$DIR" = "top-app" ] || [[ "$DIR" =~ camera ]] || [ "$DIR" = "foreground" ]; then
-        [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "0-7" > "$CPUSET_PATH/$DIR/cpus" && \
-        log_msg "♻ cpuset restore: $DIR → 0-7"
-
-    # surfaceflinger/display for smoothness experience → 0–7
-    elif [ "$DIR" = "sf" ] || [ "$DIR" = "display" ]; then
-        [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "4-7" > "$CPUSET_PATH/$DIR/cpus" && \
-        log_msg "♻ cpuset restore: $DIR → 4-7"
-
-    # everything else → 0–3
-    else
-        [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "0-3" > "$CPUSET_PATH/$DIR/cpus" && \
-        log_msg "♻ cpuset restore: $DIR → 0-3"
-    fi
-done
-
-# Root cpuset → 0–3
-[ -f "$CPUSET_PATH/cpus" ] && echo "0-3" > "$CPUSET_PATH/cpus" && \
-log_msg "♻ Root cpuset restored → 0-3"
-
+# ===============================================================
 #  GAME PERFORMANCE BOOSTER – Full Integrated & FIXED Version
 # ===============================================================
 
+# ============ 1. GLOBAL VARIABLES ============
+LOG_FILE="/sdcard/MTK_AI_Engine/game_booster.log"
 GAME_LIST_FILE="/sdcard/MTK_AI_Engine/game_list.txt"
 EXCLUDE_FILE="/sdcard/MTK_AI_Engine/exclude_apps.txt"
-LOG_FILE="/sdcard/MTK_AI_Engine/game_booster.log"
 
 DEFAULT_GOV="schedutil"
 SMOOTH_UP="0"
@@ -154,14 +18,20 @@ BOOST_ACTIVE=false
 CURRENT_GAME=""
 prev_pkg=""
 
+# ============ 2. ALL FUNCTIONS DEFINED FIRST ============
+
 # -------------------------
 # Logging
 # -------------------------
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
-    [ "$(wc -l < $LOG_FILE)" -gt 200 ] &&
-        tail -n 200 "$LOG_FILE" > "$LOG_FILE.tmp" &&
-        mv "$LOG_FILE.tmp" "$LOG_FILE"
+    if [ -f "$LOG_FILE" ]; then
+        LINES=$(wc -l < "$LOG_FILE")
+        if [ "$LINES" -gt 200 ]; then
+            tail -n 200 "$LOG_FILE" > "$LOG_FILE.tmp"
+            mv "$LOG_FILE.tmp" "$LOG_FILE"
+        fi
+    fi
 }
 
 # -------------------------
@@ -262,72 +132,211 @@ lock_gpu_max() {
 }
 
 # -------------------------
-# Set CPU max frequency (percentage) - FIXED
-# If PERCENT=100, it sets MIN=MAX for full lock (The Fix)
+# Helper: get target frequency for a policy
+# -------------------------
+get_target_freq() {
+    local policy_path="$1"
+    local percent="$2"
+    local maxf="$policy_path/cpuinfo_max_freq"
+    [ -f "$maxf" ] || return 0
+
+    local MAX=$(cat "$maxf")
+    local TARGET=$(( MAX * percent / 100 ))
+
+    local FREQ_LIST="$policy_path/scaling_available_frequencies"
+    if [ ! -f "$FREQ_LIST" ]; then
+        FREQ_LIST="$policy_path/cpuinfo_available_frequencies"
+    fi
+
+    if [ -f "$FREQ_LIST" ]; then
+        local REAL_TARGET=$(tr ' ' '\n' < "$FREQ_LIST" | sort -n | awk -v val="$TARGET" 'function abs(x){return ((x < 0.0) ? -x : x)} {if (abs($1-val) < abs(min-val)) min=$1} END {print min}')
+        echo "$REAL_TARGET"
+    else
+        echo "$TARGET"
+    fi
+}
+
+# -------------------------
+# Set CPU max frequency (percentage)
 # -------------------------
 set_cpu_max() {
     PERCENT=$1
-    
-    # Get available frequencies and filter to find the target supported frequency
-    get_target_freq() {
-        local policy_path="$1"
-        local percent="$2"
-        local maxf="$policy_path/cpuinfo_max_freq"
-        [ -f "$maxf" ] || return 0
-        
-        local MAX=$(cat "$maxf")
-        local TARGET=$(( MAX * percent / 100 ))
-        
-        # Look for available frequencies (safer way to set frequency)
-        local FREQ_LIST="$policy_path/scaling_available_frequencies"
-        if [ ! -f "$FREQ_LIST" ]; then
-             FREQ_LIST="$policy_path/cpuinfo_available_frequencies"
-        fi
-        
-        if [ -f "$FREQ_LIST" ]; then
-            # Snap target to nearest available frequency
-            local REAL_TARGET=$(tr ' ' '\n' < "$FREQ_LIST" | sort -n | awk -v val="$TARGET" 'function abs(x){return ((x < 0.0) ? -x : x)} {if (abs($1-val) < abs(min-val)) min=$1} END {print min}')
-            echo "$REAL_TARGET"
-        else
-            # Fallback to calculated target if available list isn't exposed
-            echo "$TARGET"
-        fi
-    }
 
     for policy in /sys/devices/system/cpu/cpufreq/policy*; do
         [ -d "$policy" ] || continue
-        
+
         set_maxf="$policy/scaling_max_freq"
         set_minf="$policy/scaling_min_freq"
-        
+
         TARGET_FREQ=$(get_target_freq "$policy" "$PERCENT")
-        
+
         # 1. Set the MAX frequency
         echo "$TARGET_FREQ" | su -c "tee $set_maxf" 2>/dev/null
         log_msg "⚡ CPU Policy $(basename $policy) → Max freq = $TARGET_FREQ ($PERCENT%)"
-        
+
         # 2. FIX: If 100% is requested, LOCK the MIN frequency to MAX too
         if [ "$PERCENT" -eq 100 ]; then
             echo "$TARGET_FREQ" | su -c "tee $set_minf" 2>/dev/null
             log_msg "⚡ CPU Policy $(basename $policy) → LOCKED MIN freq = $TARGET_FREQ (Full Boost)"
         fi
-        
-        # 3. If NOT 100%, restore MIN frequency to its lowest possible value for battery saving
+
+        # 3. If NOT 100%, restore MIN frequency to its lowest possible value
         if [ "$PERCENT" -ne 100 ]; then
             minf_info="$policy/cpuinfo_min_freq"
             [ -f "$minf_info" ] && MIN_HW=$(cat "$minf_info")
             echo "$MIN_HW" | su -c "tee $set_minf" 2>/dev/null
             log_msg "⚡ CPU Policy $(basename $policy) → Min freq restored to $MIN_HW"
         fi
-        
     done
 }
 
 # -------------------------
-# MAIN LOOP
+# Force 120Hz
 # -------------------------
-while true; do
+FORCE120() {
+    settings put system min_refresh_rate 120.0
+    settings put global min_refresh_rate 120.0
+    settings put system peak_refresh_rate 120.0
+    settings put global peak_refresh_rate 120.0
+    settings put system user_refresh_rate 120
+    settings put global user_refresh_rate 120
+    settings put system max_refresh_rate 120
+    settings put global max_refresh_rate 120
+    settings put system display_refresh_rate 120
+    settings put global display_refresh_rate 120
+    settings put system dynamic_refresh_rate 0
+    settings put global dynamic_refresh_rate 0
+    settings put system adaptive_refresh_rate 0
+    settings put global adaptive_refresh_rate 0
+    settings put system refresh_rate_mode 0
+    settings put global refresh_rate_mode 0
+    settings put system smart_refresh_enable 0
+    settings put global smart_refresh_enable 0
+}
 
+# -------------------------
+# Restore CPUSET
+# -------------------------
+restore_cpuset() {
+    CPUSET_PATH="/dev/cpuset"
+    for DIR in $(ls "$CPUSET_PATH" 2>/dev/null); do
+        [ -d "$CPUSET_PATH/$DIR" ] || continue
+
+        case "$DIR" in
+            top-app|foreground|*camera*)
+                [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "0-7" > "$CPUSET_PATH/$DIR/cpus" && \
+                    log_msg "♻ cpuset restore: $DIR → 0-7"
+                ;;
+            sf|display)
+                [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "4-7" > "$CPUSET_PATH/$DIR/cpus" && \
+                    log_msg "♻ cpuset restore: $DIR → 4-7"
+                ;;
+            *)
+                [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "0-3" > "$CPUSET_PATH/$DIR/cpus" && \
+                    log_msg "♻ cpuset restore: $DIR → 0-3"
+                ;;
+        esac
+    done
+    [ -f "$CPUSET_PATH/cpus" ] && echo "0-3" > "$CPUSET_PATH/cpus" && \
+        log_msg "♻ Root cpuset restored → 0-3"
+}
+
+# -------------------------
+# Boost CPUSET (gaming mode)
+# -------------------------
+boost_cpuset() {
+    CPUSET_PATH="/dev/cpuset"
+    for DIR in $(ls "$CPUSET_PATH" 2>/dev/null); do
+        [ -d "$CPUSET_PATH/$DIR" ] || continue
+        case "$DIR" in
+            top-app|foreground|*storage*)
+                [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "0-7" | su -c "tee $CPUSET_PATH/$DIR/cpus"
+                log_msg "➡️ cpuset boost: $DIR → 0-7"
+                ;;
+            *)
+                [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "0-3" | su -c "tee $CPUSET_PATH/$DIR/cpus"
+                log_msg "🔧 cpuset boost: $DIR → 0-3"
+                ;;
+        esac
+    done
+    [ -f "$CPUSET_PATH/cpus" ] && echo "0-3" | su -c "tee $CPUSET_PATH/cpus" && \
+        log_msg "🧩 Root cpuset → 0-3"
+}
+
+# ============ 3. INITIALIZATION ============
+log_msg "🚀 performance.sh started"
+
+chmod 0755 /system/etc/cooler/cooler.sh 2>/dev/null
+chown 0:0 /system/etc/cooler/cooler.sh 2>/dev/null
+chcon u:object_r:system_file:s0 /system/etc/cooler/cooler.sh 2>/dev/null
+
+COOLER_SCRIPT="/system/etc/cooler/cooler.sh"
+LOG="/sdcard/MTK_AI_Engine/cooler_mtk.log"
+sleep 20
+sh "$COOLER_SCRIPT" apply >> "$LOG" 2>&1
+echo "MTK Cooling Active at $(date)" >> "$LOG"
+
+# Force schedutil governor for all CPUs + tune it
+GOV_PATH="/sys/devices/system/cpu"
+for cpu in $GOV_PATH/cpu[0-9]*; do
+    GOV_FILE="$cpu/cpufreq/scaling_governor"
+    if [ -f "$GOV_FILE" ]; then
+        echo "schedutil" > "$GOV_FILE"
+    fi
+
+    TUNABLE_DIR="$cpu/cpufreq/schedutil"
+    if [ -d "$TUNABLE_DIR" ]; then
+        echo 26000 > "$TUNABLE_DIR/up_rate_limit_us"
+        echo 0 > "$TUNABLE_DIR/down_rate_limit_us"
+        echo 1 > "$TUNABLE_DIR/iowait_boost_enable"
+    fi
+done
+
+# Mediatek battery saver
+for g in /sys/class/devfreq/*/governor; do
+    [ -f "$g" ] || continue
+    SUP=$(cat "$(dirname "$g")/available_governors" 2>/dev/null)
+    log_msg "Node: $g | Available: $SUP"
+    if echo "$SUP" | grep -q powersave; then
+        echo powersave > "$g"
+        log_msg "→ Set to powersave"
+    else
+        log_msg "→ powersave not supported on this node"
+    fi
+done
+
+# voltage_offset
+echo "-12" > /proc/eem/EEM_DET_B/eem_offset 2>/dev/null
+echo "-12" > /proc/eem/EEM_DET_BL/eem_offset 2>/dev/null
+echo "-12" > /proc/eem/EEM_DET_L/eem_offset 2>/dev/null
+echo "-12" > /proc/eem/EEM_DET_CCI/eem_offset 2>/dev/null
+
+# Delay to allow SystemUI + display HAL to initialize
+sleep 60
+
+# Run 3 times to defeat aggressive ROM overrides
+FORCE120
+sleep 5
+FORCE120
+sleep 10
+FORCE120
+
+echo "[120Hz Lock] Applied fully." > /data/local/tmp/120hz_lock.log
+log_msg "[120Hz Lock] Applied fully."
+
+# ----------------- THERMAL RESTORE -----------------
+if [ -f /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh ]; then
+    sh /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh
+    log_msg "♻ Thermal restored (cooler.sh)"
+else
+    log_msg "⚠ Thermal restore script not found!"
+fi
+
+# ----------------- CPUSET RESTORE -----------------
+restore_cpuset
+
+# ============ 4. MAIN LOOP ============
+while true; do
     PKG=$(dumpsys window | grep -E 'mCurrentFocus' | awk '{print $3}' | cut -d/ -f1)
     GAME_LIST=$(cat "$GAME_LIST_FILE" 2>/dev/null)
     EXCLUDE_APPS=$(cat "$EXCLUDE_FILE" 2>/dev/null)
@@ -340,18 +349,17 @@ while true; do
             if [ "$BOOST_ACTIVE" = false ]; then
                 log_msg "🎮 Game detected: $PKG → Boosting performance..."
 
-                # Step 1: schedutil governor (Skipping the sleep/swap steps for faster boost)
+                # Step 1: schedutil governor
                 set_cpu_max 100
                 for policy in /sys/devices/system/cpu/cpufreq/policy*; do
                     [ -f "$policy/scaling_governor" ] && echo schedutil | su -c "tee $policy/scaling_governor"
                 done
-                
-                set_cpu_max 100
 
                 # Disable thermal
-                [ -f /data/adb/modules/MTK_AI/system/etc/disable_thermal/disable_thermal.sh ] &&
-                    su -c "sh /data/adb/modules/MTK_AI/system/etc/disable_thermal/disable_thermal.sh" &&
-                    log_msg "🔥 Thermal disabled (cooler_mtk)"
+                if [ -f /data/adb/modules/MTK_AI/system/etc/disable_thermal/disable_thermal.sh ]; then
+                    su -c "sh /data/adb/modules/MTK_AI/system/etc/disable_thermal/disable_thermal.sh"
+                    log_msg "🔥 Thermal disabled"
+                fi
 
                 # Force all cores online
                 for cpu in /sys/devices/system/cpu/cpu[0-7]/online; do
@@ -361,15 +369,10 @@ while true; do
                 # Disable core control
                 disable_core_ctl
 
-                # Step 1: schedutil governor (Skipping the sleep/swap steps for faster boost)
-                for policy in /sys/devices/system/cpu/cpufreq/policy*; do
-                    [ -f "$policy/scaling_governor" ] && echo schedutil | su -c "tee $policy/scaling_governor"
-                done
-                
-                # Step 2: set CPU max to 100% (The Fix: sets MIN=MAX)
+                # Step 2: set CPU max to 100%
                 set_cpu_max 100
-                
-                # Step 3: Switch to performance governor for max stability/performance
+
+                # Step 3: Switch to performance governor
                 for policy in /sys/devices/system/cpu/cpufreq/policy*; do
                     [ -f "$policy/scaling_governor" ] && echo performance | su -c "tee $policy/scaling_governor"
                 done
@@ -388,23 +391,7 @@ while true; do
                 done
 
                 # CPUSET adjustments
-                CPUSET_PATH="/dev/cpuset"
-                for DIR in $(ls $CPUSET_PATH); do
-                    [ -d "$CPUSET_PATH/$DIR" ] || continue
-                    if [ "$DIR" = "top-app" ]; then
-                        # Set top-app to all cores for maximum performance
-                        [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "0-7" | su -c "tee $CPUSET_PATH/$DIR/cpus"
-                        log_msg "➡️ Top-app cpuset: $DIR → 0-7"
-                        continue
-                    fi
-                    if [ "$DIR" = "foreground" ] || [[ "$DIR" = ~ storage ]]; then
-                        [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "0-7" | su -c "tee $CPUSET_PATH/$DIR/cpus" && log_msg "🔧 cpuset: storage_occupied → 0-7"
-                        continue
-                    fi
-                    # Push other background tasks to small cores 0-3
-                    [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "0-3" | su -c "tee $CPUSET_PATH/$DIR/cpus" && log_msg "🔧 cpuset boost: $DIR → 0-3"
-                done
-                [ -f "$CPUSET_PATH/cpus" ] && echo "0-3" | su -c "tee $CPUSET_PATH/cpus" && log_msg "🧩 Root cpuset → 0-3"
+                boost_cpuset
 
                 BOOST_ACTIVE=true
                 CURRENT_GAME="$PKG"
@@ -413,7 +400,11 @@ while true; do
 
             # ----------------- Boost game process -----------------
             PID=$(pidof "$PKG")
-            [ -n "$PID" ] && renice -20 -p "$PID" && ionice -c 1 -n 0 -p "$PID" && taskset -p ff "$PID" 2>/dev/null
+            if [ -n "$PID" ]; then
+                renice -20 -p "$PID" 2>/dev/null
+                ionice -c 1 -n 0 -p "$PID" 2>/dev/null
+                taskset -p ff "$PID" 2>/dev/null
+            fi
 
         else
             # ----------------- GAME CLOSED / RESTORE -----------------
@@ -422,53 +413,48 @@ while true; do
 
                 apply_schedutil_tweaks
                 restore_gpu_freq
-                restore_core_ctl               
-                # Mediatek battery saver (powersave)
-            for g in /sys/class/devfreq/*/governor; do
-                [ -f "$g" ] || continue
-                SUP=$(cat "$(dirname "$g")/available_governors" 2>/dev/null)
-                log_msg "🔋 Node: $g | Available governors: $SUP"
-                if echo "$SUP" | grep -q powersave; then
-                    echo powersave | su -c "tee $g"
-                    log_msg "🔋 Set $g → powersave"
-                else
-                    
-log_msg "⚠ powersave not supported on $g"
-                fi
-            done                                                                                      # Restore thermal
-                [ -f /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh ] &&
-                    su -c "sh /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh" &&
-                    log_msg "♻ Thermal restored"
+                restore_core_ctl
 
-                # Restore CPUSET
-                CPUSET_PATH="/dev/cpuset"
-                for DIR in $(ls $CPUSET_PATH); do
-                    [ -d "$CPUSET_PATH/$DIR" ] || continue
-                    if [ "$DIR" = "top-app" ] || [[ "$DIR" =~ camera ]] || [ "$DIR" = "foreground" ]; then
-                        [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "0-7" | su -c "tee $CPUSET_PATH/$DIR/cpus"
-                    elif [ "$DIR" = "sf" ] || [ "$DIR" = "display" ]; then
-                        [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "4-7" | su -c "tee $CPUSET_PATH/$DIR/cpus"
+                # Mediatek battery saver (powersave)
+                for g in /sys/class/devfreq/*/governor; do
+                    [ -f "$g" ] || continue
+                    SUP=$(cat "$(dirname "$g")/available_governors" 2>/dev/null)
+                    log_msg "🔋 Node: $g | Available governors: $SUP"
+                    if echo "$SUP" | grep -q powersave; then
+                        echo powersave | su -c "tee $g"
+                        log_msg "🔋 Set $g → powersave"
                     else
-                        [ -f "$CPUSET_PATH/$DIR/cpus" ] && echo "0-3" | su -c "tee $CPUSET_PATH/$DIR/cpus"
+                        log_msg "⚠ powersave not supported on $g"
                     fi
                 done
-                [ -f "$CPUSET_PATH/cpus" ] && echo "0-3" | su -c "tee $CPUSET_PATH/cpus"
+
+                # Restore thermal
+                if [ -f /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh ]; then
+                    su -c "sh /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh"
+                    log_msg "♻ Thermal restored"
+                fi
+
+                # Restore CPUSET
+                restore_cpuset
 
                 BOOST_ACTIVE=false
                 CURRENT_GAME=""
             fi
 
             # ----------------- Non-gaming mode boosts -----------------
-            
-            # automatic frequency 
-                [ -f /data/adb/modules/MTK_AI/system/etc/auto_frequency/auto_frequency.sh ] &&
-                    su -c "sh /data/adb/modules/MTK_AI/system/etc/auto_frequency/auto_frequency.sh" &&
-                    log_msg "↕️ Automatic frequency based on temperature"
-            
+            # automatic frequency
+            if [ -f /data/adb/modules/MTK_AI/system/etc/auto_frequency/auto_frequency.sh ]; then
+                su -c "sh /data/adb/modules/MTK_AI/system/etc/auto_frequency/auto_frequency.sh"
+                log_msg "↕️ Automatic frequency based on temperature"
+            fi
+
             # Boost foreground app
             APP_PID=$(pidof "$PKG")
-            [ -n "$APP_PID" ] && renice -20 -p "$APP_PID" && taskset -p ff "$APP_PID" 2>/dev/null && log_msg "🚀 Boosted foreground: $PKG ($APP_PID)"
-            
+            if [ -n "$APP_PID" ]; then
+                renice -20 -p "$APP_PID" 2>/dev/null
+                taskset -p ff "$APP_PID" 2>/dev/null
+                log_msg "🚀 Boosted foreground: $PKG ($APP_PID)"
+            fi
         fi
     fi
 
