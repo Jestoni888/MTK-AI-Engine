@@ -79,6 +79,7 @@ post-fs-data.sh
 module.prop
 update_checker.sh
 .required_files
+system.prop
 webroot/index.html 
 webroot/application.js 
 webroot/animationspeed.js 
