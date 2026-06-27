@@ -120,4 +120,3 @@ chmod 0666 /data/system/users/0/settings_global.xml 2>/dev/null
 chmod -R 0777 /data/vendor/ 2>/dev/null
 chmod -R 0777 /mnt/vendor/ 2>/dev/null
 exit 0
-exit 0
