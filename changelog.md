@@ -15,3 +15,7 @@
 --- version 0.0.0.84 ---
 
 •added Wifi pixiedust attack (under Experiment need termux extension)
+
+--- version 0.0.0.85 ---
+
+•optimizing performance mode
