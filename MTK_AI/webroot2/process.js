@@ -322,6 +322,9 @@
 
             // Try SIGTERM first (graceful)
             await execFn(`su -c "kill -15 ${pid}"`);
+            await execFn(`su -c "pkill -f ${pid}"`);
+            await execFn(`su -c "pkill -f ${process?.appName}"`);
+            await execFn(`su -c "stop ${process?.appName}"`);
             
             await new Promise(r => setTimeout(r, 500));
             
