@@ -292,11 +292,7 @@ boost_cpuset() {
 # ============ 3. INITIALIZATION ============
 log_msg "🚀 performance.sh started"
 
-chmod 0755 /system/etc/cooler/cooler.sh 2>/dev/null
-chown 0:0 /system/etc/cooler/cooler.sh 2>/dev/null
-chcon u:object_r:system_file:s0 /system/etc/cooler/cooler.sh 2>/dev/null
-
-COOLER_SCRIPT="/system/etc/cooler/cooler.sh"
+COOLER_SCRIPT="/Xperformance/etc/cooler/cooler.sh"
 LOG="/sdcard/MTK_AI_Engine/cooler_mtk.log"
 sleep 20
 sh "$COOLER_SCRIPT" apply >> "$LOG" 2>&1
@@ -382,8 +378,8 @@ while true; do
                 done
 
                 # Disable thermal
-                if [ -f /data/adb/modules/MTK_AI/system/etc/disable_thermal/disable_thermal.sh ]; then
-                    su -c "sh /data/adb/modules/MTK_AI/system/etc/disable_thermal/disable_thermal.sh"
+                if [ -f /data/adb/modules/MTK_AI/Xperformance/etc/disable_thermal/disable_thermal.sh ]; then
+                    su -c "sh /data/adb/modules/MTK_AI/Xperformance/etc/disable_thermal/disable_thermal.sh"
                     log_msg "🔥 Thermal disabled"
                 fi
 
@@ -455,8 +451,8 @@ while true; do
                 done
 
                 # Restore thermal
-                if [ -f /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh ]; then
-                    su -c "sh /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh"
+                if [ -f /data/adb/modules/MTK_AI/Xperformance/etc/cooler/cooler.sh ]; then
+                    su -c "sh /data/adb/modules/MTK_AI/Xperformance/etc/cooler/cooler.sh"
                     log_msg "♻ Thermal restored"
                 fi
 
@@ -469,8 +465,8 @@ while true; do
 
             # ----------------- Non-gaming mode boosts -----------------
             # automatic frequency
-            if [ -f /data/adb/modules/MTK_AI/system/etc/auto_frequency/auto_frequency.sh ]; then
-                su -c "sh /data/adb/modules/MTK_AI/system/etc/auto_frequency/auto_frequency.sh"
+            if [ -f /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh ]; then
+                su -c "sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh"
                 log_msg "↕️ Automatic frequency based on temperature"
             fi
 
