@@ -3,9 +3,9 @@
 # Lines starting with # are comments
 
 # Performance
-system/etc/auto_frequency/auto_frequency.sh
-system/etc/disable_thermal/disable_thermal.sh
-system/etc/cooler/cooler.sh
+Xperformance/etc/auto_frequency/auto_frequency.sh
+Xperformance/etc/disable_thermal/disable_thermal.sh
+Xperformance/etc/cooler/cooler.sh
 
 # AI Mode - Auto Frequency
 MTK_AI/AI_MODE/auto_frequency/auto_frequency
