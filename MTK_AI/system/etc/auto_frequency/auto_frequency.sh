@@ -66,6 +66,7 @@ for policy in $CPU_SYS/cpufreq/policy*; do
         target_max=$(( max_freq * max_perc / 100 ))
         chmod 644 "$policy/scaling_max_freq"
         echo "$target_max" > "$policy/scaling_max_freq"
+        chmod 000 "$policy/scaling_max_freq"
         log "Policy $(basename $policy): Max set to $target_max Hz"
     fi
 done
