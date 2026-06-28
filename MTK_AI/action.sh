@@ -36,9 +36,9 @@ has_internet() {
 # === 3. Required files list ===
 required_files="
 MTK_AI/AI_MODE/auto_frequency/auto_frequency
-system/etc/auto_frequency/auto_frequency.sh
-system/etc/disable_thermal/disable_thermal.sh
-system/etc/cooler/cooler.sh
+Xperformance/etc/auto_frequency/auto_frequency.sh
+Xperformance/etc/disable_thermal/disable_thermal.sh
+Xperformance/etc/cooler/cooler.sh
 MTK_AI/AI_MODE/auto_frequency/cpu6
 MTK_AI/AI_MODE/auto_frequency/cpu7
 MTK_AI/AI_MODE/gaming_mode/app_optimizer
