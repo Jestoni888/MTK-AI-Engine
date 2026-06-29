@@ -100,7 +100,7 @@ if grep -qx "performance" /sdcard/MTK_AI_Engine/current_profile 2>/dev/null; the
     export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
     export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"
     
-    setsid sh /data/adb/modules/MTK_AI/main_control/performance.sh </dev/null >/dev/null 2>&1 &
+    nohup sh /data/adb/modules/MTK_AI/main_control/performance.sh </dev/null >/dev/null 2>&1 &
     log_msg "Performance script started"
     
     cd /data/adb/modules/MTK_AI && setsid ./main_control/mode "performance mode" </dev/null >/dev/null 2>&1 &
