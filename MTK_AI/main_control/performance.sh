@@ -13,14 +13,6 @@ else
     rm -rf "$LOCK_DIR"
 fi
 
-# 2️⃣ If PID file exists and process is alive → exit silently
-if [ -f "$LOCK_FILE" ]; then
-    OLD_PID=$(cat "$LOCK_FILE" 2>/dev/null)
-    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        exit 0
-    fi
-fi
-
 # 3️⃣ Register current process as the single instance
 echo $$ > "$LOCK_FILE"
 # Auto-clean PID file on normal exit or SIGTERM
