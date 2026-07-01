@@ -284,7 +284,7 @@ boost_cpuset() {
 # ============ 3. INITIALIZATION ============
 log_msg "🚀 performance.sh started"
 
-COOLER_SCRIPT="/Xperformance/etc/cooler/cooler.sh"
+COOLER_SCRIPT="/data/adb/modules/MTK_AI/Xperformance/etc/cooler/cooler.sh"
 LOG="/sdcard/MTK_AI_Engine/cooler_mtk.log"
 sleep 20
 sh "$COOLER_SCRIPT" apply >> "$LOG" 2>&1
