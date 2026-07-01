@@ -14,9 +14,10 @@
 
 --- version 0.0.0.84 ---
 
-•added Wifi pixiedust attack
+•added Wifi pixiedust & bruteforce attack (WiPwn)
 
 --- version 0.0.0.85 ---
 
 •optimizing performance mode
+•added wifux on wifi attacks
 •fixing app optimizer
