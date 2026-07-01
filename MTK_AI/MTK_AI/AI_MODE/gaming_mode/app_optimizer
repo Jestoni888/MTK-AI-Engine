@@ -196,6 +196,22 @@ done || true
     fi
 
 # ==============================
+# App hibernation on background app to focus on gaming
+# ==============================
+
+for app in $(cmd package list packages | cut -f 2 -d ":"); do
+if [[ ! "$app" == "com.topjohnwu.magisk" ]] && [[ ! "$app" == "me.weishu.kernelsu" ]]; then
+echo "$app has been hibernated"
+cmd app_hibernation set-state --user 0 --global "$app" true
+echo ""
+fi
+
+device_config put app_hibernation app_hibernation_enabled true
+device_config put permissions \
+  auto_revoke_unused_threshold_millis2 99
+done
+
+# ==============================
 # 🔍 Performance Optimizations
 # ==============================
     log_msg "=== Starting MTK AI Engine Performance Optimizer ==="
@@ -232,3 +248,5 @@ done
 
 
     log_msg "=== MTK AI Engine Optimizer Complete ==="    echo "✅ All optimizations applied successfully!!"
+
+exit 0
