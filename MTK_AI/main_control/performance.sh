@@ -339,8 +339,8 @@ echo "[120Hz Lock] Applied fully." > /data/local/tmp/120hz_lock.log
 log_msg "[120Hz Lock] Applied fully."
 
 # ----------------- THERMAL RESTORE -----------------
-if [ -f /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh ]; then
-    sh /data/adb/modules/MTK_AI/system/etc/cooler/cooler.sh
+if [ -f /data/adb/modules/MTK_AI/Xperformance/etc/cooler/cooler.sh ]; then
+    sh /data/adb/modules/MTK_AI/Xperformance/etc/cooler/cooler.sh
     log_msg "♻ Thermal restored (cooler.sh)"
 else
     log_msg "⚠ Thermal restore script not found!"
