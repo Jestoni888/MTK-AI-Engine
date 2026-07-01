@@ -227,6 +227,7 @@ done
      nohup $CPULIMIT -e com.google.android.partnersetup -l 1 || true
      nohup $CPULIMIT -e com.google.android.setupwizard -l 1 || true
      nohup $CPULIMIT -e com.android.systemui -l 400 || true
+     nohup $CPULIMIT -e com.android.vending -l 400 || true
      nohup $CPULIMIT -e system_server -l 400 || true
 
 
