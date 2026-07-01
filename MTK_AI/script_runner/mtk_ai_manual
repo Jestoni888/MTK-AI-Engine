@@ -184,8 +184,22 @@ for i in 0 1 2 3 4 5 6 7 8 9; do
     fi
 done
 
+for app in $(cmd package list packages | cut -f 2 -d ":"); do
+if [[ ! "$app" == "com.topjohnwu.magisk" ]] && [[ ! "$app" == "me.weishu.kernelsu" ]]; then
+echo "$app has been hibernated"
+cmd app_hibernation set-state --user 0 --global "$app" true
+echo ""
+fi
+
+device_config put app_hibernation app_hibernation_enabled true
+device_config put permissions \
+  auto_revoke_unused_threshold_millis2 99
+done
+
 log_msg "✅ PPM policies loaded successfully from SDCard!"
 
 echo "✅ Devfreq settings loaded successfully!"
 
 echo "=== MTK AI MANUAL OVERRIDES COMPLETED ==="
+
+exit 0
