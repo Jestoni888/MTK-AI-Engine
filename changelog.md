@@ -19,3 +19,4 @@
 --- version 0.0.0.85 ---
 
 •optimizing performance mode
+•fixing app optimizer
