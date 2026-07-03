@@ -352,4 +352,3 @@ auto_focus_ram() {
 
 log_msg "🚀 RAM Focus Service Started (Config: $CONFIG_DIR)"
     auto_focus_ram    
-done
