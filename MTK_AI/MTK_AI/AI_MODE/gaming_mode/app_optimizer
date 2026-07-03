@@ -256,6 +256,7 @@ su -c "echo 1 > /sys/module/wlan/parameters/wlm" || true
   
 done
 
+     nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" &
      nohup $CPULIMIT -e com.google.android.gms -l 1 || true
      nohup $CPULIMIT -e com.google.android.gsf -l 1 || true
      nohup $CPULIMIT -e com.google.android.gsf.login -l 1 || true
