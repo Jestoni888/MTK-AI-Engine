@@ -351,8 +351,5 @@ auto_focus_ram() {
 }
 
 log_msg "🚀 RAM Focus Service Started (Config: $CONFIG_DIR)"
-
-while true; do
     auto_focus_ram    
-    sleep 60
 done
