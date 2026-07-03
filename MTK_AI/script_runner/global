@@ -50,6 +50,8 @@ nohup sh "/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual" &
 
 nohup sh "/data/adb/modules/MTK_AI/service.d/backup.sh" &
 
+nohup sh "/data/adb/modules/MTK_AI/update_checker.sh" &
+
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/bypass_on" &
 
 if [ -f "/sdcard/MTK_AI_Engine/enable_fastcharge" ]; then
