@@ -16,6 +16,23 @@ for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/
   [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
 done || true
 
+su -c "cmd wifi force-hi-perf-mode disabled" || true
+su -c "cmd wifi force-low-latency-mode disabled" || true
+su -c "iw dev wlan0 set power_save on" || true
+su -c "iw phy phy0 set retry short 2 long 2" || true
+su -c "ifconfig wlan0 txqueuelen 10" || true
+su -c "cmd wifi set-poll-rssi-interval-msecs 10000" || true
+su -c "cmd wifi set-wifi-sleep-policy screen-off" || true
+su -c "settings put global wifi_sleep_policy 2" || true
+su -c "cmd wifi set-roaming-scan-interval 120" || true
+su -c "settings put global wifi_watchdog_poor_network_test_enabled 0" || true
+su -c "settings put global wifi_watchdog_ap_count 5" || true
+su -c "settings put global wifi_watchdog_max_ap_checks 2" || true
+su -c "settings put global wifi_framework_enabled 1" || true
+su -c "cmd wifi reassociate" || true
+su -c "echo Y > /sys/module/wlan/parameters/ps" || true
+su -c "echo 1 > /sys/module/wlan/parameters/wlm" || true
+
 pkill -f cpulimit || true
 setprop 'persist.sys.power_mode_perf' '0' || true
 settings put system persist.sys.power_mode_perf 0 2>/dev/null || true
