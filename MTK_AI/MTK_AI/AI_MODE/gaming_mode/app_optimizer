@@ -251,22 +251,22 @@ su -c "echo 1 > /sys/module/wlan/parameters/wlm" || true
   
   pid=$(pgrep -f "$clean_svc" | head -n 1)
   if [ -n "$pid" ]; then
-    nohup $CPULIMIT -p "$pid" -l 1 -z 2>/dev/null & || true
+    nohup $CPULIMIT -p "$pid" -l 1 -z 2>/dev/null &
   fi
   
 done
 
      nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" &
-     nohup $CPULIMIT -e com.google.android.gms -l 1 || true
-     nohup $CPULIMIT -e com.google.android.gsf -l 1 || true
-     nohup $CPULIMIT -e com.google.android.gsf.login -l 1 || true
-     nohup $CPULIMIT -e com.google.android.gms.persistent -l 1 || true
-     nohup $CPULIMIT -e com.google.android.backuptransport -l 1 || true
-     nohup $CPULIMIT -e com.google.android.partnersetup -l 1 || true
-     nohup $CPULIMIT -e com.google.android.setupwizard -l 1 || true
-     nohup $CPULIMIT -e com.android.systemui -l 400 || true
-     nohup $CPULIMIT -e com.android.vending -l 400 || true
-     nohup $CPULIMIT -e system_server -l 400 || true
+     nohup $CPULIMIT -e com.google.android.gms -l 1 &
+     nohup $CPULIMIT -e com.google.android.gsf -l 1 &
+     nohup $CPULIMIT -e com.google.android.gsf.login -l 1 &
+     nohup $CPULIMIT -e com.google.android.gms.persistent -l 1 &
+     nohup $CPULIMIT -e com.google.android.backuptransport -l 1 &
+     nohup $CPULIMIT -e com.google.android.partnersetup -l 1 &
+     nohup $CPULIMIT -e com.google.android.setupwizard -l 1 &
+     nohup $CPULIMIT -e com.android.systemui -l 400 &
+     nohup $CPULIMIT -e com.android.vending -l 400 &
+     nohup $CPULIMIT -e system_server -l 400 &
 
 
     log_msg "=== MTK AI Engine Optimizer Complete ==="    echo "✅ All optimizations applied successfully!!"
