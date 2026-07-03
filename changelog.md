@@ -21,3 +21,7 @@
 •optimizing performance mode
 •added wifux on wifi attacks
 •fixing app optimizer
+
+--- version 0.0.0.86 ---
+
+•optimize WiFi speed
