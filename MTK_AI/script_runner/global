@@ -44,13 +44,13 @@ chmod +x "$LOGIC_CPU6_PATH"
 chmod +x "$LOGIC_CPU7_PATH"
 chmod +x "$MODULE_EXECUTER"
 
-sh "/data/adb/modules/MTK_AI/script_runner/boost_color_apply.sh" &
+nohup sh "/data/adb/modules/MTK_AI/script_runner/boost_color_apply.sh" &
 
-sh "/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual" &
+nohup sh "/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual" &
 
-sh "/data/adb/modules/MTK_AI/service.d/backup.sh" &
+nohup sh "/data/adb/modules/MTK_AI/service.d/backup.sh" &
 
-sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/bypass_on" &
+nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/bypass_on" &
 
 if [ -f "/sdcard/MTK_AI_Engine/enable_fastcharge" ]; then
     CHARGING="heartbeat"
