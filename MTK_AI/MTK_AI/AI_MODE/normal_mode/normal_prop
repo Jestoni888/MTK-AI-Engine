@@ -37,7 +37,7 @@ pkill -f cpulimit || true
 setprop 'persist.sys.power_mode_perf' '0' || true
 settings put system persist.sys.power_mode_perf 0 2>/dev/null || true
 
-settings put system 'accelerometer_rotation' '0'
+settings put system 'accelerometer_rotation' '0' || true
 su -c "cmd power set-fixed-performance-mode-enabled false" || true
 su -c "settings put global power_manager_constants fixed_performance_mode=false" || true
 
