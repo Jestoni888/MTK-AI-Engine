@@ -212,6 +212,27 @@ device_config put permissions \
 done
 
 # ==============================
+# Boost wifi for ping stabilization
+# ==============================
+
+su -c "cmd wifi force-hi-perf-mode enabled" || true
+su -c "cmd wifi force-low-latency-mode enabled" || true
+su -c "iw dev wlan0 set power_save off" || true
+su -c "iw phy phy0 set retry short 7 long 7" || true
+su -c "ifconfig wlan0 txqueuelen 100" || true
+su -c "cmd wifi set-poll-rssi-interval-msecs 1000" || true
+su -c "cmd wifi set-wifi-sleep-policy never" || true
+su -c "settings put global wifi_sleep_policy 0" || true
+su -c "cmd wifi set-roaming-scan-interval 30" || true
+su -c "settings put global wifi_watchdog_poor_network_test_enabled 0" || true
+su -c "settings put global wifi_watchdog_ap_count 10" || true
+su -c "settings put global wifi_watchdog_max_ap_checks 3" || true
+su -c "settings put global wifi_framework_enabled 1" || true
+su -c "cmd wifi reassociate" || true
+su -c "echo Y > /sys/module/wlan/parameters/ps" || true
+su -c "echo 1 > /sys/module/wlan/parameters/wlm" || true
+
+# ==============================
 # 🔍 Performance Optimizations
 # ==============================
     log_msg "=== Starting MTK AI Engine Performance Optimizer ==="
