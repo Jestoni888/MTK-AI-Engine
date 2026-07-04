@@ -266,8 +266,6 @@ done
      nohup $CPULIMIT -e com.google.android.setupwizard -l 1 &
      nohup $CPULIMIT -e com.android.systemui -l 400 &
      nohup $CPULIMIT -e com.android.vending -l 400 &
-     nohup $CPULIMIT -e system_server -l 400 &
-
 
     log_msg "=== MTK AI Engine Optimizer Complete ==="    echo "✅ All optimizations applied successfully!!"
 
