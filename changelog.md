@@ -25,5 +25,7 @@
 --- version 0.0.0.86 ---
 
 •optimize WiFi speed
+
 •fixing cpulimit on gms, systemui for better gaming experience
+
 •auto ram cleaner during gaming 
