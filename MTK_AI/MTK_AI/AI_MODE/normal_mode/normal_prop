@@ -9,6 +9,7 @@ log_msg() {
 
 BB="/data/adb/modules/MTK_AI/busybox"
 SAVE_DIR="/sdcard/MTK_AI_Engine/cooldown_values"
+POWERSAVE="powersave"
 
 log_msg "→ Applying Normal EEM offsets from sdcard..."
 for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/proc/eem/EEM_DET_CCI/eem_offset bl:/proc/eem/EEM_DET_BL/eem_offset gpu:/proc/eemg/EEMG_DET_GPU/eemg_offset gpu_hi:/proc/eemg/EEMG_DET_GPU_HI/eemg_offset; do
@@ -290,4 +291,10 @@ ndc resolver flushif 2>/dev/null || true
 sh "/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual" || true
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
 
+if grep -qx "powersave" /sdcard/MTK_AI_Engine/current_profile 2>/dev/null; then
+pkill -f mtk_ai_engine
+fi
+
+ps 2>/dev/null | grep -v grep | grep -qw "$POWERSAVE" && exit 0
+nohup "/data/adb/modules/MTK_AI/main_control/$POWERSAVE"
 log -t "NetTweak" "Network Tweaks Applied Successfully." || true
