@@ -97,15 +97,41 @@ touch_inactive() {
 
 notify_status() {
     [ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
+    
+    # --- Battery Temp ---
     RAW_TEMP=$(cat /sys/class/power_supply/battery/temp)
     B_TEMP="$((RAW_TEMP / 10)).$((RAW_TEMP % 10))°C"
+    
+    # --- RAM Consumption Calculation ---
+    # Read total and available memory (in kB) from /proc/meminfo
+    local mem_total=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+    local mem_available=$(awk '/MemAvailable/ {print $2}' /proc/meminfo)
+    
+    # Fallback for older Android kernels that don't report MemAvailable
+    if [ -z "$mem_available" ]; then
+        local mem_free=$(awk '/MemFree/ {print $2}' /proc/meminfo)
+        local buffers=$(awk '/Buffers/ {print $2}' /proc/meminfo)
+        local cached=$(awk '/^Cached/ {print $2}' /proc/meminfo)
+        mem_available=$((mem_free + buffers + cached))
+    fi
+    
+    # Calculate the used RAM percentage
+    local ram_percent=0
+    if [ "$mem_total" -gt 0 ] 2>/dev/null; then
+        ram_percent=$(( (mem_total - mem_available) * 100 / mem_total ))
+    fi
+
+    # --- App Info ---
     local status_msg="$1"
     local app_name="$2"
     local app_info=""
     if [ -n "$app_name" ] && [ "$app_name" != "unknown" ]; then
         app_info=" | App: $app_name"
     fi
-    su -lp 2000 -c "cmd notification post -I /data/adb/modules/MTK_AI/icon.png -S bigtext -t 'Powersave Mode' tag 'Status : $status_msg | Temp: $B_TEMP$app_info'" >/dev/null 2>&1
+    
+    # --- Post Notification ---
+    # Added " | RAM: ${ram_percent}%" into the notification text
+    su -lp 2000 -c "cmd notification post -I /data/adb/modules/MTK_AI/icon.png -S bigtext -t 'Powersave Mode' tag 'Status : $status_msg | Temp: $B_TEMP | RAM: ${ram_percent}%$app_info'" >/dev/null 2>&1
 }
 
 # Initial State
