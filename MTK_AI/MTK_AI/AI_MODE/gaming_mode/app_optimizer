@@ -11,6 +11,7 @@ log_msg() {
 }
 
 pkill -f powersave
+echo "1" > /sdcard/MTK_AI_Engine/automode
 
     # ==============================
     # 🗄️ I/O Scheduler & Read-Ahead
