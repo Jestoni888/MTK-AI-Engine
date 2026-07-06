@@ -29,3 +29,7 @@
 •fixing cpulimit on gms, systemui for better gaming experience
 
 •auto ram cleaner during gaming 
+
+--- version 0.0.0.87 ---
+
+•optimizing powersave mode (less ram consume)
