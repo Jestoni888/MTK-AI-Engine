@@ -46,6 +46,7 @@ chmod +x "$MODULE_EXECUTER"
 
 if grep -qx "powersave" /sdcard/MTK_AI_Engine/current_profile 2>/dev/null; then
 pkill -f mtk_ai_engine
+echo "0" > /sdcard/MTK_AI_Engine/automode
 fi
 
 nohup sh "/data/adb/modules/MTK_AI/main_control/powersave" &
