@@ -161,6 +161,7 @@ while true; do
                 if tr -d '\r' < "/sdcard/MTK_AI_Engine/game_list.txt" | grep -qx "$CURRENT_APP"; then
                     # Check if the engine is already running to prevent duplicate instances
                     if ! pgrep -f "/data/adb/modules/MTK_AI/main_control/mtk_ai_engine.sh" > /dev/null 2>&1; then
+                        echo "1" > /sdcard/MTK_AI_Engine/automode
                         nohup /data/adb/modules/MTK_AI/main_control/mtk_ai_engine.sh >/dev/null 2>&1 &
                     fi
                 fi
