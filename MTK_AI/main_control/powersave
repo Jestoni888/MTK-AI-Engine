@@ -65,6 +65,7 @@ touch_active() {
         echo "$MIN_FREQ" > "$cpu/cpufreq/scaling_min_freq"
         echo "$TARGET_MAX" > "$cpu/cpufreq/scaling_max_freq"
     done
+    pkill -f mtk_ai_engine
     nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" &
 }
 
