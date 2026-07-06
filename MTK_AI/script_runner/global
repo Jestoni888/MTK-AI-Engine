@@ -44,6 +44,12 @@ chmod +x "$LOGIC_CPU6_PATH"
 chmod +x "$LOGIC_CPU7_PATH"
 chmod +x "$MODULE_EXECUTER"
 
+if grep -qx "powersave" /sdcard/MTK_AI_Engine/current_profile 2>/dev/null; then
+pkill -f mtk_ai_engine
+fi
+
+nohup sh "/data/adb/modules/MTK_AI/main_control/powersave" &
+
 nohup sh "/data/adb/modules/MTK_AI/script_runner/boost_color_apply.sh" &
 
 nohup sh "/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual" &
