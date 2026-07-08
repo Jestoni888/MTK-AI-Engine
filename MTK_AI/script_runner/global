@@ -4,12 +4,13 @@ LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
 mkdir -p "$LOCK_DIR"
 LOCK_FILE="$LOCK_DIR/global_runner.pid"
 
+# Helper: safe logging (works on all Android versions)
+log_msg() { log -t MTK_AI "$@" 2>/dev/null || echo "[MTK_AI] $*"; }
+
 # 1️⃣ Global pgrep check FIRST
-# Excludes the current process ($$) to prevent false positives
-if pgrep -f "global" | grep -v "^$$\$" > /dev/null 2>&1; then
+if pgrep -f "global" | grep -v "^$$" > /dev/null 2>&1; then
     exit 0
 else
-    # Process didn't exist, delete the .guard directory (cleanup stale locks)
     rm -rf "$LOCK_DIR"
 fi
 
@@ -22,14 +23,14 @@ if [ -f "$LOCK_FILE" ]; then
 fi
 
 # 3️⃣ Register current process as the single instance
+mkdir -p "$LOCK_DIR"
 echo $$ > "$LOCK_FILE"
-# Auto-clean PID file on normal exit or SIGTERM
 trap 'rm -f "$LOCK_FILE"' EXIT
 ### ============================
 
 MOD_DIR="/data/adb/modules/MTK_AI"
 EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
-STATE_DIR="$LOCK_DIR" # Reuse lock dir for internal state files
+STATE_DIR="$LOCK_DIR"
 
 TRIMMING_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/trim_memory"
 RAM_CLEANER_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/ram_cleaner"
@@ -37,103 +38,117 @@ MODULE_EXECUTER="$MOD_DIR/MTK_AI/AI_MODE/global_mode/module_executer"
 LOGIC_CPU7_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu7"
 LOGIC_CPU6_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu6"
 
-# Ensure permissions (RESOURCES_PATH removed: undefined in your snippet)
-chmod +x "$TRIMMING_PATH"
-chmod +x "$RAM_CLEANER_PATH"
-chmod +x "$LOGIC_CPU6_PATH"
-chmod +x "$LOGIC_CPU7_PATH"
-chmod +x "$MODULE_EXECUTER"
+chmod +x "$TRIMMING_PATH" "$RAM_CLEANER_PATH" \
+        "$LOGIC_CPU6_PATH" "$LOGIC_CPU7_PATH" \
+        "$MODULE_EXECUTER" 2>/dev/null
 
-if grep -qx "powersave" /sdcard/MTK_AI_Engine/current_profile 2>/dev/null; then
-pkill -f mtk_ai_engine
-echo "0" > /sdcard/MTK_AI_Engine/automode
+if grep -qx "powersave" "$EXTERNAL_CFG/current_profile" 2>/dev/null; then
+    pkill -f mtk_ai_engine
+    echo "0" > "$EXTERNAL_CFG/automode"
 fi
 
-nohup sh "/data/adb/modules/MTK_AI/main_control/powersave" &
+nohup sh "$MOD_DIR/main_control/powersave" >/dev/null 2>&1 &
+nohup sh "$MOD_DIR/script_runner/boost_color_apply.sh" >/dev/null 2>&1 &
+nohup sh "$MOD_DIR/script_runner/mtk_ai_manual" >/dev/null 2>&1 &
+nohup sh "$MOD_DIR/service.d/backup.sh" >/dev/null 2>&1 &
+nohup sh "$MOD_DIR/update_checker.sh" >/dev/null 2>&1 &
+nohup sh "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/bypass_on" >/dev/null 2>&1 &
 
-nohup sh "/data/adb/modules/MTK_AI/script_runner/boost_color_apply.sh" &
-
-nohup sh "/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual" &
-
-nohup sh "/data/adb/modules/MTK_AI/service.d/backup.sh" &
-
-nohup sh "/data/adb/modules/MTK_AI/update_checker.sh" &
-
-nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/bypass_on" &
-
-if [ -f "/sdcard/MTK_AI_Engine/enable_fastcharge" ]; then
-    CHARGING="heartbeat"
+if [ -f "$EXTERNAL_CFG/enable_fastcharge" ]; then
     export LD_LIBRARY_PATH="/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH"
-    nohup "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/$CHARGING" &
+    nohup "$MOD_DIR/MTK_AI/AI_MODE/global_mode/heartbeat" >/dev/null 2>&1 &
 fi
 
-FAST_REBOOT_FLAG="/sdcard/MTK_AI_Engine/fast_reboot_enabled"
+FAST_REBOOT_FLAG="$EXTERNAL_CFG/fast_reboot_enabled"
 
 if [ -f "$FAST_REBOOT_FLAG" ]; then
-    log "MTK_AI: Fast reboot enabled, applying safe optimizations"
-
-    # 1. Skip boot animation (safe, works on all Android)
+    log_msg "Fast reboot enabled, applying safe optimizations"
     setprop debug.sf.nobootanimation 1
-
-    # 2. MTK/Transsion fast boot props (if supported by your ROM)
     setprop persist.sys.mtk.fast_boot 1 2>/dev/null
     setprop ro.config.fastboot 1 2>/dev/null
-
-    # 3. Reduce Zygote preload timeout (speeds up app launch)
     setprop ro.zygote.disable_gl_preload 1 2>/dev/null
-
-    # 4. Skip background dexopt during THIS boot only (prevents boot slowdown)
-    #    Does NOT break pm compile or user-triggered dexopt
     setprop pm.dexopt.bg-dexopt verify
-
-    log "MTK_AI: Fast reboot mode active (dex2oat-safe)"
+    log_msg "Fast reboot mode active (dex2oat-safe)"
 else
-    log "MTK_AI: Fast reboot flag not found, skipping"
+    log_msg "Fast reboot flag not found, skipping"
 fi
 
-while true; do
-    # Logic for Trim Memory
+run_cmd() {
     if [ -f "$EXTERNAL_CFG/enable_trim" ]; then
         pgrep -f "trim_memory" > /dev/null || "$TRIMMING_PATH" &
     else
-        pkill -f "trim_memory"
+        pkill -f "trim_memory" 2>/dev/null
     fi
 
-    # Logic for RAM Cleaner
     if [ -f "$EXTERNAL_CFG/enable_cleaner" ]; then
         pgrep -f "ram_cleaner" > /dev/null || "$RAM_CLEANER_PATH" &
     else
-        pkill -f "ram_cleaner"
-    fi
-    # Logic for CPU6
-    if [ -f "$EXTERNAL_CFG/enable_cpu" ]; then
-        pgrep -f "cpu6" > /dev/null || "$LOGIC_CPU6_PATH" &
-    else
-        pkill -f "cpu6"
+        pkill -f "ram_cleaner" 2>/dev/null
     fi
 
-    # Logic for CPU7
     if [ -f "$EXTERNAL_CFG/enable_cpu" ]; then
+        pgrep -f "cpu6" > /dev/null || "$LOGIC_CPU6_PATH" &
         pgrep -f "cpu7" > /dev/null || "$LOGIC_CPU7_PATH" &
     else
-        pkill -f "cpu7"
+        pkill -f "cpu6" 2>/dev/null
+        pkill -f "cpu7" 2>/dev/null
     fi
 
     if [ -f "$EXTERNAL_CFG/enable_module" ]; then
-    # 1. Kill existing instances (exclude current script PID to avoid self-termination)
-    pgrep -f "module_executer" 2>/dev/null | grep -vw "$$" | while read -r pid; do
-        kill -9 "$pid" 2>/dev/null
-    done
-    sleep 0.2 # Brief pause for clean termination
-
-    # 2. Set environment & launch fresh instance
-    export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"
-    cd /data/adb/modules/MTK_AI || exit 1
-    nohup sh "$MODULE_EXECUTER" >/dev/null 2>&1 &
-else
-    # Module disabled: kill any running instances
-    pkill -f "module_executer" 2>/dev/null
+        pgrep -f "module_executer" 2>/dev/null | grep -vw "$$" | while read -r pid; do
+            kill -9 "$pid" 2>/dev/null
+        done
+        sleep 0.2
+        export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"
+        cd "$MOD_DIR" || exit 1
+        nohup sh "$MODULE_EXECUTER" >/dev/null 2>&1 &
+    else
+        pkill -f "module_executer" 2>/dev/null
     fi
-    # Wait for 30 seconds before running again
-    sleep 30
+}
+
+find_touchscreen() {
+    for dev in /dev/input/event*; do
+        if getevent -p "$dev" 2>/dev/null | grep -q "0035"; then
+            echo "$dev"
+            return 0
+        fi
+    done
+}
+
+TIMEOUT=10
+
+# Initial State
+LAST_ACTIVITY=$(date +%s)
+STATE="PERF"
+
+# 🔧 FIX #3: resolve touchscreen device ONCE before the loop
+TS_DEV=$(find_touchscreen)
+if [ -z "$TS_DEV" ]; then
+    log_msg "WARNING: No touchscreen device found — idle detection disabled"
+fi
+
+while true; do
+    if [ -n "$TS_DEV" ] && timeout 1s getevent -c 1 "$TS_DEV" > /dev/null 2>&1; then
+        LAST_ACTIVITY=$(date +%s)
+        if [ "$STATE" = "SAVE" ]; then
+            STATE="PERF"
+            run_cmd
+        fi
+    else
+        NOW=$(date +%s)
+        ELAPSED=$((NOW - LAST_ACTIVITY))
+
+        # 🔧 FIX #1 & #2: removed extra `fi`, changed `run` -> `run_cmd`
+        if [ "$ELAPSED" -ge "$TIMEOUT" ] && [ "$STATE" = "PERF" ]; then
+            STATE="SAVE"
+            run_cmd
+            am kill-all
+        fi
+    fi
+
+    CUR_TIME=$(date +%s)
+    DIFF=$((CUR_TIME - LAST_ACTIVITY))
+    printf "\r[Mode: %s] [Idle: %ds]    " "$STATE" "$DIFF"
+    sleep 1   # prevent busy-loop CPU burn
 done
