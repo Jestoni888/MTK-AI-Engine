@@ -77,7 +77,6 @@ main_control/mtk_ai_engine
 main_control/mtk_ai_engine.sh
 main_control/mode
 main_control/performance.sh
-main_control/powersave
 action.sh
 service.sh
 post-fs-data.sh
