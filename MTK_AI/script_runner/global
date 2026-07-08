@@ -111,7 +111,7 @@ find_touchscreen() {
     done
 }
 
-TIMEOUT=10
+TIMEOUT=5
 
 # Initial State
 LAST_ACTIVITY=$(date +%s)
