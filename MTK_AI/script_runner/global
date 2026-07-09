@@ -42,7 +42,6 @@ chmod +x "$TRIMMING_PATH" "$RAM_CLEANER_PATH" \
         "$LOGIC_CPU6_PATH" "$LOGIC_CPU7_PATH" \
         "$MODULE_EXECUTER" 2>/dev/null
 
-nohup sh "$MOD_DIR/main_control/powersave" >/dev/null 2>&1 &
 nohup sh "$MOD_DIR/script_runner/boost_color_apply.sh" >/dev/null 2>&1 &
 nohup sh "$MOD_DIR/script_runner/mtk_ai_manual" >/dev/null 2>&1 &
 nohup sh "$MOD_DIR/service.d/backup.sh" >/dev/null 2>&1 &
