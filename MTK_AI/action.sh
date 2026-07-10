@@ -58,7 +58,6 @@ MTK_AI/AI_MODE/normal_mode/normal_cpuset
 MTK_AI/AI_MODE/normal_mode/normal_prop
 MTK_AI/AI_MODE/normal_mode/powersave
 MTK_AI/AI_MODE/normal_mode/powersavex
-MTK_AI/AI_MODE/global_mode/charger_check
 MTK_AI/AI_MODE/global_mode/ram_cleaner
 MTK_AI/AI_MODE/global_mode/resources_tweaks
 MTK_AI/AI_MODE/global_mode/trim_memory
