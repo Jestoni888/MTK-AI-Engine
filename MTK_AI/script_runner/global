@@ -8,7 +8,7 @@ LOCK_FILE="$LOCK_DIR/global_runner.pid"
 log_msg() { log -t MTK_AI "$@" 2>/dev/null || echo "[MTK_AI] $*"; }
 
 # 1️⃣ Global pgrep check FIRST
-if pgrep -f "global" | grep -v "^$$" > /dev/null 2>&1; then
+if pgrep -f "automatrix" | grep -v "^$$" > /dev/null 2>&1; then
     exit 0
 else
     rm -rf "$LOCK_DIR"
