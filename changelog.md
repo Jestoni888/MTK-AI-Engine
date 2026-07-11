@@ -33,3 +33,9 @@
 --- version 0.0.0.87 ---
 
 •optimizing powersave mode (less ram consume)
+
+--- version 0.0.0.88 ---
+
+• Manual mode can now activate deep sleep mode when screen is off (enable deep sleep system in settings)
+
+• Ram hibarnator optimize kills background apps every touch on screen (enable ram hibarnator in tools tab to make this work)
