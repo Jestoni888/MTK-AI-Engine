@@ -1,4 +1,32 @@
-# /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/powersaverx
 #!/system/bin/sh
-export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
-exec /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/powersave
+export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:/data/adb/modules/MTK_AI/lib:$LD_LIBRARY_PATH
+
+INOTIFY="/data/adb/modules/MTK_AI/lib/inotifywait"
+POWERSAVE="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/powersave"
+MANUAL="/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual"
+MONITOR_FILE="/sys/class/leds/lcd-backlight/brightness"
+
+# Function to check state and launch the correct script
+apply_mode() {
+    # Read the current state of the monitor file
+    STATE=$(cat "$MONITOR_FILE" 2>/dev/null)
+    
+    if [ "$STATE" = "0" ]; then
+        # Screen is OFF ->
+        "$POWERSAVE" &
+    else
+        # Screen is ON -> 
+        "$MANUAL" &
+    fi
+}
+
+# Apply the correct mode immediately on script startup
+apply_mode
+
+# Start monitoring the file for changes using your custom inotifywait
+# -m : monitor mode (keeps the process alive to watch for future events)
+# -e modify : trigger when the file content is modified
+# -q : quiet mode (reduces output overhead)
+"$INOTIFY" -m -e modify -q "$MONITOR_FILE" | while read -r dir event file; do
+    apply_mode
+done
