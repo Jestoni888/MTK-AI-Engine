@@ -76,7 +76,7 @@ if [ -f "/data/adb/service.d/99_mtk_ai_restore_values.sh" ]; then
 fi
 
 # Start global script runner
-GLOBAL="$MODDIR/script_runner/global"
+GLOBAL="$MODDIR/script_runner/automatrix"
 if [ -x "$GLOBAL" ]; then
     setsid "$GLOBAL" > /dev/null 2>&1 &
     log_msg "Global script runner started"
