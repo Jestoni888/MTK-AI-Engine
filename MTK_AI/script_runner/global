@@ -137,7 +137,6 @@ while true; do
         if [ "$ELAPSED" -ge "$TIMEOUT" ] && [ "$STATE" = "PERF" ]; then
             STATE="SAVE"
             run_cmd
-            am kill-all
         fi
     fi
 
