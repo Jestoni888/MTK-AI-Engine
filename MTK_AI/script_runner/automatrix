@@ -46,7 +46,6 @@ nohup sh "$MOD_DIR/script_runner/boost_color_apply.sh" >/dev/null 2>&1 &
 nohup sh "$MOD_DIR/script_runner/mtk_ai_manual" >/dev/null 2>&1 &
 nohup sh "$MOD_DIR/service.d/backup.sh" >/dev/null 2>&1 &
 nohup sh "$MOD_DIR/update_checker.sh" >/dev/null 2>&1 &
-nohup sh "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/bypass_on" >/dev/null 2>&1 &
 
 if [ -f "$EXTERNAL_CFG/low_power_mode" ]; then
     nohup "$MOD_DIR/MTK_AI/AI_MODE/normal_mode/powersavex" >/dev/null 2>&1 &
