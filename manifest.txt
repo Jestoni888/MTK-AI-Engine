@@ -29,7 +29,7 @@ MTK_AI/AI_MODE/global_mode/webview_tweaks https://raw.githubusercontent.com/Jest
 MTK_AI/AI_MODE/global_mode/module_executer https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/module_executer
 MTK_AI/AI_MODE/global_mode/heartbeat https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/global_mode/heartbeat
 script_runner/display_mode https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/display_mode
-script_runner/global https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/global
+script_runner/automatrix https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/automatrix
 script_runner/mtk_ai_manual https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/mtk_ai_manual
 script_runner/refresh_rate_locker https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/refresh_rate_locker
 script_runner/sf_controller https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/sf_controller
