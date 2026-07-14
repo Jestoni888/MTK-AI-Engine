@@ -171,10 +171,7 @@ nohup sh /data/adb/modules/MTK_AI/service.sh 2>&1 &
             desc: 'schedutil • Normal thermal • Smart switch on gaming/normal',
             commands: `
             su -c "pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null"
-            export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
-su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "balance mode" >/dev/null 2>&1 &'
 rm -f /sdcard/MTK_AI_Engine/enable_limiter
-echo "1" > /sdcard/MTK_AI_Engine/automode 2>/dev/null
 su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'
 `
         },
@@ -184,9 +181,8 @@ su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/mo
             desc: 'schedutil • Frequency relax • Offset -10 • Smart switch on gaming/normal',
             commands: `
             su -c "pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null"
-            export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
-su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "powersaver mode" >/dev/null 2>&1 &'
-echo "1" > /sdcard/MTK_AI_Engine/automode 2>/dev/null
+touch /sdcard/MTK_AI_Engine/enable_limiter 2>/dev/null 
+echo "1" > /sdcard/MTK_AI_Engine/enable_limiter 2>/dev/null
 su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'
 `
         }
@@ -849,18 +845,19 @@ su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/mo
         const txt = document.getElementById('mon_services'), dot = document.getElementById('services-status-dot');
         try {
             if (mtkServicesEnabled) {
-                await exec(`pkill -f "MTK_AI.*mtk_ai_engine" 2>/dev/null; pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null; pkill -f "dumpsys2" 2>/dev/null; pkill -f "script_runner.*global" 2>/dev/null; pkill -f "service.sh" 2>/dev/null; killall service.sh mtk_ai_engine 2>/dev/null`);
+                await exec(`su -c "pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null"`);
+                await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
                 mtkServicesEnabled = false;
                 await saveServicesState(false);
-                if (txt) { txt.textContent = 'MANUAL MODE'; txt.style.color = '#FF453A'; }
+                if (txt) { txt.textContent = 'LITE MODE'; txt.style.color = '#FF453A'; }
                 if (dot) { dot.style.background = '#FF453A'; dot.style.display = 'block'; }
-                showStatus('⏹️ MTK AI services disabled - Manual Mode', '#FF453A');
+                showStatus('⏹️ MTK AI services disabled - LITE MODE', '#0000ff');
             } else {
                 await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
                 mtkServicesEnabled = true;
                 await saveServicesState(true);
-                if (txt) { txt.textContent = 'AUTO MODE'; txt.style.color = '#32D74B'; }
-                if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; }                showStatus('▶️ MTK AI services enabled - Auto Mode', '#32D74B');
+                if (txt) { txt.textContent = 'HARD MODE'; txt.style.color = '#32D74B'; }
+                if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; }                showStatus('▶️ MTK AI services enabled - HARD MODE', '#32D74B');
             }
             setTimeout(() => { if (dot) dot.style.display = 'none'; }, 2000);
         } catch (e) { 
@@ -876,11 +873,11 @@ su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/mo
             const txt = document.getElementById('mon_services');
             const dot = document.getElementById('services-status-dot');
             if (isRunning) {
-                if (txt) { txt.textContent = 'AUTO MODE'; txt.style.color = '#32D74B'; }
+                if (txt) { txt.textContent = 'HARD MODE'; txt.style.color = '#32D74B'; }
                 if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; }
             } else {
-                if (txt) { txt.textContent = 'MANUAL MODE'; txt.style.color = '#FF453A'; }
-                if (dot) { dot.style.background = '#FF453A'; dot.style.display = 'block'; }
+                if (txt) { txt.textContent = 'LITE MODE'; txt.style.color = '#0000ff'; }
+                if (dot) { dot.style.background = '#0000ff'; dot.style.display = 'block'; }
             }
             setTimeout(() => { if (dot) dot.style.display = 'none'; }, 1000);
         } catch (e) {
@@ -984,10 +981,10 @@ su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/mo
             const txt = document.getElementById('mon_services');
             const dot = document.getElementById('services-status-dot');
             if (mtkServicesEnabled) {
-                if (txt) { txt.textContent = 'AUTO MODE'; txt.style.color = '#32D74B'; }
+                if (txt) { txt.textContent = 'HARD MODE'; txt.style.color = '#32D74B'; }
                 if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; setTimeout(() => dot.style.display = 'none', 1000); }
             } else {
-                if (txt) { txt.textContent = 'MANUAL MODE'; txt.style.color = '#FF453A'; }
+                if (txt) { txt.textContent = 'LITE MODE'; txt.style.color = '#0000ff'; }
                 if (dot) { dot.style.background = '#FF453A'; dot.style.display = 'block'; setTimeout(() => dot.style.display = 'none', 1000); }
             }
         }
