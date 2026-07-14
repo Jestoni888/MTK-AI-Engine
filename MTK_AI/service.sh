@@ -67,8 +67,6 @@ else
     log_msg "⚠ Busybox not found, HTTP server disabled"
 fi
 
-sleep 10
-
 # Run restore values script if exists
 if [ -f "/data/adb/service.d/99_mtk_ai_restore_values.sh" ]; then
     sh /data/adb/service.d/99_mtk_ai_restore_values.sh &
