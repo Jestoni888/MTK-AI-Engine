@@ -1,4 +1,5 @@
 #!/system/bin/sh
+
 ### === SINGLE INSTANCE LOCK ===
 LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
 mkdir -p "$LOCK_DIR"
@@ -27,6 +28,8 @@ mkdir -p "$LOCK_DIR"
 echo $$ > "$LOCK_FILE"
 trap 'rm -f "$LOCK_FILE"' EXIT
 ### ============================
+
+. /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/auto_frequency
 
 MOD_DIR="/data/adb/modules/MTK_AI"
 EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
@@ -72,20 +75,20 @@ fi
 
 run_cmd() {
     if [ -f "$EXTERNAL_CFG/enable_trim" ]; then
-        pgrep -f "trim_memory" > /dev/null || "$TRIMMING_PATH" &
+        pgrep -f "trim_memory" > /dev/null || nohup sh "$TRIMMING_PATH" 2>&1 &
     else
         pkill -f "trim_memory" 2>/dev/null
     fi
 
     if [ -f "$EXTERNAL_CFG/enable_cleaner" ]; then
-        pgrep -f "ram_cleaner" > /dev/null || "$RAM_CLEANER_PATH" &
+        pgrep -f "ram_cleaner" > /dev/null || nohup sh "$RAM_CLEANER_PATH" 2>&1 &
     else
         pkill -f "ram_cleaner" 2>/dev/null
     fi
 
     if [ -f "$EXTERNAL_CFG/enable_cpu" ]; then
-        pgrep -f "cpu6" > /dev/null || "$LOGIC_CPU6_PATH" &
-        pgrep -f "cpu7" > /dev/null || "$LOGIC_CPU7_PATH" &
+        pgrep -f "cpu6" > /dev/null || nohup sh "$LOGIC_CPU6_PATH" 2>&1 &
+        pgrep -f "cpu7" > /dev/null || nohup sh "$LOGIC_CPU7_PATH" 2>&1 &
     else
         pkill -f "cpu6" 2>/dev/null
         pkill -f "cpu7" 2>/dev/null
@@ -131,20 +134,29 @@ while true; do
         if [ "$STATE" = "SAVE" ]; then
             STATE="PERF"
             run_cmd
+            touch_active
+            # 🔧 FIX: Skip current_app if automode is "1"
+            if [ ! -f "$EXTERNAL_CFG/automode" ] || [ "$(cat "$EXTERNAL_CFG/automode" 2>/dev/null)" != "1" ]; then
+                current_app
+            fi
         fi
     else
         NOW=$(date +%s)
         ELAPSED=$((NOW - LAST_ACTIVITY))
 
-        # 🔧 FIX #1 & #2: removed extra `fi`, changed `run` -> `run_cmd`
         if [ "$ELAPSED" -ge "$TIMEOUT" ] && [ "$STATE" = "PERF" ]; then
             STATE="SAVE"
             run_cmd
+            touch_inactive
+            # 🔧 FIX: Skip current_app if automode is "1"
+            if [ ! -f "$EXTERNAL_CFG/automode" ] || [ "$(cat "$EXTERNAL_CFG/automode" 2>/dev/null)" != "1" ]; then
+                current_app
+            fi
         fi
     fi
 
     CUR_TIME=$(date +%s)
     DIFF=$((CUR_TIME - LAST_ACTIVITY))
     printf "\r[Mode: %s] [Idle: %ds]    " "$STATE" "$DIFF"
-    sleep 1   # prevent busy-loop CPU burn
+    sleep 1
 done
