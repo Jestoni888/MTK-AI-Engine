@@ -1,86 +1,248 @@
 #!/system/bin/sh
-# MTK AI ENGINE - Unified CPU Frequency Scaling with Continuous Monitoring
-# Loops every 60 seconds to adjust based on real-time temperature
-# -5% frequency per 1°C above 38°C baseline
 
-CONFIG_FILE="/sdcard/MTK_AI_Engine/cpu_freq_scaling.txt"
-LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
-CPU_SYS="/sys/devices/system/cpu"
-PID_FILE="/data/adb/modules/MTK_AI/cpu_scaling.pid"
+# LITE MODE
 
-# Cleanup old process if exists
-if [ -f "$PID_FILE" ]; then
-    OLD_PID=$(cat "$PID_FILE")
-    kill -9 "$OLD_PID" 2>/dev/null
-    rm -f "$PID_FILE"
-fi
+MOD_DIR="/data/adb/modules/MTK_AI"
+BB="$MOD_DIR/busybox"
+EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
+NOTIFY_ENABLED_FILE="$EXTERNAL_CFG/enable_notifications"
+TOUCH_ACTIVE="$EXTERNAL_CFG/enable_limiter"
 
-# Save current PID
-echo $$ > "$PID_FILE"
+# --- NOTIFICATION FUNCTION ---
+# Uses UID 2000 to bypass SELinux restrictions
+notify_status() {
+# Skip if notification toggle is OFF
+    [ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
+    # --- 1. Temperature ---
+    RAW_TEMP=$(cat /sys/class/power_supply/battery/temp 2>/dev/null || echo "0")
+    B_TEMP="$((RAW_TEMP / 10)).$((RAW_TEMP % 10))°C"
 
-log_msg() {
-    echo "[$(date '+%m-%d %H:%M:%S')] [cpu_scaling] $1" >> "$LOG_FILE"
+    # --- 2. Governor ---
+    GOV_FILE="/sys/devices/system/cpu/cpufreq/policy0/scaling_governor"
+    [ ! -f "$GOV_FILE" ] && GOV_FILE="/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+    CPU_GOV="Unknown"
+    [ -f "$GOV_FILE" ] && CPU_GOV=$(cat "$GOV_FILE" 2>/dev/null | tr -d '[:space:]')
+
+    # --- 3. Power Calculation (FIXED FOR LARGE NUMBERS) ---
+    VOLT_FILE="/sys/class/power_supply/battery/voltage_now"
+    CURR_FILE="/sys/class/power_supply/battery/current_now"
+    [ ! -f "$VOLT_FILE" ] && VOLT_FILE="/sys/class/power_supply/bms/voltage_now"
+    [ ! -f "$CURR_FILE" ] && CURR_FILE="/sys/class/power_supply/bms/current_now"
+
+    POWER_WATTS="N/A"
+
+    if [ -f "$VOLT_FILE" ] && [ -f "$CURR_FILE" ]; then
+        VOLT=$(cat "$VOLT_FILE" 2>/dev/null | tr -d '[:space:]')
+        CURR=$(cat "$CURR_FILE" 2>/dev/null | tr -d '[:space:]')
+
+        # FIX: Divide inputs by 1,000,000 FIRST to get Volts and Amps.
+        # Then multiply. This prevents integer overflow in awk.
+        POWER_WATTS=$(awk -v v="$VOLT" -v c="$CURR" 'BEGIN {
+            # Convert micro-units to base units immediately
+            volts = v / 1000000
+            amps = c / 1000000
+            
+            # Make amps positive
+            if (amps < 0) amps = -amps
+            
+            # Calculate Watts
+            val = volts * amps
+            
+            # Sanity Check (0.01W to 60W)
+            if (val >= 0.01 && val <= 60) {
+                printf "%.2fW", val
+            } else {
+                print "N/A"
+            }
+        }')
+    fi
+
+    local status_msg="$1"
+    local full_msg="$status_msg | Gov: $CPU_GOV | Pwr: $POWER_WATTS | Temp: $B_TEMP"
+
+    su -lp 2000 -c "cmd notification post -I /data/adb/modules/MTK_AI/icon.png -S bigtext -t 'Lite mode' tag '$full_msg'" >/dev/null 2>&1
 }
 
-# Wait for system to be ready
-for i in $(seq 1 30); do
-    if [ -d "$CPU_SYS/cpu0" ]; then
-        log_msg "CPU sysfs ready after $i seconds"
-        break
-    fi
-    sleep 1
+touch_active() {
+[ ! -f "$TOUCH_ACTIVE" ] && return 0
+ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
+
+    CPU_SYS="/sys/devices/system/cpu"
+    
+    # Tune schedutil for faster response
+    for p in $CPU_SYS/cpufreq/policy*; do
+        [ -d "$p" ] || continue
+        [ -w "$p/schedutil/rate_limit_us" ] && echo 100 > "$p/schedutil/rate_limit_us"
+    done
+
+    # Replace the existing frequency setting with:
+TOUCH_ACTIVE_PERCENT=100
+if [ -f "/sdcard/MTK_AI_Engine/manual_touch_active_freq.txt" ]; then
+    TOUCH_ACTIVE_PERCENT=$(cat "/sdcard/MTK_AI_Engine/manual_touch_active_freq.txt" | tr -d '\r\n ')
+    # Validate range
+    if [ "$TOUCH_ACTIVE_PERCENT" -lt 50 ] 2>/dev/null; then TOUCH_ACTIVE_PERCENT=50; fi
+    if [ "$TOUCH_ACTIVE_PERCENT" -gt 100 ] 2>/dev/null; then TOUCH_ACTIVE_PERCENT=100; fi
+fi
+
+# --- 5. REFRESH RATE ---
+            REFRESH_FILE="/sdcard/MTK_AI_Engine/manual_refresh_lock.txt"
+            if [ -f "$REFRESH_FILE" ]; then
+                MODE_ID=$(tr -d '\r\n\t ' < "$REFRESH_FILE")
+                if [ -n "$MODE_ID" ] && [ "$MODE_ID" -eq "$MODE_ID" ] 2>/dev/null; then
+                    service call SurfaceFlinger 1035 i32 "$MODE_ID" >/dev/null 2>&1 && \
+                        log_msg "🖥️ Refresh Rate: mode $MODE_ID"
+                fi
+            fi
+
+for cpu in $CPU_SYS/cpu[0-9]*; do
+    MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
+    MIN_FREQ=$(cat "$cpu/cpufreq/cpuinfo_min_freq")
+    TARGET_MAX=$((MAX_FREQ * TOUCH_ACTIVE_PERCENT / 100))
+    chmod 644 "$cpu/cpufreq/scaling_min_freq"
+    chmod 644 "$cpu/cpufreq/scaling_max_freq" 
+    echo "$MIN_FREQ" > "$cpu/cpufreq/scaling_min_freq"
+    echo "$TARGET_MAX" > "$cpu/cpufreq/scaling_max_freq"
 done
 
-# Continuous monitoring loop
-while true; do
-    # Get current battery temperature
-    if [ -f "/sys/class/power_supply/battery/temp" ]; then
-        TEMP_RAW=$(cat "/sys/class/power_supply/battery/temp")
-        TEMP_INT=$((TEMP_RAW / 10))
-    else
-        TEMP_INT=38  # Safe default
-    fi
-    
-    # Load user setting (default: 100%)
-    if [ -f "$CONFIG_FILE" ]; then
-        USER_PERCENT=$(cat "$CONFIG_FILE" | tr -d '\r\n ')
-        # Validate range
-        if ! [ "$USER_PERCENT" -ge 30 ] 2>/dev/null || ! [ "$USER_PERCENT" -le 100 ] 2>/dev/null; then
-            USER_PERCENT=100
+sync
+
+[ "$(id -u)" -ne 0 ] && exit 1
+OPP=$(cat /sdcard/MTK_AI_Engine/global_gpu_opp_index.txt 2>/dev/null) || OPP=0
+[ "$OPP" -lt 0 ] || [ "$OPP" -gt 32 ] && OPP=0
+echo $OPP > /proc/gpufreqv2/fix_target_opp_index
+}
+
+touch_inactive() {
+[ ! -f "$TOUCH_ACTIVE" ] && return 0
+ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
+echo 32 > /proc/gpufreqv2/fix_target_opp_index
+
+    su -c "service call SurfaceFlinger 1035 i32 2" 2>/dev/null
+
+    # Read saved Inactive CPU % from SD card
+    INACTIVE_PERCENT=30
+    if [ -f "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" ]; then
+        INACTIVE_PERCENT=$(cat "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" | tr -d '\r\n ')
+        # Enforce 25-50% range
+        if [ "$INACTIVE_PERCENT" -lt 25 ] 2>/dev/null; then
+            INACTIVE_PERCENT=25
+        elif [ "$INACTIVE_PERCENT" -gt 50 ] 2>/dev/null; then
+            INACTIVE_PERCENT=50
         fi
-    else
-        USER_PERCENT=100
     fi
-    
-    # Temperature-based scaling logic
-    BASE_TEMP=38  # Reference temperature
-    TEMP_DIFF=$((TEMP_INT - BASE_TEMP))
-    
-    if [ "$TEMP_DIFF" -gt 0 ]; then
-        REDUCTION=$((TEMP_DIFF * 5))  # -5% per °C above 38°C
-        CURRENT_PERCENT=$((USER_PERCENT - REDUCTION))
-        [ "$CURRENT_PERCENT" -lt 30 ] && CURRENT_PERCENT=30
-    else
-        CURRENT_PERCENT=$USER_PERCENT
-    fi
-    
-    # Apply to all CPUs
-    for cpu in $CPU_SYS/cpu[0-9]*; do
-        [ -d "$cpu" ] || continue
+
+    for policy in $CPU_SYS/cpufreq/policy*; do
+        [ -d "$policy" ] || continue
         
-        if [ -f "$cpu/cpufreq/cpuinfo_max_freq" ]; then
-            MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
-            MIN_FREQ=$(cat "$cpu/cpufreq/cpuinfo_min_freq")
-            TARGET_FREQ=$((MAX_FREQ * CURRENT_PERCENT / 100))
+        if [ -f "$policy/cpuinfo_max_freq" ]; then
+            max_val=$(cat "$policy/cpuinfo_max_freq")
+            target_val=$(( max_val * INACTIVE_PERCENT / 100 ))
             
-            # Apply frequencies (same as your touch_active logic)
-            echo "$MIN_FREQ" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null
-            echo "$TARGET_FREQ" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+            chmod 644 "$policy/scaling_max_freq" 2>/dev/null
+            echo "$target_val" > "$policy/scaling_max_freq"
         fi
     done
+
+    sync
+}
+
+game_mode() {
+nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer"
+
+if [ -f "$EXTERNAL_CFG/enable_gaming_prop" ]; then
+    nohup "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/gaming_prop" >/dev/null 2>&1 &
+fi
+if [ -f "$EXTERNAL_CFG/enable_gaming_prop2" ]; then
+    nohup "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2" >/dev/null 2>&1 &
+fi
+if [ -f "$EXTERNAL_CFG/enable_disable_thermal" ]; then
+    nohup "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/disable_thermal" >/dev/null 2>&1 &
+fi
+if [ -f "$EXTERNAL_CFG/enable_performance" ]; then
+    nohup "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/performance" >/dev/null 2>&1 &
+fi
+
+[ "$(cat "/sdcard/MTK_AI_Engine/current_profile" 2>/dev/null | tr -d '[:space:]')" != "powersave" ] && return 0
+rm -f /sdcard/MTK_AI_Engine/enable_limiter
+}
+
+normal_mode() {
+nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_prop" >/dev/null 2>&1 &
+nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_cpuset" >/dev/null 2>&1 &
+[ "$(cat "/sdcard/MTK_AI_Engine/current_profile" 2>/dev/null | tr -d '[:space:]')" != "powersave" ] && return 0
+touch /sdcard/MTK_AI_Engine/enable_limiter 2>/dev/null 
+echo "1" > /sdcard/MTK_AI_Engine/enable_limiter 2>/dev/null
+}
+
+# 🏠 Helper: Check if package is a launcher (home screen)
+is_launcher() {
+    local pkg="$1"
+    case "$pkg" in
+        com.android.launcher*|\
+        com.google.android.launcher*|\
+        com.google.android.apps.nexuslauncher|\
+        com.miui.home|\
+        com.sec.android.app.launcher|\
+        com.sonyericsson.home|\
+        com.lge.launcher*|\
+        com.huawei.android.launcher|\
+        com.transsion.launcher*|\
+        com.oppo.launcher|\
+        com.coloros.launcher|\
+        com.oneplus.launcher|\
+        com.teslacoilsw.launcher|\
+        org.lineageos.trebuchet|\
+        com.android.launcher3|\
+        com.pixelstar.launcher|\
+        com.tcl.launcher|\
+        com.vivo.launcher)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+current_app() {
+    # 🎮 STATE CHECK: If gaming mode is already active, skip full detection
+    # This ensures the game list check only runs ONCE when entering gaming mode
+    if [ -f /dev/.mtk_ai_active_game ]; then
+        # Only detect current app to check for launcher (to exit gaming mode)
+        CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | sed -E 's/.* ([^ /]+)\/.*/\1/')
+        
+        # Validate package format
+        if echo "$CURRENT_TOP_APP" | grep -qE '^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$'; then
+            # 🏠 Only trigger normal mode when launcher is detected
+            if is_launcher "$CURRENT_TOP_APP"; then
+                log_msg "🏠 Launcher detected, exiting gaming mode"
+                rm -f /dev/.mtk_ai_active_game
+                normal_mode
+                notify_status "Normal mode: $CURRENT_TOP_APP"
+            fi
+            # Otherwise: stay in gaming mode, do nothing (no repeated calls)
+        fi
+        return 0
+    fi
     
-    log_msg "Applied ${CURRENT_PERCENT}% @ ${TEMP_INT}°C"
+    # 📱 Not in gaming mode: run full detection ONCE
+    log_msg "📱 Detecting current top app..."
+    CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | sed -E 's/.* ([^ /]+)\/.*/\1/')
     
-    # Sleep for 60 seconds
-    sleep 60
-done
+    # Validate package format to avoid matching null/empty/garbage
+    if ! echo "$CURRENT_TOP_APP" | grep -qE '^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$'; then
+        CURRENT_TOP_APP=""
+        notify_status "⚠️"
+        return 0
+    fi
+    
+    notify_status "$CURRENT_TOP_APP"
+    
+    # Check if current app is a game (only runs when NOT in gaming mode)
+    if awk -v pkg="$CURRENT_TOP_APP" '{ gsub(/\r/, ""); if ($0 == pkg) { found=1; exit } } END { exit !found }' /sdcard/MTK_AI_Engine/game_list.txt 2>/dev/null; then
+        echo "$CURRENT_TOP_APP" > /dev/.mtk_ai_active_game 2>/dev/null
+        game_mode
+        notify_status "Gaming🎮: $CURRENT_TOP_APP"
+    fi
+    # If not a game: stay in normal mode, do nothing
+}
