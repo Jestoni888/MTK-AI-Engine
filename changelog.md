@@ -43,4 +43,5 @@
 --- version 0.0.0.89 ---
 
 •automode converts to hard mode & manual mode to lite mode
+
 •optimize lite mode for smoothness
