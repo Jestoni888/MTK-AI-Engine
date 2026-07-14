@@ -39,3 +39,8 @@
 • Manual mode can now activate deep sleep mode when screen is off (enable deep sleep system in settings)
 
 • Ram hibarnator optimize kills background apps every touching on screen (enable ram hibarnator in tools tab to make this work)
+
+--- version 0.0.0.89 ---
+
+•automode converts to hard mode & manual mode to lite mode
+•optimize lite mode for smoothness
