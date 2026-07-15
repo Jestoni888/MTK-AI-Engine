@@ -59,7 +59,7 @@ const toggleConfig = {
     enable_gaming_prop2: { title:  "Gaming Props v2 ", desc:  "Advanced gaming property tweaks ", group:  "Gaming " },
     enable_module: { title:  "Module automation ", desc:  "No need to reboot when new modules installed except system level modules ", group:  "System " },
     fast_mode_switch: { title:  "Fast Mode Switch ", desc:  "Quickly switch between normal, gaming  & screen state profiles ", group:  "System " },
-    use_tweaks: { title:  "Use tweaks ", desc:  "Using tweaks between normal mode & gaming mode ", group:  "System " },
+    use_tweaks: { title:  "Use tweaks ", desc:  "Using tweaks between normal mode & gaming mode (⚠️lite mode) ", group:  "System " },
     enable_cpu: { title:  "Auto shutdown CPU 6  & 7 ", desc:  "Auto shutdown cpu 6  & 7 when temp reaches 42°C  & auto revert in 39°C ", group:  "Battery " },
     enable_lite_gaming: { title:  "Lite Gaming Mode ", desc:  "Lightweight tweaks for low-end devices ", group:  "Gaming " },
     disable_tap_to_rotate: { title:  "Disable Tap to Rotate ", desc:  "Hide the manual rotation button on the navigation bar ", group:  "Display " }
