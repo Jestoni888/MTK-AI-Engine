@@ -137,7 +137,6 @@ while true; do
         if [ "$STATE" = "SAVE" ]; then
             STATE="PERF"
             touch_active
-            run_cmd
             # 🔧 FIX: Skip current_app if automode is "1"
             if [ ! -f "$EXTERNAL_CFG/automode" ] || [ "$(cat "$EXTERNAL_CFG/automode" 2>/dev/null)" != "1" ]; then
                 current_app
