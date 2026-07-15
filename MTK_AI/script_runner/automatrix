@@ -117,6 +117,9 @@ find_touchscreen() {
 }
 
 TIMEOUT=5
+F="/sdcard/MTK_AI_Engine/touch_timeout.txt"
+
+[ -f "$F" ] && T=$(tr -d ' \r\n' < "$F") && [ "$T" -eq "$T" ] 2>/dev/null && TIMEOUT=$T
 
 # Initial State
 LAST_ACTIVITY=$(date +%s)
