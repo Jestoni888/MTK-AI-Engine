@@ -136,8 +136,8 @@ while true; do
         LAST_ACTIVITY=$(date +%s)
         if [ "$STATE" = "SAVE" ]; then
             STATE="PERF"
-            run_cmd
             touch_active
+            run_cmd
             # 🔧 FIX: Skip current_app if automode is "1"
             if [ ! -f "$EXTERNAL_CFG/automode" ] || [ "$(cat "$EXTERNAL_CFG/automode" 2>/dev/null)" != "1" ]; then
                 current_app
@@ -149,8 +149,8 @@ while true; do
 
         if [ "$ELAPSED" -ge "$TIMEOUT" ] && [ "$STATE" = "PERF" ]; then
             STATE="SAVE"
-            run_cmd
             touch_inactive
+            run_cmd
             # 🔧 FIX: Skip current_app if automode is "1"
             if [ ! -f "$EXTERNAL_CFG/automode" ] || [ "$(cat "$EXTERNAL_CFG/automode" 2>/dev/null)" != "1" ]; then
                 current_app
