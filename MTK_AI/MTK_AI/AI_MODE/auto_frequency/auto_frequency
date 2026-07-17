@@ -209,21 +209,17 @@ is_launcher() {
 
 current_app() {
     # 🎮 STATE CHECK: If gaming mode is already active, skip full detection
-    # This ensures the game list check only runs ONCE when entering gaming mode
     if [ -f /dev/.mtk_ai_active_game ]; then
-        # Only detect current app to check for launcher (to exit gaming mode)
         CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | sed -E 's/.* ([^ /]+)\/.*/\1/')
         
-        # Validate package format
-        if echo "$CURRENT_TOP_APP" | grep -qE '^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$'; then
-            # 🏠 Only trigger normal mode when launcher is detected
+        # ✅ FIXED: Allow uppercase letters in package validation
+        if echo "$CURRENT_TOP_APP" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
             if is_launcher "$CURRENT_TOP_APP"; then
                 log_msg "🏠 Launcher detected, exiting gaming mode"
                 rm -f /dev/.mtk_ai_active_game
                 normal_mode
                 notify_status "Normal mode: $CURRENT_TOP_APP"
             fi
-            # Otherwise: stay in gaming mode, do nothing (no repeated calls)
         fi
         return 0
     fi
@@ -232,8 +228,8 @@ current_app() {
     log_msg "📱 Detecting current top app..."
     CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | sed -E 's/.* ([^ /]+)\/.*/\1/')
     
-    # Validate package format to avoid matching null/empty/garbage
-    if ! echo "$CURRENT_TOP_APP" | grep -qE '^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$'; then
+    # ✅ FIXED: Allow uppercase letters in package validation
+    if ! echo "$CURRENT_TOP_APP" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
         CURRENT_TOP_APP=""
         notify_status "⚠️"
         return 0
@@ -241,11 +237,10 @@ current_app() {
     
     notify_status "$CURRENT_TOP_APP"
     
-    # Check if current app is a game (only runs when NOT in gaming mode)
+    # Check if current app is a game
     if awk -v pkg="$CURRENT_TOP_APP" '{ gsub(/\r/, ""); if ($0 == pkg) { found=1; exit } } END { exit !found }' /sdcard/MTK_AI_Engine/game_list.txt 2>/dev/null; then
         echo "$CURRENT_TOP_APP" > /dev/.mtk_ai_active_game 2>/dev/null
         game_mode
         notify_status "Gaming🎮: $CURRENT_TOP_APP"
     fi
-    # If not a game: stay in normal mode, do nothing
 }
