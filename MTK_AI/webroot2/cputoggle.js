@@ -1,4 +1,4 @@
-// cputoggle.js - CPU Core Toggle with LIVE status + chmod fix
+// cputoggle.js - CPU Core Toggle with LIVE status + chmod fix + Partial UI Update
 (function() {
     'use strict';
 
@@ -96,7 +96,8 @@
     }
 
     async function scanCores() {
-        const listEl = document.getElementById('cpu-list');        const statusEl = document.getElementById('cpu-scan-status');
+        const listEl = document.getElementById('cpu-list');
+        const statusEl = document.getElementById('cpu-scan-status');
         if (!listEl || !statusEl) return;
 
         try {
@@ -128,24 +129,35 @@
                 detectedCores.push({ id, path, liveOnline, isHotplug, freq });
 
                 const canToggle = isHotplug && parseInt(id) > 0;
+                const isOnline = liveOnline;
                 
+                // Dynamic styling based on state
+                const statusColor = isOnline ? '#32D74B' : '#FF453A';
+                const statusBg = isOnline ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)';
+                const btnBg = isOnline ? '#FF453A' : '#32D74B';
+                const btnText = isOnline ? 'Offline' : 'Online';
+
                 const coreEl = document.createElement('div');
+                coreEl.id = `cpu-core-row-${id}`;
                 coreEl.style.cssText = 'background: rgba(0,0,0,0.3); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;';
+                
+                // ✅ Added unique IDs to elements for targeted partial updates
                 coreEl.innerHTML = `
                     <div style="flex: 1;">
                         <div style="color: #fff; font-size: 13px; font-weight: 600;">
                             CPU${id}
-                            <span style="font-size: 10px; background: ${liveOnline ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)'}; color: ${liveOnline ? '#32D74B' : '#FF453A'}; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">
+                            <span id="cpu-badge-${id}" style="font-size: 10px; background: ${statusBg}; color: ${statusColor}; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">
                                 LIVE
                             </span>
                         </div>
                         <div style="color: #666; font-size: 11px; margin-top: 2px;">
-                            ${freq} • <span style="color: ${liveOnline ? '#32D74B' : '#FF453A'}">${liveOnline ? 'online' : 'offline'}</span>
+                            <span id="cpu-freq-${id}">${freq}</span> • <span id="cpu-status-${id}" style="color: ${statusColor}">${isOnline ? 'online' : 'offline'}</span>
                             ${!canToggle ? ' • <span style="color: #888;">locked</span>' : ''}
                         </div>
                     </div>
-                    <button class="cpu-core-toggle" data-id="${id}" data-live="${liveOnline ? '1' : '0'}" ${!canToggle ? 'disabled' : ''} 
-                        style="background: ${liveOnline ? '#FF453A' : '#32D74B'}; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: ${canToggle ? 'pointer' : 'not-allowed'}; opacity: ${canToggle ? '1' : '0.5'}; min-width: 70px;">                        ${liveOnline ? 'Offline' : 'Online'}
+                    <button id="cpu-btn-${id}" class="cpu-core-toggle" data-id="${id}" data-live="${isOnline ? '1' : '0'}" ${!canToggle ? 'disabled' : ''} 
+                        style="background: ${btnBg}; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: ${canToggle ? 'pointer' : 'not-allowed'}; opacity: ${canToggle ? '1' : '0.5'}; min-width: 70px;">
+                        ${btnText}
                     </button>
                 `;
                 listEl.appendChild(coreEl);
@@ -162,8 +174,16 @@
                     
                     const newOnline = currentLive ? '0' : '1';
                     
-                    e.currentTarget.disabled = true;
-                    e.currentTarget.textContent = '⏳';
+                    // ✅ Target specific elements for this CPU core only
+                    const btnEl = document.getElementById(`cpu-btn-${id}`);
+                    const badgeEl = document.getElementById(`cpu-badge-${id}`);
+                    const statusTextEl = document.getElementById(`cpu-status-${id}`);
+                    const freqEl = document.getElementById(`cpu-freq-${id}`);
+                    
+                    if (btnEl) {
+                        btnEl.disabled = true;
+                        btnEl.textContent = '⏳';
+                    }
                     
                     try {
                         // ✅ STEP 1: Make the online file writable (chmod 644)
@@ -180,13 +200,49 @@
                         }
                         await execFn(`mkdir -p /sdcard/MTK_AI_Engine && echo "${cfg}" > ${CONFIG_FILE}`);
                         
-                        // ✅ Re-read LIVE status after toggle
+                        // ✅ Re-read LIVE status after toggle FOR THIS CORE ONLY
                         await new Promise(r => setTimeout(r, 300));
-                        showCPUModal();
+                        const updatedOnlineRaw = await execFn(`cat ${core.path}/online 2>/dev/null`);
+                        const updatedLive = updatedOnlineRaw && updatedOnlineRaw.trim() === '1';
+                        
+                        const updatedFreqRaw = await execFn(`cat ${core.path}/cpufreq/scaling_cur_freq 2>/dev/null`);
+                        const updatedFreq = updatedFreqRaw && updatedFreqRaw.trim() ? `${Math.floor(parseInt(updatedFreqRaw)/1000)} MHz` : 'N/A';
+
+                        // Update state in memory
+                        core.liveOnline = updatedLive;
+                        core.freq = updatedFreq;
+
+                        // ✅ Update UI text and styles of this particular CPU core ONLY (No full UI refresh)
+                        const isOnline = updatedLive;
+                        const statusColor = isOnline ? '#32D74B' : '#FF453A';
+                        const statusBg = isOnline ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)';
+                        const btnBg = isOnline ? '#FF453A' : '#32D74B';
+                        const btnText = isOnline ? 'Offline' : 'Online';
+
+                        if (badgeEl) {
+                            badgeEl.style.background = statusBg;
+                            badgeEl.style.color = statusColor;
+                        }
+                        if (statusTextEl) {
+                            statusTextEl.style.color = statusColor;
+                            statusTextEl.textContent = isOnline ? 'online' : 'offline';
+                        }
+                        if (freqEl) {
+                            freqEl.textContent = updatedFreq;
+                        }
+                        if (btnEl) {
+                            btnEl.style.background = btnBg;
+                            btnEl.textContent = btnText;
+                            btnEl.dataset.live = isOnline ? '1' : '0';
+                            btnEl.disabled = false;
+                        }
+
                     } catch (err) {
                         console.error(`CPUToggle: Failed CPU${id}:`, err);
-                        e.currentTarget.textContent = currentLive ? 'Offline' : 'Online';
-                        e.currentTarget.disabled = false;
+                        if (btnEl) {
+                            btnEl.textContent = currentLive ? 'Offline' : 'Online';
+                            btnEl.disabled = false;
+                        }
                     }
                 };
             });
@@ -194,7 +250,8 @@
         } catch (e) {
             console.error('CPUToggle: Scan failed:', e);
             statusEl.innerHTML = `<span style="color: #FF453A;">❌ Error: ${e.message}</span>`;
-        }    }
+        }
+    }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
