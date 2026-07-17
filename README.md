@@ -1,55 +1,94 @@
-# Mediatek AI Engine
-MTK AI Engine is Magisk/Kernel root based modules to optimize devices to full capabilities. 
-It uses logcat/touch based module
-with near zero usages of cpu power because it has no loop/sleep commands, just automatically triggers anything you do in your device.
-also gives full features of your android device in all scenarios such as gaming , daily use & screen off to save power
+<p align="center">
+  <!-- Replace the src URL below with the actual link to your logo image -->
+  <img src="https://via.placeholder.com/150x150.png?text=MTK+AI+Engine" alt="MTK AI Engine Logo" width="150" />
+  <h1 align="center">Mediatek AI Engine</h1>
+  <p align="center"><strong>Unlock the full potential of your MediaTek device.</strong></p>
+</p>
 
+<p align="center">
+  <a href="https://github.com/Jestoni888/MTK-AI-Engine"><img src="https://img.shields.io/badge/GitHub-MTK--AI--Engine-blue?logo=github" alt="GitHub"></a>
+  <a href="https://t.me/mikamisaturo"><img src="https://img.shields.io/badge/Telegram-@mikamisaturo-2CA5E0?logo=telegram" alt="Telegram"></a>
+  <a href="https://www.facebook.com/jestonicenabre888"><img src="https://img.shields.io/badge/Facebook-Jestoni%20Ceniza%20Cenabre-1877F2?logo=facebook" alt="Facebook"></a>
+  <a href="https://youtube.com/@jestonicenabre"><img src="https://img.shields.io/badge/YouTube-@jestonicenabre-FF0000?logo=youtube" alt="YouTube"></a>
+</p>
 
-## FEATURES 
+---
 
-- Powersaver mode during screen-off events can be toggled to turning it on/off if you don't want missing notifications or alarms
-- Boost colors
-- Refresh rate locker / per-app
-- Resolution scaling
-- GPU frequency slider from min - max output
-- CPU governor selection
-- Devfreq governor selection
-- Render mode selection (Skia VULKAN & Skia GL)
-- Touch mode optimization ( auto raise CPU, GPU & refresh rate depends in your input values also automatically down all frequencies & refresh rate to low if limiter is enabled in webui
-- Application trimmer in extra storage caches can be toggled on/off in webui 
-- Ram cleaner every 30 seconds can be toggled on/off in webui
-- Thermal bypass for maximum performance on gaming
-- Bypass charging (working only during gaming mode)
-- Auto enable developer option & turning on 4X MSAA & Disable hw overlays for smoother gaming experience, can be toggled on/off in webui
-- PPM Policy control specifically only for MediaTek devices
-- EEM voltage offset slider for CPU, GPU & Cache coherent
-- CPUSET groups selections for cpu prioritization setup
-- CPU dynamic cgroups share control setup values for each groups of cpus
-- Display animation adjustment for those who want faster animation or smoother experience 
-- Zram manager up to 20GB extension along with custom swappiness value
-- Auto App freezer during gaming & during screen-off, can also automatically unfreeze during normal use suitable for who doesn't want disturbance during gaming sessions
-  🆙🆕
-- Sysctl kernel tuner editor (Under experimental)
-- Global root search with editor & file permission changer (Under experimental) 
+## 📖 Overview
+**MTK AI Engine** is a Magisk/KernelSU root-based module designed to optimize your device to its absolute full capabilities. 
 
-## GAMING MODE PER-APP 
-- Refresh rate
-- Resolution scaling slider
-- Cpu governor selection
-- Vsync offset slider
-- Voltage offset slider
-- Render mode skiagl or skiavk
-- Screen resolution with custom input
-- Cpu frequency slider applied to all clusters
-- Custom command for your own scripts
-- Monitoring average for fps, power, battery Temperature, cpu usage
+Unlike traditional optimization scripts, it utilizes an event-driven (logcat/touch-based) architecture. This ensures **near-zero CPU power usage** because it operates without continuous loop or sleep commands. Instead, it automatically triggers optimizations based on your device's real-time actions, delivering peak performance and power efficiency across all scenarios: gaming, daily use, and screen-off states.
 
-## DISCLAIMER
-- Any misconfiguration setup that not supported in your devices will result in instability or further sudden restart/reboot, missed notifications, alarms, laggy. Make a further research for your devices in webui
-- This is only my personal module as a hobby to learn something but I'm gonna share it to everyone for FREE & further information
+---
 
- ## INSTRUCTIONS
- - Choose universal for safe of bootloops
- - Click action button for online updates (Added notice in module section if there's new updates)
- - Go to webui in maintenance section for 1click configuration setup from github if you don't understand the setup of webui
- - New release for tweak finder that can search & tweaks all system files of your rooted android 
+## ✨ Key Features
+
+### ⚡ System & Performance Optimization
+- **Smart Power Saver:** Toggleable screen-off power-saving mode (ensures you never miss notifications or alarms).
+- **Display Enhancements:** Boost colors, per-app refresh rate locking, and resolution scaling.
+- **Advanced Rendering:** Render mode selection (Skia Vulkan & Skia GL).
+- **Touch Optimization:** Automatically raises CPU, GPU, and refresh rates based on touch input values. Automatically scales down frequencies when the limiter is enabled in the WebUI.
+- **Thermal & Charging:** Thermal bypass for maximum gaming performance, and charging bypass (active exclusively during gaming mode).
+- **Developer Tweaks:** Auto-enables Developer Options, 4x MSAA, and disables HW overlays for a smoother gaming experience (toggleable in WebUI).
+
+### 🧠 Hardware & Kernel Tuning
+- **GPU & CPU Control:** GPU frequency slider (min–max output), CPU governor selection, and Devfreq governor selection.
+- **MediaTek Specific:** PPM Policy control and EEM voltage offset slider for CPU, GPU, and Cache coherence.
+- **CPU Management:** CPUSET group selection for CPU prioritization and dynamic cgroups share control for each CPU cluster.
+- **Memory Management:** ZRAM manager with up to 20GB extension and custom swappiness values.
+- **Maintenance:** Toggleable RAM cleaner (every 30 seconds) and application cache trimmer via WebUI.
+
+### 🎮 Gaming Mode (Per-App Configuration)
+- Refresh rate & Resolution scaling sliders
+- CPU governor & frequency sliders (applied to all clusters)
+- Vsync & Voltage offset sliders
+- Render mode selection (SkiaGL or SkiaVK)
+- Custom screen resolution input
+- Custom command execution for personalized scripts
+- Real-time monitoring: Average FPS, power draw, battery temperature, and CPU usage
+
+### 🆕 Experimental Features
+- **Sysctl Kernel Tuner Editor**
+- **Global Root Search:** File editor and permission changer
+- **Smart App Freezer:** Automatically freezes apps during gaming or screen-off, and unfreezes them during normal use to prevent disturbances.
+- **Tweak Finder:** Search and tweak all system files on your rooted Android device.
+
+---
+
+## ⚠️ Disclaimer
+- **Use at your own risk:** Any misconfiguration unsupported by your specific device may result in instability, sudden reboots, bootloops, missed notifications, or lag. 
+- **Research first:** Always research your device's specific capabilities before applying advanced tweaks via the WebUI.
+- **Hobby Project:** This is a personal hobby project created to learn and experiment. It is shared with the community **100% FREE**. 
+
+---
+
+## 🚀 Installation & Instructions
+1. **Safety First:** Choose the "Universal" profile during setup to minimize the risk of bootloops.
+2. **Updates:** Click the "Action" button in the module to check for online updates (notifications will appear in the module section if a new version is available).
+3. **Easy Setup:** If you are unfamiliar with manual configurations, navigate to the **Maintenance** section in the WebUI and use the **1-Click Configuration Setup** fetched directly from GitHub.
+4. **Advanced Users:** Utilize the new **Tweak Finder** release to search and modify system files safely.
+
+---
+
+## 💖 Support the Project
+MTK AI Engine is developed and maintained in my free time. If you find this module helpful and would like to support its continued development, your contribution is deeply appreciated. 
+
+While this module will always remain free and open to everyone, you can show your support by:
+- Starring ⭐ the [GitHub Repository](https://github.com/Jestoni888/MTK-AI-Engine)
+- Sharing the project with others
+- Reaching out via the contact links below for feedback or collaboration
+
+*If you wish to make a small donation to support this project, please contact me directly via Telegram or Facebook, and I will gladly provide you with the details.*
+
+---
+
+## 📬 Contact & Links
+Feel free to reach out for support, feedback, or updates through any of the following channels:
+
+- 🔧 **Main Repository:** [MTK-AI-Engine on GitHub](https://github.com/Jestoni888/MTK-AI-Engine)
+- ✈️ **Telegram:** [@mikamisaturo](https://t.me/mikamisaturo)
+- 📘 **Facebook:** [Jestoni Ceniza Cenabre](https://www.facebook.com/jestonicenabre888)
+- 📺 **YouTube:** [@jestonicenabre](https://youtube.com/@jestonicenabre)
+
+---
+<p align="center">Made with ❤️ by <strong>Jestoni Ceniza Cenabre</strong></p>
