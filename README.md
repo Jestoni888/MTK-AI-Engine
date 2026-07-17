@@ -1,6 +1,6 @@
 <p align="center">
   <!-- Replace the src URL below with the actual link to your logo image -->
-  <img src="https://pin.it/2jXlT6wKt" alt="MTK AI Engine Logo" width="150" />
+  <img src="https://photos.app.goo.gl/cFmeKZwiz7wamMHo6" alt="MTK AI Engine Logo" width="150" />
   <h1 align="center">Mediatek AI Engine</h1>
   <p align="center"><strong>Unlock the full potential of your MediaTek device.</strong></p>
 </p>
