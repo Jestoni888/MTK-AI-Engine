@@ -301,6 +301,7 @@ normal_mode() {
 if [ -f "$EXTERNAL_CFG/use_tweaks" ]; then
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_prop" >/dev/null 2>&1 &
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_cpuset" >/dev/null 2>&1 &
+rm -f /sdcard/MTK_AI_Engine/config/never_kill.list
 fi
 [ "$(cat "/sdcard/MTK_AI_Engine/current_profile" 2>/dev/null | tr -d '[:space:]')" != "powersave" ] && return 0
 touch /sdcard/MTK_AI_Engine/enable_limiter 2>/dev/null 
