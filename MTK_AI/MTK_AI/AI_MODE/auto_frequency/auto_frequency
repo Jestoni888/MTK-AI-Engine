@@ -146,8 +146,138 @@ echo 32 > /proc/gpufreqv2/fix_target_opp_index
     sync
 }
 
+force_kill() {
+CONFIG_DIR="/sdcard/MTK_AI_Engine/config"
+FORCE_KILL_FILE="${CONFIG_DIR}/force_kill.list"
+NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
+
+# Critical apps that must NEVER be killed (from hibernator.js)
+CRITICAL_APPS="
+com.android.systemui
+com.android.phone
+com.android.stk
+com.google.android.gms
+com.google.android.gsf
+com.google.android.packageinstaller
+com.android.settings
+com.google.android.setupwizard
+com.android.launcher3
+com.google.android.inputmethod.latin
+android
+com.android.providers.settings
+com.android.providers.downloads
+com.android.providers.media.module
+com.android.externalstorage
+com.android.documentsui
+com.android.permissioncontroller
+com.android.vending
+com.google.android.webview
+"
+
+# Critical prefixes (apps starting with these are protected)
+CRITICAL_PREFIXES="android.hardware. android.system. vendor. com.android.system"
+
+mkdir -p "$CONFIG_DIR"
+
+is_critical() {
+    local pkg="$1"
+    # Check exact match
+    for critical in $CRITICAL_APPS; do
+        [ "$pkg" = "$critical" ] && return 0
+    done
+    # Check prefix match
+    for prefix in $CRITICAL_PREFIXES; do
+        case "$pkg" in
+            ${prefix}*) return 0 ;;
+        esac
+    done
+    return 1
+}
+
+get_current_app() {
+    # 🎯 Extract current top app package name
+    local top_app=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | sed -E 's/.* ([^ /]+)\/.*/\1/')
+    
+    # ✅ Validate package name format (allows uppercase)
+    if echo "$top_app" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
+        echo "$top_app"
+    fi
+}
+
+echo "📦 Fetching installed packages..."
+ALL_PACKAGES=$(pm list packages 2>/dev/null | cut -d: -f2 | sort -u)
+
+if [ -z "$ALL_PACKAGES" ]; then
+    echo "❌ Failed to get package list. Are you root?"
+    exit 1
+fi
+
+TOTAL=$(echo "$ALL_PACKAGES" | wc -l)
+echo "📊 Total installed packages: $TOTAL"
+
+# Detect current top app
+echo "🎯 Detecting current top app..."
+CURRENT_APP=$(get_current_app)
+if [ -n "$CURRENT_APP" ]; then
+    echo "✅ Current top app: $CURRENT_APP"
+else
+    echo "⚠️ Could not detect current top app"
+fi
+
+# Initialize lists
+FORCE_LIST=""
+NEVER_LIST=""
+ADDED_FORCE=0
+SKIPPED=0
+
+# 1. Add current app to Never Kill list (if it's not a critical system app)
+if [ -n "$CURRENT_APP" ] && ! is_critical "$CURRENT_APP"; then
+    NEVER_LIST="$CURRENT_APP"
+    echo "🛡️ Added current app to Never Kill list: $CURRENT_APP"
+fi
+
+# 2. Add all non-critical apps to Force Kill list
+for pkg in $ALL_PACKAGES; do
+    pkg=$(echo "$pkg" | tr -d '[:space:]')
+    [ -z "$pkg" ] && continue
+
+    # Skip current app (already handled in never_kill)
+    [ "$pkg" = "$CURRENT_APP" ] && continue
+
+    if is_critical "$pkg"; then
+        SKIPPED=$((SKIPPED + 1))
+    else
+        if [ -z "$FORCE_LIST" ]; then
+            FORCE_LIST="$pkg"
+        else
+            FORCE_LIST="${FORCE_LIST}
+${pkg}"
+        fi
+        ADDED_FORCE=$((ADDED_FORCE + 1))
+    fi
+done
+
+# Write files
+echo "$FORCE_LIST" > "$FORCE_KILL_FILE"
+echo "⚡ Added $ADDED_FORCE apps to Force Kill list"
+
+if [ -n "$NEVER_LIST" ]; then
+    echo "$NEVER_LIST" > "$NEVER_KILL_FILE"
+else
+    # If no current app was added, clear the file since all non-critical 
+    # apps are now in force_kill (mirrors JS bulk action behavior)
+    echo "" > "$NEVER_KILL_FILE"
+fi
+
+touch /sdcard/MTK_AI_Engine/enable_cleaner
+
+echo "🛡️ Skipped $SKIPPED critical system apps"
+echo "✅ Done! Configs saved to $CONFIG_DIR"
+}
+
 game_mode() {
 if [ -f "$EXTERNAL_CFG/use_tweaks" ]; then
+force_kill
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer" >/dev/null 2>&1 &
 fi
 if [ -f "$EXTERNAL_CFG/enable_gaming_prop" ]; then
