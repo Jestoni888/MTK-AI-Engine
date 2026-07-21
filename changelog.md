@@ -46,6 +46,6 @@
 
 •optimize lite mode for smoothness
 
---- version 0.0.0.89 ---
+--- version 0.0.0.90 ---
 
 •optimize app detection in lite mode & ram hibernator
