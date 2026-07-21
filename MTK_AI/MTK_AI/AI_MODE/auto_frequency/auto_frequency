@@ -196,7 +196,15 @@ is_critical() {
 
 get_current_app() {
     # 🎯 Extract current top app package name
-    local top_app=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | sed -E 's/.* ([^ /]+)\/.*/\1/')
+    local top_app=$(dumpsys activity activities 2>/dev/null | grep -m1 'mResumedActivity' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    
+    if [ -z "$top_app" ]; then
+        top_app=$(dumpsys activity activities 2>/dev/null | grep -m1 'mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    fi
+    
+    if [ -z "$top_app" ]; then
+        top_app=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    fi
     
     # ✅ Validate package name format (allows uppercase)
     if echo "$top_app" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
@@ -224,24 +232,29 @@ else
     echo "⚠️ Could not detect current top app"
 fi
 
-# Initialize lists
+# 1. 🛡️ ADD current app to Never Kill list (WITHOUT clearing existing entries)
+if [ -n "$CURRENT_APP" ] && ! is_critical "$CURRENT_APP"; then
+    # Check if it's already in the list to prevent duplicates
+    if [ -f "$NEVER_KILL_FILE" ] && grep -Fqx "$CURRENT_APP" "$NEVER_KILL_FILE"; then
+        echo "ℹ️ Current app already protected: $CURRENT_APP"
+    else
+        # Append to the file (creates it if it doesn't exist)
+        echo "$CURRENT_APP" >> "$NEVER_KILL_FILE"
+        echo "🛡️ Added current app to Never Kill list: $CURRENT_APP"
+    fi
+fi
+
+# Initialize lists for Force Kill
 FORCE_LIST=""
-NEVER_LIST=""
 ADDED_FORCE=0
 SKIPPED=0
-
-# 1. Add current app to Never Kill list (if it's not a critical system app)
-if [ -n "$CURRENT_APP" ] && ! is_critical "$CURRENT_APP"; then
-    NEVER_LIST="$CURRENT_APP"
-    echo "🛡️ Added current app to Never Kill list: $CURRENT_APP"
-fi
 
 # 2. Add all non-critical apps to Force Kill list
 for pkg in $ALL_PACKAGES; do
     pkg=$(echo "$pkg" | tr -d '[:space:]')
     [ -z "$pkg" ] && continue
 
-    # Skip current app (already handled in never_kill)
+    # Skip current app (it's protected in never_kill)
     [ "$pkg" = "$CURRENT_APP" ] && continue
 
     if is_critical "$pkg"; then
@@ -257,17 +270,11 @@ ${pkg}"
     fi
 done
 
-# Write files
+# Write Force Kill file
 echo "$FORCE_LIST" > "$FORCE_KILL_FILE"
 echo "⚡ Added $ADDED_FORCE apps to Force Kill list"
 
-if [ -n "$NEVER_LIST" ]; then
-    echo "$NEVER_LIST" > "$NEVER_KILL_FILE"
-else
-    # If no current app was added, clear the file since all non-critical 
-    # apps are now in force_kill (mirrors JS bulk action behavior)
-    echo "" > "$NEVER_KILL_FILE"
-fi
+# ⚠️ Note: NEVER_KILL_FILE is intentionally NOT overwritten here to preserve your existing protections!
 
 touch /sdcard/MTK_AI_Engine/enable_cleaner
 
@@ -299,9 +306,9 @@ rm -f /sdcard/MTK_AI_Engine/enable_limiter
 
 normal_mode() {
 if [ -f "$EXTERNAL_CFG/use_tweaks" ]; then
+APP=$(head -n 1 /dev/.mtk_ai_active_game 2>/dev/null | tr -d '[:space:]') && [ -n "$APP" ] && { grep -Fvx "$APP" /sdcard/MTK_AI_Engine/config/never_kill.list > /sdcard/MTK_AI_Engine/config/never_kill.tmp || true; mv /sdcard/MTK_AI_Engine/config/never_kill.tmp /sdcard/MTK_AI_Engine/config/never_kill.list; }
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_prop" >/dev/null 2>&1 &
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_cpuset" >/dev/null 2>&1 &
-rm -f /sdcard/MTK_AI_Engine/config/never_kill.list
 fi
 [ "$(cat "/sdcard/MTK_AI_Engine/current_profile" 2>/dev/null | tr -d '[:space:]')" != "powersave" ] && return 0
 touch /sdcard/MTK_AI_Engine/enable_limiter 2>/dev/null 
@@ -341,14 +348,28 @@ is_launcher() {
 current_app() {
     # 🎮 STATE CHECK: If gaming mode is already active, skip full detection
     if [ -f /dev/.mtk_ai_active_game ]; then
-        CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | sed -E 's/.* ([^ /]+)\/.*/\1/')
+        
+        # 🛡️ UNIVERSAL DETECTION: 
+        # 3-step fallback chain to find the real app, completely ignoring overlays.
+        # Step 1: mResumedActivity (Ignores overlays 99% of the time)
+        CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mResumedActivity' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+        
+        # Step 2: Fallback to mFocusedApp
+        if [ -z "$CURRENT_TOP_APP" ]; then
+            CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+        fi
+        
+        # Step 3: Fallback to mCurrentFocus (Original method)
+        if [ -z "$CURRENT_TOP_APP" ]; then
+            CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+        fi
         
         # ✅ FIXED: Allow uppercase letters in package validation
         if echo "$CURRENT_TOP_APP" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
             if is_launcher "$CURRENT_TOP_APP"; then
                 log_msg "🏠 Launcher detected, exiting gaming mode"
-                rm -f /dev/.mtk_ai_active_game
                 normal_mode
+                rm -f /dev/.mtk_ai_active_game
                 notify_status "Normal mode: $CURRENT_TOP_APP"
             fi
         fi
@@ -357,15 +378,25 @@ current_app() {
     
     # 📱 Not in gaming mode: run full detection ONCE
     log_msg "📱 Detecting current top app..."
-    CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | sed -E 's/.* ([^ /]+)\/.*/\1/')
+    
+    # 🛡️ UNIVERSAL DETECTION (Same 3-step fallback chain)
+    CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mResumedActivity' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    
+    if [ -z "$CURRENT_TOP_APP" ]; then
+        CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    fi
+    
+    if [ -z "$CURRENT_TOP_APP" ]; then
+        CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    fi
     
     # ✅ FIXED: Allow uppercase letters in package validation
     if ! echo "$CURRENT_TOP_APP" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
         CURRENT_TOP_APP=""
-        notify_status "⚠️"
+        notify_status ""
         return 0
     fi
-    
+
     notify_status "$CURRENT_TOP_APP"
     
     # Check if current app is a game
