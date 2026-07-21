@@ -97,10 +97,18 @@ force_kill_cgroup_safe() {
     
     # 📱 1. Detect current foreground/top app ONCE (outside the loop)
     log_msg "📱 Detecting current top app..."
-    CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | sed -E 's/.* ([^ /]+)\/.*/\1/')
+    CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mResumedActivity' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    
+    if [ -z "$CURRENT_TOP_APP" ]; then
+        CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    fi
+    
+    if [ -z "$CURRENT_TOP_APP" ]; then
+        CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    fi
     
     # Validate package format to avoid matching null/empty/garbage
-    if ! echo "$CURRENT_TOP_APP" | grep -qE '^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$'; then
+    if ! echo "$CURRENT_TOP_APP" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
         CURRENT_TOP_APP=""
         log_msg "⚠️ Could not detect a valid top app."
     else
