@@ -45,3 +45,7 @@
 •automode converts to hard mode & manual mode to lite mode
 
 •optimize lite mode for smoothness
+
+--- version 0.0.0.89 ---
+
+•optimize app detection in lite mode & ram hibernator
