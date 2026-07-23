@@ -86,6 +86,10 @@ run_cmd() {
         pkill -f "ram_cleaner" 2>/dev/null
     fi
 
+    if [ -f "$EXTERNAL_CFG/random_device" ]; then
+        nohup sh "/data/adb/modules/MTK_AI/script_runner/sf_controller" 2>&1 &
+    fi
+
     if [ -f "$EXTERNAL_CFG/enable_cpu" ]; then
         pgrep -f "cpu6" > /dev/null || nohup sh "$LOGIC_CPU6_PATH" 2>&1 &
         pgrep -f "cpu7" > /dev/null || nohup sh "$LOGIC_CPU7_PATH" 2>&1 &
