@@ -107,19 +107,20 @@ setprop net.hostname "$HOSTNAME"
 # mount -o remount,ro /system
 
 # Log the change
-log -t DeviceNameRandomizer "Device name changed to: $RANDOM_NAME"
+log -t DeviceNameRandomizer "Device name changed to: $DEVICE_NAME"
 
 # Apply changes to active connections
 if [ -x /system/bin/ndc ]; then
-    /system/bin/ndc interface setcfg wlan0 "$RANDOM_NAME"
+    /system/bin/ndc interface setcfg wlan0 "$HOSTNAME"
 fi
 
 NEW_MAC="02:$(tr -dc '0-9a-f' < /dev/urandom | head -c 2):$(tr -dc '0-9a-f' < /dev/urandom | head -c 2):$(tr -dc '0-9a-f' < /dev/urandom | head -c 2):$(tr -dc '0-9a-f' < /dev/urandom | head -c 2):$(tr -dc '0-9a-f' < /dev/urandom | head -c 2)"
 
 ip link set dev wlan0 address "$NEW_MAC"
+sudo iw dev wlan0 set address "$NEW_MAC"
 
 # Verify changes
-echo "Device name successfully randomized to: $RANDOM_NAME"
+echo "Device name successfully randomized to: $DEVICE_NAME"
 echo "New MAC: $NEW_MAC"
 }
 
