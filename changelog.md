@@ -49,3 +49,7 @@
 --- version 0.0.0.90 ---
 
 •optimize app detection in lite mode & ram hibernator
+
+--- version 0.0.0.91 ---
+
+•added randomize device name & mac address to bypass from wifi blocking via router 🚫
