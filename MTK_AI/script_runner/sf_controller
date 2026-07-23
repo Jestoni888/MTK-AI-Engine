@@ -3,14 +3,101 @@
 MONITOR_FILE="/sys/class/net/wlan0/operstate"
 
 random_device() {
-# Generate random device name (format: android-XXXXX)
-RANDOM_NAME="$(tr -dc 'a-z0-9' < /dev/urandom | head -c 5)"
+    # ==========================================
+    # 1. SELECT RANDOM HIGH-END DEVICE MODEL
+    # ==========================================
+    DEVICES=(
+        # Apple
+        "iPhone 16 Pro Max" "iPhone 16 Pro" "iPhone 16 Plus" "iPhone 16"
+        "iPhone 15 Pro Max" "iPhone 15 Pro" "iPhone 15 Plus" "iPhone 15"
+        "iPhone 14 Pro Max" "iPhone 14 Pro" "iPhone 14"
+        "iPhone 13 Pro Max" "iPhone 13 Pro" "iPhone 13"
+        "iPad Pro 13-inch M4" "iPad Pro 12.9-inch M2" "iPad Air 13-inch M2"
+        "MacBook Pro 16-inch M3 Max" "MacBook Pro 14-inch M3 Pro" "MacBook Air 15-inch M3"
+        
+        # Samsung
+        "Samsung Galaxy S24 Ultra" "Samsung Galaxy S24+" "Samsung Galaxy S24"
+        "Samsung Galaxy S23 Ultra" "Samsung Galaxy S23+" "Samsung Galaxy S23"
+        "Samsung Galaxy Z Fold6" "Samsung Galaxy Z Fold5" "Samsung Galaxy Z Fold4"
+        "Samsung Galaxy Z Flip6" "Samsung Galaxy Z Flip5" "Samsung Galaxy Z Flip4"
+        "Samsung Galaxy Tab S10 Ultra" "Samsung Galaxy Tab S10+"
+        "Samsung Galaxy Tab S9 Ultra" "Samsung Galaxy Tab S9+" "Samsung Galaxy Tab S9"
+        
+        # Google
+        "Google Pixel 9 Pro XL" "Google Pixel 9 Pro" "Google Pixel 9"
+        "Google Pixel 8 Pro" "Google Pixel 8" "Google Pixel 8a"
+        "Google Pixel 7 Pro" "Google Pixel 7"
+        "Google Pixel Fold" "Google Pixel Tablet"
+        
+        # Xiaomi & Redmi
+        "Xiaomi 14 Ultra" "Xiaomi 14 Pro" "Xiaomi 14"
+        "Xiaomi 13 Ultra" "Xiaomi 13 Pro" "Xiaomi 13"
+        "Xiaomi Mix Fold 4" "Xiaomi Mix Fold 3"
+        "Redmi K70 Pro" "Redmi K70" "Redmi Note 13 Pro+"
+        
+        # OnePlus
+        "OnePlus 12" "OnePlus 12R" "OnePlus 11" "OnePlus 11R"
+        "OnePlus Open" "OnePlus Nord 4" "OnePlus Nord 3"
+        
+        # ASUS
+        "ASUS ROG Phone 8 Pro" "ASUS ROG Phone 8"
+        "ASUS ROG Phone 7 Ultimate" "ASUS ROG Phone 7"
+        "ASUS Zenfone 11 Ultra" "ASUS Zenfone 10"
+        
+        # Sony
+        "Sony Xperia 1 VI" "Sony Xperia 1 V" "Sony Xperia 1 IV"
+        "Sony Xperia 5 V" "Sony Xperia 5 IV" "Sony Xperia 10 VI"
+        
+        # Huawei
+        "Huawei Pura 70 Ultra" "Huawei Pura 70 Pro" "Huawei Pura 70"
+        "Huawei Mate 60 Pro" "Huawei Mate 60"
+        "Huawei Mate X5" "Huawei Mate X3" "Huawei P60 Pro"
+        
+        # Honor
+        "Honor Magic6 Pro" "Honor Magic6"
+        "Honor Magic V2" "Honor Magic Vs"
+        "Honor 200 Pro" "Honor 200" "Honor 100 Pro"
+        
+        # Vivo
+        "Vivo X100 Ultra" "Vivo X100 Pro" "Vivo X100"
+        "Vivo X Fold3 Pro" "Vivo X Fold3" "Vivo X90 Pro+"
+        
+        # Oppo
+        "Oppo Find X7 Ultra" "Oppo Find X7" "Oppo Find X6 Pro"
+        "Oppo Find N3" "Oppo Find N3 Flip"
+        "Oppo Reno 12 Pro" "Oppo Reno 11 Pro"
+        
+        # Motorola
+        "Motorola Edge 50 Ultra" "Motorola Edge 50 Pro" "Motorola Edge 40 Pro"
+        "Motorola Razr 50 Ultra" "Motorola Razr 40 Ultra" "Motorola Razr 40"
+        
+        # Nothing
+        "Nothing Phone 2a" "Nothing Phone 2" "Nothing Phone 1"
+        
+        # Realme
+        "Realme GT 6" "Realme GT 5 Pro" "Realme GT 5" "Realme 12 Pro+"
+        
+        # ZTE / Nubia / RedMagic
+        "RedMagic 9S Pro" "RedMagic 9 Pro" "RedMagic 8S Pro"
+        "Nubia Z60 Ultra" "Nubia Z50 Ultra"
+        
+        # Lenovo
+        "Lenovo Legion Y90" "Lenovo Legion Y70" "Lenovo Legion Tab" "Lenovo Legion Y70 2026"
+    )
+
+    # Pick a random index from the array
+    RANDOM_INDEX=$(( RANDOM % ${#DEVICES[@]} ))
+    DEVICE_NAME="${DEVICES[$RANDOM_INDEX]}"
+
+    # Sanitize for network hostname: lowercase and replace spaces with hyphens
+    # (e.g., "iPhone 15 Pro Max" becomes "iphone-15-pro-max")
+    HOSTNAME=$(echo "$DEVICE_NAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
 
 # Set global device name (visible in settings)
-settings put global device_name "$RANDOM_NAME"
+settings put global device_name "$DEVICE_NAME"
 
 # Set hostname for network requests (DHCP/mDNS)
-setprop net.hostname "$RANDOM_NAME"
+setprop net.hostname "$HOSTNAME"
 
 # Optional: Set persistent hostname in build.prop (requires remount)
 # Uncomment if you want to make it persistent across reboots
