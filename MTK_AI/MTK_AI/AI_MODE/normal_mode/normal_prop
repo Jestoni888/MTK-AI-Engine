@@ -2,6 +2,7 @@
 #!/data/adb/modules/MTK_AI/busybox sh
 
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
+CPULIMIT="/data/adb/modules/MTK_AI/lib/cpulimit"
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE" || true
@@ -34,6 +35,13 @@ su -c "echo Y > /sys/module/wlan/parameters/ps" || true
 su -c "echo 1 > /sys/module/wlan/parameters/wlm" || true
 
 pkill -f cpulimit || true
+
+if [ -f "/sdcard/MTK_AI_Engine/limit_surfaceflinger" ]; then
+        SF_PID=$(pidof surfaceflinger)
+        echo $SF_PID
+        nohup $CPULIMIT -p $SF_PID -l 80 -z 2>/dev/null &
+fi
+
 setprop 'persist.sys.power_mode_perf' '0' || true
 settings put system persist.sys.power_mode_perf 0 2>/dev/null || true
 
