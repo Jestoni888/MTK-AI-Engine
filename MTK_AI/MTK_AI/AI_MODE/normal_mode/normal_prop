@@ -34,14 +34,6 @@ su -c "cmd wifi reassociate" || true
 su -c "echo Y > /sys/module/wlan/parameters/ps" || true
 su -c "echo 1 > /sys/module/wlan/parameters/wlm" || true
 
-pkill -f cpulimit || true
-
-if [ -f "/sdcard/MTK_AI_Engine/limit_surfaceflinger" ]; then
-        SF_PID=$(pidof surfaceflinger)
-        echo $SF_PID
-        nohup $CPULIMIT -p $SF_PID -l 80 -z 2>/dev/null &
-fi
-
 setprop 'persist.sys.power_mode_perf' '0' || true
 settings put system persist.sys.power_mode_perf 0 2>/dev/null || true
 
