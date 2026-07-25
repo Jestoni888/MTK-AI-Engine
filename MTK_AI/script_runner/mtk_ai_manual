@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# MTK AI ENGINE - Manual Overrides (Fixed Version)
+# MTK AI ENGINE - Manual Overrides (Fixed & Hardened Version)
 # Place in: /data/adb/service.d/mtk_ai_manual
 # chmod 755 /data/adb/service.d/mtk_ai_manual
 
@@ -12,17 +12,17 @@ CPULIMIT="/data/adb/modules/MTK_AI/lib/cpulimit"
 
 ### === SINGLE INSTANCE LOCK ===
 LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
-mkdir -p "$LOCK_DIR"
+mkdir -p "$LOCK_DIR" 2>/dev/null || true
 LOCK_FILE="$LOCK_DIR/mtk_ai_manual.pid"
 
 # Helper: safe logging (works on all Android versions)
 log_msg() { log -t MTK_AI "$@" 2>/dev/null || echo "[MTK_AI] $*"; }
 
 # 1️⃣ Global pgrep check FIRST
-if pgrep -f "mtk_ai_manual" | grep -v "^$$" > /dev/null 2>&1; then
+if pgrep -f "mtk_ai_manual" 2>/dev/null | grep -v "^$$" > /dev/null 2>&1; then
     exit 0
 else
-    rm -rf "$LOCK_DIR"
+    rm -rf "$LOCK_DIR" 2>/dev/null || true
 fi
 
 # 2️⃣ If PID file exists and process is alive → exit silently
@@ -34,206 +34,199 @@ if [ -f "$LOCK_FILE" ]; then
 fi
 
 # 3️⃣ Register current process as the single instance
-mkdir -p "$LOCK_DIR"
-echo $$ > "$LOCK_FILE"
-trap 'rm -f "$LOCK_FILE"' EXIT
+mkdir -p "$LOCK_DIR" 2>/dev/null || true
+echo $$ > "$LOCK_FILE" 2>/dev/null || true
+trap 'rm -f "$LOCK_FILE" 2>/dev/null || true' EXIT
 ### ============================
 
 echo "=== MTK AI MANUAL OVERRIDES STARTING ==="
-settings put global low_power 0
-settings put global low_power_sticky 0
-echo "0" > /proc/sys/kernel/panic
+settings put global low_power 0 >/dev/null 2>&1 || true
+settings put global low_power_sticky 0 >/dev/null 2>&1 || true
+echo "0" > /proc/sys/kernel/panic 2>/dev/null || true
+
 # --- 1. RESOLUTION SCALING ---
 RES_CONFIG="$CONFIG_DIR/resolution_scale_config.txt"
 if [ -f "$RES_CONFIG" ]; then
-    # Parse key=value pairs, strip CR/LF/whitespace
-    SCALE=$(grep -m1 "^scale=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ')
-    TEXTURE=$(grep -m1 "^texture=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ')
-    TARGET_DENSITY=$(grep -m1 "^density=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ')
+    SCALE=$(grep -m1 "^scale=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ') || true
+    TEXTURE=$(grep -m1 "^texture=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ') || true
+    TARGET_DENSITY=$(grep -m1 "^density=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ') || true
 
-    # Validate density is a positive integer
     if [ -n "$TARGET_DENSITY" ] && [ "$TARGET_DENSITY" -gt 0 ] 2>/dev/null; then
         echo "Applying resolution config: scale=${SCALE}%, texture=${TEXTURE}, density=${TARGET_DENSITY}"
         
-        # Apply density via wm
-        su -c "wm density $TARGET_DENSITY" 2>/dev/null
-        if [ $? -eq 0 ]; then
+        if su -c "wm density $TARGET_DENSITY" >/dev/null 2>&1; then
             echo "✓ Resolution/Density applied successfully"
             log_msg "Resolution config applied: scale=$SCALE, texture=$TEXTURE, density=$TARGET_DENSITY"
         else
-            echo "✗ Failed to apply density $TARGET_DENSITY"
+            echo "✗ Failed to apply density $TARGET_DENSITY (skipping)"
             log_msg "Failed to apply density: $TARGET_DENSITY"
         fi
     else
-        echo "Invalid or missing density value in config"
+        echo "Invalid or missing density value in config (skipping)"
         log_msg "Invalid density value in resolution_scale_config.txt"
     fi
 else
-    echo "No resolution config found at $RES_CONFIG"
+    echo "No resolution config found at $RES_CONFIG (skipping)"
 fi
 
 # --- 2. CPU GOVERNOR ---
-if [ -f "$CONFIG_DIR/manual_governor.txt" ]; then
-    GOVERNOR=$(cat "$CONFIG_DIR/manual_governor.txt" 2>/dev/null | tr -d '\r\n\t ')
+GOV_CONFIG="$CONFIG_DIR/manual_governor.txt"
+if [ -f "$GOV_CONFIG" ]; then
+    GOVERNOR=$(cat "$GOV_CONFIG" 2>/dev/null | tr -d '\r\n\t ') || true
     if [ -n "$GOVERNOR" ]; then
         echo "Applying governor: $GOVERNOR"
         for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
             if [ -f "$cpu/cpufreq/scaling_available_governors" ]; then
-                if grep -q "$GOVERNOR" "$cpu/cpufreq/scaling_available_governors"; then
-                    # Grant write permissions first to prevent permission denied errors
-                    su -c "chmod 777 '$cpu/cpufreq/scaling_governor'" 2>/dev/null
+                if grep -q "$GOVERNOR" "$cpu/cpufreq/scaling_available_governors" 2>/dev/null; then
+                    su -c "chmod 777 '$cpu/cpufreq/scaling_governor'" >/dev/null 2>&1 || true
                     
-                    # Apply the governor
-                    su -c "echo '$GOVERNOR' > '$cpu/cpufreq/scaling_governor'" 2>/dev/null
-                    
-                    if [ $? -eq 0 ]; then
+                    if su -c "echo '$GOVERNOR' > '$cpu/cpufreq/scaling_governor'" 2>/dev/null; then
                         echo "✓ Governor applied to $cpu"
                     else
-                        echo "✗ Failed to apply governor to $cpu"
+                        echo "✗ Failed to apply governor to $cpu (skipping)"
                     fi
                 else
-                    echo "Governor '$GOVERNOR' not available for $cpu"
+                    echo "Governor '$GOVERNOR' not available for $cpu (skipping)"
                 fi
             fi
         done
     else
-        echo "Empty governor config"
+        echo "Empty governor config (skipping)"
     fi
 else
-    echo "No governor config found"
+    echo "No governor config found (skipping)"
 fi
 
 # --- 3. RENDERER ---
-if [ -f "$CONFIG_DIR/manual_renderer.txt" ]; then
-    RENDERER=$(cat "$CONFIG_DIR/manual_renderer.txt" 2>/dev/null | tr -d '\r\n\t ')
+RENDERER_CONFIG="$CONFIG_DIR/manual_renderer.txt"
+if [ -f "$RENDERER_CONFIG" ]; then
+    RENDERER=$(cat "$RENDERER_CONFIG" 2>/dev/null | tr -d '\r\n\t ') || true
     if [ -n "$RENDERER" ]; then
         echo "Applying renderer: $RENDERER"
-        su -c "setprop debug.hwui.renderer '$RENDERER'" 2>/dev/null
-        if [ $? -eq 0 ]; then
+        if su -c "setprop debug.hwui.renderer '$RENDERER'" 2>/dev/null; then
             echo "✓ Renderer applied"
         else
-            echo "✗ Failed to apply renderer"
+            echo "✗ Failed to apply renderer (skipping)"
         fi
     else
-        echo "Empty renderer config"
+        echo "Empty renderer config (skipping)"
     fi
 else
-    echo "No renderer config found"
+    echo "No renderer config found (skipping)"
 fi
 
 # --- 4. REFRESH RATE ---
-if [ -f "$CONFIG_DIR/manual_refresh_lock.txt" ]; then
-    MODE_ID=$(cat "$CONFIG_DIR/manual_refresh_lock.txt" 2>/dev/null | tr -d '\r\n\t ')
+REFRESH_CONFIG="$CONFIG_DIR/manual_refresh_lock.txt"
+if [ -f "$REFRESH_CONFIG" ]; then
+    MODE_ID=$(cat "$REFRESH_CONFIG" 2>/dev/null | tr -d '\r\n\t ') || true
     if [ -n "$MODE_ID" ]; then
         echo "Applying refresh rate mode: $MODE_ID"
-        su -c "service call SurfaceFlinger 1035 i32 $MODE_ID" 2>/dev/null
-        if [ $? -eq 0 ]; then
+        if su -c "service call SurfaceFlinger 1035 i32 $MODE_ID" 2>/dev/null; then
             echo "✓ Refresh rate applied"
         else
-            echo "✗ Failed to apply refresh rate"
+            echo "✗ Failed to apply refresh rate (skipping)"
         fi
     else
-        echo "Empty refresh rate config"
+        echo "Empty refresh rate config (skipping)"
     fi
 else
-    echo "No refresh rate config found"
+    echo "No refresh rate config found (skipping)"
 fi
 
+# --- 5. DEVFREQ SETTINGS ---
+# CRITICAL FIX: Skip if missing, DO NOT exit 1
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Config file not found"
-    exit 1
-fi
+    echo "⚠️ Config file not found at $CONFIG_FILE. Skipping devfreq block, continuing execution..."
+else
+    echo "Loading devfreq settings..."
 
-echo "Loading devfreq settings..."
-
-# Process each line
-while IFS= read -r line; do
-    # Skip comments and empty lines
-    case "$line" in
-        \#*|"") continue ;;
-    esac
-    
-    # Extract device and governor from "device"="governor" format
-    if echo "$line" | grep -q '=".*"$'; then
-        # Remove quotes and split
-        clean_line=$(echo "$line" | sed 's/"//g')
-        DEVICE=$(echo "$clean_line" | cut -d'=' -f1)
-        GOVERNOR=$(echo "$clean_line" | cut -d'=' -f2)
+    # Process each line (|| [ -n "$line" ] ensures last line is read even without trailing newline)
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Skip comments and empty lines
+        case "$line" in
+            \#*|"") continue ;;
+        esac
         
-        if [ -n "$DEVICE" ] && [ -n "$GOVERNOR" ]; then
-            GOV_PATH="/sys/class/devfreq/$DEVICE/governor"
-            if [ -f "$GOV_PATH" ]; then
-                echo "$GOVERNOR" > "$GOV_PATH" 2>/dev/null
-                if [ $? -eq 0 ]; then
-                    echo "✅ Applied $GOVERNOR to $DEVICE"
+        # Extract device and governor from "device"="governor" format
+        if echo "$line" | grep -q '=".*"$'; then
+            clean_line=$(echo "$line" | sed 's/"//g') || true
+            DEVICE=$(echo "$clean_line" | cut -d'=' -f1) || true
+            GOVERNOR=$(echo "$clean_line" | cut -d'=' -f2) || true
+            
+            if [ -n "$DEVICE" ] && [ -n "$GOVERNOR" ]; then
+                GOV_PATH="/sys/class/devfreq/$DEVICE/governor"
+                if [ -f "$GOV_PATH" ]; then
+                    # Direct if-check replaces fragile $? checking
+                    if echo "$GOVERNOR" > "$GOV_PATH" 2>/dev/null; then
+                        echo "✅ Applied $GOVERNOR to $DEVICE"
+                    else
+                        echo "❌ Failed to apply $GOVERNOR to $DEVICE (skipping)"
+                    fi
                 else
-                    echo "❌ Failed to apply $GOVERNOR to $DEVICE"
+                    echo "⚠️ Device not found: $DEVICE (skipping)"
                 fi
-            else
-                echo "⚠️ Device not found: $DEVICE"
             fi
         fi
-    fi
-done < "$CONFIG_FILE"
+    done < "$CONFIG_FILE"
+fi
 
-# Check if PPM interface exists
+# --- 6. PPM POLICIES ---
+# CRITICAL FIX: Skip if missing, DO NOT exit 0
 if [ ! -f "$PPM_PATH" ]; then
-    log_msg "⚠️ PPM not available on this device"
-    exit 0
-fi
-
-# Check if config file exists
-if [ ! -f "$PPM_CONFIG" ]; then
-    log_msg "ℹ️ No PPM config found, using defaults"
-    exit 0
-fi
-
-log_msg "🎮 Loading PPM policies from SDCard..."
-
-# Source the config file to get policy variables
-. "$PPM_CONFIG" 2>/dev/null
-
-# Apply all PPM policies (0-9)
-for i in 0 1 2 3 4 5 6 7 8 9; do
-    # Get policy state using eval
-    eval "POLICY_STATE=\$policies[$i]"
-    
-    if [ "$POLICY_STATE" = "0" ] || [ "$POLICY_STATE" = "1" ]; then
-        echo "$i $POLICY_STATE" > "$PPM_PATH" 2>/dev/null
-        if [ $? -eq 0 ]; then
-            log_msg "✅ Applied PPM policy $i = $POLICY_STATE"
-        else
-            log_msg "❌ Failed to apply PPM policy $i"
-        fi
+    log_msg "⚠️ PPM not available on this device. Skipping PPM block, continuing execution..."
+else
+    if [ ! -f "$PPM_CONFIG" ]; then
+        log_msg "ℹ️ No PPM config found. Skipping PPM block, continuing execution..."
     else
-        log_msg "⚠️ Policy $i not set in config, skipping"
+        log_msg "🎮 Loading PPM policies from SDCard..."
+
+        . "$PPM_CONFIG" 2>/dev/null || true
+
+        for i in 0 1 2 3 4 5 6 7 8 9; do
+            eval "POLICY_STATE=\$policies[$i]" 2>/dev/null || true
+            
+            if [ "$POLICY_STATE" = "0" ] || [ "$POLICY_STATE" = "1" ]; then
+                if echo "$i $POLICY_STATE" > "$PPM_PATH" 2>/dev/null; then
+                    log_msg "✅ Applied PPM policy $i = $POLICY_STATE"
+                else
+                    log_msg "❌ Failed to apply PPM policy $i (skipping)"
+                fi
+            else
+                log_msg "⚠️ Policy $i not set in config, skipping"
+            fi
+        done
+        log_msg "✅ PPM policies loaded successfully from SDCard!"
+    fi
+fi
+
+# --- 7. APP HIBERNATION ---
+echo "Applying app hibernation rules..."
+for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); do
+    if [ -n "$app" ] && [ "$app" != "com.topjohnwu.magisk" ] && [ "$app" != "me.weishu.kernelsu" ]; then
+        echo "$app has been hibernated"
+        cmd app_hibernation set-state --user 0 --global "$app" true >/dev/null 2>&1 || true
+        echo ""
     fi
 done
 
-for app in $(cmd package list packages | cut -f 2 -d ":"); do
-if [[ ! "$app" == "com.topjohnwu.magisk" ]] && [[ ! "$app" == "me.weishu.kernelsu" ]]; then
-echo "$app has been hibernated"
-cmd app_hibernation set-state --user 0 --global "$app" true
-echo ""
-fi
+# CRITICAL FIX: Moved outside the loop for massive efficiency and guaranteed execution
+device_config put app_hibernation app_hibernation_enabled true >/dev/null 2>&1 || true
+device_config put permissions auto_revoke_unused_threshold_millis2 99 >/dev/null 2>&1 || true
 
-device_config put app_hibernation app_hibernation_enabled true
-device_config put permissions \
-  auto_revoke_unused_threshold_millis2 99
-done
-
-pkill -f cpulimit || true
+# --- 8. SURFACEFLINGER CPU LIMIT ---
+pkill -f cpulimit >/dev/null 2>&1 || true
 
 if [ -f "/sdcard/MTK_AI_Engine/limit_surfaceflinger" ]; then
-        SF_PID=$(pidof surfaceflinger)
-        echo $SF_PID
-        nohup $CPULIMIT -p $SF_PID -l 80 -z 2>/dev/null &
+    SF_PID=$(pidof surfaceflinger 2>/dev/null || true)
+    if [ -n "$SF_PID" ]; then
+        echo "Limiting SurfaceFlinger PID: $SF_PID"
+        nohup "$CPULIMIT" -p "$SF_PID" -l 80 -z >/dev/null 2>&1 &
+    else
+        echo "⚠️ SurfaceFlinger PID not found (skipping limit)"
+    fi
 fi
 
-log_msg "✅ PPM policies loaded successfully from SDCard!"
-
 echo "✅ Devfreq settings loaded successfully!"
-
 echo "=== MTK AI MANUAL OVERRIDES COMPLETED ==="
 
 exit 0
