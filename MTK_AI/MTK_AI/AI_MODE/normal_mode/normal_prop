@@ -2,7 +2,6 @@
 #!/data/adb/modules/MTK_AI/busybox sh
 
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
-CPULIMIT="/data/adb/modules/MTK_AI/lib/cpulimit"
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE" || true
