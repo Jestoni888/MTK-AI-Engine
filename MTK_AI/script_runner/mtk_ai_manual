@@ -221,6 +221,14 @@ device_config put permissions \
   auto_revoke_unused_threshold_millis2 99
 done
 
+pkill -f cpulimit || true
+
+if [ -f "/sdcard/MTK_AI_Engine/limit_surfaceflinger" ]; then
+        SF_PID=$(pidof surfaceflinger)
+        echo $SF_PID
+        nohup $CPULIMIT -p $SF_PID -l 80 -z 2>/dev/null &
+fi
+
 log_msg "✅ PPM policies loaded successfully from SDCard!"
 
 echo "✅ Devfreq settings loaded successfully!"
