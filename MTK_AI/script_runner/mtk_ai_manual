@@ -8,6 +8,7 @@ CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
 LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
 PPM_CONFIG="$CONFIG_DIR/ppm_config.conf"
 PPM_PATH="/proc/ppm/policy_status"
+CPULIMIT="/data/adb/modules/MTK_AI/lib/cpulimit"
 
 ### === SINGLE INSTANCE LOCK ===
 LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
