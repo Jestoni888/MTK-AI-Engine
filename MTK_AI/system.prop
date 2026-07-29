@@ -1,5 +1,3 @@
-# Project Raco Prop
-
 # Disable Limit 60FPS while Gaming on AOSP 15.0
 debug.graphics.game_default_frame_rate.disabled=true
 
