@@ -1,10 +1,10 @@
-# /data/adb/modules/MTK_AI/service.sh
 #!/system/bin/sh
 # action.sh - Full updater + service restarter + telemetry
 
 LOG_TAG="[MTK_AI UPDATE]"
 MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"
 TMP="/data/local/tmp/mtk_update"
+PROGRESS_FILE="/sdcard/MTK_AI/.update_progress"
 
 log() {
     echo "$LOG_TAG $*"
@@ -26,8 +26,7 @@ log "📁 Module dir: $MODDIR"
 # === 2. Check internet using YOUR BUSYBOX ===
 has_internet() {
     if [ -x "$MODDIR/busybox" ]; then
-        "$MODDIR/busybox" wget -q --timeout=5 -O /dev/null \
-            "1.1.1.1" 2>/dev/null
+        "$MODDIR/busybox" wget -q --timeout=5 -O /dev/null "1.1.1.1" 2>/dev/null
         return $?
     fi
     return 1
@@ -144,20 +143,37 @@ is_required() {
 
 # === 5. MAIN LOGIC ===
 
+# Ensure progress directory exists and reset to 0%
+mkdir -p "/sdcard/MTK_AI"
+echo "0" > "$PROGRESS_FILE"
+
 if has_internet; then
     log "🌐 Internet detected. Checking for updates..."
     mkdir -p "$TMP"
-        if download "$MANIFEST_URL" "$TMP/manifest.txt"; then
+    
+    if download "$MANIFEST_URL" "$TMP/manifest.txt"; then
         if [ ! -s "$TMP/manifest.txt" ]; then
             log "⚠️ Manifest is empty."
             rm -rf "$TMP"
         else
+            # 🔥 Pre-calculate total files to update for accurate progress percentage
+            total_files=0
+            while IFS= read -r line; do
+                [ -z "$line" ] && continue
+                case "$line" in \#*) continue ;; esac
+                rel_path=$(echo "$line" | cut -d' ' -f1)
+                if is_required "$rel_path"; then
+                    total_files=$((total_files + 1))
+                fi
+            done < "$TMP/manifest.txt"
+            
+            # Prevent division by zero
+            [ "$total_files" -eq 0 ] && total_files=1
+            
             updated=0
             while IFS= read -r line; do
                 [ -z "$line" ] && continue
-                case "$line" in
-                    \#*) continue ;;
-                esac
+                case "$line" in \#*) continue ;; esac
                 
                 rel_path=$(echo "$line" | cut -d' ' -f1)
                 url=$(echo "$line" | cut -d' ' -f2- | xargs)
@@ -170,12 +186,19 @@ if has_internet; then
                         chmod 755 "$target" 2>/dev/null
                         log "✅ Updated: $rel_path"
                         updated=$((updated + 1))
+                        
+                        # 🔥 Calculate and write progress (0-100)
+                        progress=$((updated * 100 / total_files))
+                        echo "$progress" > "$PROGRESS_FILE"
                     else
                         log "⚠️ FAILED: $rel_path"
                     fi
                 fi
             done < "$TMP/manifest.txt"
             rm -rf "$TMP"
+            
+            # 🔥 Ensure it hits 100% at the end of the loop
+            echo "100" > "$PROGRESS_FILE"
             
             if [ "$updated" -gt 0 ]; then
                 log "✅ Update complete!"
@@ -203,4 +226,5 @@ done
 
 export SERVICE=$MODDIR:$SERVICE
 
+# exec replaces the current process, which naturally stops the "action.sh" pgrep in JS
 exec $MODDIR/service.sh
