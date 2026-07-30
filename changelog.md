@@ -55,3 +55,9 @@
 •added randomize device name & mac address to bypass from wifi blocking via router 🚫
 
 •added Surfaceflinger limiter to reduce overheating in normal use (toggleable in settings)
+
+--- version 0.0.0.92 ---
+
+•improved use tweaks between normal mode & gaming mode without disabling thermal can play smoothly in gaming
+
+•updating UI updates in progress bar upon downloading update
