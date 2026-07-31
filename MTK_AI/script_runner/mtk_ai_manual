@@ -171,6 +171,43 @@ else
     fi
 fi
 
+# CPU GOVERNOR ---
+GOV_CONFIG="$CONFIG_DIR/manual_governor.txt"
+GOVERNOR="schedutil" # Set default fallback
+
+# 1. Determine which governor to use
+if [ -f "$GOV_CONFIG" ]; then
+    GOVERNOR=$(cat "$GOV_CONFIG" 2>/dev/null | tr -d '\r\n\t ') || true
+    if [ -z "$GOVERNOR" ]; then
+        echo "Empty governor config, falling back to default: schedutil"
+        GOVERNOR="schedutil"
+    else
+        echo "Applying governor from config: $GOVERNOR"
+    fi
+else
+    echo "No governor config found, falling back to default: schedutil"
+fi
+
+# 2. Apply the selected governor to ALL CPUs
+for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+    if [ -f "$cpu/cpufreq/scaling_available_governors" ]; then
+        if grep -q "$GOVERNOR" "$cpu/cpufreq/scaling_available_governors" 2>/dev/null; then
+            
+            # Note: If you run this script as root, you don't need 'su' or 'chmod 777'.
+            # If you must use su, ensure it's configured for passwordless root access.
+            su -c "chmod 644 '$cpu/cpufreq/scaling_governor'" >/dev/null 2>&1 || true
+            
+            if su -c "echo '$GOVERNOR' > '$cpu/cpufreq/scaling_governor'" 2>/dev/null; then
+                echo "✓ Governor applied to $cpu"
+            else
+                echo "✗ Failed to apply governor to $cpu (skipping)"
+            fi
+        else
+            echo "Governor '$GOVERNOR' not available for $cpu (skipping)"
+        fi
+    fi
+done
+
 # --- 7. APP HIBERNATION ---
 echo "Applying app hibernation rules..."
 for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); do
@@ -199,36 +236,6 @@ if [ -f "/sdcard/MTK_AI_Engine/limit_surfaceflinger" ]; then
 fi
 
 nohup sh "/data/adb/modules/MTK_AI/update_checker.sh" >/dev/null 2>&1 &
-
-sleep 5
-
-# CPU GOVERNOR ---
-GOV_CONFIG="$CONFIG_DIR/manual_governor.txt"
-if [ -f "$GOV_CONFIG" ]; then
-    GOVERNOR=$(cat "$GOV_CONFIG" 2>/dev/null | tr -d '\r\n\t ') || true
-    if [ -n "$GOVERNOR" ]; then
-        echo "Applying governor: $GOVERNOR"
-        for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
-            if [ -f "$cpu/cpufreq/scaling_available_governors" ]; then
-                if grep -q "$GOVERNOR" "$cpu/cpufreq/scaling_available_governors" 2>/dev/null; then
-                    su -c "chmod 777 '$cpu/cpufreq/scaling_governor'" >/dev/null 2>&1 || true
-                    
-                    if su -c "echo '$GOVERNOR' > '$cpu/cpufreq/scaling_governor'" 2>/dev/null; then
-                        echo "✓ Governor applied to $cpu"
-                    else
-                        echo "✗ Failed to apply governor to $cpu (skipping)"
-                    fi
-                else
-                    echo "Governor '$GOVERNOR' not available for $cpu (skipping)"
-                fi
-            fi
-        done
-    else
-        echo "Empty governor config (skipping)"
-    fi
-else
-    echo "No governor config found (skipping)"
-fi
 
 echo "✅ Devfreq settings loaded successfully!"
 echo "=== MTK AI MANUAL OVERRIDES COMPLETED ==="
