@@ -3,8 +3,8 @@
     'use strict';
 
     const MODDIR = '/data/adb/modules/MTK_AI';
-    const STATUS_FILE = '/sdcard/MTK_AI/.update_status';
-    const PROGRESS_FILE = '/sdcard/MTK_AI/.update_progress';
+    const STATUS_FILE = '/sdcard/MTK_AI_Engine/.update_status';
+    const PROGRESS_FILE = '/sdcard/MTK_AI_Engine/.update_progress';
     const ACTION_SCRIPT = `${MODDIR}/action.sh`;
     const CHECKER_SCRIPT = `${MODDIR}/update_checker.sh`;
     const BUSYBOX = `${MODDIR}/busybox`;
