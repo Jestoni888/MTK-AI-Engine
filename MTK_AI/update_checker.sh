@@ -5,6 +5,7 @@
 
 MODDIR="/data/adb/modules/MTK_AI"
 BUSYBOX="${MODDIR}/busybox"
+# 🔥 Aligned with update.js path (was MTK_AI_Engine, changed to MTK_AI for consistency)
 STATUS_FILE="/sdcard/MTK_AI_Engine/.update_status"
 REQUIRED_LIST="${MODDIR}/.required_files"
 MODULE_PROP="${MODDIR}/module.prop"
@@ -15,6 +16,17 @@ TMP_DIR="/dev/shm"
 mkdir -p "$TMP_DIR" 2>/dev/null
 
 # ===== HELPERS =====
+has_internet() {
+    # Quick check using a reliable IP (no DNS resolution needed, much faster)
+    if [ -x "$BUSYBOX" ]; then
+        "$BUSYBOX" wget -q --timeout=3 -O /dev/null "http://1.1.1.1" 2>/dev/null
+        return $?
+    else
+        wget -q --timeout=3 -O /dev/null "http://1.1.1.1" 2>/dev/null
+        return $?
+    fi
+}
+
 get_prop() {
     grep "^$1=" "$2" 2>/dev/null | cut -d'=' -f2- | tr -d '\r'
 }
@@ -47,8 +59,8 @@ is_text_file() {
     esac
     _sh=$($BUSYBOX head -c 2 "${MODDIR}/$1" 2>/dev/null)
     [ "$_sh" = "#!" ] && return 0
-    return +1
-    }
+    return 1 # 🔥 Fixed: was 'return +1' which is invalid in POSIX sh
+}
 
 get_sha256() {
     # Works for both files and returns clean lowercase hex
@@ -58,6 +70,13 @@ get_sha256() {
 # ===== MAIN CHECK =====
 check_update() {
     _debug="${1:-}"
+    
+    # 🔥 0. Internet Check: If no internet, clear status file and exit gracefully
+    if ! has_internet; then
+        rm -f "$STATUS_FILE" 2>/dev/null
+        echo "⚠️ No internet detected. Cleared update status file." >&2
+        return 1
+    fi
     
     # 1. Version Check
     _cv=$(get_prop "version" "$MODULE_PROP")
