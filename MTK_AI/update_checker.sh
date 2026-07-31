@@ -5,13 +5,13 @@
 
 MODDIR="/data/adb/modules/MTK_AI"
 BUSYBOX="${MODDIR}/busybox"
-STATUS_FILE="/sdcard/MTK_AI/.update_status"
+STATUS_FILE="/sdcard/MTK_AI_Engine/.update_status"
 REQUIRED_LIST="${MODDIR}/.required_files"
 MODULE_PROP="${MODDIR}/module.prop"
 ONLINE_PROP_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/module.prop"
 MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"
 TMP_DIR="/dev/shm"
-[ -d "$TMP_DIR" ] || TMP_DIR="/sdcard/MTK_AI/.tmp"
+[ -d "$TMP_DIR" ] || TMP_DIR="/sdcard/MTK_AI_Engine/.tmp"
 mkdir -p "$TMP_DIR" 2>/dev/null
 
 # ===== HELPERS =====
