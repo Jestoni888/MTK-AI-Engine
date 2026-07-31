@@ -24,19 +24,6 @@ if pgrep -f "mtk_ai_manual" 2>/dev/null | grep -v "^$$" > /dev/null 2>&1; then
 else
     rm -rf "$LOCK_DIR" 2>/dev/null || true
 fi
-
-# 2️⃣ If PID file exists and process is alive → exit silently
-if [ -f "$LOCK_FILE" ]; then
-    OLD_PID=$(cat "$LOCK_FILE" 2>/dev/null)
-    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        exit 0
-    fi
-fi
-
-# 3️⃣ Register current process as the single instance
-mkdir -p "$LOCK_DIR" 2>/dev/null || true
-echo $$ > "$LOCK_FILE" 2>/dev/null || true
-trap 'rm -f "$LOCK_FILE" 2>/dev/null || true' EXIT
 ### ============================
 
 echo "=== MTK AI MANUAL OVERRIDES STARTING ==="
