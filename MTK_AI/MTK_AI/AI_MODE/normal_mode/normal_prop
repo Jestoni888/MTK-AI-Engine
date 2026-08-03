@@ -296,6 +296,23 @@ done || true
 ndc resolver flushdefaultif 2>/dev/null || true
 ndc resolver flushif 2>/dev/null || true
 
+# --- APP HIBERNATION ---
+echo "Applying app hibernation rules..."
+for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); do
+    if [ -n "$app" ] && [ "$app" != "com.topjohnwu.magisk" ] && [ "$app" != "me.weishu.kernelsu" ]; then
+        echo "$app has been hibernated"
+        cmd app_hibernation set-state --user 0 --global "$app" true >/dev/null 2>&1 || true
+        cmd appops set "$app" RUN_IN_BACKGROUND ignore 2>/dev/null
+        cmd appops set "$app" RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
+        am set-standby-bucket "$app" restricted 2>/dev/null
+        echo ""
+    fi
+done
+
+# CRITICAL FIX: Moved outside the loop for massive efficiency and guaranteed execution
+device_config put app_hibernation app_hibernation_enabled true >/dev/null 2>&1 || true
+device_config put permissions auto_revoke_unused_threshold_millis2 99 >/dev/null 2>&1 || true
+
 sh "/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual" || true
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
 
