@@ -29,6 +29,7 @@ const scriptPaths = {
     limit_surfaceflinger: { on: null, off: null, isDaemon: false, critical: false },
     enable_cpu: { on: null, off: null, isDaemon: false, critical: false },
     enable_lite_gaming: { on: null, off: null, isDaemon: false, critical: false },
+    suspend_bg: { on: null, off: null, isDaemon: false, critical: false },
     disable_tap_to_rotate: { on: null, off: null, isDaemon: false, critical: false }
 };
 const toggleConfig = {
@@ -66,6 +67,7 @@ const toggleConfig = {
     limit_surfaceflinger: { title:  "Limit Surfaceflinger", desc:  "Limit Surfaceflinger in normal use to reduce overheating 🔥", group:  "System " },
     enable_cpu: { title:  "Auto shutdown CPU 6  & 7 ", desc:  "Auto shutdown cpu 6  & 7 when temp reaches 42°C  & auto revert in 39°C ", group:  "Battery " },
     enable_lite_gaming: { title:  "Lite Gaming Mode ", desc:  "Lightweight tweaks for low-end devices ", group:  "Gaming " },
+    suspend_bg: { title:  "Suspend background apps", desc:  "Suspend background apps to smoother gaming experience ‼️ Enable USE TWEAKS first ‼️", group:  "Gaming " },
     disable_tap_to_rotate: { title:  "Disable Tap to Rotate ", desc:  "Hide the manual rotation button on the navigation bar ", group:  "Display " }
 };const execFn = async function(cmd, timeout = 2000) {
     return new Promise(resolve => {
