@@ -39,7 +39,6 @@
     };
 
     const triggerCheck = async function() {
-        execCmd(`su -c '${CHECKER_SCRIPT}' >/dev/null 2>&1 &`, 2000);
     };
 
     const fetchChangelog = async function() {
