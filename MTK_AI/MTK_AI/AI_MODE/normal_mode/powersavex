@@ -12,10 +12,12 @@ apply_mode() {
     STATE=$(cat "$MONITOR_FILE" 2>/dev/null)
     
     if [ "$STATE" = "0" ]; then
-        # Screen is OFF ->
-        "$POWERSAVE" &
+        # Screen is OFF -> Apply powersave mode if enabled
+        if [ -f "/sdcard/MTK_AI_Engine/low_power_mode" ]; then
+            "$POWERSAVE" &
+        fi
     else
-        # Screen is ON -> 
+        # Screen is ON -> Apply manual/performance mode
         "$MANUAL" &
     fi
 }
