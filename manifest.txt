@@ -62,7 +62,7 @@ webroot/gmsdoze.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/re
 webroot/gpu.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/gpu.js
 webroot/iotweaks.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/iotweaks.js
 webroot/mtk_ai_engine.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/mtk_ai_engine.js
-webroot/overvolt.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/overvolt.js
+webroot/spoof.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/spoof.js
 webroot/ppmpolicy.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/ppmpolicy.js
 webroot/refreshrate.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/refreshrate.js
 webroot/resolutionscale.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/resolutionscale.js
