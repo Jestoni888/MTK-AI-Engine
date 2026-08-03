@@ -397,12 +397,38 @@ current_app() {
         notify_status ""
         return 0
     fi
-
+    
     notify_status "$CURRENT_TOP_APP"
+    # --- NEW: Execute per-app refresh rate ---
+        MODE_FILE="/sdcard/MTK_AI_Engine/refresh_locks/${CURRENT_TOP_APP}.mode"
+        if [ -f "$MODE_FILE" ]; then
+            # Read the mode ID and strip any spaces, tabs, or newlines
+            MODE_ID=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
+            
+            # Execute the refresh rate change if a valid ID is found
+            if [ -n "$MODE_ID" ]; then
+                service call SurfaceFlinger 1035 i32 "$MODE_ID"
+            fi
+        fi
+    # -----------------------------------------
     
     # Check if current app is a game
     if awk -v pkg="$CURRENT_TOP_APP" '{ gsub(/\r/, ""); if ($0 == pkg) { found=1; exit } } END { exit !found }' /sdcard/MTK_AI_Engine/game_list.txt 2>/dev/null; then
         echo "$CURRENT_TOP_APP" > /dev/.mtk_ai_active_game 2>/dev/null
+        
+        # --- NEW: Execute per-app refresh rate ---
+        MODE_FILE="/sdcard/MTK_AI_Engine/refresh_locks/${CURRENT_TOP_APP}.mode"
+        if [ -f "$MODE_FILE" ]; then
+            # Read the mode ID and strip any spaces, tabs, or newlines
+            MODE_ID=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
+            
+            # Execute the refresh rate change if a valid ID is found
+            if [ -n "$MODE_ID" ]; then
+                service call SurfaceFlinger 1035 i32 "$MODE_ID"
+            fi
+        fi
+        # -----------------------------------------
+
         game_mode
         notify_status "Gaming🎮: $CURRENT_TOP_APP"
     fi
