@@ -61,3 +61,9 @@
 •improved use tweaks between normal mode & gaming mode without disabling thermal can play smoothly in gaming
 
 •updating UI updates in progress bar upon downloading update
+
+--- version 0.0.0.93 ---
+
+•added background app suspend during gaming mode & unsuspend during normal mode (works in lite mode)
+
+•added spoof in device model & serial number changer (Beta test)
