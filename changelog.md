@@ -67,3 +67,5 @@
 •added background app suspend during gaming mode & unsuspend during normal mode (works in lite mode)
 
 •added spoof in device model & serial number changer (Beta test)
+
+•optimize powersave mode for battery efficiency & low thermal experience (select powersave mode in master mode of WebUI)
