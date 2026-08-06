@@ -70,4 +70,4 @@
 
 •optimize powersave mode for battery efficiency & low thermal experience (select powersave mode in master mode of WebUI)
 
-•fixed app that added in never kill (Ram Hibernator in tools section)
+•fixed app that added in never kill lists & also not included in hibernation mode (Ram Hibernator in tools section)
