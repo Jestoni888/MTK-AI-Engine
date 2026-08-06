@@ -232,13 +232,15 @@ else
     echo "⚠️ Could not detect current top app"
 fi
 
-# 1. 🛡️ ADD current app to Never Kill list (WITHOUT clearing existing entries)
+is_in_never_kill() {
+    [ -f "$NEVER_KILL_FILE" ] && grep -Fqx -- "$1" "$NEVER_KILL_FILE"
+}
+
+# 1. 🛡️ ADD current app to Never Kill list
 if [ -n "$CURRENT_APP" ] && ! is_critical "$CURRENT_APP"; then
-    # Check if it's already in the list to prevent duplicates
-    if [ -f "$NEVER_KILL_FILE" ] && grep -Fqx "$CURRENT_APP" "$NEVER_KILL_FILE"; then
+    if is_in_never_kill "$CURRENT_APP"; then
         echo "ℹ️ Current app already protected: $CURRENT_APP"
     else
-        # Append to the file (creates it if it doesn't exist)
         echo "$CURRENT_APP" >> "$NEVER_KILL_FILE"
         echo "🛡️ Added current app to Never Kill list: $CURRENT_APP"
     fi
@@ -254,8 +256,14 @@ for pkg in $ALL_PACKAGES; do
     pkg=$(echo "$pkg" | tr -d '[:space:]')
     [ -z "$pkg" ] && continue
 
-    # Skip current app (it's protected in never_kill)
+    # Skip current app
     [ "$pkg" = "$CURRENT_APP" ] && continue
+
+    # Skip packages already protected in Never Kill file
+    if is_in_never_kill "$pkg"; then
+        SKIPPED=$((SKIPPED + 1))
+        continue
+    fi
 
     if is_critical "$pkg"; then
         SKIPPED=$((SKIPPED + 1))
@@ -271,8 +279,14 @@ ${pkg}"
 done
 
 # Write Force Kill file
-echo "$FORCE_LIST" > "$FORCE_KILL_FILE"
+if [ -n "$FORCE_LIST" ]; then
+    printf '%s\n' "$FORCE_LIST" > "$FORCE_KILL_FILE"
+else
+    : > "$FORCE_KILL_FILE"
+fi
+
 echo "⚡ Added $ADDED_FORCE apps to Force Kill list"
+echo "⏭️ Skipped $SKIPPED apps"
 
 # ⚠️ Note: NEVER_KILL_FILE is intentionally NOT overwritten here to preserve your existing protections!
 
