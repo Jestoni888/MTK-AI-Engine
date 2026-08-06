@@ -69,3 +69,5 @@
 •added spoof in device model & serial number changer (Beta test)
 
 •optimize powersave mode for battery efficiency & low thermal experience (select powersave mode in master mode of WebUI)
+
+•fixed app that added in never kill 
