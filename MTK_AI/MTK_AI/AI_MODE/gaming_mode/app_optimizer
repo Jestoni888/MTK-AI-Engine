@@ -276,7 +276,7 @@ for zone in /sys/devices/virtual/thermal/thermal_zone*/mode; do
     chmod 777 "$zone" || true
     echo disabled | tee "$zone" || true
 done
-
+     pkill -f cpulimit >/dev/null 2>&1 || true
      nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" &
      nohup $CPULIMIT -e com.google.android.gms -l 1 &
      nohup $CPULIMIT -e com.google.android.gsf -l 1 &
