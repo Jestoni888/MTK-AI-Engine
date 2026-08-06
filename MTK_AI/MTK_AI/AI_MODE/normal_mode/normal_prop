@@ -296,17 +296,38 @@ done || true
 ndc resolver flushdefaultif 2>/dev/null || true
 ndc resolver flushif 2>/dev/null || true
 
+CONFIG_DIR="/sdcard/MTK_AI_Engine/config"
+NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
+
 # --- APP HIBERNATION ---
 echo "Applying app hibernation rules..."
+
 for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); do
-    if [ -n "$app" ] && [ "$app" != "com.topjohnwu.magisk" ] && [ "$app" != "me.weishu.kernelsu" ]; then
-        echo "$app has been hibernated"
-        cmd app_hibernation set-state --user 0 --global "$app" true >/dev/null 2>&1 || true
-        cmd appops set "$app" RUN_IN_BACKGROUND ignore 2>/dev/null
-        cmd appops set "$app" RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
-        am set-standby-bucket "$app" restricted 2>/dev/null
+    # Clean package name
+    app=$(echo "$app" | tr -d '[:space:]')
+
+    # Skip empty package names
+    [ -z "$app" ] && continue
+
+    # Skip Magisk / KernelSU
+    [ "$app" = "com.topjohnwu.magisk" ] && continue
+    [ "$app" = "me.weishu.kernelsu" ] && continue
+
+    # Skip apps found in Never Kill list
+    if [ -f "$NEVER_KILL_FILE" ] && grep -Fqx -- "$app" "$NEVER_KILL_FILE"; then
+        echo "🛡️ $app is protected by Never Kill list, skipping"
         echo ""
+        continue
     fi
+
+    echo "$app has been hibernated"
+
+    cmd app_hibernation set-state --user 0 --global "$app" true >/dev/null 2>&1 || true
+    cmd appops set "$app" RUN_IN_BACKGROUND ignore 2>/dev/null
+    cmd appops set "$app" RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
+    am set-standby-bucket "$app" restricted 2>/dev/null
+
+    echo ""
 done
 
 # CRITICAL FIX: Moved outside the loop for massive efficiency and guaranteed execution
