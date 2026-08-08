@@ -279,15 +279,15 @@ for zone in /sys/devices/virtual/thermal/thermal_zone*/mode; do
 done
 
      nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" &
-     nohup $CPULIMIT -e com.google.android.gms -l 1 &
-     nohup $CPULIMIT -e com.google.android.gsf -l 1 &
-     nohup $CPULIMIT -e com.google.android.gsf.login -l 1 &
-     nohup $CPULIMIT -e com.google.android.gms.persistent -l 1 &
-     nohup $CPULIMIT -e com.google.android.backuptransport -l 1 &
-     nohup $CPULIMIT -e com.google.android.partnersetup -l 1 &
-     nohup $CPULIMIT -e com.google.android.setupwizard -l 1 &
-     nohup $CPULIMIT -e com.android.systemui -l 400 &
-     nohup $CPULIMIT -e com.android.vending -l 400 &
+     nohup $CPULIMIT -e com.google.android.gms -l 5 &
+     nohup $CPULIMIT -e com.google.android.gsf -l 5 &
+     nohup $CPULIMIT -e com.google.android.gsf.login -l 5 &
+     nohup $CPULIMIT -e com.google.android.gms.persistent -l 5 &
+     nohup $CPULIMIT -e com.google.android.backuptransport -l 5 &
+     nohup $CPULIMIT -e com.google.android.partnersetup -l 5 &
+     nohup $CPULIMIT -e com.google.android.setupwizard -l 5 &
+     nohup $CPULIMIT -e com.android.systemui -l 50 &
+     nohup $CPULIMIT -e com.android.vending -l 50 &
 
     log_msg "=== MTK AI Engine Optimizer Complete ==="    echo "✅ All optimizations applied successfully!!"
 
