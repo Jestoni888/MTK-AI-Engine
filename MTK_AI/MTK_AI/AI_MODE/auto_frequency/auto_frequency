@@ -313,6 +313,9 @@ fi
 if [ -f "$EXTERNAL_CFG/enable_performance" ]; then
     nohup "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/performance" >/dev/null 2>&1 &
 fi
+if [ -f "$EXTERNAL_CFG/enable_lite_gaming" ]; then
+    nohup "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/lite_gaming" >/dev/null 2>&1 &
+fi
 
 [ "$(cat "/sdcard/MTK_AI_Engine/current_profile" 2>/dev/null | tr -d '[:space:]')" != "powersave" ] && return 0
 rm -f /sdcard/MTK_AI_Engine/enable_limiter
