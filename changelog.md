@@ -1,3 +1,5 @@
+--- version 0.0.0.83 ---
+
 •auto use of this module after installing update (no need reboot)
 
 •fixed daemon about running multiple times & causes lags
