@@ -64,6 +64,9 @@ notify_status() {
 }
 
 touch_active() {
+if [ ! -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
+nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
+fi
 [ ! -f "$TOUCH_ACTIVE" ] && return 0
 ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
 
@@ -113,6 +116,9 @@ echo $OPP > /proc/gpufreqv2/fix_target_opp_index
 }
 
 touch_inactive() {
+if [ ! -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
+nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
+fi
 [ ! -f "$TOUCH_ACTIVE" ] && return 0
 ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
 echo 32 > /proc/gpufreqv2/fix_target_opp_index
@@ -322,10 +328,10 @@ rm -f /sdcard/MTK_AI_Engine/enable_limiter
 }
 
 normal_mode() {
+nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_prop" >/dev/null 2>&1 &
 if [ -f "$EXTERNAL_CFG/use_tweaks" ]; then
 APP=$(head -n 1 /dev/.mtk_ai_active_game 2>/dev/null | tr -d '[:space:]') && [ -n "$APP" ] && { grep -Fvx "$APP" /sdcard/MTK_AI_Engine/config/never_kill.list > /sdcard/MTK_AI_Engine/config/never_kill.tmp || true; mv /sdcard/MTK_AI_Engine/config/never_kill.tmp /sdcard/MTK_AI_Engine/config/never_kill.list; }
 force_kill
-nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_prop" >/dev/null 2>&1 &
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_cpuset" >/dev/null 2>&1 &
 fi
 [ "$(cat "/sdcard/MTK_AI_Engine/current_profile" 2>/dev/null | tr -d '[:space:]')" != "powersave" ] && return 0
