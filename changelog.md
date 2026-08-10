@@ -71,3 +71,7 @@
 •optimize powersave mode for battery efficiency & low thermal experience (select powersave mode in master mode of WebUI)
 
 •fixed app that added in never kill lists & also not included in hibernation mode (Ram Hibernator in tools section)
+
+--- version 0.0.0.93 ---
+
+•optimize lite gaming mode (in settings gaming section) auto lowers frequency when temperature raises so that thermal stays lower
