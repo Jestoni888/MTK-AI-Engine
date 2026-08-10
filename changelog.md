@@ -72,6 +72,6 @@
 
 •fixed app that added in never kill lists & also not included in hibernation mode (Ram Hibernator in tools section)
 
---- version 0.0.0.93 ---
+--- version 0.0.0.94 ---
 
 •optimize lite gaming mode (in settings gaming section) auto lowers frequency when temperature raises so that thermal stays lower
