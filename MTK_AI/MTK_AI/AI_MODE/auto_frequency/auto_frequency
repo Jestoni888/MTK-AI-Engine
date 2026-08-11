@@ -64,7 +64,7 @@ notify_status() {
 }
 
 touch_active() {
-if [ ! -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
+if [ -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
 nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
 fi
 [ ! -f "$TOUCH_ACTIVE" ] && return 0
@@ -116,7 +116,7 @@ echo $OPP > /proc/gpufreqv2/fix_target_opp_index
 }
 
 touch_inactive() {
-if [ ! -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
+if [ -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
 nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
 fi
 [ ! -f "$TOUCH_ACTIVE" ] && return 0
