@@ -234,7 +234,7 @@ if [ -f /proc/ppm/policy_status ]; then
     echo "$idx 1" > /proc/ppm/policy_status 2>/dev/null || true
   done
 fi
-echo "4 0" > /proc/ppm/policy_status 2>/dev/null || true
+
 echo "Done" || true
 
 log -t "NetTweak" "Starting network tweaks..." || true
