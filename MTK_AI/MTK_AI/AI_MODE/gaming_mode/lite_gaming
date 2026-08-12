@@ -25,4 +25,4 @@ for d in /sys/class/devfreq/*/; do
   [ -n "$f" ] && echo $f | tee "$d/min_freq" 2>/dev/null
 done
 echo "4 0" > /proc/ppm/policy_status 2>/dev/null || true
-echo enabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
+echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
