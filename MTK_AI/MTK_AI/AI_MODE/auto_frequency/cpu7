@@ -39,10 +39,10 @@ echo "$COUNT" > "$COUNT_FILE"
 ### ==== FLOOD GUARD END ==== ###
 
 # --- CONFIGURATION (Celsius) ---
-OFF_LOW=41
+OFF_LOW=40
 OFF_HIGH=50
 ON_LOW=30
-ON_HIGH=39
+ON_HIGH=38
 
 CPU7_ONLINE="/sys/devices/system/cpu/cpu7/online"
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
