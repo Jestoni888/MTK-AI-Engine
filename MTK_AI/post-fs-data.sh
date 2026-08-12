@@ -80,8 +80,10 @@ backup_part() {
 }
 
 # 5. Execute backups
-backup_part "boot" "boot*"
-backup_part "super" "super"
+if [ -f "/sdcard/MTK_AI_Engine/backup_rom" ]; then
+            backup_part "boot" "boot*"
+            backup_part "super" "super"
+fi
 
 # 6️⃣ ✅ CONSUME SAFE BOOT FLAG (Moved to end as requested)
 rm -f "$SAFE_FLAG" 2>/dev/null
