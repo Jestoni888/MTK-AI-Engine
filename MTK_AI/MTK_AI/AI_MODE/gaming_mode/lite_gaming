@@ -22,7 +22,7 @@ done
 
 for d in /sys/class/devfreq/*/; do
   f=$(awk '{print $NF}' "$d/available_frequencies" 2>/dev/null)
-  [ -n "$f" ] && echo $f | tee "$d/min_freq" 2>/dev/null
+  [ -n "$f" ] && echo $f | tee "$d/max_freq" 2>/dev/null
 done
 echo "4 0" > /proc/ppm/policy_status 2>/dev/null || true
 echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
