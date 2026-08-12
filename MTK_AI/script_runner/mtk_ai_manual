@@ -208,8 +208,6 @@ if [ -f "/sdcard/MTK_AI_Engine/limit_surfaceflinger" ]; then
     fi
 fi
 
-nohup sh "/data/adb/modules/MTK_AI/update_checker.sh" >/dev/null 2>&1 &
-
 echo "✅ Devfreq settings loaded successfully!"
 echo "=== MTK AI MANUAL OVERRIDES COMPLETED ==="
 
