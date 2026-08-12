@@ -2,6 +2,8 @@
 
 •optimize lite gaming mode (in settings gaming section) auto lowers frequency when temperature raises so that thermal stays lower
 
+•adjusting cpu7 in thermal range shutdown to 40°C revert in 38°C (only works if hexacore enabled in settings tab)
+
 --- version 0.0.0.93 ---
 
 •added background app suspend during gaming mode & unsuspend during normal mode (works in lite mode)
