@@ -4,6 +4,8 @@
 
 •adjusting cpu7 in thermal range shutdown to 40°C revert in 38°C (only works if hexacore enabled in settings tab)
 
+•adding toggle for backup current rom, works only every reboot which is known as post-fs-data script (in settings tab)
+
 --- version 0.0.0.93 ---
 
 •added background app suspend during gaming mode & unsuspend during normal mode (works in lite mode)
