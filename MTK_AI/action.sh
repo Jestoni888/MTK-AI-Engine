@@ -4,7 +4,7 @@
 LOG_TAG="[MTK_AI UPDATE]"
 MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"
 TMP="/data/local/tmp/mtk_update"
-PROGRESS_FILE="/sdcard/MTK_AI/.update_progress"
+PROGRESS_FILE="/sdcard/MTK_AI_Engine/.update_progress"
 
 log() {
     echo "$LOG_TAG $*"
