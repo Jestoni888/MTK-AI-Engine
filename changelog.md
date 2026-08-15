@@ -1,3 +1,7 @@
+--- version 0.0.0.95 ---
+
+•use tweaks now considered as experimental for those device getting more lags & not supported by those options you can disable it & restart your device to fully disabled
+
 --- version 0.0.0.94 ---
 
 •optimize lite gaming mode (in settings gaming section) auto lowers frequency when temperature raises so that thermal stays lower
