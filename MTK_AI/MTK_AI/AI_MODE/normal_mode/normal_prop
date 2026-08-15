@@ -1,9 +1,6 @@
 #!/system/bin/sh
 #!/data/adb/modules/MTK_AI/busybox sh
 
-STATE="/sdcard/MTK_AI_Engine/use_tweaks"
-[ "$(cat "$STATE" 2>/dev/null | tr -d '[:space:]')" != "1" ] && exit 0
-
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 
 log_msg() {
@@ -28,6 +25,50 @@ for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/
   k=${i%%:*}; p=${i#*:}; v=$(cat /sdcard/MTK_AI_Engine/eem_offsets/normal/$k.txt 2>/dev/null)
   [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
 done || true
+
+for zone in /sys/devices/virtual/thermal/thermal_zone*/mode; do
+    chmod 777 "$zone" || true
+    echo enabled | tee "$zone" || true
+done || true
+
+CONFIG_DIR="/sdcard/MTK_AI_Engine/config"
+NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
+
+# --- APP HIBERNATION ---
+echo "Applying app hibernation rules..."
+
+for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); do
+    # Clean package name
+    app=$(echo "$app" | tr -d '[:space:]')
+
+    # Skip empty package names
+    [ -z "$app" ] && continue
+
+    # Skip Magisk / KernelSU
+    [ "$app" = "com.topjohnwu.magisk" ] && continue
+    [ "$app" = "me.weishu.kernelsu" ] && continue
+
+    # Skip apps found in Never Kill list
+    if [ -f "$NEVER_KILL_FILE" ] && grep -Fqx -- "$app" "$NEVER_KILL_FILE"; then
+        echo "🛡️ $app is protected by Never Kill list, skipping"
+        echo ""
+        continue
+    fi
+
+    echo "$app has been hibernated"
+
+    cmd app_hibernation set-state --user 0 --global "$app" true >/dev/null 2>&1 || true
+    cmd appops set "$app" RUN_IN_BACKGROUND ignore 2>/dev/null
+    cmd appops set "$app" RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
+    am set-standby-bucket "$app" restricted 2>/dev/null
+
+    echo ""
+done
+
+sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
+
+STATE="/sdcard/MTK_AI_Engine/use_tweaks"
+[ "$(cat "$STATE" 2>/dev/null | tr -d '[:space:]')" != "1" ] && exit 0
 
 su -c "cmd wifi force-hi-perf-mode disabled" || true
 su -c "cmd wifi force-low-latency-mode disabled" || true
@@ -164,11 +205,6 @@ start thermal_control || true
 start thermal_repeater || true
 start thermal_notify || true
 
-for zone in /sys/devices/virtual/thermal/thermal_zone*/mode; do
-    chmod 777 "$zone" || true
-    echo enabled | tee "$zone" || true
-done || true
-
 # Loop through all saved config files
 for conf in $SAVE_DIR/*.conf; do
     [ -f "$conf" ] || continue
@@ -299,45 +335,10 @@ done || true
 ndc resolver flushdefaultif 2>/dev/null || true
 ndc resolver flushif 2>/dev/null || true
 
-CONFIG_DIR="/sdcard/MTK_AI_Engine/config"
-NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
-
-# --- APP HIBERNATION ---
-echo "Applying app hibernation rules..."
-
-for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); do
-    # Clean package name
-    app=$(echo "$app" | tr -d '[:space:]')
-
-    # Skip empty package names
-    [ -z "$app" ] && continue
-
-    # Skip Magisk / KernelSU
-    [ "$app" = "com.topjohnwu.magisk" ] && continue
-    [ "$app" = "me.weishu.kernelsu" ] && continue
-
-    # Skip apps found in Never Kill list
-    if [ -f "$NEVER_KILL_FILE" ] && grep -Fqx -- "$app" "$NEVER_KILL_FILE"; then
-        echo "🛡️ $app is protected by Never Kill list, skipping"
-        echo ""
-        continue
-    fi
-
-    echo "$app has been hibernated"
-
-    cmd app_hibernation set-state --user 0 --global "$app" true >/dev/null 2>&1 || true
-    cmd appops set "$app" RUN_IN_BACKGROUND ignore 2>/dev/null
-    cmd appops set "$app" RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
-    am set-standby-bucket "$app" restricted 2>/dev/null
-
-    echo ""
-done
-
 # CRITICAL FIX: Moved outside the loop for massive efficiency and guaranteed execution
 device_config put app_hibernation app_hibernation_enabled true >/dev/null 2>&1 || true
 device_config put permissions auto_revoke_unused_threshold_millis2 99 >/dev/null 2>&1 || true
 
 sh "/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual" || true
-sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
 
 log -t "NetTweak" "Network Tweaks Applied Successfully." || true
