@@ -27,6 +27,8 @@ for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/
   [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
 done || true
 
+pkill -f cpulimit >/dev/null 2>&1 || true
+
 STATE="/sdcard/MTK_AI_Engine/use_tweaks"
 [ "$(cat "$STATE" 2>/dev/null | tr -d '[:space:]')" != "1" ] && exit 0
 
@@ -245,7 +247,6 @@ su -c "echo 1 > /sys/module/wlan/parameters/wlm" || true
     # 🗄️ CPUlimit on Certain process to focus on gaming
     # ==============================
     # Stop thermal throttling services safely (Combined Multi-Layer Approach)
-pkill -f cpulimit >/dev/null 2>&1 || true
 ps -A -w 2>/dev/null | grep -i thermal | grep -v grep | awk '{print $NF}' | while read -r svc_path; do
   
   # 1. Extract clean service name (strip directory paths like /vendor/bin/hw/)
