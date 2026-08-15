@@ -1,6 +1,9 @@
 #!/system/bin/sh
 #!/data/adb/modules/MTK_AI/busybox sh
 
+STATE="/sdcard/MTK_AI_Engine/use_tweaks"
+[ "$(cat "$STATE" 2>/dev/null | tr -d '[:space:]')" != "1" ] && exit 0
+
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 
 log_msg() {
