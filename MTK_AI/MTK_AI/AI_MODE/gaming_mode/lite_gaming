@@ -16,9 +16,8 @@ log_action() {
 }
 
 for q in /sys/block/*/queue; do 
-  echo 4096|tee $q/read_ahead_kb 2>/dev/null
+  echo 8192|tee $q/read_ahead_kb 2>/dev/null
   echo none|tee $q/scheduler 2>/dev/null
 done
 
-echo "4 0" > /proc/ppm/policy_status 2>/dev/null || true
 echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
