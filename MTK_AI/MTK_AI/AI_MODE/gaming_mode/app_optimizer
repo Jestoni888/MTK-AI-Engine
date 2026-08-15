@@ -1,9 +1,6 @@
 #!/system/bin/sh
 # Fallback to BusyBox sh if available for better POSIX compliance
 
-STATE="/sdcard/MTK_AI_Engine/use_tweaks"
-[ "$(cat "$STATE" 2>/dev/null | tr -d '[:space:]')" != "1" ] && exit 0
-
 CONFIG_DIR="/sdcard/MTK_AI_Engine"
 CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
 LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
@@ -29,6 +26,9 @@ for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/
   k=${i%%:*}; p=${i#*:}; v=$(cat /sdcard/MTK_AI_Engine/eem_offsets/gaming/$k.txt 2>/dev/null)
   [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
 done || true
+
+STATE="/sdcard/MTK_AI_Engine/use_tweaks"
+[ "$(cat "$STATE" 2>/dev/null | tr -d '[:space:]')" != "1" ] && exit 0
 
     # ==============================
     # ⚡ CPU/CCI Power Mode
