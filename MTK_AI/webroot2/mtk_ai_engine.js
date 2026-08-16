@@ -5,12 +5,12 @@ const CFG_DIR = '/sdcard/MTK_AI_Engine';
 const MOD_DIR = '/data/adb/modules/MTK_AI';
 const STATE_DIR = CFG_DIR;
 const scriptPaths = {
-    enable_disable_thermal: { on:  `${MOD_DIR}/MTK_AI/AI_MODE/gaming_mode/disable_thermal` , off: null, isDaemon: false, critical: false },
-    enable_performance: { on:  `${MOD_DIR}/MTK_AI/AI_MODE/gaming_mode/performance` , off: null, isDaemon: false, critical: false },
-    disable_zram: { on:  `${MOD_DIR}/MTK_AI/AI_MODE/gaming_mode/disable_zram` , off: null, isDaemon: false, critical: false },
-    enable_gaming_prop: { on:  `${MOD_DIR}/MTK_AI/AI_MODE/gaming_mode/gaming_prop` , off: null, isDaemon: false, critical: false },
-    enable_gaming_prop2: { on:  `${MOD_DIR}/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2` , off:  `${MOD_DIR}/MTK_AI/AI_MODE/normal_mode/normal_prop` , isDaemon: false, critical: false },
-    enable_highframerate: { on:  `${MOD_DIR}/MTK_AI/AI_MODE/gaming_mode/unlockfps` , off: null, isDaemon: false, critical: false },
+    enable_disable_thermal: { on: null, off: null, isDaemon: false, critical: false },
+    enable_performance: { on: null, off: null, isDaemon: false, critical: false },
+    disable_zram: { on: null, off: null, isDaemon: false, critical: false },
+    enable_gaming_prop: { on: null, off: null, isDaemon: false, critical: false },
+    enable_gaming_prop2: { on: null, off: null, isDaemon: false, critical: false },
+    enable_highframerate: { on: null, off: null, isDaemon: false, critical: false },
     selinux_mode: { on: null, off: null, isDaemon: false, critical: false },
     fast_reboot: { on: null, off: null, isDaemon: false, critical: false },
     enable_trim: { on: null, off: null, isDaemon: false, critical: false },
@@ -31,6 +31,7 @@ const scriptPaths = {
     enable_cpu: { on: null, off: null, isDaemon: false, critical: false },
     enable_lite_gaming: { on: null, off: null, isDaemon: false, critical: false },
     suspend_bg: { on: null, off: null, isDaemon: false, critical: false },
+    cpufreq_mode: { on: null, off: null, isDaemon: false, critical: false },
     disable_tap_to_rotate: { on: null, off: null, isDaemon: false, critical: false }
 };
 const toggleConfig = {
@@ -70,6 +71,7 @@ const toggleConfig = {
     enable_cpu: { title:  "Hexacore mode ", desc:  "Auto shutdown cpu 6  & 7 when temp reaches 42°C  & auto revert in 39°C ", group:  "Battery " },
     enable_lite_gaming: { title:  "Lite Gaming Mode ", desc:  "Stable temperature while providing smoother gaming experience", group:  "Gaming " },
     suspend_bg: { title:  "Suspend background apps", desc:  "Suspend background apps to smoother gaming experience ‼️ Enable USE TWEAKS first ‼️", group:  "Gaming " },
+    cpufreq_mode: { title:  "Cpufreq CCI/Power", desc:  "Enable Cpufreq CCI & Power mode to optimal performance", group:  "Gaming " },
     disable_tap_to_rotate: { title:  "Disable Tap to Rotate ", desc:  "Hide the manual rotation button on the navigation bar ", group:  "Display " }
 };const execFn = async function(cmd, timeout = 2000) {
     return new Promise(resolve => {
