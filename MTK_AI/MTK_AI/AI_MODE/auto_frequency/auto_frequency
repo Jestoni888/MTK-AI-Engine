@@ -421,8 +421,9 @@ current_app() {
         return 0
     fi
 
-    if [ -f "$EXTERNAL_CFG/current_profile" ] || [ "$(cat "$EXTERNAL_CFG/current_profile" 2>/dev/null)" = "balance" ]; then
-nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
+    if [ -f "$EXTERNAL_CFG/current_profile" ] && \
+   [ "$(cat "$EXTERNAL_CFG/current_profile" 2>/dev/null)" = "balance" ]; then
+    nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
     fi
     
     notify_status "$CURRENT_TOP_APP"
