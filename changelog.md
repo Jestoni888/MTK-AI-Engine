@@ -6,6 +6,8 @@
 
 •tweak finder improved search query which allow either uppercase or lowercase letters & maximum search for system files 
 
+•new setting toggle for gaming CPUFREQ CCI/POWER MODE in settings
+
 --- version 0.0.0.94 ---
 
 •optimize lite gaming mode (in settings gaming section) auto lowers frequency when temperature raises so that thermal stays lower
