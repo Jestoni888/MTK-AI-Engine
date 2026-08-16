@@ -4,6 +4,8 @@
 
 •balance mode now with stable temperature by auto adjusting cpu frequency based by temperature Ex: if temperature rises to higher then cpu frequency goes lower (works only in lite mode)
 
+•tweak finder improved search query which allow either uppercase or lowercase letters & maximum search for system files 
+
 --- version 0.0.0.94 ---
 
 •optimize lite gaming mode (in settings gaming section) auto lowers frequency when temperature raises so that thermal stays lower
