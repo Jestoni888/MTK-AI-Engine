@@ -9,6 +9,7 @@
         REGISTRY_FILE: "/sdcard/MTK_AI_Engine/tweak_controls.json",
         VALUES_DIR: "/sdcard/MTK_AI_Engine/tweak_values",
         TRIGGERS_DIR: "/sdcard/MTK_AI_Engine/triggers",
+        MODES_DIR: "/sdcard/MTK_AI_Engine/modes",
         safePaths: [
             "/sys/class","/sys","/sys/devices","/sys/kernel","/sys/module",
             "/proc", "/dev/cpuctl","/dev/cpuset","/dev"
@@ -1517,6 +1518,7 @@ async function applyToggle(id, on) {
     async function loadAppScripts() {
         try {
             await execFn(`${CFG.BB} mkdir -p "${CFG.TRIGGERS_DIR}" 2>/dev/null`);
+            await execFn(`${CFG.BB} mkdir -p "${CFG.MODES_DIR}" 2>/dev/null`);
             const files = await execFn(`${CFG.BB} ls "${CFG.TRIGGERS_DIR}"/*.sh 2>/dev/null`);
             const fileList = files.split('\n').filter(f => f.trim());
             appScripts = {};
@@ -1530,6 +1532,7 @@ async function applyToggle(id, on) {
     async function saveAppScript(pkg, code) {
         try {
             await execFn(`${CFG.BB} mkdir -p "${CFG.TRIGGERS_DIR}" 2>/dev/null`);
+            await execFn(`${CFG.BB} mkdir -p "${CFG.MODES_DIR}" 2>/dev/null`);
             await execFn(`${CFG.BB} chmod 777 "${CFG.TRIGGERS_DIR}/${pkg}.sh" 2>/dev/null`);
             await execFn(`${CFG.BB} echo '${code.replace(/'/g, "'\\''")}' > "${CFG.TRIGGERS_DIR}/${pkg}.sh" 2>/dev/null`);
             await execFn(`chmod 755 "${CFG.TRIGGERS_DIR}/${pkg}.sh"`);
@@ -1652,9 +1655,14 @@ async function applyToggle(id, on) {
         document.getElementById(`tf-tab-${tabName}`)?.classList.add('active');
         
         // Auto-load browse when tab is opened
-        if (tabName === 'browse' && currentBrowsePath === '/') {
-            setTimeout(() => browsePath('/'), 100);
-        }
+     if (tabName === 'browse' && currentBrowsePath === '/') {
+         setTimeout(() => browsePath('/'), 100);
+     }
+
+     // Auto-render mode generator when tab is opened
+     if (tabName === 'modes') {
+         setTimeout(() => renderModeGenerator(), 100);
+     }
     }
 
     function injectStyles() {
@@ -1672,9 +1680,10 @@ async function applyToggle(id, on) {
                 <label><input type="checkbox" id="tf-opt-path"> Path/Folder</label>
             </div>
             <div class="tf-tab-nav">                <button class="tf-tab-btn active" onclick="TweakFinder.switchTab('search')">🔍 Search</button>
-                <button class="tf-tab-btn" onclick="TweakFinder.switchTab('browse')">📁 Browse</button>
-                <button class="tf-tab-btn" onclick="TweakFinder.switchTab('controls')">🎛️ Controls</button>
-            </div>
+             <button class="tf-tab-btn" onclick="TweakFinder.switchTab('browse')">📁 Browse</button>
+             <button class="tf-tab-btn" onclick="TweakFinder.switchTab('controls')">🎛️ Controls</button>
+             <button class="tf-tab-btn" onclick="TweakFinder.switchTab('modes')">🎮 Mode Scripts</button>
+         </div>
             <div class="tf-cache-info">Cache: <span id="tf-cache-count">0</span> searches <button onclick="TweakFinder.clearCache()">Clear</button></div>
             <div id="tf-search-status" style="font-size:12px;color:var(--orange);margin:8px 0 12px;display:none"></div>
             
@@ -1714,7 +1723,37 @@ async function applyToggle(id, on) {
                 </div>
             </div>
             
-            <!-- Triggers Tab -->
+            <!-- Mode Scripts Tab -->
+         <div id="tf-tab-modes" class="tf-tab-content">
+             <div class="tf-section-title">🎮 Normal / Gaming Script Generator</div>
+
+             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+                 <button class="tf-btn-sm" onclick="TweakFinder.renderModeGenerator()">🔄 Refresh Controls</button>
+                 <button class="tf-btn-sm" onclick="TweakFinder.fillModeFromCurrent('normal')">⬇️ Current → Normal</button>
+                 <button class="tf-btn-sm" onclick="TweakFinder.fillModeFromCurrent('gaming')">⬇️ Current → Gaming</button>
+                 <button class="tf-btn-sm" onclick="TweakFinder.generateModeScripts()">⚙️ Generate</button>
+                 <button class="tf-btn-sm add" onclick="TweakFinder.saveModeScripts()">💾 Save Both</button>
+                 <button class="tf-btn-sm" onclick="TweakFinder.applyMode('normal')">▶️ Apply Normal</button>
+                 <button class="tf-btn-sm" onclick="TweakFinder.applyMode('gaming')">🎮 Apply Gaming</button>
+             </div>
+
+             <div style="font-size:11px;color:var(--text-dim);margin-bottom:12px;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px">
+                 Generates two scripts:<br>
+                 <code>normal_mode.sh</code><br>
+                 <code>gaming_mode.sh</code><br><br>
+                 Saved in: <code>/sdcard/MTK_AI_Engine/modes/</code>
+             </div>
+
+             <div id="tf-mode-list"></div>
+
+             <div class="tf-section-title">Normal Script Preview</div>
+             <textarea id="tf-mode-normal-script" class="tf-script-editor" placeholder="#!/system/bin/sh"></textarea>
+
+             <div class="tf-section-title">Gaming Script Preview</div>
+             <textarea id="tf-mode-gaming-script" class="tf-script-editor" placeholder="#!/system/bin/sh"></textarea>
+         </div>
+
+         <!-- Triggers Tab -->
             <div id="tf-tab-triggers" class="tf-tab-content">
                 <div class="tf-section-title">🎮 Per-App Trigger Manager</div>
                 <div class="tf-current-app-box">
@@ -1783,6 +1822,7 @@ async function applyToggle(id, on) {
             await execFn(`${CFG.BB} mkdir -p "/sdcard/MTK_AI_Engine" 2>/dev/null`);
             await execFn(`${CFG.BB} mkdir -p "${CFG.VALUES_DIR}" 2>/dev/null`);
             await execFn(`${CFG.BB} mkdir -p "${CFG.TRIGGERS_DIR}" 2>/dev/null`);
+            await execFn(`${CFG.BB} mkdir -p "${CFG.MODES_DIR}" 2>/dev/null`);
         } catch (e) {}
         
         // Load cache & registry
@@ -1792,6 +1832,7 @@ async function applyToggle(id, on) {
         } catch (e) {}
         
         await loadRegistry();
+        renderModeGenerator();
         await loadAppScripts();
         renderAppList();
         
@@ -1802,12 +1843,328 @@ async function applyToggle(id, on) {
         // Auto-apply saved values
         setTimeout(() => { applyAllSavedValues(); }, 500);
     }
+    
+    // ========== MODE SCRIPT GENERATOR ==========
+ let modeValues = {};
+
+ function modeStr(value, fallback) {
+     if (fallback === undefined) fallback = '';
+     if (value === undefined || value === null || value === '') return fallback;
+     return String(value);
+ }
+
+ function getModeVal(id, mode) {
+     const entry = modeValues[id];
+     if (!entry) return '';
+     const v = entry[mode];
+     return (v === undefined || v === null) ? '' : v;
+ }
+
+ function setModeValue(id, mode, value) {
+     if (!modeValues[id]) modeValues[id] = {};
+     modeValues[id][mode] = value;
+ }
+
+ function getModeDefaults(cfg) {
+     const current = modeStr(cfg.current, '');
+
+     if (cfg.type === 'toggle') {
+         return {
+             normal: modeStr(cfg.off, '0'),
+             gaming: modeStr(cfg.on, '1')
+         };
+     }
+
+     if (cfg.type === 'slider') {
+         return {
+             normal: modeStr(cfg.min, current),
+             gaming: modeStr(cfg.max, current)
+         };
+     }
+
+     if (cfg.type === 'governor') {
+         const normalGov = cfg.current ||
+             ((cfg.governors && cfg.governors.includes('schedutil')) ? 'schedutil' :
+             ((cfg.governors && cfg.governors.length) ? cfg.governors[0] : 'schedutil'));
+
+         const gamingGov =
+             (cfg.governors && cfg.governors.includes('performance')) ? 'performance' :
+             ((cfg.governors && cfg.governors.length) ? cfg.governors[0] : 'performance');
+
+         return {
+             normal: modeStr(normalGov, 'schedutil'),
+             gaming: modeStr(gamingGov, 'performance')
+         };
+     }
+
+     if (cfg.type === 'ppm_policy') {
+         return {
+             normal: 'disable',
+             gaming: 'enable'
+         };
+     }
+
+     if (cfg.type === 'permission') {
+         return {
+             normal: modeStr(cfg.current, '644'),
+             gaming: modeStr(cfg.current, '644')
+         };
+     }
+
+     return {
+         normal: current,
+         gaming: current
+     };
+ }
+
+ function fillModeFromCurrent(mode) {
+     if (!controls.length) {
+         showStatus('No controls found', 'warning');
+         return;
+     }
+
+     controls.forEach(cfg => {
+         if (!modeValues[cfg.id]) modeValues[cfg.id] = getModeDefaults(cfg);
+
+         if (cfg.type === 'ppm_policy') {
+             modeValues[cfg.id][mode] = 'enable';
+         } else if (cfg.current !== undefined && cfg.current !== null && cfg.current !== '') {
+             modeValues[cfg.id][mode] = String(cfg.current);
+         }
+     });
+
+     renderModeGenerator();
+     showStatus(`Copied current values into ${mode} mode`, 'info', 2000);
+ }
+
+ function renderModeGenerator() {
+     const container = document.getElementById('tf-mode-list');
+     if (!container) return;
+
+     if (!controls.length) {
+         container.innerHTML = '<div class="tf-empty-state"><div class="icon">🎮</div><p>No controls found</p><p>Create controls first, then generate Normal/Gaming scripts.</p></div>';
+         return;
+     }
+
+     let html = '';
+
+     controls.forEach(cfg => {
+         if (!modeValues[cfg.id]) modeValues[cfg.id] = getModeDefaults(cfg);
+
+         const normal = modeStr(getModeVal(cfg.id, 'normal'), '');
+         const gaming = modeStr(getModeVal(cfg.id, 'gaming'), '');
+
+         html += `
+             <div class="tf-control-card">
+                 <div class="tf-control-title">${escapeHtml(cfg.label)}</div>
+                 <div class="tf-control-path">${escapeHtml(cfg.path)}</div>
+
+                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:10px;color:var(--text-dim)">
+                     <div>Normal</div>
+                     <div>Gaming</div>
+                 </div>
+
+                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+         `;
+
+         if (cfg.type === 'toggle') {
+             const off = modeStr(cfg.off, '0');
+             const on = modeStr(cfg.on, '1');
+
+             html += `
+                 <select class="tf-gov-select" onchange="TweakFinder.setModeValue('${cfg.id}','normal',this.value)">
+                     <option value="${escapeHtml(off)}" ${normal === off ? 'selected' : ''}>${escapeHtml(off)}</option>
+                     <option value="${escapeHtml(on)}" ${normal === on ? 'selected' : ''}>${escapeHtml(on)}</option>
+                 </select>
+
+                 <select class="tf-gov-select" onchange="TweakFinder.setModeValue('${cfg.id}','gaming',this.value)">
+                     <option value="${escapeHtml(off)}" ${gaming === off ? 'selected' : ''}>${escapeHtml(off)}</option>
+                     <option value="${escapeHtml(on)}" ${gaming === on ? 'selected' : ''}>${escapeHtml(on)}</option>
+                 </select>
+             `;
+         } else if (cfg.type === 'ppm_policy') {
+             html += `
+                 <select class="tf-gov-select" onchange="TweakFinder.setModeValue('${cfg.id}','normal',this.value)">
+                     <option value="disable" ${normal === 'disable' ? 'selected' : ''}>Disable</option>
+                     <option value="enable" ${normal === 'enable' ? 'selected' : ''}>Enable</option>
+                 </select>
+
+                 <select class="tf-gov-select" onchange="TweakFinder.setModeValue('${cfg.id}','gaming',this.value)">
+                     <option value="disable" ${gaming === 'disable' ? 'selected' : ''}>Disable</option>
+                     <option value="enable" ${gaming === 'enable' ? 'selected' : ''}>Enable</option>
+                 </select>
+             `;
+         } else if (cfg.type === 'governor' && cfg.governors && cfg.governors.length) {
+             const govOptions = [];
+
+             cfg.governors.forEach(g => govOptions.push(g));
+             if (normal) govOptions.push(normal);
+             if (gaming) govOptions.push(gaming);
+
+             const uniqueGov = govOptions.filter((g, i) => govOptions.indexOf(g) === i);
+
+             html += `
+                 <select class="tf-gov-select" onchange="TweakFinder.setModeValue('${cfg.id}','normal',this.value)">
+                     ${uniqueGov.map(g => `<option value="${escapeHtml(g)}" ${normal === g ? 'selected' : ''}>${escapeHtml(g)}</option>`).join('')}
+                 </select>
+
+                 <select class="tf-gov-select" onchange="TweakFinder.setModeValue('${cfg.id}','gaming',this.value)">
+                     ${uniqueGov.map(g => `<option value="${escapeHtml(g)}" ${gaming === g ? 'selected' : ''}>${escapeHtml(g)}</option>`).join('')}
+                 </select>
+             `;
+         } else if (cfg.type === 'slider') {
+             html += `
+                 <input type="number" class="tf-text-control" value="${escapeHtml(normal)}" min="${cfg.min || 0}" max="${cfg.max || 100}" step="${cfg.step || 1}" onchange="TweakFinder.setModeValue('${cfg.id}','normal',this.value)">
+                 <input type="number" class="tf-text-control" value="${escapeHtml(gaming)}" min="${cfg.min || 0}" max="${cfg.max || 100}" step="${cfg.step || 1}" onchange="TweakFinder.setModeValue('${cfg.id}','gaming',this.value)">
+             `;
+         } else {
+             html += `
+                 <input type="text" class="tf-text-control" value="${escapeHtml(normal)}" onchange="TweakFinder.setModeValue('${cfg.id}','normal',this.value)">
+                 <input type="text" class="tf-text-control" value="${escapeHtml(gaming)}" onchange="TweakFinder.setModeValue('${cfg.id}','gaming',this.value)">
+             `;
+         }
+
+         html += `
+                 </div>
+             </div>
+         `;
+     });
+
+     container.innerHTML = html;
+ }
+
+ function shellDoubleQuote(value) {
+     return '"' + String(value)
+         .replace(/\\/g, '\\\\')
+         .replace(/"/g, '\\"')
+         .replace(/\$/g, '\\$')
+         .replace(/`/g, '\\`') + '"';
+ }
+
+ function buildModeScript(mode) {
+     const lines = [
+         '#!/system/bin/sh',
+         `# ${mode} mode generated by TweakFinder`,
+         ''
+     ];
+
+     controls.forEach(cfg => {
+         const rawValue = modeValues[cfg.id] ? modeValues[cfg.id][mode] : undefined;
+
+         if (rawValue === undefined || rawValue === null || rawValue === '') return;
+
+         const value = String(rawValue);
+
+         if (cfg.type === 'permission') {
+             const perm = /^[0-7]{3,4}$/.test(value) ? value : '644';
+
+             lines.push(`for f in ${cfg.path}; do`);
+             lines.push(`    [ -e "$f" ] && chmod ${perm} "$f" 2>/dev/null`);
+             lines.push('done');
+         } else if (cfg.type === 'ppm_policy') {
+             const enable = value === 'enable' || value === '1' || value.toLowerCase() === 'on';
+             const policies = (cfg.policies && cfg.policies.length) ? cfg.policies : [{ index: 0 }];
+
+             policies.forEach(p => {
+                 lines.push(`for f in ${cfg.path}; do`);
+                 lines.push(`    [ -f "$f" ] && echo "${p.index} ${enable ? 1 : 0}" > "$f" 2>/dev/null`);
+                 lines.push('done');
+             });
+         } else {
+             lines.push(`for f in ${cfg.path}; do`);
+             lines.push('    if [ -f "$f" ]; then');
+             lines.push('        chmod 666 "$f" 2>/dev/null');
+             lines.push(`        echo ${shellDoubleQuote(value)} > "$f" 2>/dev/null`);
+             lines.push('    fi');
+             lines.push('done');
+         }
+
+         lines.push('');
+     });
+
+     return lines.join('\n');
+ }
+
+ function generateModeScripts() {
+     const normal = buildModeScript('normal');
+     const gaming = buildModeScript('gaming');
+
+     const nEl = document.getElementById('tf-mode-normal-script');
+     const gEl = document.getElementById('tf-mode-gaming-script');
+
+     if (nEl) nEl.value = normal;
+     if (gEl) gEl.value = gaming;
+
+     showStatus('⚙️ Generated Normal + Gaming scripts', 'success', 2000);
+ }
+
+ async function writeModeScript(path, code) {
+     await execFn(`${CFG.BB} chmod 777 "${path}" 2>/dev/null`);
+     await execFn(`${CFG.BB} echo '${code.replace(/'/g, "'\\''")}' > "${path}" 2>/dev/null`);
+     await execFn(`chmod 755 "${path}"`);
+ }
+
+ async function saveModeScripts() {
+     if (!rootAvailable) {
+         showStatus('⚠️ Root required', 'error');
+         return;
+     }
+
+     generateModeScripts();
+
+     const normal = document.getElementById('tf-mode-normal-script') ? document.getElementById('tf-mode-normal-script').value : '';
+     const gaming = document.getElementById('tf-mode-gaming-script') ? document.getElementById('tf-mode-gaming-script').value : '';
+
+     try {
+         await execFn(`${CFG.BB} mkdir -p "${CFG.MODES_DIR}" 2>/dev/null`);
+
+         await writeModeScript(`${CFG.MODES_DIR}/normal_mode.sh`, normal);
+         await writeModeScript(`${CFG.MODES_DIR}/gaming_mode.sh`, gaming);
+
+         showStatus(`💾 Saved normal + gaming scripts`, 'success', 4000);
+     } catch (e) {
+         console.error(e);
+         showStatus(`❌ Save failed: ${e.message}`, 'error', 4000);
+     }
+ }
+
+ async function applyMode(mode) {
+     if (!rootAvailable) {
+         showStatus('⚠️ Root required', 'error');
+         return;
+     }
+
+     const file = `${CFG.MODES_DIR}/${mode}_mode.sh`;
+
+     try {
+         const exists = await execFn(`${CFG.BB} test -f "${file}" 2>/dev/null && echo yes || echo no`);
+
+         if (exists.trim() !== 'yes') {
+             await saveModeScripts();
+         }
+
+         const out = await execFn(`sh "${file}" 2>&1`);
+
+         showStatus(out.trim() || `✅ Applied ${mode} mode`, 'success', 4000);
+
+         setTimeout(() => refreshAllControls(), 500);
+     } catch (e) {
+         console.error(e);
+         showStatus(`❌ ${mode} mode failed: ${e.message}`, 'error', 4000);
+     }
+ }
 
     // ========== PUBLIC API ==========
     window.TweakFinder = {
         init,
         switchTab,
         doSearch,
+        renderModeGenerator,
+        setModeValue,
+        fillModeFromCurrent,
+        generateModeScripts,
+        saveModeScripts,
+        applyMode,
         browsePath,
         browseAddControl,
         previewFile,
