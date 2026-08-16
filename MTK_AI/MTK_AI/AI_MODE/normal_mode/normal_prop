@@ -6,9 +6,9 @@ LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE" || true
 }
-
+SDCARD="/sdcard/MTK_AI_Engine"
 BB="/data/adb/modules/MTK_AI/busybox"
-SAVE_DIR="/sdcard/MTK_AI_Engine/cooldown_values"
+SAVE_DIR="$CONFIG_DIR/cooldown_values"
 
 # ==============================
 # unsuspend background apps
@@ -33,6 +33,12 @@ done || true
 
 CONFIG_DIR="/sdcard/MTK_AI_Engine/config"
 NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
+
+#CPUFREQ POWER MODE
+if [ -f "$SDCARD/cpufreq_mode" ]; then
+echo "0" > /proc/cpufreq/cpufreq_power_mode || true
+echo "0" > /proc/cpufreq/cpufreq_cci_mode || true
+fi
 
 # --- APP HIBERNATION ---
 echo "Applying app hibernation rules..."
@@ -101,9 +107,6 @@ echo "0" > /sys/kernel/fpsgo/fstb/fstb_self_ctrl_fps_enable || true
 echo "1" > /sys/kernel/fpsgo/fbt/enable_switch_down_throttle || true
 echo "1" > /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable || true
 echo "0" > /sys/kernel/fpsgo/fstb/set_cam_active || true
-
-echo "0" > /proc/cpufreq/cpufreq_power_mode || true
-echo "0" > /proc/cpufreq/cpufreq_cci_mode || true
 
 setprop 'dalvik.vm.usap_pool_enabled' 'true' || true
 
