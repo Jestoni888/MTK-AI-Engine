@@ -11,22 +11,32 @@ LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 get_max_perc() {
     temp=$1
     case $temp in
-        35) echo 100 ;;
-        36) echo 95 ;;
-        37) echo 90 ;;
-        38) echo 85 ;;
-        39) echo 80 ;;
-        40) echo 75 ;;
-        41) echo 70 ;;
-        42) echo 65 ;;
-        43) echo 60 ;;
-        44) echo 55 ;;
-        45) echo 50 ;;
-        46) echo 45 ;;
-        47) echo 40 ;;
-        48) echo 35 ;;
-        49) echo 30 ;;
-        50) echo 25 ;;
+        25) echo 100 ;;
+        26) echo 98 ;;
+        27) echo 96 ;;
+        28) echo 94 ;;
+        29) echo 92 ;;
+        30) echo 90 ;;
+        31) echo 88 ;;
+        32) echo 86 ;;
+        33) echo 84 ;;
+        34) echo 82 ;;
+        35) echo 80 ;;
+        36) echo 78 ;;
+        37) echo 76 ;;
+        38) echo 74 ;;
+        39) echo 72 ;;
+        40) echo 70 ;;
+        41) echo 68 ;;
+        42) echo 66 ;;
+        43) echo 64 ;;
+        44) echo 62 ;;
+        45) echo 60 ;;
+        46) echo 58 ;;
+        47) echo 56 ;;
+        48) echo 54 ;;
+        49) echo 52 ;;
+        50) echo 50 ;;
         *)  
             if [ "$temp" -lt 35 ]; then
                 echo 100
