@@ -20,6 +20,8 @@ pm list packages | cut -d: -f2 | while read -r pkg; do
 done
 fi
 
+nohup sh "/sdcard/MTK_AI_Engine/modes/normal_mode.sh" >/dev/null 2>&1 &
+
 log_msg "→ Applying Normal EEM offsets from sdcard..."
 for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/proc/eem/EEM_DET_CCI/eem_offset bl:/proc/eem/EEM_DET_BL/eem_offset gpu:/proc/eemg/EEMG_DET_GPU/eemg_offset gpu_hi:/proc/eemg/EEMG_DET_GPU_HI/eemg_offset; do
   k=${i%%:*}; p=${i#*:}; v=$(cat /sdcard/MTK_AI_Engine/eem_offsets/normal/$k.txt 2>/dev/null)
