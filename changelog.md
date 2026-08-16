@@ -1,10 +1,12 @@
+--- version 0.0.0.96 ---
+
+•tweak finder improved search query which allow either uppercase or lowercase letters & maximum search for system files plus normal & gaming script generator that will automatically trigger
+
 --- version 0.0.0.95 ---
 
 •use tweaks now considered as experimental for those device getting more lags & not supported by those options you can disable it & restart your device to fully disabled
 
 •balance mode now with stable temperature by auto adjusting cpu frequency based by temperature Ex: if temperature rises to higher then cpu frequency goes lower (works only in lite mode)
-
-•tweak finder improved search query which allow either uppercase or lowercase letters & maximum search for system files 
 
 •new setting toggle for gaming CPUFREQ CCI/POWER MODE in settings
 
