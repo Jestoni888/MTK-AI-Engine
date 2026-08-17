@@ -1251,6 +1251,115 @@ setTimeout(removeOldCards, 900);
 })();
 setTimeout(enforcePosition, 2500);
 
+// ============ ROBUST ONLINE/LOCAL CONFIG (fetch + JS unzip, no binaries needed) ============
+async function inflateRaw(u8) {
+    if (typeof DecompressionStream === 'undefined') throw new Error('no inflate support');
+    const ds = new DecompressionStream('deflate-raw');
+    const resp = new Response(new Blob([u8]).stream().pipeThrough(ds));
+    return new Uint8Array(await resp.arrayBuffer());
+}
+function parseZip(u8) {
+    const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    let eocd = -1;
+    for (let i = u8.length - 22; i >= 0; i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    if (eocd < 0) throw new Error('bad zip');
+    const count = dv.getUint16(eocd + 10, true);
+    let ptr = dv.getUint32(eocd + 16, true);
+    const out = [];
+    for (let i = 0; i < count; i++) {
+        if (dv.getUint32(ptr, true) !== 0x02014b50) break;
+        const method = dv.getUint16(ptr + 10, true);
+        const compSize = dv.getUint32(ptr + 20, true);
+        const nameLen = dv.getUint16(ptr + 28, true);
+        const extraLen = dv.getUint16(ptr + 30, true);
+        const commentLen = dv.getUint16(ptr + 32, true);
+        const offset = dv.getUint32(ptr + 42, true);
+        const name = new TextDecoder().decode(u8.subarray(ptr + 46, ptr + 46 + nameLen));
+        out.push({ name, method, compSize, offset });
+        ptr += 46 + nameLen + extraLen + commentLen;
+    }
+    return out;
+}
+function zipEntryData(u8, e) {
+    const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    const nameLen = dv.getUint16(e.offset + 26, true);
+    const extraLen = dv.getUint16(e.offset + 28, true);
+    const start = e.offset + 30 + nameLen + extraLen;
+    return u8.subarray(start, start + e.compSize);
+}
+async function extractZipBytesToSdcard(u8) {
+    const entries = parseZip(u8);
+    const roots = new Set(entries.map(e => e.name.split('/')[0]));
+    const root = roots.size === 1 ? [...roots][0] : '';
+    let written = 0;
+    for (const e of entries) {
+        if (e.name.includes('..')) continue;                      // safety
+        let name = e.name;
+        if (root && name.startsWith(root + '/')) name = 'MTK_AI_Engine/' + name.slice(root.length + 1);
+        else if (!name.startsWith('MTK_AI_Engine/')) name = 'MTK_AI_Engine/' + name;
+        const target = '/sdcard/' + name;
+        if (e.name.endsWith('/')) { await exec(`mkdir -p "${target}" 2>/dev/null`); continue; }
+        let data = zipEntryData(u8, e);
+        if (e.method === 8) data = await inflateRaw(data);        // deflate
+        else if (e.method !== 0) continue;                        // store
+        await writeBytesToSdcard(data, target);
+        written++;
+    }
+    return written;
+}
+// faster chunked writer (16KB chunks)
+async function writeBytesToSdcard(bytes, path) {
+    const b64 = bytesToB64(bytes);
+    await exec(`rm -f "${path}" "${CC_TMP_B64}" 2>/dev/null`);
+    for (let i = 0; i < b64.length; i += 16000)
+        await exec(`printf '%s' '${b64.slice(i, i + 16000)}' >> "${CC_TMP_B64}"`);
+    await exec(`(base64 -d "${CC_TMP_B64}" 2>/dev/null || busybox base64 -d "${CC_TMP_B64}") > "${path}"`);
+    await exec(`rm -f "${CC_TMP_B64}" 2>/dev/null`);
+}
+
+// ---- ONLINE: fetch in WebView first (works without curl/wget), shell as fallback ----
+window.cfgLoadOnline = async function() {
+    if (ccBusy) return;
+    if (!confirm('Download & apply online config?\n/sdcard/MTK_AI_Engine will be overwritten.')) return;
+    setCCBusy(true); setCCStatus('⏳ Downloading online config...', '#32BEEB');
+    try {
+        let u8 = null, why = '';
+        try {
+            const resp = await fetch(CC_ONLINE_URL, { cache: 'no-store' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            u8 = new Uint8Array(await resp.arrayBuffer());
+        } catch (fe) {
+            why = fe.message || 'fetch blocked';
+            await exec(`curl -L --connect-timeout 20 -o "${CC_TMP_ZIP}" "${CC_ONLINE_URL}" 2>/dev/null || wget -T 20 -O "${CC_TMP_ZIP}" "${CC_ONLINE_URL}" 2>/dev/null`, 90000);
+            const b64 = await exec(`base64 "${CC_TMP_ZIP}" 2>/dev/null`, 30000);
+            if (b64.trim()) u8 = b64ToBytes(b64);
+        }
+        if (!u8 || u8.length < 22) throw new Error('download failed' + (why ? ' (' + why + ')' : ''));
+        setCCStatus('⏳ Extracting ' + u8.length + ' B...', '#32BEEB');
+        const n = await extractZipBytesToSdcard(u8);
+        if (!n) throw new Error('zip empty / unsupported');
+        await exec(`rm -f "${CC_TMP_ZIP}" 2>/dev/null`);
+        await afterConfigChange('✅ Online config applied (' + n + ' files)');
+    } catch (e) { setCCStatus('❌ ' + e.message, '#FF453A'); }
+    finally { setCCBusy(false); }
+};
+
+// ---- LOCAL: read backup zip via base64 and extract in JS (no unzip binary needed) ----
+window.cfgRestoreLocal = async function() {
+    if (ccBusy) return;
+    if (!(parseInt(await exec(`stat -c %s "${CC_BACKUP_ZIP}" 2>/dev/null`)) || 0)) { setCCStatus('❌ No local backup zip found', '#FF453A'); return; }
+    if (!confirm('Restore local backup?\n/sdcard/MTK_AI_Engine will be overwritten.')) return;
+    setCCBusy(true); setCCStatus('⏳ Restoring local backup...', '#5b9dff');
+    try {
+        const b64 = await exec(`base64 "${CC_BACKUP_ZIP}" 2>/dev/null`, 30000);
+        if (!b64.trim()) throw new Error('cannot read backup zip');
+        const n = await extractZipBytesToSdcard(b64ToBytes(b64));
+        if (!n) throw new Error('backup zip empty');
+        await afterConfigChange('✅ Local config restored (' + n + ' files)');
+    } catch (e) { setCCStatus('❌ ' + e.message, '#FF453A'); }
+    finally { setCCBusy(false); }
+};
+
 // ============ CONTROL CENTER THEME SYNC ============
 function injectCCThemeOverride() {
     if (document.getElementById('cc-theme-styles')) return;
@@ -1308,7 +1417,90 @@ function watchCCTheme() {
     }
     if (n < 40) setTimeout(() => waitCCForTheme(n + 1), 250);
 })();
-    
+
+// ============ ONLINE CONFIG: MULTI-TRANSPORT DOWNLOADER ============
+const BBX2 = '/data/adb/modules/MTK_AI/busybox';
+const CC_URL_LIST = [
+    'https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/config/MTK_AI_Engine.zip',
+    'https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/main/config/MTK_AI_Engine.zip',
+    'https://github.com/Jestoni888/MTK-AI-Engine/raw/refs/heads/main/config/MTK_AI_Engine.zip'
+];
+async function ccTryFetch() {
+    for (const url of CC_URL_LIST) {
+        try {
+            const resp = await fetch(url, { cache: 'no-store' });
+            if (resp.ok) {
+                const u8 = new Uint8Array(await resp.arrayBuffer());
+                if (u8.length > 22) return { u8, via: 'fetch' };
+            }
+        } catch (e) { /* try next URL */ }
+    }
+    return null;
+}
+async function ccTryShell() {
+    for (const url of CC_URL_LIST) {
+        let size = parseInt(await exec(`${BBX2} wget -q -O "${CC_TMP_ZIP}" --no-check-certificate "${url}" 2>/dev/null; stat -c %s "${CC_TMP_ZIP}" 2>/dev/null`, 60000)) || 0;
+        if (!size) size = parseInt(await exec(`curl -L --connect-timeout 15 -o "${CC_TMP_ZIP}" "${url}" 2>/dev/null; stat -c %s "${CC_TMP_ZIP}" 2>/dev/null`, 60000)) || 0;
+        if (!size) size = parseInt(await exec(`wget -q -O "${CC_TMP_ZIP}" "${url}" 2>/dev/null; stat -c %s "${CC_TMP_ZIP}" 2>/dev/null`, 60000)) || 0;
+        if (size) return { size, via: 'shell wget/curl' };
+    }
+    return null;
+}
+async function ccTryDownloadManager() {
+    await exec(`rm -f "${CC_TMP_ZIP}" /sdcard/MTK_AI_Engine_online.zip 2>/dev/null`);
+    await exec(`content insert --uri content://downloads/public_downloads --bind uri:s:"${CC_URL_LIST[0]}" --bind destination:i:6 --bind hint:s:"MTK_AI_Engine_online.zip" --bind visibility:i:1 2>/dev/null`, 10000);
+    for (let i = 0; i < 25; i++) {
+        await new Promise(r => setTimeout(r, 1000));
+        const size = parseInt(await exec(`stat -c %s /sdcard/MTK_AI_Engine_online.zip 2>/dev/null`)) || 0;
+        if (size > 22) {
+            await exec(`cp -f /sdcard/MTK_AI_Engine_online.zip "${CC_TMP_ZIP}" 2>/dev/null; rm -f /sdcard/MTK_AI_Engine_online.zip 2>/dev/null`);
+            return { size, via: 'DownloadManager' };
+        }
+    }
+    return null;
+}
+window.cfgLoadOnline = async function() {
+    if (ccBusy) return;
+    if (!confirm('Download & apply online config?\n/sdcard/MTK_AI_Engine will be overwritten.')) return;
+    setCCBusy(true);
+    let u8 = null, zipOnDisk = false, via = '';
+    try {
+        setCCStatus('⏳ [1/3] WebView fetch (direct raw URL)...', '#32BEEB');
+        const f = await ccTryFetch();
+        if (f) { u8 = f.u8; via = f.via; }
+        if (!u8) {
+            setCCStatus('⏳ [2/3] Shell wget/curl...', '#32BEEB');
+            const s = await ccTryShell();
+            if (s) {
+                zipOnDisk = true; via = s.via;
+                const b64 = await exec(`(${BBX2} base64 "${CC_TMP_ZIP}" 2>/dev/null || base64 "${CC_TMP_ZIP}" 2>/dev/null)`, 60000);
+                if (b64.trim()) u8 = b64ToBytes(b64);
+            }
+        }
+        if (!u8) {
+            setCCStatus('⏳ [3/3] Android DownloadManager...', '#32BEEB');
+            const d = await ccTryDownloadManager();
+            if (d) {
+                zipOnDisk = true; via = d.via;
+                const b64 = await exec(`(${BBX2} base64 "${CC_TMP_ZIP}" 2>/dev/null || base64 "${CC_TMP_ZIP}" 2>/dev/null)`, 60000);
+                if (b64.trim()) u8 = b64ToBytes(b64);
+            }
+        }
+        if (!u8 || u8.length < 22) throw new Error('all download methods failed');
+        setCCStatus(`⏳ Extracting ${u8.length} B (via ${via})...`, '#32BEEB');
+        if (!zipOnDisk) await writeBytesToSdcard(u8, CC_TMP_ZIP);
+        const uz = await exec(`cd /sdcard && ${BBX2} unzip -o "${CC_TMP_ZIP}" >/dev/null 2>&1; echo EXIT=$?`, 60000);
+        if (/EXIT=0/.test(uz)) {
+            await exec(`if [ -d "${CC_DIR}/MTK_AI_Engine" ]; then cp -rf "${CC_DIR}/MTK_AI_Engine/." "${CC_DIR}/" 2>/dev/null; rm -rf "${CC_DIR}/MTK_AI_Engine"; fi`);
+        } else {
+            const n = await extractZipBytesToSdcard(u8);
+            if (!n) throw new Error('unzip failed & JS extractor empty');
+        }
+        await exec(`rm -f "${CC_TMP_ZIP}" 2>/dev/null`);
+        await afterConfigChange(`✅ Online config applied (via ${via})`);
+    } catch (e) { setCCStatus('❌ ' + e.message, '#FF453A'); }
+    finally { setCCBusy(false); }
+};
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
 })();
