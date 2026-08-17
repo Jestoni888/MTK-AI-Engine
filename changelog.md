@@ -4,6 +4,8 @@
 
 •adding config save locally & config load via online with theme adaptation
 
+•Wifi hacking Wifux replaced with Oneshot-extended
+
 --- version 0.0.0.95 ---
 
 •use tweaks now considered as experimental for those device getting more lags & not supported by those options you can disable it & restart your device to fully disabled
