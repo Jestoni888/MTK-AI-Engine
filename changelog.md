@@ -4,7 +4,7 @@
 
 •adding config save locally & config load via online with theme adaptation
 
-•Wifi hacking Wifux replaced with Oneshot-extended
+•Wifi hacking Wifux replaced with Oneshot-extended (Wifi manager in tools tab)
 
 --- version 0.0.0.95 ---
 
