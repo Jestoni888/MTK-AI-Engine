@@ -970,4 +970,100 @@ window.verifyRenderer = verifyRenderer;
 window.applyHardCoreFix = applyHardCoreFix;
 window.saveAndApplyRenderer = saveAndApplyRenderer;
 window.loadAppRenderer = loadAppRenderer;
+// ============ THEME SYNC (APPLICATION PAGE) ============
+let lastAppThemeKey = '';
+function atShade(color, f) {
+    const m = (color || '').match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/);
+    if (!m) return null;
+    const cl = v => Math.max(0, Math.min(255, Math.round(v * f)));
+    return `rgb(${cl(+m[1])}, ${cl(+m[2])}, ${cl(+m[3])})`;
+}
+function atRgba(color, a) {
+    let r = 0, g = 0, b = 0;
+    if (color && color[0] === '#') {
+        let h = color.slice(1);
+        if (h.length === 3) h = h.split('').map(c => c + c).join('');
+        r = parseInt(h.substr(0, 2), 16); g = parseInt(h.substr(2, 2), 16); b = parseInt(h.substr(4, 2), 16);
+    } else {
+        const m = (color || '').match(/rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/);
+        if (!m) return null;
+        r = +m[1]; g = +m[2]; b = +m[3];
+    }
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+function sampleAppTheme() {
+    const card = document.querySelector('.status-card');
+    if (!card) return null;
+    const cs = getComputedStyle(card);
+    let accent = '';
+    const ring = document.querySelector('circle.progress-bar');
+    if (ring) accent = getComputedStyle(ring).stroke;
+    if (!accent || accent === 'none') {
+        const nav = document.querySelector('.nav-item.active');
+        if (nav) accent = getComputedStyle(nav).color;
+    }
+    return {
+        card: cs.backgroundColor,
+        border: cs.borderColor,
+        text: cs.color,
+        body: getComputedStyle(document.body).backgroundColor,
+        accent: accent || '#0A84FF'
+    };
+}
+function applyAppTheme() {
+    const s = sampleAppTheme();
+    if (!s) return;
+    const key = [s.card, s.body, s.accent, s.border, s.text].join('|');
+    if (key === lastAppThemeKey) return;
+    lastAppThemeKey = key;
+    const CARD = s.card;
+    const PAGE = s.body;
+    const HOV = atShade(s.card, 1.35) || s.card;
+    const INPUT = atShade(s.card, 0.55) || s.card;
+    const BORDER = (s.border && s.border !== 'rgba(0, 0, 0, 0)') ? s.border : 'rgba(255,255,255,0.08)';
+    const TEXT = s.text || '#fff';
+    const SUB = atShade(s.text, 0.62) || '#888';
+    const ACC = s.accent || '#0A84FF';
+    const ACC_SOFT = atRgba(ACC, 0.35) || ACC;
+    let el = document.getElementById('app-theme-styles');
+    if (!el) { el = document.createElement('style'); el.id = 'app-theme-styles'; document.head.appendChild(el); }
+    el.textContent = `
+        .app-card { background:${CARD} !important; border-bottom-color:${BORDER} !important; }
+        .app-card:hover, .app-card[style*="#2c2c2e"] { background:${HOV} !important; }
+        .app-card [style*="color:#fff"], .app-card [style*="color: #fff"] { color:${TEXT} !important; }
+        .app-card [style*="color:#888"], .app-card [style*="color: #888"] { color:${SUB} !important; }
+        .search-box-pro { background:linear-gradient(180deg, ${PAGE} 95%, transparent) !important; }
+        #app-search-input { background:${INPUT} !important; border-color:${BORDER} !important; color:${TEXT} !important; }
+        #search-clear-btn { background:${HOV} !important; color:${TEXT} !important; }
+        #app-config-modal { background:${PAGE} !important; color:${TEXT} !important; }
+        #monitor-popup > div { background:${CARD} !important; }
+        #app-config-modal [style*="#1e1e1e"], #app-config-modal [style*="#1c1c1e"],
+        #monitor-popup [style*="#1c1c1e"], #monitor-popup [style*="#1e1e1e"] { background:${CARD} !important; }
+        #app-config-modal [style*="#121212"], #app-config-modal [style*="#2a2a2c"],
+        #app-config-modal [style*="#2a2a2a"], #app-config-modal [style*="#3a3a3c"],
+        #monitor-popup [style*="rgba(0,0,0,0.3)"] { background:${INPUT} !important; }
+        #app-config-modal [style*="background:#000"] { background:${PAGE} !important; }
+        #app-config-modal select, #app-config-modal input, #app-config-modal textarea {
+            background:${INPUT} !important; border-color:${BORDER} !important; color:${TEXT} !important; }
+        #app-config-modal [style*="color:#888"], #monitor-popup [style*="color:#888"],
+        #app-config-modal [style*="color: #888"] { color:${SUB} !important; }
+        #app-config-modal [style*="color:#fff"], #monitor-popup [style*="color:#fff"] { color:${TEXT} !important; }
+        #app-config-modal [style*="color:#8ab4f8"] { color:${ACC} !important; }
+        #app-config-modal [style*="#2a3a8a"] { background:${ACC_SOFT} !important; }
+    `;
+}
+function watchAppTheme() {
+    if (window.appThemeWatchOn) return;
+    window.appThemeWatchOn = true;
+    const mo = new MutationObserver(() => setTimeout(applyAppTheme, 250));
+    const opts = { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] };
+    mo.observe(document.documentElement, opts);
+    mo.observe(document.body, opts);
+    document.addEventListener('click', () => setTimeout(applyAppTheme, 350), true);
+    setInterval(applyAppTheme, 3000);
+}
+(function waitAppTheme(n = 0) {
+    if (document.querySelector('.status-card')) { applyAppTheme(); watchAppTheme(); return; }
+    if (n < 40) setTimeout(() => waitAppTheme(n + 1), 250);
+})();
 })();

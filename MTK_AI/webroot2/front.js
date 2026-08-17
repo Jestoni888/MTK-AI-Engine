@@ -1004,6 +1004,311 @@ su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/mo
         
         console.log('MTK AI Engine ready.');
     }
+    
+    // ============ CONTROL CENTER (PRO PANEL + ZIP CONFIG) ============
+const CC_DIR = '/sdcard/MTK_AI_Engine';
+const CC_BACKUP_ZIP = '/sdcard/MTK_AI_Engine_backup.zip';
+const CC_ONLINE_URL = 'https://github.com/Jestoni888/MTK-AI-Engine/raw/refs/heads/main/config/MTK_AI_Engine.zip';
+const CC_TMP_ZIP = '/sdcard/.mtk_online.zip';
+const CC_TMP_B64 = '/sdcard/.mtk_b64.tmp';
+let ccBusy = false;
+
+function injectCCAssets() {
+    if (!document.getElementById('fa-cdn')) {
+        const l = document.createElement('link');
+        l.id = 'fa-cdn'; l.rel = 'stylesheet';
+        l.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css';
+        document.head.appendChild(l);
+    }
+    if (document.getElementById('cc-styles')) return;
+    const s = document.createElement('style'); s.id = 'cc-styles';
+    s.textContent = `
+        .cc-card { grid-column:1/-1; width:100%; background:#372e4f; border-radius:24px; padding:20px 16px; border:1px solid rgba(255,255,255,.06); margin:12px 0; box-sizing:border-box; }
+        .cc-header { display:flex; align-items:center; gap:10px; margin:0 4px 16px; color:#b9a8e0; font-size:12px; font-weight:800; letter-spacing:2px; text-transform:uppercase; }
+        .cc-header i { color:#FFD60A; font-size:14px; }
+        .cc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+        .cc-btn { --acc:#8f7bd0; --soft:rgba(143,123,208,.15); display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px 4px 12px; border:none; border-radius:16px; cursor:pointer; background:linear-gradient(160deg,#2b2342,#241c3a); box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 4px 10px rgba(0,0,0,.35); transition:transform .12s, background .2s; -webkit-tap-highlight-color:transparent; }
+        .cc-btn:active { transform:scale(.95); }
+        .cc-ico { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; color:var(--acc); background:var(--soft); }
+        .cc-lbl { font-size:9px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:#e6def7; }
+        .cc-sub { font-size:8px; font-weight:700; letter-spacing:1px; color:var(--acc); }
+        #cc-btn-services { --acc:#5b9dff; --soft:rgba(91,157,255,.15); }
+        #cc-btn-overlay  { --acc:#b678e8; --soft:rgba(182,120,232,.15); }
+        #cc-btn-save     { --acc:#32D74B; --soft:rgba(50,215,75,.15); }
+        #cc-btn-local    { --acc:#FF9F0A; --soft:rgba(255,159,10,.15); }
+        #cc-btn-online   { --acc:#32BEEB; --soft:rgba(50,190,235,.15); }
+        #cc-btn-reset    { --acc:#FF453A; --soft:rgba(255,69,58,.15); }
+        .cc-btn[data-active="true"] { background:var(--acc); }
+        .cc-btn[data-active="true"] .cc-ico { background:rgba(0,0,0,.18); color:#1b1530; }
+        .cc-btn[data-active="true"] .cc-lbl, .cc-btn[data-active="true"] .cc-sub { color:#1b1530; }
+        .cc-btn.busy { animation:pulse 1s infinite; opacity:.6; pointer-events:none; }
+        .cc-status { text-align:center; font-family:monospace; font-size:10px; color:#8f7bd0; margin-top:14px; min-height:14px; }
+    `;
+    document.head.appendChild(s);
+}
+
+// ---- REMOVE old long buttons (by ID AND by visible label) ----
+function removeOldCards() {
+    ['mtk-services-card', 'refresh-rate-overlay-card'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) (el.closest('.status-card') || el).remove();
+    });
+    const cards = [...document.querySelectorAll('[class*="card"]')].filter(c => /MTK AI SERVICES|REFRESH RATE OVERLAY/.test(c.textContent || ''));
+    cards.forEach(c => { if (!c.querySelector('[class*="card"]')) c.remove(); });
+}
+
+// ---- PLACE panel strictly BEFORE Master Mode ----
+function placeControlCenter(card) {
+    const master = document.querySelector('.profile-card') ||
+        [...document.querySelectorAll('[class*="card"]')].find(c => (c.textContent || '').includes('MASTER MODE') && !c.querySelector('.cc-grid'));
+    if (master) { master.before(card); return; }
+    const consoleCard = document.getElementById('inline-console')?.closest('[class*="card"]');
+    if (consoleCard) { consoleCard.before(card); return; }
+    document.body.appendChild(card);
+}
+function enforcePosition() {
+    const card = document.getElementById('cc-card');
+    const master = document.querySelector('.profile-card');
+    if (card && master && master.previousElementSibling !== card) master.before(card);
+}
+
+// ---- Re-wire toggles so they work without the old cards ----
+window.toggleMTKServices = async function() {
+    if (ccBusy) return;
+    try {
+        if (mtkServicesEnabled) {
+            await exec(`su -c "pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null"`);
+            await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
+            mtkServicesEnabled = false; await saveServicesState(false);
+            showStatus('⏹️ MTK AI services → LITE MODE', '#FF453A');
+        } else {
+            await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
+            mtkServicesEnabled = true; await saveServicesState(true);
+            showStatus('▶️ MTK AI services → HARD MODE', '#32D74B');
+        }
+        updateControlStates();
+    } catch (e) { showStatus('❌ Toggle failed: ' + e.message, '#FF453A'); }
+};
+window.toggleOverlay = async function() {
+    const next = !isOverlayOn;
+    try {
+        await exec(`service call SurfaceFlinger 1034 i32 ${next ? 1 : 0}`);
+        isOverlayOn = next;
+        showStatus(next ? '👁️ FPS overlay ON' : '🙈 FPS overlay OFF', next ? '#34C759' : '#FF453A');
+        updateControlStates();
+    } catch (e) { console.error('Overlay error:', e); }
+};
+
+// ---- ZIP engine (store method, no zip binary needed) ----
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c; } return t; })();
+function crc32(u) { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC_T[(c ^ u[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function b64ToBytes(b) { const bin = atob(b.replace(/\s+/g, '')); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+function bytesToB64(u) { let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
+function buildZip(entries) {
+    const enc = new TextEncoder(), parts = [], central = [];
+    let offset = 0, cdSize = 0;
+    for (const e of entries) {
+        const name = enc.encode(e.name), crc = crc32(e.data);
+        const lh = new Uint8Array(30), lv = new DataView(lh.buffer);
+        lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true);
+        lv.setUint32(14, crc, true); lv.setUint32(18, e.data.length, true); lv.setUint32(22, e.data.length, true);
+        lv.setUint16(26, name.length, true);
+        parts.push(lh, name, e.data);
+        const ch = new Uint8Array(46), cv = new DataView(ch.buffer);
+        cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+        cv.setUint32(16, crc, true); cv.setUint32(20, e.data.length, true); cv.setUint32(24, e.data.length, true);
+        cv.setUint16(28, name.length, true); cv.setUint32(42, offset, true);
+        central.push(ch, name);
+        offset += 30 + name.length + e.data.length; cdSize += 46 + name.length;
+    }
+    const eo = new Uint8Array(22), ev = new DataView(eo.buffer);
+    ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, entries.length, true); ev.setUint16(10, entries.length, true);
+    ev.setUint32(12, cdSize, true); ev.setUint32(16, offset, true);
+    let total = 22; parts.forEach(p => total += p.length); central.forEach(p => total += p.length);
+    const out = new Uint8Array(total); let pos = 0;
+    for (const p of [...parts, ...central, eo]) { out.set(p, pos); pos += p.length; }
+    return out;
+}
+async function writeBytesToSdcard(bytes, path) {
+    const b64 = bytesToB64(bytes);
+    await exec(`rm -f "${path}" "${CC_TMP_B64}" 2>/dev/null`);
+    for (let i = 0; i < b64.length; i += 3000)
+        await exec(`printf '%s' '${b64.slice(i, i + 3000)}' >> "${CC_TMP_B64}"`);
+    await exec(`(base64 -d "${CC_TMP_B64}" 2>/dev/null || busybox base64 -d "${CC_TMP_B64}") > "${path}"`);
+    await exec(`rm -f "${CC_TMP_B64}" 2>/dev/null`);
+}
+
+// ---- UI state helpers ----
+function setCCStatus(m, c) { const el = document.getElementById('cc-status'); if (el) { el.textContent = m; el.style.color = c || '#8f7bd0'; } }
+function setCCBusy(b) { ccBusy = b; document.querySelectorAll('.cc-btn').forEach(x => { x.disabled = b; x.classList.toggle('busy', b); }); }
+function updateControlStates() {
+    const s = document.getElementById('cc-btn-services');
+    if (s) {
+        s.dataset.active = mtkServicesEnabled;
+        s.querySelector('.cc-ico i').className = 'fas ' + (mtkServicesEnabled ? 'fa-rocket' : 'fa-microchip');
+        s.querySelector('.cc-sub').textContent = mtkServicesEnabled ? 'HARD' : 'LITE';
+    }
+    const o = document.getElementById('cc-btn-overlay');
+    if (o) {
+        o.dataset.active = isOverlayOn;
+        o.querySelector('.cc-ico i').className = 'fas ' + (isOverlayOn ? 'fa-eye' : 'fa-eye-slash');
+        o.querySelector('.cc-sub').textContent = isOverlayOn ? 'ON' : 'OFF';
+    }
+}
+
+// ---- CONFIG ACTIONS ----
+window.cfgSave = async function() {
+    if (ccBusy) return; setCCBusy(true); setCCStatus('⏳ Zipping ' + CC_DIR + ' ...', '#FF9F0A');
+    try {
+        const list = await exec(`find "${CC_DIR}" -type f 2>/dev/null`);
+        const files = list.split('\n').map(x => x.trim()).filter(Boolean);
+        if (!files.length) throw new Error('folder missing / empty');
+        const entries = [];
+        for (const f of files) {
+            setCCStatus(`⏳ Packing ${entries.length + 1}/${files.length}...`, '#FF9F0A');
+            entries.push({ name: f.replace(/^\/sdcard\//, ''), data: b64ToBytes(await exec(`base64 "${f}" 2>/dev/null`)) });
+        }
+        const zip = buildZip(entries);
+        await writeBytesToSdcard(zip, CC_BACKUP_ZIP);
+        setCCStatus(`✅ Backup → ${CC_BACKUP_ZIP} (${entries.length} files)`, '#32D74B');
+        showStatus('💾 Config zipped to /sdcard', '#32D74B');
+    } catch (e) { setCCStatus('❌ ' + e.message, '#FF453A'); }
+    finally { setCCBusy(false); }
+};
+window.cfgRestoreLocal = async function() {
+    if (ccBusy) return;
+    if (!(parseInt(await exec(`stat -c %s "${CC_BACKUP_ZIP}" 2>/dev/null`)) || 0)) { setCCStatus('❌ No local backup zip found', '#FF453A'); return; }
+    if (!confirm('Restore local backup?\n/sdcard/MTK_AI_Engine will be overwritten.')) return;
+    setCCBusy(true); setCCStatus('⏳ Unzipping local backup...', '#5b9dff');
+    try {
+        await exec(`cd /sdcard && (unzip -o "${CC_BACKUP_ZIP}" 2>/dev/null || busybox unzip -o "${CC_BACKUP_ZIP}" 2>/dev/null)`, 30000);
+        await afterConfigChange('✅ Local config restored');
+    } catch (e) { setCCStatus('❌ ' + e.message, '#FF453A'); }
+    finally { setCCBusy(false); }
+};
+window.cfgLoadOnline = async function() {
+    if (ccBusy) return;
+    if (!confirm('Download & apply online config?\n/sdcard/MTK_AI_Engine will be overwritten.')) return;
+    setCCBusy(true); setCCStatus('⏳ Downloading online config...', '#32BEEB');
+    try {
+        const dl = await exec(`curl -L --connect-timeout 20 -o "${CC_TMP_ZIP}" "${CC_ONLINE_URL}" 2>/dev/null || wget -T 20 -O "${CC_TMP_ZIP}" "${CC_ONLINE_URL}" 2>/dev/null; stat -c %s "${CC_TMP_ZIP}" 2>/dev/null`, 90000);
+        if (!(parseInt(dl) || 0)) throw new Error('download failed');
+        setCCStatus('⏳ Extracting...', '#32BEEB');
+        await exec(`cd /sdcard && (unzip -o "${CC_TMP_ZIP}" 2>/dev/null || busybox unzip -o "${CC_TMP_ZIP}" 2>/dev/null)`, 30000);
+        await exec(`if [ -d "${CC_DIR}/MTK_AI_Engine" ]; then cp -rf "${CC_DIR}/MTK_AI_Engine/." "${CC_DIR}/" 2>/dev/null; rm -rf "${CC_DIR}/MTK_AI_Engine"; fi`);
+        await exec(`rm -f "${CC_TMP_ZIP}" 2>/dev/null`);
+        await afterConfigChange('✅ Online config applied');
+    } catch (e) { setCCStatus('❌ ' + e.message, '#FF453A'); }
+    finally { setCCBusy(false); }
+};
+window.cfgReset = async function() {
+    if (ccBusy) return;
+    if (!confirm('⚠️ RESET will run:\nrm -rf /sdcard/MTK_AI_Engine\n\nContinue?')) return;
+    setCCBusy(true); setCCStatus('⏳ rm -rf ...', '#FF453A');
+    await exec(`rm -rf "${CC_DIR}" 2>/dev/null`);
+    setCCStatus('✅ Config reset (folder removed)', '#32D74B');
+    showStatus('♻️ Config reset', '#FF453A');
+    setCCBusy(false);
+};
+async function afterConfigChange(okMsg) {
+    const p = await loadProfileState(); if (p) { state.currentProfile = p; updateProfileUI(); }
+    const sv = await loadServicesState(); if (sv !== null) mtkServicesEnabled = sv;
+    updateControlStates();
+    setCCStatus(okMsg, '#32D74B'); showStatus('📦 Config updated', '#32D74B');
+}
+
+// ---- BUILD PANEL ----
+function injectControlCenter() {
+    if (document.getElementById('cc-card')) return;
+    injectCCAssets();
+    const card = document.createElement('div');
+    card.id = 'cc-card'; card.className = 'cc-card';
+    card.innerHTML = `
+        <div class="cc-header"><i class="fas fa-sliders"></i><span>CONTROL CENTER</span></div>
+        <div class="cc-grid">
+            <button class="cc-btn" id="cc-btn-services" onclick="toggleMTKServices()"><span class="cc-ico"><i class="fas fa-microchip"></i></span><span class="cc-lbl">Services</span><span class="cc-sub">LITE</span></button>
+            <button class="cc-btn" id="cc-btn-overlay" onclick="toggleOverlay()"><span class="cc-ico"><i class="fas fa-eye-slash"></i></span><span class="cc-lbl">FPS Overlay</span><span class="cc-sub">OFF</span></button>
+            <button class="cc-btn" id="cc-btn-save" onclick="cfgSave()"><span class="cc-ico"><i class="fas fa-file-zipper"></i></span><span class="cc-lbl">Save config</span><span class="cc-sub">ZIP→/sdcard</span></button>
+            <button class="cc-btn" id="cc-btn-local" onclick="cfgRestoreLocal()"><span class="cc-ico"><i class="fas fa-box-open"></i></span><span class="cc-lbl">Load local config</span><span class="cc-sub">UNZIP</span></button>
+            <button class="cc-btn" id="cc-btn-online" onclick="cfgLoadOnline()"><span class="cc-ico"><i class="fas fa-cloud-arrow-down"></i></span><span class="cc-lbl">Online config</span><span class="cc-sub">GITHUB</span></button>
+            <button class="cc-btn" id="cc-btn-reset" onclick="cfgReset()"><span class="cc-ico"><i class="fas fa-trash-can"></i></span><span class="cc-lbl">Reset config</span><span class="cc-sub">RM -RF</span></button>
+        </div>
+        <div class="cc-status" id="cc-status">Ready</div>`;
+    placeControlCenter(card);
+    updateControlStates();
+    setInterval(updateControlStates, 2000);
+}
+
+// ---- BOOT: cut old cards repeatedly, inject panel, enforce position ----
+removeOldCards();
+setTimeout(removeOldCards, 300);
+setTimeout(removeOldCards, 900);
+(function tryCC(n = 0) {
+    if (document.getElementById('cc-card')) return;
+    if (!document.body) { setTimeout(() => tryCC(n + 1), 100); return; }
+    if (document.querySelector('.profile-card') || n >= 10) { injectControlCenter(); return; }
+    setTimeout(() => tryCC(n + 1), 200);
+})();
+setTimeout(enforcePosition, 2500);
+
+// ============ CONTROL CENTER THEME SYNC ============
+function injectCCThemeOverride() {
+    if (document.getElementById('cc-theme-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'cc-theme-styles';
+    s.textContent = `
+        #cc-card .cc-btn { background: linear-gradient(160deg, var(--cc-btn-bg1, #2b2342), var(--cc-btn-bg2, #241c3a)); }
+        #cc-card .cc-btn[data-active="true"] { background: var(--acc); }
+        #cc-card .cc-lbl { color: var(--cc-lbl, #e6def7); }
+    `;
+    document.head.appendChild(s);
+}
+function ccShade(color, f) {
+    const m = (color || '').match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/);
+    if (!m) return null;
+    return `rgb(${Math.round(m[1] * f)}, ${Math.round(m[2] * f)}, ${Math.round(m[3] * f)})`;
+}
+let ccThemeKey = '';
+function applyCCTheme() {
+    const card = document.getElementById('cc-card');
+    const sample = document.querySelector('.status-card') || document.querySelector('.profile-card');
+    if (!card || !sample) return;
+    const cs = getComputedStyle(sample);
+    const key = cs.backgroundColor + '|' + cs.borderRadius + '|' + cs.borderColor + '|' + cs.color;
+    if (key === ccThemeKey) return;           // only re-apply when theme actually changed
+    ccThemeKey = key;
+    // Card shell copies the native card look of the active theme
+    card.style.background = cs.backgroundColor;
+    card.style.border = '1px solid ' + (cs.borderColor && cs.borderColor !== 'rgba(0, 0, 0, 0)' ? cs.borderColor : 'rgba(255,255,255,0.06)');
+    card.style.borderRadius = cs.borderRadius || '24px';
+    // Inner buttons = darkened shade of the themed card background
+    const root = document.documentElement.style;
+    root.setProperty('--cc-btn-bg1', ccShade(cs.backgroundColor, 0.72) || '#2b2342');
+    root.setProperty('--cc-btn-bg2', ccShade(cs.backgroundColor, 0.58) || '#241c3a');
+    root.setProperty('--cc-lbl', cs.color || '#e6def7');
+    const hdr = card.querySelector('.cc-header');
+    if (hdr) hdr.style.color = cs.color || '#b9a8e0';
+    const st = document.getElementById('cc-status');
+    if (st) st.style.color = ccShade(cs.color, 0.75) || '#8f7bd0';
+}
+function watchCCTheme() {
+    if (window.ccThemeWatchOn) return;
+    window.ccThemeWatchOn = true;
+    const mo = new MutationObserver(() => setTimeout(applyCCTheme, 250));
+    const opts = { attributes: true, attributeFilter: ['class', 'style', 'data-theme'] };
+    mo.observe(document.documentElement, opts);
+    mo.observe(document.body, opts);
+    document.addEventListener('click', () => setTimeout(applyCCTheme, 350), true); // theme button clicks
+    setInterval(applyCCTheme, 3000);   // safety net for <style>-swap themes
+}
+// Self-boot: wait for the panel, then sync + watch
+(function waitCCForTheme(n = 0) {
+    if (document.getElementById('cc-card')) {
+        injectCCThemeOverride(); applyCCTheme(); watchCCTheme(); return;
+    }
+    if (n < 40) setTimeout(() => waitCCForTheme(n + 1), 250);
+})();
+    
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
 })();
