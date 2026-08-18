@@ -144,12 +144,6 @@ webroot/setedit.js
 webroot/update.js
 webroot/hibernator.js
 webroot/wifi.js
-lib/inotifywait
-lib/inotifywatch
-lib/libinotifytools.so
-lib/sudo
-lib/cpulimit
-lib64/libc++_shared.so
 "
 
 # === 4. Download helper ===
