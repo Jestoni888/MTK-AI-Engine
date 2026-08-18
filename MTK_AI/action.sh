@@ -212,19 +212,3 @@ if has_internet; then
 else
     log "🛜 No internet detected. Skipping online update."
 fi
-
-# === 6. ALWAYS RESTART SERVICES ===
-log "🔄 Restarting MTK AI Engine services..."
-
-# Get all PIDs under MTK_AI, exclude action.sh
-for pid in $(pgrep -f "/data/adb/modules/MTK_AI"); do
-    cmdline=$(cat /proc/$pid/cmdline | tr '\0' ' ')
-    if ! echo "$cmdline" | grep -q "action\.sh"; then
-        kill -9 $pid 2>/dev/null
-    fi
-done
-
-export SERVICE=$MODDIR:$SERVICE
-
-# exec replaces the current process, which naturally stops the "action.sh" pgrep in JS
-exec $MODDIR/service.sh
