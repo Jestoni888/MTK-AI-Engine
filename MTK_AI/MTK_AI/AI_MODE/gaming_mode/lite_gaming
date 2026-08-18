@@ -15,9 +15,4 @@ log_action() {
     echo "[$(date +"%Y-%m-%d %H:%M:%S")] $1" >> "$LOG_FILE"
 }
 
-for q in /sys/block/*/queue; do 
-  echo 8192|tee $q/read_ahead_kb 2>/dev/null
-  echo none|tee $q/scheduler 2>/dev/null
-done
-
-echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
+nohup /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh 2>/dev/null &

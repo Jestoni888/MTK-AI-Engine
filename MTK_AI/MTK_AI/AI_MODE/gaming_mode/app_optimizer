@@ -5,10 +5,15 @@ CONFIG_DIR="/sdcard/MTK_AI_Engine"
 CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
 LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
 CPULIMIT="/data/adb/modules/MTK_AI/lib/cpulimit"
+CPU_SYS="/sys/devices/system/cpu"
 
 log_msg() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE" 2>/dev/null || echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
+
+for policy in $CPU_SYS/cpufreq/policy*; do
+    chmod 000 "$policy/scaling_max_freq"
+done
 
     # ==============================
     # 🗄️ I/O Scheduler & Read-Ahead
@@ -34,6 +39,8 @@ done || true
     echo "3" > /proc/cpufreq/cpufreq_power_mode 2>/dev/null || true
     echo "1" > /proc/cpufreq/cpufreq_cci_mode 2>/dev/null || true
     fi
+    
+echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
 
 nohup sh "/sdcard/MTK_AI_Engine/modes/gaming_mode.sh" >/dev/null 2>&1 &
 
