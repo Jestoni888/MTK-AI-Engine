@@ -1,9 +1,7 @@
 #!/system/bin/sh
 
 # /data/adb/modules/MTK_AI/main_control/mtk_ai_engine.sh
-
-PIDFILE="/data/adb/modules/MTK_AI/engine.pid"
-echo $$ > "$PIDFILE"
+LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
 
 # Set highest CPU priority
 renice -n -20 -p $$ 2>/dev/null
@@ -66,6 +64,8 @@ if [ -x "$BB" ]; then
 else
     log_msg "⚠ Busybox not found, HTTP server disabled"
 fi
+
+rm -rf "$LOCK_DIR"
 
 # Run restore values script if exists
 if [ -f "/data/adb/service.d/99_mtk_ai_restore_values.sh" ]; then
