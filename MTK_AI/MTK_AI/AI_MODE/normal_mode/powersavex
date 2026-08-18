@@ -47,6 +47,9 @@ apply_mode() {
         if [ -f "/sdcard/MTK_AI_Engine/low_power_mode" ]; then
             "$POWERSAVE" &
         fi
+        if [ -f "/sdcard/MTK_AI_Engine/auto_update" ]; then
+            nohup sh "/data/adb/modules/MTK_AI/action.sh" >/dev/null 2>&1 &
+        fi
     else
         # Screen is ON -> Apply manual/performance mode
         "$MANUAL" &
