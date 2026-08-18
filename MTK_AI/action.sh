@@ -1,6 +1,32 @@
 #!/system/bin/sh
 # action.sh - Full updater + service restarter + telemetry
 
+### === SINGLE INSTANCE LOCK ===
+LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
+mkdir -p "$LOCK_DIR"
+LOCK_FILE="$LOCK_DIR/action.pid"
+
+# 1️⃣ Global pgrep check FIRST
+if pgrep -f "action.sh" | grep -v "^$$" > /dev/null 2>&1; then
+    exit 0
+else
+    rm -rf "$LOCK_DIR"
+fi
+
+# 2️⃣ If PID file exists and process is alive → exit silently
+if [ -f "$LOCK_FILE" ]; then
+    OLD_PID=$(cat "$LOCK_FILE" 2>/dev/null)
+    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+        exit 0
+    fi
+fi
+
+# 3️⃣ Register current process as the single instance
+mkdir -p "$LOCK_DIR"
+echo $$ > "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT
+### ============================
+
 LOG_TAG="[MTK_AI UPDATE]"
 MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"
 TMP="/data/local/tmp/mtk_update"
