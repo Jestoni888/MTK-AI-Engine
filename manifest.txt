@@ -83,9 +83,3 @@ webroot/setedit.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/re
 webroot/update.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/update.js
 webroot/hibernator.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/hibernator.js
 webroot/wifi.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/wifi.js
-lib/libinotifytools.so https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/libinotifytools.so
-lib/inotifywatch https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/inotifywatch
-lib/inotifywait https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/inotifywait
-lib/sudo https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/sudo
-lib/cpulimit https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/cpulimit
-lib64/libc++_shared.so https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib64/libc++_shared.so
