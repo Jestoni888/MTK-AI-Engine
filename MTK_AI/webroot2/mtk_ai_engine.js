@@ -70,7 +70,7 @@ const toggleConfig = {
     backup_rom: { title:  "Backup rom ", desc:  "Auto backup current rom during boot (Save in /sdcard/AndroidBackups) ", group:  "System " },
     enable_cpu: { title:  "Hexacore mode ", desc:  "Auto shutdown cpu 6  & 7 when temp reaches 42°C  & auto revert in 39°C ", group:  "Battery " },
     enable_lite_gaming: { title:  "Lite Gaming Mode ", desc:  "Stable temperature while providing smoother gaming experience", group:  "Gaming " },
-    suspend_bg: { title:  "Suspend background apps", desc:  "Suspend background apps to smoother gaming experience ‼️ Enable USE TWEAKS first ‼️", group:  "Gaming " },
+    suspend_bg: { title:  "Suspend background apps", desc:  "Suspend background apps for smoother gaming experience (in lite mode stay 5-10 seconds in home launcher to switch between normal/gaming) (Hard mode detects instantly)", group:  "Gaming " },
     cpufreq_mode: { title:  "Cpufreq CCI/Power", desc:  "Enable Cpufreq CCI & Power mode to optimal performance", group:  "Gaming " },
     disable_tap_to_rotate: { title:  "Disable Tap to Rotate ", desc:  "Hide the manual rotation button on the navigation bar ", group:  "Display " }
 };const execFn = async function(cmd, timeout = 2000) {
