@@ -6,6 +6,8 @@
 
 •Wifi hacking Wifux replaced with Oneshot-extended (Wifi manager in tools tab)
 
+•added toggle for auto update of this module during screen-off
+
 --- version 0.0.0.95 ---
 
 •use tweaks now considered as experimental for those device getting more lags & not supported by those options you can disable it & restart your device to fully disabled
