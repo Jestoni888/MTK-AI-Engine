@@ -10,6 +10,8 @@ SDCARD="/sdcard/MTK_AI_Engine"
 BB="/data/adb/modules/MTK_AI/busybox"
 SAVE_DIR="$CONFIG_DIR/cooldown_values"
 
+rm -f /dev/.mtk_ai_active_game
+
 # ==============================
 # unsuspend background apps
 # ==============================
