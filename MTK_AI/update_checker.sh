@@ -40,7 +40,7 @@ TMP_DIR="/dev/shm"
 [ -d "$TMP_DIR" ] || TMP_DIR="/sdcard/MTK_AI_Engine/.tmp"
 mkdir -p "$TMP_DIR" 2>/dev/null
 
-if [ -f "/sdcard/MTK_AI_Engine/auto_update"]; then
+if [ -f "/sdcard/MTK_AI_Engine/auto_update" ]; then
   echo "auto updating"
 else
 
