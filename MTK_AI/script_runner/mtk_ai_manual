@@ -162,6 +162,7 @@ fi
 GOV_CONFIG="$CONFIG_DIR/manual_governor.txt"
 GOVERNOR="schedutil" # Set default fallback
 
+cpu_governor() {
 # 1. Determine which governor to use
 if [ -f "$GOV_CONFIG" ]; then
     GOVERNOR=$(cat "$GOV_CONFIG" 2>/dev/null | tr -d '\r\n\t ') || true
@@ -194,6 +195,8 @@ for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
         fi
     fi
 done
+}
+cpu_governor
 
 # --- 8. SURFACEFLINGER CPU LIMIT ---
 pkill -f cpulimit >/dev/null 2>&1 || true
@@ -207,6 +210,17 @@ if [ -f "/sdcard/MTK_AI_Engine/limit_surfaceflinger" ]; then
         echo "⚠️ SurfaceFlinger PID not found (skipping limit)"
     fi
 fi
+
+sleep 5
+
+MONITOR_FILE="/sys/class/leds/lcd-backlight/brightness"
+STATE=$(cat "$MONITOR_FILE" 2>/dev/null)
+    
+    if [ "$STATE" = "0" ]; then
+       echo "powersave mode"
+    else
+       cpu_governor
+    fi
 
 echo "✅ Devfreq settings loaded successfully!"
 echo "=== MTK AI MANUAL OVERRIDES COMPLETED ==="
