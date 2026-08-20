@@ -39,6 +39,8 @@ MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/he
 TMP_DIR="/dev/shm"
 [ -d "$TMP_DIR" ] || TMP_DIR="/sdcard/MTK_AI_Engine/.tmp"
 mkdir -p "$TMP_DIR" 2>/dev/null
+STATE="/sdcard/MTK_AI_Engine/auto_update"
+[ "$(cat "$STATE" 2>/dev/null | tr -d '[:space:]')" != "1" ] && exit 0
 
 # ===== HELPERS =====
 has_internet() {
