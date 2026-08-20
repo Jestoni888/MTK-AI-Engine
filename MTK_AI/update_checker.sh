@@ -42,6 +42,7 @@ mkdir -p "$TMP_DIR" 2>/dev/null
 
 if [ -f "/sdcard/MTK_AI_Engine/auto_update" ]; then
   echo "auto updating"
+  rm -f /sdcard/MTK_AI_Engine/.update_status
 else
 
 # ===== HELPERS =====
