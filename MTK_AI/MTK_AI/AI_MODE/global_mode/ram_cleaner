@@ -278,7 +278,7 @@ limit_cpu_background() {
         
         # Skip system packages (same whitelist as your killer)
         case "$pkg" in
-            android.hardware.*|android.system.*|vendor.*|com.android.systemui|com.google.android.gms|com.google.android.gsf|com.android.phone|com.android.settings|com.android.launcher3|com.google.android.inputmethod.latin|android|bluetooth|com.google.android.webview)
+            android.hardware.*|android.system.*|vendor.*|com.android.systemui|com.google.android.gms|com.google.android.gsf|com.android.phone|com.android.settings|com.android.launcher3|com.google.android.inputmethod.latin|android|com.android.bluetooth|com.google.android.webview)
                 skipped_count=$((skipped_count + 1))
                 continue
                 ;;
