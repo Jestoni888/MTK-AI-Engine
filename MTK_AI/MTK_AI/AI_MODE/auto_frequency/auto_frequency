@@ -147,6 +147,7 @@ NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
 # Critical apps that must NEVER be killed (from hibernator.js)
 CRITICAL_APPS="
 com.android.systemui
+com.android.bluetooth
 com.android.phone
 com.android.stk
 com.google.android.gms
