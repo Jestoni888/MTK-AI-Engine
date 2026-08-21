@@ -59,7 +59,11 @@ else
 fi
 
 log_msg() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     echo "[$(date '+%m-%d %H:%M:%S')] [battery_thermal] $1" >> "$LOG_FILE"
+fi
 }
 
 # Ensure the CPU path exists
