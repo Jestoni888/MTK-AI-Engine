@@ -8,7 +8,11 @@ ICON_PATH="/data/adb/modules/MTK_AI/icon.png"
 mkdir -p "$BASE_DIR"
 
 log_msg() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+fi
 }
 
 write_try() {
