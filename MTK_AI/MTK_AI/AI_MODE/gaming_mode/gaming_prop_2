@@ -5,7 +5,11 @@ LOG_FILE="$LOG_DIR/MTK_AI_Engine.log"
 mkdir -p "$LOG_DIR"
 
 log() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     echo "[$(date '+%H:%M:%S')] $1" >> "$LOG_FILE"
+fi
 }
 
 log "🔥 HARDCORE GAMING MODE INIT"
