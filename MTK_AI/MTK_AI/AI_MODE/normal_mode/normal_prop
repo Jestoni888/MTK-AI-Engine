@@ -4,7 +4,11 @@
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 
 log_msg() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE" || true
+fi
 }
 SDCARD="/sdcard/MTK_AI_Engine"
 BB="/data/adb/modules/MTK_AI/busybox"
