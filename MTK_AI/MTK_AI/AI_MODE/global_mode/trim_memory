@@ -39,13 +39,15 @@ echo "$COUNT" > "$COUNT_FILE"
 
 ### ==== FLOOD GUARD END ==== ###
 
-#!/system/bin/sh
-
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 mkdir -p "$(dirname "$LOG_FILE")"
 
 log_msg() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+fi
 }
 
 # --- 1. fstrim on /data (only if fstrim exists) ---
