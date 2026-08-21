@@ -8,7 +8,11 @@ CPULIMIT="/data/adb/modules/MTK_AI/lib/cpulimit"
 CPU_SYS="/sys/devices/system/cpu"
 
 log_msg() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE" 2>/dev/null || echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+fi
 }
 
 chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_max_freq 2>/dev/null || true
