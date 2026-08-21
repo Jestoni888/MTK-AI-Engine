@@ -10,7 +10,13 @@ TARGET_DIR="$LOG_DIR"
 SAFE_FLAG="$LOG_DIR/.safe_boot_marker"
 
 mkdir -p "$LOG_DIR" 2>/dev/null
-log() { echo "$LOG_TAG $@" | tee -a "$LOG_FILE"; }
+log() { 
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
+echo "$LOG_TAG $@" | tee -a "$LOG_FILE";
+fi
+}
 
 # 1️⃣ SAFE BOOT CHECK
 if [ ! -f "$SAFE_FLAG" ]; then
