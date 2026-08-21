@@ -83,8 +83,12 @@ get_batt_temp() {
 
 # Function to log messages with timestamp
 log() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     timestamp=$(date "+%Y-%m-%d %H:%M")
     echo "[$timestamp] $1" | tee -a "$LOG_FILE"
+fi
 }
 
 # --- One-shot execution ---
