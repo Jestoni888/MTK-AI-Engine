@@ -28,7 +28,11 @@ resetprop persist.sys.webview.extra_flags "\
 DEBUG=${MTK_SMOOTH_DEBUG:-0}
 
 log() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
   [ "$DEBUG" = "1" ] && echo "[SMOOTH_TUNE] $*" >&2
+fi
 }
 
 if [ "$(id -u)" != "0" ]; then
