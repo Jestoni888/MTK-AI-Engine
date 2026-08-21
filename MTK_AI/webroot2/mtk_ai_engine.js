@@ -67,7 +67,7 @@ const toggleConfig = {
     enable_gaming_prop2: { title:  "Gaming Props v2 ", desc:  "Advanced gaming property tweaks ", group:  "Gaming " },
     enable_module: { title:  "Module automation ", desc:  "No need to reboot when new modules installed except system level modules ", group:  "System " },
     fast_mode_switch: { title:  "Fast Mode Switch ", desc:  "Quickly switch between normal, gaming  & screen state profiles ", group:  "System " },
-    use_tweaks: { title:  "Use tweaks ", desc:  "‼️EXPERIMENTAL TWEAKS: Use at your own risks, disable & reboot to fully disable ", group:  "System " },
+    use_tweaks: { title:  "Use tweaks ", desc:  "‼️EXPERIMENTAL TWEAKS: Use at your own risks may cause LAG, disable & reboot to fully disable ", group:  "System " },
     random_device: { title:  "Random device ", desc:  "Randomize device name & Mac address in wireless network to bypass from being blocked 🚫 (⚠️turn off wifi first & wait 5-10 seconds) ", group:  "System " },
     limit_surfaceflinger: { title:  "Limit Surfaceflinger", desc:  "Limit Surfaceflinger in normal use to reduce overheating 🔥", group:  "System " },
     backup_rom: { title:  "Backup rom ", desc:  "Auto backup current rom during boot (Save in /sdcard/AndroidBackups) ", group:  "System " },
