@@ -159,7 +159,11 @@ PPM_PATH="/proc/ppm/policy_status"
 mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
 
 log_action() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
   echo "[$(date +"%Y-%m-%d %H:%M:%S")] $1" >> "$LOG_FILE" 2>/dev/null || true
+fi
 }
 
 log_action "Starting PPM Policy Application..."
