@@ -24,6 +24,9 @@ pm list packages | cut -d: -f2 | while read -r pkg; do
 done
 fi
 
+echo "-1" > /proc/gpufreqv2/gpu_working_opp_table 2>/dev/null || true
+echo "-1" > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null || true
+
 nohup sh "/sdcard/MTK_AI_Engine/modes/normal_mode.sh" >/dev/null 2>&1 &
 
 log_msg "→ Applying Normal EEM offsets from sdcard..."
