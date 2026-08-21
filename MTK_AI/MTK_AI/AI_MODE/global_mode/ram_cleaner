@@ -58,10 +58,14 @@ load_configs() {
 }
 
 log_msg() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
     [ "$(wc -l < "$LOG_FILE")" -gt 200 ] &&
         tail -n 200 "$LOG_FILE" > "$LOG_FILE.tmp" &&
         mv "$LOG_FILE.tmp" "$LOG_FILE"
+fi
 }
 
 # -------------------------
