@@ -12,7 +12,11 @@ PPM_PATH="/proc/ppm/policy_status"
 mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null
 
 log_action() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     echo "[$(date +"%Y-%m-%d %H:%M:%S")] $1" >> "$LOG_FILE"
+fi
 }
 
 nohup /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh 2>/dev/null &
