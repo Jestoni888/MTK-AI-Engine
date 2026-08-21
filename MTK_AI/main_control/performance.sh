@@ -42,6 +42,9 @@ prev_pkg=""
 # Logging
 # -------------------------
 log_msg() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
     if [ -f "$LOG_FILE" ]; then
         LINES=$(wc -l < "$LOG_FILE")
@@ -50,6 +53,7 @@ log_msg() {
             mv "$LOG_FILE.tmp" "$LOG_FILE"
         fi
     fi
+fi
 }
 
 # -------------------------
