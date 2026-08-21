@@ -25,6 +25,9 @@ done
 
 # Log function
 log_msg() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
     echo "$msg" >> "$LOG"
     
@@ -36,6 +39,7 @@ log_msg() {
             mv "$LOG.tmp" "$LOG"
         fi
     fi
+fi
 }
 
 # Cleanup lock
