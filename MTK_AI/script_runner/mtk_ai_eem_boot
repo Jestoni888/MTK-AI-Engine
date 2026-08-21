@@ -17,9 +17,13 @@ LOG_TAG="MTK_AI_BOOT"
 
 # Helper: Log with timestamp
 log_msg() {
+if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+  echo "log disabled"
+else
     echo "[$(date '+%H:%M:%S')] [$LOG_TAG] $1"
     # Also log to dmesg/logcat if possible
     echo "$LOG_TAG: $1" > /dev/kmsg 2>/dev/null || true
+fi
 }
 
 # 3. WAIT FOR STORAGE & BOOT
