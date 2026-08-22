@@ -2,7 +2,7 @@
 
 •adding disable logs on SD card for less cpu work, less heating & save power (in module settings)
 
-•auto lowers GPU frequency in lite gaming depends on temperature to stabilize temperature 
+•auto lowers GPU frequency in lite gaming depends on temperature for stabilization 
 
 --- version 0.0.0.96 ---
 
