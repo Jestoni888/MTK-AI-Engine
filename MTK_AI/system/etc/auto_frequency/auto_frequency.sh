@@ -363,7 +363,7 @@ get_batt_temp() {
 }
 
 log() {
-    if [ -f "/sdcard/MTK_AI_Engine/disabl" ]; then
+    if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
         echo "log disabled"
     else
         timestamp=$(date "+%Y-%m-%d %H:%M")
