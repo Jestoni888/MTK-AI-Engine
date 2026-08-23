@@ -546,6 +546,422 @@ log -t SetEdit-Pro "Starting script: ${scriptName}"
             await refreshInstalledScriptsList();
         } catch (e) { toast(`❌ Error: ${e.message || e}`, 'error'); }
     }
+    
+    // ========== NORMAL / GAMING MODE SCRIPT GENERATOR (v2 - keyboard safe) ==========
+ const MODES_DIR = '/sdcard/MTK_AI_Engine/setedit-modes';
+ const MODE_VALUES_FILE = '/data/adb/setedit-modes-values.json';
+ let modeValues = {};
+ let modeProperties = [];
+ let modeModalOpen = false;
+ let modeValuesSaveTimer = null;
+
+ function escapeModeAttr(value) {
+     return String(value === undefined || value === null ? '' : value)
+         .replace(/&/g, '&amp;')
+         .replace(/</g, '&lt;')
+         .replace(/>/g, '&gt;')
+         .replace(/"/g, '&quot;')
+         .replace(/'/g, '&#39;');
+ }
+
+ function modeKey(p) {
+     return p.table + '/' + p.name;
+ }
+
+ function getModeProperties() {
+     return modeProperties.length ? modeProperties : filteredProperties;
+ }
+
+ async function loadModeValues() {
+     try {
+         const raw = await execFn(`cat '${MODE_VALUES_FILE}' 2>/dev/null`);
+         if (raw.trim()) modeValues = JSON.parse(raw.trim());
+     } catch (e) { /* keep in-memory values */ }
+ }
+
+ function persistModeValues() {
+     clearTimeout(modeValuesSaveTimer);
+     modeValuesSaveTimer = setTimeout(async () => {
+         try {
+             const escaped = JSON.stringify(modeValues).replace(/'/g, "'\\''");
+             await execFn(`echo '${escaped}' > '${MODE_VALUES_FILE}'`);
+         } catch (e) { /* non-fatal */ }
+     }, 800);
+ }
+
+ function setModeValue(index, mode, value) {
+     const p = modeProperties[index];
+     if (!p) return;
+
+     const key = modeKey(p);
+     if (!modeValues[key]) modeValues[key] = { normal: '', gaming: '' };
+
+     modeValues[key][mode] = value;
+     persistModeValues();
+ }
+
+ function refreshModeProperties() {
+     modeProperties = filteredProperties.length ? [...filteredProperties] : [];
+     renderModeList();
+     generateModeScripts();
+     toast(`Loaded ${modeProperties.length} properties into mode generator`, 'info', 2000);
+ }
+
+ function fillModeFromCurrent(mode) {
+     const props = getModeProperties();
+
+     if (!props.length) {
+         toast('No properties loaded', 'warning');
+         return;
+     }
+
+     props.forEach(p => {
+         const key = modeKey(p);
+         if (!modeValues[key]) modeValues[key] = { normal: '', gaming: '' };
+         modeValues[key][mode] = p.value;
+     });
+
+     persistModeValues();
+     renderModeList();
+     generateModeScripts();
+     toast(`Copied current values into ${mode} mode`, 'success', 2000);
+ }
+
+ function renderModeList() {
+     const container = document.getElementById('se-mode-list');
+     if (!container) return;
+
+     const props = getModeProperties();
+
+     if (!props.length) {
+         container.innerHTML = '<div class="se-status-box"><div class="se-status-icon">🎮</div><div style="color:var(--text-dim)">No properties loaded</div></div>';
+         return;
+     }
+
+     let html = `
+         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:10px;color:var(--text-dim);margin-bottom:6px">
+             <div>Normal</div>
+             <div>Gaming</div>
+         </div>
+     `;
+
+     props.forEach((p, i) => {
+         const key = modeKey(p);
+
+         if (!modeValues[key]) {
+             modeValues[key] = {
+                 normal: p.value,
+                 gaming: p.value
+             };
+         }
+
+         const normal = modeValues[key].normal === undefined || modeValues[key].normal === null ? '' : modeValues[key].normal;
+         const gaming = modeValues[key].gaming === undefined || modeValues[key].gaming === null ? '' : modeValues[key].gaming;
+
+         const tableCfg = CFG.TABLES.find(t => t.id === p.table);
+         const writable = tableCfg && tableCfg.writeCmd !== null;
+
+         html += `
+             <div class="se-card" style="padding:10px;${writable ? '' : 'opacity:0.55'}">
+                 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+                     <div style="flex:1;min-width:0">
+                         <div style="font-weight:600;font-size:12px;word-break:break-word">${escapeModeAttr(p.name)}</div>
+                         <div style="font-size:10px;color:var(--text-dim)">Current: ${escapeModeAttr(p.value)}</div>
+                     </div>
+                     <span class="se-prop-table ${p.table}">${p.table}</span>
+                 </div>
+         `;
+
+         if (writable) {
+             html += `
+                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                     <input type="text" class="se-form-input" value="${escapeModeAttr(normal)}"
+                         data-modeindex="${i}" data-mode="normal"
+                         autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="done">
+                     <input type="text" class="se-form-input" value="${escapeModeAttr(gaming)}"
+                         data-modeindex="${i}" data-mode="gaming"
+                         autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="done">
+                 </div>
+             `;
+         } else {
+             html += `
+                 <div style="font-size:11px;color:var(--orange)">⚠️ Read-only table</div>
+             `;
+         }
+
+         html += `</div>`;
+     });
+
+     container.innerHTML = html;
+ }
+
+ // If the keyboard/WebView resize ever empties the list, rebuild it from state.
+ function ensureModeList() {
+     const c = document.getElementById('se-mode-list');
+     if (modeModalOpen && c && !c.childElementCount) {
+         renderModeList();
+         generateModeScripts();
+     }
+ }
+ window.addEventListener('resize', () => setTimeout(ensureModeList, 100));
+
+ function buildModeScript(mode) {
+     const timestamp = new Date().toISOString();
+     const props = getModeProperties();
+
+     let script = `#!/system/bin/sh
+# SetEdit ${mode} mode script
+# Generated: ${timestamp}
+# Properties source: ${props.length}
+
+while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 5; done
+sleep 5
+
+`;
+
+     const groups = {
+         settings: { system: [], secure: [], global: [] },
+         android: [],
+         linux: [],
+         java: []
+     };
+
+     props.forEach(p => {
+         const key = modeKey(p);
+         const rawValue = modeValues[key] ? modeValues[key][mode] : p.value;
+
+         if (rawValue === undefined || rawValue === null || rawValue === '') return;
+
+         const tableCfg = CFG.TABLES.find(t => t.id === p.table);
+         if (!tableCfg || tableCfg.writeCmd === null) return;
+
+         const n = String(p.name).replace(/'/g, "'\\''");
+         const v = String(rawValue).replace(/'/g, "'\\''");
+
+         if (p.table === 'android') {
+             groups.android.push(`setprop '${n}' '${v}'`);
+         } else if (p.table === 'linux') {
+             groups.linux.push(`export '${n}'='${v}'`);
+         } else if (p.table === 'java') {
+             groups.java.push(`# Java property: ${n}=${v} (requires app-level code)`);
+         } else if (tableCfg.type === 'settings' && groups.settings[p.table]) {
+             groups.settings[p.table].push(`settings put ${p.table} '${n}' '${v}'`);
+         }
+     });
+
+     ['system', 'secure', 'global'].forEach(t => {
+         if (groups.settings[t].length) {
+             script += `# === ${t.toUpperCase()} TABLE (${groups.settings[t].length}) ===\n${groups.settings[t].join('\n')}\n\n`;
+         }
+     });
+
+     if (groups.android.length) script += `# === ANDROID PROPS (${groups.android.length}) ===\n${groups.android.join('\n')}\n\n`;
+     if (groups.linux.length) script += `# === LINUX ENV (${groups.linux.length}) ===\n# WARNING: export only affects this script shell session\n${groups.linux.join('\n')}\n\n`;
+     if (groups.java.length) script += `# === JAVA PROPS (${groups.java.length}) ===\n${groups.java.join('\n')}\n\n`;
+
+     script += `log -t SetEdit-Modes "${mode} mode applied"\n`;
+
+     return script;
+ }
+
+ function generateModeScripts() {
+     const normal = buildModeScript('normal');
+     const gaming = buildModeScript('gaming');
+
+     const normalEl = document.getElementById('se-mode-normal-script');
+     const gamingEl = document.getElementById('se-mode-gaming-script');
+
+     if (normalEl) normalEl.value = normal;
+     if (gamingEl) gamingEl.value = gaming;
+ }
+
+ async function saveModeScripts() {
+     if (!rootAvailable) {
+         toast('❌ Root required', 'error');
+         return;
+     }
+
+     generateModeScripts();
+
+     const normal = document.getElementById('se-mode-normal-script')?.value || '';
+     const gaming = document.getElementById('se-mode-gaming-script')?.value || '';
+
+     try {
+         await execFn(`mkdir -p '${MODES_DIR}'`);
+
+         const normalDelim = 'SETEDIT_MODE_NORMAL_' + Date.now();
+         await execFn(`cat > '${MODES_DIR}/normal.sh' << '${normalDelim}'\n${normal}\n${normalDelim}`);
+         await execFn(`chmod 755 '${MODES_DIR}/normal.sh'`);
+
+         const gamingDelim = 'SETEDIT_MODE_GAMING_' + Date.now();
+         await execFn(`cat > '${MODES_DIR}/gaming.sh' << '${gamingDelim}'\n${gaming}\n${gamingDelim}`);
+         await execFn(`chmod 755 '${MODES_DIR}/gaming.sh'`);
+
+         persistModeValues();
+
+         toast('💾 Saved normal.sh + gaming.sh', 'success', 3000);
+         showModeSavePopup();
+     } catch (e) {
+         toast(`❌ Save failed: ${e.message || e}`, 'error', 4000);
+     }
+ }
+
+ async function applyMode(mode) {
+     if (!rootAvailable) {
+         toast('❌ Root required', 'error');
+         return;
+     }
+
+     const file = `${MODES_DIR}/${mode}.sh`;
+
+     try {
+         const exists = await execFn(`test -f '${file}' && echo yes || echo no`);
+
+         if (exists.trim() !== 'yes') {
+             await saveModeScripts();
+         }
+
+         const out = await execFn(`sh '${file}' 2>&1`);
+
+         toast(out.trim() || `✅ Applied ${mode} mode`, out.toLowerCase().includes('error') ? 'error' : 'success', 4000);
+
+         await refreshProperties();
+     } catch (e) {
+         toast(`❌ ${mode} mode failed: ${e.message || e}`, 'error', 4000);
+     }
+ }
+
+ async function copyModeScript(mode) {
+     const el = document.getElementById(`se-mode-${mode}-script`);
+     if (!el) return;
+
+     try {
+         await navigator.clipboard.writeText(el.value);
+         toast(`📋 Copied ${mode} script`, 'success');
+     } catch {
+         toast('❌ Copy failed', 'error');
+     }
+ }
+ 
+ function showModeSavePopup() {
+     const old = document.getElementById('se-mode-save-popup');
+     if (old) old.remove();
+
+     const popup = document.createElement('div');
+     popup.id = 'se-mode-save-popup';
+     popup.className = 'se-modal-overlay active';
+     popup.style.zIndex = '10010';
+     popup.onclick = (e) => { if (e.target === popup) popup.remove(); };
+
+     popup.innerHTML = `
+         <div class="se-modal" style="max-width:340px;">
+             <div class="se-modal-body" style="align-items:center;text-align:center;">
+                 <div style="font-size:48px;margin-bottom:8px">✅</div>
+                 <div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:6px">Saving Successful!</div>
+                 <div style="font-size:11px;color:var(--text-dim);word-break:break-all;margin-bottom:14px">
+                     ${MODES_DIR}/normal.sh<br>${MODES_DIR}/gaming.sh
+                 </div>
+                 <button class="se-btn se-btn-success" style="width:100%;justify-content:center" onclick="document.getElementById('se-mode-save-popup').remove()">👍 OK</button>
+             </div>
+         </div>
+     `;
+
+     document.body.appendChild(popup);
+
+     // Auto-close after 4 seconds
+     setTimeout(() => {
+         const p = document.getElementById('se-mode-save-popup');
+         if (p) p.remove();
+     }, 4000);
+ }
+
+ async function openModeScriptModal() {
+     let modal = document.getElementById('se-modal-modes');
+
+     if (!modal) {
+         modal = document.createElement('div');
+         modal.id = 'se-modal-modes';
+         modal.className = 'se-modal-overlay';
+         modal.onclick = (e) => {
+             if (e.target === modal) closeModeScriptModal();
+         };
+
+         // Event delegation: values are saved to state on every keystroke,
+         // so they can never be lost when the keyboard re-renders the page.
+         modal.addEventListener('input', (e) => {
+             const t = e.target;
+             if (t && t.dataset && t.dataset.modeindex !== undefined && t.dataset.mode) {
+                 setModeValue(parseInt(t.dataset.modeindex, 10), t.dataset.mode, t.value);
+             }
+         });
+
+         modal.innerHTML = `
+             <div class="se-modal" style="max-width:700px;">
+                 <div class="se-modal-header">
+                     <h3>🎮 Normal / Gaming Script Generator</h3>
+                     <button class="se-btn se-btn-secondary se-btn-small" onclick="SetEdit.closeModeScriptModal()">✕</button>
+                 </div>
+
+                 <div class="se-modal-body">
+                     <div class="se-script-info">
+                         Uses the currently filtered/search list.<br>
+                         Empty value = excluded from that script.<br>
+                         Saved scripts are manual scripts, not automatic boot scripts.
+                     </div>
+
+                     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+                         <button class="se-btn se-btn-secondary se-btn-small" onclick="SetEdit.refreshModeProperties()">🔄 Use Current Filter</button>
+                         <button class="se-btn se-btn-secondary se-btn-small" onclick="SetEdit.fillModeFromCurrent('normal')">⬇️ Current → Normal</button>
+                         <button class="se-btn se-btn-secondary se-btn-small" onclick="SetEdit.fillModeFromCurrent('gaming')">⬇️ Current → Gaming</button>
+                         <button class="se-btn se-btn-primary se-btn-small" onclick="SetEdit.generateModeScripts()">⚙️ Generate</button>
+                         <button class="se-btn se-btn-success se-btn-small" onclick="SetEdit.saveModeScripts()">💾 Save Both</button>
+                         <button class="se-btn se-btn-secondary se-btn-small" onclick="SetEdit.applyMode('normal')">▶️ Apply Normal</button>
+                         <button class="se-btn se-btn-warning se-btn-small" onclick="SetEdit.applyMode('gaming')">🎮 Apply Gaming</button>
+                     </div>
+
+                     <div id="se-mode-list"></div>
+
+                     <div class="se-form-group">
+                         <label>Normal Script Preview</label>
+                         <textarea id="se-mode-normal-script" class="se-form-textarea" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>
+                     </div>
+
+                     <div class="se-form-group">
+                         <label>Gaming Script Preview</label>
+                         <textarea id="se-mode-gaming-script" class="se-form-textarea" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>
+                     </div>
+                 </div>
+
+                 <div class="se-modal-footer">
+                     <button class="se-btn se-btn-secondary" onclick="SetEdit.closeModeScriptModal()">Close</button>
+                     <button class="se-btn se-btn-secondary" onclick="SetEdit.copyModeScript('normal')">📋 Copy Normal</button>
+                     <button class="se-btn se-btn-secondary" onclick="SetEdit.copyModeScript('gaming')">📋 Copy Gaming</button>
+                     <button class="se-btn se-btn-primary" onclick="SetEdit.saveModeScripts()">💾 Save Both</button>
+                 </div>
+             </div>
+         `;
+
+         document.body.appendChild(modal);
+     }
+
+     modeModalOpen = true;
+
+     if (!modeProperties.length) {
+         modeProperties = filteredProperties.length ? [...filteredProperties] : [];
+     }
+
+     await loadModeValues();
+     renderModeList();
+     generateModeScripts();
+
+     modal.classList.add('active');
+ }
+
+ function closeModeScriptModal() {
+     const modal = document.getElementById('se-modal-modes');
+     if (modal) modal.classList.remove('active');
+     modeModalOpen = false;
+ }
 
     // ========== PUBLIC ACTIONS ==========
     async function copyBootScript() {
@@ -711,6 +1127,7 @@ log -t SetEdit-Pro "Starting script: ${scriptName}"
                         <button class="se-btn se-btn-secondary se-btn-small" onclick="SetEdit.backupProperties()">📦 Backup</button>
                         <label class="se-btn se-btn-secondary se-btn-small" style="cursor:pointer"> Restore<input type="file" accept=".json" style="display:none" onchange="SetEdit.restoreProperties(this.files[0])"></label>
                         <button class="se-btn se-btn-warning se-btn-small" onclick="SetEdit.openBootScriptModal()">🚀 Boot Scripts</button>
+                    <button class="se-btn se-btn-success se-btn-small" onclick="SetEdit.openModeScriptModal()">🎮 Normal/Gaming</button>
                     </div>
                 </div>
                 <div class="se-search-box">
@@ -729,7 +1146,7 @@ log -t SetEdit-Pro "Starting script: ${scriptName}"
     function startAutoRefresh() {
         if (refreshInterval) clearInterval(refreshInterval);
         refreshProperties();
-        refreshInterval = setInterval(() => { if (!document.hidden && !editTarget) refreshProperties(); }, CFG.REFRESH_INTERVAL);
+        refreshInterval = setInterval(() => { if (!document.hidden && !editTarget && !modeModalOpen) refreshProperties(); }, CFG.REFRESH_INTERVAL);
     }
 
     function setupSetEditModal() {        const btn = document.getElementById('setedit-btn');
@@ -745,7 +1162,7 @@ log -t SetEdit-Pro "Starting script: ${scriptName}"
                 </div>
                 <div id="se-modal-root" style="padding-bottom:20px;"></div>`;
             document.body.appendChild(modal);
-            document.getElementById('se-close-btn').onclick = () => { modal.style.display = 'none'; closeEditModal(); closeBootScriptModal(); };
+            document.getElementById('se-close-btn').onclick = () => { modal.style.display = 'none'; closeEditModal(); closeBootScriptModal(); closeModeScriptModal(); };
         }
         btn.onclick = async () => {
             const modal = document.getElementById('se-modal-container');
@@ -773,7 +1190,9 @@ log -t SetEdit-Pro "Starting script: ${scriptName}"
         refreshProperties, setTableFilter, setSearchTerm, editProperty, addNewProperty, copyValue,
         backupProperties, restoreProperties, openEditModal, closeEditModal, saveProperty, deleteProperty,
         openBootScriptModal, closeBootScriptModal, generateBootScript, copyBootScript, downloadBootScript,
-        createBootScript, viewScript, copyViewedScript, deleteScript, toggleScript,
+     openModeScriptModal, closeModeScriptModal, refreshModeProperties, setModeValue, fillModeFromCurrent,
+     generateModeScripts, saveModeScripts, applyMode, copyModeScript, renderModeList,
+     createBootScript, viewScript, copyViewedScript, deleteScript, toggleScript,
         refreshInstalledScriptsList, loadScriptsMetadata, getInstalledScripts,
         getAllProperties: () => [...allProperties], isRootAvailable: () => rootAvailable
     };

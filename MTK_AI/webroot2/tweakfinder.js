@@ -2122,6 +2122,7 @@ async function applyToggle(id, on) {
          await writeModeScript(`${CFG.MODES_DIR}/gaming_mode.sh`, gaming);
 
          showStatus(`💾 Saved normal + gaming scripts`, 'success', 4000);
+         showModeSavePopup();
      } catch (e) {
          console.error(e);
          showStatus(`❌ Save failed: ${e.message}`, 'error', 4000);
@@ -2152,6 +2153,34 @@ async function applyToggle(id, on) {
          console.error(e);
          showStatus(`❌ ${mode} mode failed: ${e.message}`, 'error', 4000);
      }
+ }
+ 
+ function showModeSavePopup() {
+     const old = document.querySelector('.tf-mode-save-popup');
+     if (old) old.remove();
+
+     const popup = document.createElement('div');
+     popup.className = 'tf-modal-overlay tf-mode-save-popup';
+     popup.style.zIndex = '10010';
+     popup.onclick = (e) => { if (e.target === popup) popup.remove(); };
+
+     popup.innerHTML = `
+         <div class="tf-modal-card" style="max-width:340px;text-align:center">
+             <div style="font-size:48px;margin-bottom:8px">✅</div>
+             <div style="font-size:16px;font-weight:700;color:var(--green);margin-bottom:6px">Saving Successful!</div>
+             <div style="font-size:11px;color:var(--text-dim);word-break:break-all;margin-bottom:14px">
+                 ${CFG.MODES_DIR}/normal_mode.sh<br>${CFG.MODES_DIR}/gaming_mode.sh
+             </div>
+             <button onclick="this.closest('.tf-modal-overlay').remove()" style="width:100%;padding:11px;border:none;border-radius:10px;font-weight:600;background:var(--green);color:#fff">👍 OK</button>
+         </div>
+     `;
+
+     document.body.appendChild(popup);
+
+     setTimeout(() => {
+         const p = document.querySelector('.tf-mode-save-popup');
+         if (p) p.remove();
+     }, 4000);
  }
 
     // ========== PUBLIC API ==========
