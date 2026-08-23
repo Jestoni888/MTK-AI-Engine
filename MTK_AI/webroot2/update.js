@@ -131,7 +131,7 @@ const execCmd = async function(cmd, timeout = 8000) {
      banner.innerHTML = `
          <div id="banner-header" style="height: 50px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-size: 14px; font-weight: 600; padding: 0 16px;">
              <span style="font-size: 20px;">📢</span>
-             <span style="flex: 1; text-align: center;">New Update Available! Tap to view Changelog</span>
+             <span style="flex: 1; text-align: center;">Tap to view Changelog</span>
              <span id="banner-arrow" style="transition: transform 0.3s; font-size: 14px;">▼</span>
          </div>
          <div id="banner-body" style="padding: 0 16px; max-height: 0; overflow: hidden; transition: all 0.4s ease-out;">
