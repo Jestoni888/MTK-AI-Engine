@@ -1,4 +1,4 @@
-// update.js - Background-Powered Update Notifier
+// update.js - Background-Powered Update Notifier (with Internet Check)
 (function() {
 'use strict';
 const MODDIR = '/data/adb/modules/MTK_AI';
@@ -48,7 +48,24 @@ const execCmd = async function(cmd, timeout = 8000) {
      }
  };
 
- //  Format raw markdown text into styled HTML
+ //  Check for active internet connection
+ const checkInternet = async () => {
+     try {
+         // Method 1: Quick ping test (most reliable)
+         const pingResult = await execCmd('ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1 && echo "ONLINE" || echo "OFFLINE"', 4000);
+         if (pingResult.includes('ONLINE')) return true;
+         
+         // Method 2: Try to resolve DNS
+         const nslookupResult = await execCmd('nslookup google.com >/dev/null 2>&1 && echo "DNS_OK" || echo "DNS_FAIL"', 4000);
+         if (nslookupResult.includes('DNS_OK')) return true;
+         
+         return false;
+     } catch (e) {
+         return false;
+     }
+ };
+
+ // 📝 Format raw markdown text into styled HTML
  function formatChangelog(md) {
      if (!md || !md.trim()) return 'Failed to load changelog.';
      md = md.trim();
@@ -94,7 +111,7 @@ const execCmd = async function(cmd, timeout = 8000) {
      if (el) el.innerHTML = formatChangelog(md);
  }
 
- // 🆕 Show top banner (changelog only, no download button)
+ //  Show top banner (changelog only, no download button)
  function showTopBanner() {
      if (bannerDismissed || document.getElementById('update-top-banner')) return;
      
@@ -239,7 +256,7 @@ const execCmd = async function(cmd, timeout = 8000) {
      document.getElementById('dl-btn').onclick = async () => {
          const btn = document.getElementById('dl-btn');
          const laterBtn = document.getElementById('later-btn');
-         btn.innerHTML = '⏳ Downloading...';
+         btn.innerHTML = ' Downloading...';
          btn.disabled = true;
          btn.style.background = '#FF9F0A';
          if (laterBtn) { laterBtn.disabled = true; laterBtn.style.opacity = '0.5'; }
@@ -324,7 +341,14 @@ const execCmd = async function(cmd, timeout = 8000) {
  async function checkForUpdates(refresh = false) {
      await new Promise(res => setTimeout(res, refresh ? 100 : 800));
      
-     // 🆕 Check auto_update first - if enabled, show banner (changelog only)
+     //  CRITICAL: Check internet first - if no internet, don't show ANY popup
+     const hasInternet = await checkInternet();
+     if (!hasInternet) {
+         console.log('[MTK AI] No internet detected - suppressing all update popups');
+         return; // EXIT EARLY - no popup shown
+     }
+     
+     // Check auto_update first - if enabled, show banner (changelog only)
      const isAutoUpdate = await checkAutoUpdateEnabled();
      if (isAutoUpdate) {
          showTopBanner();
@@ -353,6 +377,14 @@ const execCmd = async function(cmd, timeout = 8000) {
      updateContainer.title = 'Check for updates';
      updateContainer.addEventListener('click', async (e) => {
          e.preventDefault();
+         
+         // Check internet first for manual trigger
+         const hasInternet = await checkInternet();
+         if (!hasInternet) {
+             if (window.showStatus) window.showStatus('❌ No internet connection', '#FF453A');
+             return;
+         }
+         
          const isAutoUpdate = await checkAutoUpdateEnabled();
          if (isAutoUpdate) {
              showTopBanner();
