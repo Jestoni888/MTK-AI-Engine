@@ -1,5 +1,9 @@
 --- version 0.0.0.97 ---
 
+•setedit added normal & gaming script generator that later on automatically triggered in our daemon
+
+--- version 0.0.0.97 ---
+
 •adding disable logs on SD card for less cpu work, less heating & save power (in module settings)
 
 •auto lowers GPU frequency in lite gaming depends on temperature for stabilization 
