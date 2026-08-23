@@ -4,6 +4,8 @@
 
 •auto lowers GPU frequency in lite gaming depends on temperature for stabilization 
 
+•boost color optimization 
+
 --- version 0.0.0.96 ---
 
 •tweak finder improved search query which allow either uppercase or lowercase letters & maximum search for system files plus normal & gaming script generator that will automatically trigger
