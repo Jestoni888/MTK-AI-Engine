@@ -211,6 +211,23 @@ if [ -f "/sdcard/MTK_AI_Engine/limit_surfaceflinger" ]; then
     fi
 fi
 
+LIMIT_BYTES=51200 # 50 * 1024 bytes
+
+# Check if directory exists
+if [ ! -d "$CONFIG_DIR" ]; then
+    echo "Error: Directory $TARGET_DIR does not exist."
+    exit 1
+fi
+
+echo "Scanning for files larger than 50KB in $CONFIG_DIR..."
+
+# Find files larger than 50KB and truncate them
+find "$CONFIG_DIR" -type f -size +50k | while read -r file; do
+    echo "Limiting: $file"
+    # Extract the first 51200 bytes to a temp file, then replace the original
+    head -c $LIMIT_BYTES "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+done
+
 sleep 5
 
 MONITOR_FILE="/sys/class/leds/lcd-backlight/brightness"
