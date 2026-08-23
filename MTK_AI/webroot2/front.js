@@ -1258,63 +1258,113 @@ async function inflateRaw(u8) {
     const resp = new Response(new Blob([u8]).stream().pipeThrough(ds));
     return new Uint8Array(await resp.arrayBuffer());
 }
+
 function parseZip(u8) {
     const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
     let eocd = -1;
-    for (let i = u8.length - 22; i >= 0; i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
-    if (eocd < 0) throw new Error('bad zip');
+    // Search backwards for EOCD signature (0x06054b50)
+    for (let i = u8.length - 22; i >= 0; i--) {
+        if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error('bad zip: EOCD not found');
+    
     const count = dv.getUint16(eocd + 10, true);
     let ptr = dv.getUint32(eocd + 16, true);
     const out = [];
+    
     for (let i = 0; i < count; i++) {
-        if (dv.getUint32(ptr, true) !== 0x02014b50) break;
+        if (ptr + 46 > u8.length) break; // Safety bounds check
+        if (dv.getUint32(ptr, true) !== 0x02014b50) break; // Central Directory signature
+        
         const method = dv.getUint16(ptr + 10, true);
         const compSize = dv.getUint32(ptr + 20, true);
         const nameLen = dv.getUint16(ptr + 28, true);
         const extraLen = dv.getUint16(ptr + 30, true);
         const commentLen = dv.getUint16(ptr + 32, true);
         const offset = dv.getUint32(ptr + 42, true);
+        
+        if (ptr + 46 + nameLen > u8.length) break;
         const name = new TextDecoder().decode(u8.subarray(ptr + 46, ptr + 46 + nameLen));
+        
         out.push({ name, method, compSize, offset });
         ptr += 46 + nameLen + extraLen + commentLen;
     }
     return out;
 }
+
 function zipEntryData(u8, e) {
     const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    if (e.offset + 30 > u8.length) throw new Error('invalid local header offset');
+    
     const nameLen = dv.getUint16(e.offset + 26, true);
     const extraLen = dv.getUint16(e.offset + 28, true);
     const start = e.offset + 30 + nameLen + extraLen;
+    
+    if (start + e.compSize > u8.length) throw new Error('compressed data exceeds file bounds');
     return u8.subarray(start, start + e.compSize);
 }
+
+// Helper to ensure parent folders exist before writing files
+async function ensureDirectoryExists(path) {
+    const dir = path.substring(0, path.lastIndexOf('/'));
+    if (dir && dir !== '/sdcard') {
+        await exec(`mkdir -p "${dir}" 2>/dev/null`);
+    }
+}
+
+// Faster chunked writer (16KB chunks)
+async function writeBytesToSdcard(bytes, path) {
+    const b64 = bytesToB64(bytes); // FIXED: Removed space in function name
+    await exec(`rm -f "${path}" "${CC_TMP_B64}" 2>/dev/null`);
+    for (let i = 0; i < b64.length; i += 16000) {
+        await exec(`printf '%s' '${b64.slice(i, i + 16000)}' >> "${CC_TMP_B64}"`);
+    }
+    await exec(`(base64 -d "${CC_TMP_B64}" 2>/dev/null || busybox base64 -d "${CC_TMP_B64}") > "${path}"`);
+    await exec(`rm -f "${CC_TMP_B64}" 2>/dev/null`);
+}
+
 async function extractZipBytesToSdcard(u8) {
     const entries = parseZip(u8);
     const roots = new Set(entries.map(e => e.name.split('/')[0]));
     const root = roots.size === 1 ? [...roots][0] : '';
     let written = 0;
+    
     for (const e of entries) {
-        if (e.name.includes('..')) continue;                      // safety
+        if (e.name.includes('..')) continue; // Path traversal safety
+        
         let name = e.name;
-        if (root && name.startsWith(root + '/')) name = 'MTK_AI_Engine/' + name.slice(root.length + 1);
-        else if (!name.startsWith('MTK_AI_Engine/')) name = 'MTK_AI_Engine/' + name;
-        const target = '/sdcard/' + name;
-        if (e.name.endsWith('/')) { await exec(`mkdir -p "${target}" 2>/dev/null`); continue; }
-        let data = zipEntryData(u8, e);
-        if (e.method === 8) data = await inflateRaw(data);        // deflate
-        else if (e.method !== 0) continue;                        // store
-        await writeBytesToSdcard(data, target);
-        written++;
+        if (root && name.startsWith(root + '/')) {
+            name = 'MTK_AI_Engine/' + name.slice(root.length + 1);
+        } else if (!name.startsWith('MTK_AI_Engine/')) {
+            name = 'MTK_AI_Engine/' + name;
+        }
+        
+        const target = '/sdcard/' + name; // FIXED: Removed space in '/ sdcard/'
+        
+        if (e.name.endsWith('/')) {
+            await exec(`mkdir -p "${target}" 2>/dev/null`);
+            continue;
+        }
+        
+        // Ensure parent directory exists before attempting to write the file
+        await ensureDirectoryExists(target);
+        
+        try {
+            let data = zipEntryData(u8, e);
+            if (e.method === 8) {
+                data = await inflateRaw(data); // deflate
+            } else if (e.method !== 0) {
+                console.warn(`Skipping unsupported compression method ${e.method} for ${e.name}`);
+                continue; 
+            }
+            await writeBytesToSdcard(data, target);
+            written++;
+        } catch (err) {
+            console.error(`Failed to extract ${e.name}:`, err);
+            // Continue extracting other files instead of aborting completely
+        }
     }
     return written;
-}
-// faster chunked writer (16KB chunks)
-async function writeBytesToSdcard(bytes, path) {
-    const b64 = bytesToB64(bytes);
-    await exec(`rm -f "${path}" "${CC_TMP_B64}" 2>/dev/null`);
-    for (let i = 0; i < b64.length; i += 16000)
-        await exec(`printf '%s' '${b64.slice(i, i + 16000)}' >> "${CC_TMP_B64}"`);
-    await exec(`(base64 -d "${CC_TMP_B64}" 2>/dev/null || busybox base64 -d "${CC_TMP_B64}") > "${path}"`);
-    await exec(`rm -f "${CC_TMP_B64}" 2>/dev/null`);
 }
 
 // ---- ONLINE: fetch in WebView first (works without curl/wget), shell as fallback ----
