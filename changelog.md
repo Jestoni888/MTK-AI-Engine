@@ -1,4 +1,4 @@
---- version 0.0.0.97 ---
+--- version 0.0.0.98 ---
 
 •setedit added normal & gaming script generator that later on automatically triggered in our daemon
 
