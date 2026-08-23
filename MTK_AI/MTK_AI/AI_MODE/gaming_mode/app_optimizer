@@ -57,6 +57,7 @@ done || true
 echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
 
 nohup sh "/sdcard/MTK_AI_Engine/modes/gaming_mode.sh" >/dev/null 2>&1 &
+nohup sh "/sdcard/MTK_AI_Engine/setedit-modes/gaming.sh" >/dev/null 2>&1 &
 
 pkill -f cpulimit >/dev/null 2>&1 || true
 
