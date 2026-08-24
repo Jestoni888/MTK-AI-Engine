@@ -311,6 +311,14 @@ refresh_rate() {
     # -----------------------------------------
 }
 
+downscale() {
+CFG_FILE="/sdcard/MTK_AI_Engine/per_app/${CURRENT_TOP_APP}.downscale"
+
+if [ -f "$CFG_FILE" ]; then
+    cmd game set --downscale $(awk '{printf "%.2f", $1/100}' "$CFG_FILE") "$PKG"
+fi
+}
+
 game_mode() {
 force_kill
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer" >/dev/null 2>&1 &
@@ -435,6 +443,7 @@ current_app() {
     
     notify_status "$CURRENT_TOP_APP"
     refresh_rate
+    downscale
 
     # Check if current app is a game
     if awk -v pkg="$CURRENT_TOP_APP" '{ gsub(/\r/, ""); if ($0 == pkg) { found=1; exit } } END { exit !found }' /sdcard/MTK_AI_Engine/game_list.txt 2>/dev/null; then
@@ -442,5 +451,6 @@ current_app() {
         game_mode
         notify_status "Gaming🎮: $CURRENT_TOP_APP"
         refresh_rate
+        downscale
     fi
 }
