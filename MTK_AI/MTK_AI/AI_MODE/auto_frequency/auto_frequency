@@ -70,7 +70,7 @@ fi
 [ ! -f "$TOUCH_ACTIVE" ] && return 0
 ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
 if [ -f "/dev/.mtk_ai_active_game" ]; then
-    exit 0
+    return 0
 fi
 
     CPU_SYS="/sys/devices/system/cpu"
@@ -123,7 +123,7 @@ fi
 [ ! -f "$TOUCH_ACTIVE" ] && return 0
 ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
 if [ -f "/dev/.mtk_ai_active_game" ]; then
-    exit 0
+    return 0
 fi
 
     INACTIVE_PERCENT=30
