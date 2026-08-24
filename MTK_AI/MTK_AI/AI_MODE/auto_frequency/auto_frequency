@@ -69,9 +69,6 @@ nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency
 fi
 [ ! -f "$TOUCH_ACTIVE" ] && return 0
 ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
-if [ -f "/dev/.mtk_ai_active_game" ]; then
-    return 0
-fi
 
     CPU_SYS="/sys/devices/system/cpu"
 
@@ -82,25 +79,6 @@ if [ -f "/sdcard/MTK_AI_Engine/manual_touch_active_freq.txt" ]; then
     # Validate range
     if [ "$TOUCH_ACTIVE_PERCENT" -lt 50 ] 2>/dev/null; then TOUCH_ACTIVE_PERCENT=50; fi
     if [ "$TOUCH_ACTIVE_PERCENT" -gt 100 ] 2>/dev/null; then TOUCH_ACTIVE_PERCENT=100; fi
-fi
-
-# --- 5. REFRESH RATE ---
-            REFRESH_FILE="/sdcard/MTK_AI_Engine/manual_refresh_lock.txt"
-if [ -f "$REFRESH_FILE" ]; then
-    MODE_ID=$(tr -d '\r\n\t ' < "$REFRESH_FILE")
-    
-    # Check if MODE_ID is a valid integer
-    if [ -n "$MODE_ID" ] && [ "$MODE_ID" -eq "$MODE_ID" ] 2>/dev/null; then
-        
-        # If MODE_ID is -1 (Auto), DO NOT execute the SurfaceFlinger command
-        if [ "$MODE_ID" -ne -1 ]; then
-            service call SurfaceFlinger 1035 i32 "$MODE_ID" >/dev/null 2>&1 && \
-                log_msg "🖥️ Refresh Rate: Locked to mode $MODE_ID"
-        else
-            log_msg "🖥️ Refresh Rate: Auto (Skipping manual lock)"
-        fi
-        
-    fi
 fi
 
 for cpu in $CPU_SYS/cpu[0-9]*; do
@@ -302,6 +280,8 @@ echo "✅ Done! Configs saved to $CONFIG_DIR"
 
 refresh_rate() {
 # --- NEW: Execute per-app refresh rate ---
+        REFRESH_FILE="/sdcard/MTK_AI_Engine/manual_refresh_lock.txt"
+                MODE_ID=$(cat "$REFRESH_FILE" 2>/dev/null | tr -d '[:space:]')
         MODE_FILE="/sdcard/MTK_AI_Engine/refresh_locks/${CURRENT_TOP_APP}.mode"
         if [ -f "$MODE_FILE" ]; then
             # Read the mode ID and strip any spaces, tabs, or newlines
@@ -310,6 +290,8 @@ refresh_rate() {
             # Execute the refresh rate change if a valid ID is found
             if [ -n "$MODE" ]; then
                 service call SurfaceFlinger 1035 i32 "$MODE"
+            else
+                service call SurfaceFlinger 1035 i32 "$MODE_ID"
             fi
         fi
 # -----------------------------------------
