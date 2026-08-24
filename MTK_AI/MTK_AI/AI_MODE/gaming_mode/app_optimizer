@@ -15,8 +15,6 @@ else
 fi
 }
 
-service call SurfaceFlinger 1035 i32 -1 >/dev/null 2>&1
-
 chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_max_freq 2>/dev/null || true
 chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_min_freq 2>/dev/null || true
 
