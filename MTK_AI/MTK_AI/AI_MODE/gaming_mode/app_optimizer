@@ -271,55 +271,240 @@ su -c "echo 1 > /sys/module/wlan/parameters/wlm" || true
 
     # ==============================
     # 🗄️ CPUlimit on Certain process to focus on gaming
-    # ==============================
-    # Stop thermal throttling services safely (Combined Multi-Layer Approach)
+    # ==============================#!/system/bin/sh
+
+# ==============================
+# 🎮 FPSGO / FSTB / FBT Tweaks
+# ==============================
+for path in \
+    /sys/kernel/fpsgo/common/fpsgo_enable \
+    /sys/kernel/fpsgo/fstb/fstb_self_ctrl_fps_enable \
+    /sys/kernel/fpsgo/fbt/enable_switch_down_throttle \
+    /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable \
+    /sys/kernel/fpsgo/fstb/set_cam_active; do
+    [ -f "$path" ] && echo "1" > "$path" 2>/dev/null
+done    
+
+# ==============================
+# ✋ Touchscreen Modes (Glove/Cover)
+# ==============================
+for path in \
+    /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_cover_mode \
+    /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_glove_mode; do
+    [ -f "$path" ] && echo "1" > "$path" 2>/dev/null
+done
+
+# ==============================
+# 🛡️ Kernel Panic & System Props
+# ==============================
+echo "0" > /proc/sys/kernel/panic 2>/dev/null
+
+settings put global activity_manager_constants 'max_cached_processes=0,background_settle_time=0,fgs_start_deny_exposure_time=10000,fgservice_min_show_time=0,fgservice_bg_start_timeout=0,max_phantom_processes=0,process_limit=-1,enable_fg_boost=true' 2>/dev/null
+setprop persist.sys.max_background 0 2>/dev/null
+setprop persist.sys.framepredict.enable true 2>/dev/null
+setprop persist.sys.power_mode_perf '1' 2>/dev/null
+settings put system persist.sys.power_mode_perf 1 2>/dev/null
+settings put global sustained_performance_mode_enabled 1 2>/dev/null
+
+device_config put activity_manager max_phantom_processes 0 2>/dev/null
+device_config put activity_manager max_cached_processes 0 2>/dev/null
+device_config put activity_manager use_compaction true 2>/dev/null
+
+# ⚠️ WARNING: Commented out to prevent immediate UI stutter from I/O spikes.
+# am kill-all 2>/dev/null
+# cmd activity trim-memory critical 2>/dev/null
+# cmd activity compact-apps 3 2>/dev/null
+
+# ==============================
+# 🧠 VM / Sysctl Tuning
+# ==============================
+sysctl -w vm.swappiness=50 2>/dev/null
+sysctl -w vm.vfs_cache_pressure=150 2>/dev/null
+sysctl -w vm.dirty_ratio=5 2>/dev/null
+sysctl -w vm.dirty_background_ratio=2 2>/dev/null
+
+settings put global app_standby_enabled 1 2>/dev/null
+settings put global background_dex_opt_job false 2>/dev/null
+setprop persist.sys.game_mode 1 2>/dev/null
+
+# ==============================
+# 🔥 Thermal Toggle (Optional)
+# ==============================
+if [ -f "/sdcard/MTK_AI_Engine/enable_disable_thermal" ] && [ -f "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" ]; then
+    sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" 2>/dev/null
+fi
+
+settings put global low_power 0 2>/dev/null
+settings put global low_power_sticky 0 2>/dev/null
+echo "4 0" > /proc/ppm/policy_status 2>/dev/null
+
+# ==============================
+# 🎯 Foreground App Optimization (OPTIMIZED)
+# ==============================
+FPID=""
+# Read directly from cpuset tasks file instead of looping all /proc/ directories
+if [ -f /dev/cpuset/top-app/tasks ]; then
+    for pid in $(cat /dev/cpuset/top-app/tasks 2>/dev/null); do
+        PNAME=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
+        case "$PNAME" in
+            *surfaceflinger*|*systemui*|*com.android.*) continue ;;
+        esac
+        FPID=$pid
+        break
+    done
+fi
+
+if [ -z "$FPID" ]; then
+    echo "⚠️ Foreground app not found in top-app cpuset (skipping app-specific tuning)"
+else
+    echo "✓ Optimize App PID: $FPID"
+    echo -1000 > "/proc/$FPID/oom_score_adj" 2>/dev/null
+    renice -n -20 -p "$FPID" 2>/dev/null
+    ionice -c 1 -n 0 -p "$FPID" 2>/dev/null
+    
+    # Apply to process group instead of looping every thread individually
+    renice -n -20 -g "$FPID" 2>/dev/null
+fi
+
+# ==============================
+# ✋ Edge Touch Control
+# ==============================
+ENABLE=1
+EDGE_PATHS="
+/sys/class/sec/tsp/cmd_edge_swipe_enable
+/sys/devices/virtual/touch/touch_dev/edge_filter
+/sys/class/input/touchscreen0/edge_suppression
+/sys/module/goodix_core/parameters/edge_limit
+/sys/class/drm/card0/device/edge_touch_disable
+/sys/kernel/touch/edge_ignore"
+
+for path in $EDGE_PATHS; do
+    if [ -w "$path" ]; then
+        echo "✓ Found writable edge control at: $path"
+        if [ "$ENABLE" -eq 1 ]; then
+            echo 0 > "$path" 2>/dev/null || echo 1 > "$path" 2>/dev/null
+        else                
+            echo 1 > "$path" 2>/dev/null || echo 0 > "$path" 2>/dev/null
+        fi
+    fi
+done
+
+if command -v sec_touch_grip >/dev/null 2>&1; then
+    if [ "$ENABLE" -eq 1 ]; then
+        sec_touch_grip --enable 0 2>/dev/null
+    else
+        sec_touch_grip --enable 1 2>/dev/null
+    fi
+fi
+
+[ -f /sdcard/MTK_AI_Engine/enable_gaming_prop2 ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 2>/dev/null
+
+# ==============================
+# ⚙️ Devfreq Config Loader (OPTIMIZED)
+# ==============================
+CONFIG_FILE="/path/to/your/config" # Ensure this variable is defined earlier in your script
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "⚠️ Config file not found: $CONFIG_FILE (skipping devfreq tuning)"
+else
+    echo "✓ Loading devfreq settings from: $CONFIG_FILE"
+    # 100% shell built-in parsing. Zero external process spawning (no grep/sed/cut).
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in \#*|"") continue ;; esac
+        clean_line="${line//\"/}"
+        DEVICE="${clean_line%%=*}"
+        GOVERNOR="${clean_line#*=}"
+        
+        if [ -n "$DEVICE" ] && [ -n "$GOVERNOR" ]; then
+            GOV_PATH="/sys/class/devfreq/$DEVICE/governor"
+            if [ -f "$GOV_PATH" ]; then
+                echo "$GOVERNOR" > "$GOV_PATH" 2>/dev/null && \
+                    echo "✅ Applied $GOVERNOR to $DEVICE" || \
+                    echo "❌ Failed to apply $GOVERNOR to $DEVICE"
+            fi
+        fi
+    done < "$CONFIG_FILE"
+fi
+
+# ==============================
+# 🔁 Restore Values (Optional)
+# ==============================
+if [ -f "/data/adb/service.d/99_mtk_ai_restore_values.sh" ]; then
+    echo "✓ Triggering restore script in background..."
+    sh /data/adb/service.d/99_mtk_ai_restore_values.sh 2>/dev/null &
+fi
+
+# ==============================
+# App Hibernation (OPTIMIZED)
+# ==============================
+# Enable hibernation globally ONCE, NOT inside the loop!
+device_config put app_hibernation app_hibernation_enabled true 2>/dev/null
+device_config put permissions auto_revoke_unused_threshold_millis2 99 2>/dev/null
+
+for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":"); do
+    if [ "$app" != "com.topjohnwu.magisk" ] && [ "$app" != "me.weishu.kernelsu" ]; then
+        cmd app_hibernation set-state --user 0 --global "$app" true 2>/dev/null
+    fi
+done
+
+# ==============================
+# Boost WiFi for Ping Stabilization (OPTIMIZED)
+# ==============================
+# NOTE: If this script runs as root (Magisk/KSU), 'su -c' is redundant and causes massive lag. 
+# It has been removed below. If NOT running as root, wrap this entire block in one 'su -c "..." '
+cmd wifi force-hi-perf-mode enabled 2>/dev/null
+cmd wifi force-low-latency-mode enabled 2>/dev/null
+iw dev wlan0 set power_save off 2>/dev/null
+iw phy phy0 set retry short 7 long 7 2>/dev/null
+ip link set wlan0 txqueuelen 100 2>/dev/null # 'ip' is preferred over deprecated 'ifconfig'
+cmd wifi set-poll-rssi-interval-msecs 1000 2>/dev/null
+cmd wifi set-wifi-sleep-policy never 2>/dev/null
+settings put global wifi_sleep_policy 0 2>/dev/null
+cmd wifi set-roaming-scan-interval 30 2>/dev/null
+settings put global wifi_watchdog_poor_network_test_enabled 0 2>/dev/null
+settings put global wifi_watchdog_ap_count 10 2>/dev/null
+settings put global wifi_watchdog_max_ap_checks 3 2>/dev/null
+settings put global wifi_framework_enabled 1 2>/dev/null
+cmd wifi reassociate 2>/dev/null
+echo Y > /sys/module/wlan/parameters/ps 2>/dev/null
+echo 1 > /sys/module/wlan/parameters/wlm 2>/dev/null
+
+# ==============================
+# 🔍 Performance Optimizations
+# ==============================
+echo "=== Starting MTK AI Engine Performance Optimizer ==="
+
+# Stop thermal throttling services safely
 ps -A -w 2>/dev/null | grep -i thermal | grep -v grep | awk '{print $NF}' | while read -r svc_path; do
-  
-  # 1. Extract clean service name (strip directory paths like /vendor/bin/hw/)
-  clean_svc="${svc_path##*/}"
-  
-  # 2. Apply your rule: if name is long (>12 chars) and contains "thermal", append *thermal*
-  target_svc="$clean_svc"
-  if [[ ${#clean_svc} -gt 12 && "$clean_svc" == *"thermal"* ]]; then
-    target_svc="${clean_svc}*thermal*"
-  fi
-  
-  # --- LAYER 1: Graceful Stop ---
-  # Tells Android 'init' to stop it, which is the official way to prevent respawn
-  setprop ctl.stop "$clean_svc" 2>/dev/null || true
-  stop "$target_svc" 2>/dev/null || true
-  
-  # --- LAYER 2: SIGSTOP (The Freeze) ---
-  # Suspends the process entirely (0% CPU). 'init' sees the PID is still alive, 
-  # so it usually does not trigger a respawn. (Uses clean_svc to ensure it finds the real process)
-  pkill -STOP -f "$clean_svc" 2>/dev/null || true
-  
-  # --- LAYER 3: cpulimit (The Neuter) ---
-  # If the process somehow wakes up or wasn't fully stopped, this restricts it to 1% CPU.
-  # (Silently fails if cpulimit isn't installed, which is safe)
-  pid=$(pgrep -f "$clean_svc" | head -n 1)
-  if [ -n "$pid" ]; then
-    nohup /data/adb/modules/MTK_AI/lib/cpulimit -p "$pid" -l 1 -z 2>/dev/null &
-  fi
-  
+    clean_svc="${svc_path##*/}"
+    target_svc="$clean_svc"
+    if [ ${#clean_svc} -gt 12 ] && echo "$clean_svc" | grep -q "thermal"; then
+        target_svc="${clean_svc}*thermal*"
+    fi
+    
+    setprop ctl.stop "$clean_svc" 2>/dev/null
+    stop "$target_svc" 2>/dev/null
+    pkill -STOP -f "$clean_svc" 2>/dev/null
+    
+    pid=$(pgrep -f "$clean_svc" | head -n 1)
+    if [ -n "$pid" ]; then
+        nohup /data/adb/modules/MTK_AI/lib/cpulimit -p "$pid" -l 1 -z 2>/dev/null &
+    fi
 done
 
-for zone in /sys/devices/virtual/thermal/thermal_zone*/mode; do
-    chmod 777 "$zone" || true
-    echo disabled | tee "$zone" || true
-done
+CPULIMIT_BIN="/data/adb/modules/MTK_AI/lib/cpulimit"
 
-     nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" &
-     nohup $CPULIMIT -e com.google.android.gms -l 5 &
-     nohup $CPULIMIT -e com.google.android.gsf -l 5 &
-     nohup $CPULIMIT -e com.google.android.gsf.login -l 5 &
-     nohup $CPULIMIT -e com.google.android.gms.persistent -l 5 &
-     nohup $CPULIMIT -e com.google.android.backuptransport -l 5 &
-     nohup $CPULIMIT -e com.google.android.partnersetup -l 5 &
-     nohup $CPULIMIT -e com.google.android.setupwizard -l 5 &
-     nohup $CPULIMIT -e com.android.systemui -l 50 &
-     nohup $CPULIMIT -e com.android.vending -l 50 &
+nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" 2>/dev/null &
+nohup "$CPULIMIT_BIN" -e com.google.android.gms -l 5 2>/dev/null &
+nohup "$CPULIMIT_BIN" -e com.google.android.gsf -l 5 2>/dev/null &
+nohup "$CPULIMIT_BIN" -e com.google.android.gsf.login -l 5 2>/dev/null &
+nohup "$CPULIMIT_BIN" -e com.google.android.gms.persistent -l 5 2>/dev/null &
+nohup "$CPULIMIT_BIN" -e com.google.android.backuptransport -l 5 2>/dev/null &
+nohup "$CPULIMIT_BIN" -e com.google.android.partnersetup -l 5 2>/dev/null &
+nohup "$CPULIMIT_BIN" -e com.google.android.setupwizard -l 5 2>/dev/null &
+nohup "$CPULIMIT_BIN" -e com.android.systemui -l 50 2>/dev/null &
+nohup "$CPULIMIT_BIN" -e com.android.vending -l 50 2>/dev/null &
 
-    log_msg "=== MTK AI Engine Optimizer Complete ==="    echo "✅ All optimizations applied successfully!!"
+echo "=== MTK AI Engine Optimizer Complete ==="
+echo "✅ All optimizations applied successfully!!"
 
 exit 0
