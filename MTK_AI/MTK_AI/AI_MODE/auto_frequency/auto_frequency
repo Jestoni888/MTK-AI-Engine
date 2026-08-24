@@ -448,8 +448,9 @@ current_app() {
     
     # Check if current app is a game
     if awk -v pkg="$CURRENT_TOP_APP" '{ gsub(/\r/, ""); if ($0 == pkg) { found=1; exit } } END { exit !found }' /sdcard/MTK_AI_Engine/game_list.txt 2>/dev/null; then
-        echo "$CURRENT_TOP_APP" > /dev/.mtk_ai_active_game 2>/dev/null
-        
+        echo "$CURRENT_TOP_APP" > /dev/.mtk_ai_active_game 2>/dev/null     
+        game_mode
+        notify_status "Gaming🎮: $CURRENT_TOP_APP"
         # --- NEW: Execute per-app refresh rate ---
         MODE_FILE="/sdcard/MTK_AI_Engine/refresh_locks/${CURRENT_TOP_APP}.mode"
         if [ -f "$MODE_FILE" ]; then
@@ -462,8 +463,5 @@ current_app() {
             fi
         fi
         # -----------------------------------------
-
-        game_mode
-        notify_status "Gaming🎮: $CURRENT_TOP_APP"
     fi
 }
