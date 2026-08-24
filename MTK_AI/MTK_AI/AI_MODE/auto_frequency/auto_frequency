@@ -122,9 +122,6 @@ nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency
 fi
 [ ! -f "$TOUCH_ACTIVE" ] && return 0
 ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
-if [ -f "/dev/.mtk_ai_active_game" ]; then
-    return 0
-fi
 
     INACTIVE_PERCENT=30
     if [ -f "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" ]; then
@@ -150,13 +147,6 @@ fi
     done
 
     sync
-
-MODE_ID=$(cat "/sdcard/MTK_AI_Engine/manual_refresh_lock.txt" 2>/dev/null | tr -d '[:space:]')
-if [ "$MODE_ID" != "-1" ] && [ -n "$MODE_ID" ]; then
-    su -c "service call SurfaceFlinger 1035 i32 2" 2>/dev/null
-else
-    echo "auto"
-fi
 }
 
 force_kill() {
@@ -310,6 +300,21 @@ echo "🛡️ Skipped $SKIPPED critical system apps"
 echo "✅ Done! Configs saved to $CONFIG_DIR"
 }
 
+refresh_rate() {
+# --- NEW: Execute per-app refresh rate ---
+        MODE_FILE="/sdcard/MTK_AI_Engine/refresh_locks/${CURRENT_TOP_APP}.mode"
+        if [ -f "$MODE_FILE" ]; then
+            # Read the mode ID and strip any spaces, tabs, or newlines
+            MODE=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
+            
+            # Execute the refresh rate change if a valid ID is found
+            if [ -n "$MODE" ]; then
+                service call SurfaceFlinger 1035 i32 "$MODE"
+            fi
+        fi
+# -----------------------------------------
+}
+
 game_mode() {
 force_kill
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer" >/dev/null 2>&1 &
@@ -433,35 +438,13 @@ current_app() {
     fi
     
     notify_status "$CURRENT_TOP_APP"
-    # --- NEW: Execute per-app refresh rate ---
-        MODE_FILE="/sdcard/MTK_AI_Engine/refresh_locks/${CURRENT_TOP_APP}.mode"
-        if [ -f "$MODE_FILE" ]; then
-            # Read the mode ID and strip any spaces, tabs, or newlines
-            MODE_ID=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
-            
-            # Execute the refresh rate change if a valid ID is found
-            if [ -n "$MODE_ID" ]; then
-                service call SurfaceFlinger 1035 i32 "$MODE_ID"
-            fi
-        fi
-    # -----------------------------------------
-    
+    refresh_rate
+
     # Check if current app is a game
     if awk -v pkg="$CURRENT_TOP_APP" '{ gsub(/\r/, ""); if ($0 == pkg) { found=1; exit } } END { exit !found }' /sdcard/MTK_AI_Engine/game_list.txt 2>/dev/null; then
         echo "$CURRENT_TOP_APP" > /dev/.mtk_ai_active_game 2>/dev/null     
         game_mode
         notify_status "Gaming🎮: $CURRENT_TOP_APP"
-        # --- NEW: Execute per-app refresh rate ---
-        MODE_FILE="/sdcard/MTK_AI_Engine/refresh_locks/${CURRENT_TOP_APP}.mode"
-        if [ -f "$MODE_FILE" ]; then
-            # Read the mode ID and strip any spaces, tabs, or newlines
-            MODE_ID=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
-            
-            # Execute the refresh rate change if a valid ID is found
-            if [ -n "$MODE_ID" ]; then
-                service call SurfaceFlinger 1035 i32 "$MODE_ID"
-            fi
-        fi
-        # -----------------------------------------
+        refresh_rate
     fi
 }
