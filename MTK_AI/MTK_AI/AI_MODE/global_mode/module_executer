@@ -152,7 +152,7 @@ for mod_dir in "$MODULE_DIR"/*/; do
             [ -z "$pid" ] && continue
             kill -9 "$pid" 2>/dev/null
         done
-
+        nohup sh "$mod_dir/uninstall.sh" &
         sleep 0.5
         rm -rf "$mod_dir"
         echo "[$(date '+%H:%M:%S')] Successfully removed: $mod_name"
