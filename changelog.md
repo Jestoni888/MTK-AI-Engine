@@ -2,6 +2,8 @@
 
 •setedit added normal & gaming script generator that later on automatically triggered in our daemon
 
+•added auto in refresh rate selection
+
 --- version 0.0.0.97 ---
 
 •adding disable logs on SD card for less cpu work, less heating & save power (in module settings)
