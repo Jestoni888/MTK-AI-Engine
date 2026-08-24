@@ -83,13 +83,22 @@ fi
 
 # --- 5. REFRESH RATE ---
             REFRESH_FILE="/sdcard/MTK_AI_Engine/manual_refresh_lock.txt"
-            if [ -f "$REFRESH_FILE" ]; then
-                MODE_ID=$(tr -d '\r\n\t ' < "$REFRESH_FILE")
-                if [ -n "$MODE_ID" ] && [ "$MODE_ID" -eq "$MODE_ID" ] 2>/dev/null; then
-                    service call SurfaceFlinger 1035 i32 "$MODE_ID" >/dev/null 2>&1 && \
-                        log_msg "🖥️ Refresh Rate: mode $MODE_ID"
-                fi
-            fi
+if [ -f "$REFRESH_FILE" ]; then
+    MODE_ID=$(tr -d '\r\n\t ' < "$REFRESH_FILE")
+    
+    # Check if MODE_ID is a valid integer
+    if [ -n "$MODE_ID" ] && [ "$MODE_ID" -eq "$MODE_ID" ] 2>/dev/null; then
+        
+        # If MODE_ID is -1 (Auto), DO NOT execute the SurfaceFlinger command
+        if [ "$MODE_ID" -ne -1 ]; then
+            service call SurfaceFlinger 1035 i32 "$MODE_ID" >/dev/null 2>&1 && \
+                log_msg "🖥️ Refresh Rate: Locked to mode $MODE_ID"
+        else
+            log_msg "🖥️ Refresh Rate: Auto (Skipping manual lock)"
+        fi
+        
+    fi
+fi
 
 for cpu in $CPU_SYS/cpu[0-9]*; do
     MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
@@ -110,9 +119,7 @@ nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency
 fi
 [ ! -f "$TOUCH_ACTIVE" ] && return 0
 ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
-    su -c "service call SurfaceFlinger 1035 i32 2" 2>/dev/null
 
-    # Read saved Inactive CPU % from SD card
     INACTIVE_PERCENT=30
     if [ -f "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" ]; then
         INACTIVE_PERCENT=$(cat "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" | tr -d '\r\n ')
@@ -137,6 +144,13 @@ ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
     done
 
     sync
+
+MODE_ID=$(cat "/sdcard/MTK_AI_Engine/manual_refresh_lock.txt" 2>/dev/null | tr -d '[:space:]')
+if [ "$MODE_ID" != "-1" ] && [ -n "$MODE_ID" ]; then
+    su -c "service call SurfaceFlinger 1035 i32 2" 2>/dev/null
+else
+    echo "auto"
+fi
 }
 
 force_kill() {
