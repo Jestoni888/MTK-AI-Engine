@@ -279,22 +279,36 @@ echo "✅ Done! Configs saved to $CONFIG_DIR"
 }
 
 refresh_rate() {
-# --- NEW: Execute per-app refresh rate ---
-        REFRESH_FILE="/sdcard/MTK_AI_Engine/manual_refresh_lock.txt"
-                MODE_ID=$(cat "$REFRESH_FILE" 2>/dev/null | tr -d '[:space:]')
-        MODE_FILE="/sdcard/MTK_AI_Engine/refresh_locks/${CURRENT_TOP_APP}.mode"
-        if [ -f "$MODE_FILE" ]; then
-            # Read the mode ID and strip any spaces, tabs, or newlines
-            MODE=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
-            
-            # Execute the refresh rate change if a valid ID is found
-            if [ -n "$MODE" ]; then
-                service call SurfaceFlinger 1035 i32 "$MODE"
-            else
-                service call SurfaceFlinger 1035 i32 "$MODE_ID"
-            fi
+    # --- Execute per-app refresh rate ---
+    REFRESH_FILE="/sdcard/MTK_AI_Engine/manual_refresh_lock.txt"
+    MODE_FILE="/sdcard/MTK_AI_Engine/refresh_locks/${CURRENT_TOP_APP}.mode"
+
+    # 1. Read the global mode ID (strip spaces, tabs, newlines)
+    MODE_ID=""
+    if [ -f "$REFRESH_FILE" ]; then
+        MODE_ID=$(cat "$REFRESH_FILE" 2>/dev/null | tr -d '[:space:]')
+    fi
+
+    # 2. Determine which mode to apply (Per-app vs Global)
+    TARGET_MODE=""
+    if [ -f "$MODE_FILE" ]; then
+        # Read the per-app mode ID
+        MODE=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
+        
+        if [ -n "$MODE" ]; then
+            TARGET_MODE="$MODE"      # Use per-app mode if valid
+        else
+            TARGET_MODE="$MODE_ID"   # Fallback to global if per-app file is empty
         fi
-# -----------------------------------------
+    else
+        TARGET_MODE="$MODE_ID"       # Fallback to global if per-app file doesn't exist
+    fi
+
+    # 3. Execute the refresh rate change ONLY if we have a valid mode
+    if [ -n "$TARGET_MODE" ]; then
+        service call SurfaceFlinger 1035 i32 "$TARGET_MODE"
+    fi
+    # -----------------------------------------
 }
 
 game_mode() {
