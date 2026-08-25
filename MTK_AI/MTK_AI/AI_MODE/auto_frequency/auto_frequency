@@ -429,6 +429,63 @@ current_app() {
             normal_mode
             rm -f /dev/.mtk_ai_active_game
             notify_status "Normal mode"
+# 🏠 Helper: Check if package is a launcher (home screen)
+is_launcher() {
+    local pkg="$1"
+    case "$pkg" in
+        com.android.launcher*|\
+        com.google.android.launcher*|\
+        com.google.android.apps.nexuslauncher|\
+        com.miui.home|\
+        com.sec.android.app.launcher|\
+        com.sonyericsson.home|\
+        com.lge.launcher*|\
+        com.huawei.android.launcher|\
+        com.transsion.launcher*|\
+        com.oppo.launcher|\
+        com.coloros.launcher|\
+        com.oneplus.launcher|\
+        com.teslacoilsw.launcher|\
+        org.lineageos.trebuchet|\
+        com.android.launcher3|\
+        com.pixelstar.launcher|\
+        com.tcl.launcher|\
+        com.vivo.launcher)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+current_app() {
+    # 🎮 STATE CHECK: If gaming mode is already active, skip full detection
+    if [ -f /dev/.mtk_ai_active_game ]; then
+        
+        # 🛡️ UNIVERSAL DETECTION: 
+        # 3-step fallback chain to find the real app, completely ignoring overlays.
+        # Step 1: mResumedActivity (Ignores overlays 99% of the time)
+        CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mResumedActivity' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+        
+        # Step 2: Fallback to mFocusedApp
+        if [ -z "$CURRENT_TOP_APP" ]; then
+            CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+        fi
+        
+        # Step 3: Fallback to mCurrentFocus (Original method)
+        if [ -z "$CURRENT_TOP_APP" ]; then
+            CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+        fi
+        
+        # ✅ FIXED: Allow uppercase letters in package validation
+        if echo "$CURRENT_TOP_APP" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
+            if is_launcher "$CURRENT_TOP_APP"; then
+                log_msg "🏠 Launcher detected, exiting gaming mode"
+                normal_mode
+                rm -f /dev/.mtk_ai_active_game
+                notify_status "Normal mode: $CURRENT_TOP_APP"
+            fi
         fi
         return 0
     fi
@@ -447,14 +504,16 @@ current_app() {
         CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
     fi
     
+    # ✅ FIXED: Allow uppercase letters in package validation
     if ! echo "$CURRENT_TOP_APP" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
         CURRENT_TOP_APP=""
         notify_status ""
         return 0
     fi
 
-    if [ -f "$EXTERNAL_CFG/current_profile" ] && [ "$(cat "$EXTERNAL_CFG/current_profile" 2>/dev/null)" = "balance" ]; then
-        nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
+    if [ -f "$EXTERNAL_CFG/current_profile" ] && \
+   [ "$(cat "$EXTERNAL_CFG/current_profile" 2>/dev/null)" = "balance" ]; then
+    nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
     fi
     
     notify_status "$CURRENT_TOP_APP"
