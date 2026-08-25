@@ -355,63 +355,64 @@ touch /sdcard/MTK_AI_Engine/enable_limiter 2>/dev/null
 echo "1" > /sdcard/MTK_AI_Engine/enable_limiter 2>/dev/null
 }
 
-# 🏠 Helper: Check if package is a launcher (home screen)
-is_launcher() {
+# 🎮 Helper: Check if the active game is TRULY pushed to background
+# Uses the /data/data/ trick to isolate the main game process, 
+# and allows overlays/notification shades by checking if the process is fully frozen.
+is_game_background() {
     local pkg="$1"
-    case "$pkg" in
-        com.android.launcher*|\
-        com.google.android.launcher*|\
-        com.google.android.apps.nexuslauncher|\
-        com.miui.home|\
-        com.sec.android.app.launcher|\
-        com.sonyericsson.home|\
-        com.lge.launcher*|\
-        com.huawei.android.launcher|\
-        com.transsion.launcher*|\
-        com.oppo.launcher|\
-        com.coloros.launcher|\
-        com.oneplus.launcher|\
-        com.teslacoilsw.launcher|\
-        org.lineageos.trebuchet|\
-        com.android.launcher3|\
-        com.pixelstar.launcher|\
-        com.tcl.launcher|\
-        com.vivo.launcher)
-            return 0
-            ;;
-        *)
-            return 1
-            ;;
-    esac
+    
+    # 1. Locate PIDs running in the app's specific data directory
+    # This isolates the main game process from background services (like push/crash handlers)
+    # We check both /data/data/ and /data/user/0/ as Android uses both depending on the version
+    local main_pids=$(ls -l /proc/[0-9]*/cwd 2>/dev/null | grep -E "/data/(data|user/0)/$pkg" | awk -F'/' '{print $3}')
+    
+    # Fallback to pidof if the cwd check fails (some games might run from /data/app/...)
+    if [ -z "$main_pids" ]; then
+        main_pids=$(pidof "$pkg")
+    fi
+
+    # If no main process is found at all, it's closed
+    if [ -z "$main_pids" ]; then
+        return 0 # True, it's background/closed
+    fi
+
+    # 2. Check if ANY of these main PIDs are still "active" (not fully frozen in deep background)
+    for pid in $main_pids; do
+        local oom_adj=$(cat /proc/$pid/oom_score_adj 2>/dev/null)
+        
+        # 🧠 THE MAGIC THRESHOLD: 
+        # If oom_score_adj is less than 900, the system still considers it 
+        # "Visible", "Perceptible", or "Service" (e.g., when notification shade is pulled).
+        # 900+ means it's fully cached and frozen.
+        if [ -n "$oom_adj" ] && [ "$oom_adj" -lt 900 ]; then
+            return 1 # False, game is still active/foreground enough
+        fi
+        
+        # Additional check: if cgroup is NOT in deep background
+        local cgroup=$(cat /proc/$pid/cgroup 2>/dev/null)
+        if ! echo "$cgroup" | grep -qiE "bg_non_interactive|system-background"; then
+            return 1 # False, game is still active
+        fi
+    done
+
+    # If all main PIDs are >= 900 or in deep background, it's truly backgrounded
+    return 0
 }
 
 current_app() {
-    # 🎮 STATE CHECK: If gaming mode is already active, skip full detection
+    # 🎮 STATE CHECK: If gaming mode is already active
     if [ -f /dev/.mtk_ai_active_game ]; then
+        # ✅ Read the exact game package from the file
+        ACTIVE_GAME=$(cat /dev/.mtk_ai_active_game 2>/dev/null)
         
-        # 🛡️ UNIVERSAL DETECTION: 
-        # 3-step fallback chain to find the real app, completely ignoring overlays.
-        # Step 1: mResumedActivity (Ignores overlays 99% of the time)
-        CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mResumedActivity' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
-        
-        # Step 2: Fallback to mFocusedApp
-        if [ -z "$CURRENT_TOP_APP" ]; then
-            CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
-        fi
-        
-        # Step 3: Fallback to mCurrentFocus (Original method)
-        if [ -z "$CURRENT_TOP_APP" ]; then
-            CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
-        fi
-        
-        # ✅ FIXED: Allow uppercase letters in package validation
-        if echo "$CURRENT_TOP_APP" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
-            if is_launcher "$CURRENT_TOP_APP"; then
-                log_msg "🏠 Launcher detected, exiting gaming mode"
-                normal_mode
-                rm -f /dev/.mtk_ai_active_game
-                notify_status "Normal mode: $CURRENT_TOP_APP"
-            fi
+        # ✅ ONLY check if that specific game's main process is fully frozen.
+        # We completely ignore "current top app" to prevent false positives 
+        # from overlays, notification shades, or floating apps.
+        if is_game_background "$ACTIVE_GAME"; then
+            log_msg "📉 $ACTIVE_GAME detected in background/closed, exiting gaming mode"
+            normal_mode
+            rm -f /dev/.mtk_ai_active_game
+            notify_status "Normal mode"
         fi
         return 0
     fi
@@ -430,16 +431,14 @@ current_app() {
         CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
     fi
     
-    # ✅ FIXED: Allow uppercase letters in package validation
     if ! echo "$CURRENT_TOP_APP" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
         CURRENT_TOP_APP=""
         notify_status ""
         return 0
     fi
 
-    if [ -f "$EXTERNAL_CFG/current_profile" ] && \
-   [ "$(cat "$EXTERNAL_CFG/current_profile" 2>/dev/null)" = "balance" ]; then
-    nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
+    if [ -f "$EXTERNAL_CFG/current_profile" ] && [ "$(cat "$EXTERNAL_CFG/current_profile" 2>/dev/null)" = "balance" ]; then
+        nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
     fi
     
     notify_status "$CURRENT_TOP_APP"
