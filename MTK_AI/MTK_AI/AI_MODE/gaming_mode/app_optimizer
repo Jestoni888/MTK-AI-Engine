@@ -56,7 +56,7 @@ done || true
 
 #DND
 if [ -f "$CONFIG_DIR/enable_dnd_during_game" ]; then
-    cmd notification set_dnd none
+    cmd notification set_dnd priority
 fi
     
 echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
