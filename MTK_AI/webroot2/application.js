@@ -597,15 +597,15 @@ async function openAppConfigPopup(pkg) {
             <span style="display:inline-block;background:#1e1e1e;padding:4px 12px;border-radius:12px;font-size:13px;color:#8ab4f8;">Kernel</span>
         </div>
 
-        <!-- DVFS Settings Item -->
+        <!-- CPU Settings Item -->
         <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;">
             <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;">
                 <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;">
                     <span style="font-size:18px;">📊</span>
                 </div>
                 <div style="flex:1;">
-                    <div style="font-size:17px;font-weight:500;margin-bottom:2px;">DVFS Settings</div>
-                    <div style="font-size:13px;color:#888;">Set per-app DVFS policies for GPU/CPU frequency management.</div>
+                    <div style="font-size:17px;font-weight:500;margin-bottom:2px;">CPU Settings</div>
+                    <div style="font-size:13px;color:#888;">Set CPU Governor & frequency</div>
                 </div>
                 <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;">
                     <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span>
@@ -624,15 +624,15 @@ async function openAppConfigPopup(pkg) {
             </div>
         </div>
 
-        <!-- Lock Frequencies Item -->
+        <!-- GPU Frequency Item -->
         <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;">
             <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;">
                 <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;">
                     <span style="font-size:18px;">🔒</span>
                 </div>
                 <div style="flex:1;">
-                    <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Lock Frequencies</div>
-                    <div style="font-size:13px;color:#888;">Lock frequencies to the maximum available within system limits.</div>
+                    <div style="font-size:17px;font-weight:500;margin-bottom:2px;">GPU Frequency</div>
+                    <div style="font-size:13px;color:#888;">GPU Frequency to the maximum available within system limits.</div>
                 </div>
                 <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;">
                     <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span>
@@ -645,15 +645,15 @@ async function openAppConfigPopup(pkg) {
             </div>
         </div>
 
-        <!-- Scheduler Priority Item -->
+        <!-- Vsync & Voltage offset Item -->
         <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;">
             <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;">
                 <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;">
                     <span style="font-size:18px;">⏱️</span>
                 </div>
                 <div style="flex:1;">
-                    <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Scheduler Priority</div>
-                    <div style="font-size:13px;color:#888;">Android scheduler priority level for target processes.</div>
+                    <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Vsync & Voltage offset</div>
+                    <div style="font-size:13px;color:#888;">Android Vsync & Voltage offset to specific game or app</div>
                 </div>
                 <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;">
                     <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span>
