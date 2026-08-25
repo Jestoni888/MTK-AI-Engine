@@ -53,6 +53,11 @@ done || true
     echo "3" > /proc/cpufreq/cpufreq_power_mode 2>/dev/null || true
     echo "1" > /proc/cpufreq/cpufreq_cci_mode 2>/dev/null || true
     fi
+
+#DND
+if [ -f "$CONFIG_DIR/enable_dnd_during_game" ]; then
+    cmd notification set_dnd none
+fi
     
 echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
 
