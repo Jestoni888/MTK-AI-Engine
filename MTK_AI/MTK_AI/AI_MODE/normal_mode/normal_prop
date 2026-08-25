@@ -12,7 +12,7 @@ fi
 }
 SDCARD="/sdcard/MTK_AI_Engine"
 BB="/data/adb/modules/MTK_AI/busybox"
-SAVE_DIR="$CONFIG_DIR/cooldown_values"
+SAVE_DIR="$SDCARD/cooldown_values"
 
 # ==============================
 # unsuspend background apps
@@ -25,7 +25,7 @@ done
 fi
 
 #DND
-if [ -f "$CONFIG_DIR/enable_dnd_during_game" ]; then
+if [ -f "$SDCARD/enable_dnd_during_game" ]; then
     cmd notification set_dnd off
 fi
 
