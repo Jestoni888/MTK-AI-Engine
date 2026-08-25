@@ -126,7 +126,7 @@ F="/sdcard/MTK_AI_Engine/touch_timeout.txt"
 
 # Initial State
 LAST_ACTIVITY=$(date +%s)
-STATE="SAVE"
+STATE="PERF"
 
 # 🔧 FIX #3: resolve touchscreen device ONCE before the loop
 TS_DEV=$(find_touchscreen)
