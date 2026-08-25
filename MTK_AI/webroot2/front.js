@@ -1221,12 +1221,87 @@ async function afterConfigChange(okMsg) {
 function injectControlCenter() {
     if (document.getElementById('cc-card')) return;
     injectCCAssets();
+    // --- START: SERVICES POPUP MODAL ---
+if (!document.getElementById('cc-services-modal')) {
+    const modalStyle = document.createElement('style');
+    modalStyle.textContent = `
+        .cc-modal-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity 0.3s; backdrop-filter:blur(5px); }
+        .cc-modal-overlay.active { opacity:1; pointer-events:auto; }
+        .cc-modal-box { background:#1e1a2e; border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:24px; width:85%; max-width:320px; box-shadow:0 10px 30px rgba(0,0,0,0.5); transform:scale(0.9); transition:transform 0.3s; position:relative; }
+        .cc-modal-overlay.active .cc-modal-box { transform:scale(1); }
+        .cc-modal-title { color:#fff; font-size:16px; font-weight:800; text-align:center; margin-bottom:20px; text-transform:uppercase; letter-spacing:1px; }
+        .cc-mode-info { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:14px; margin-bottom:12px; transition:all 0.2s; }
+        .cc-mode-info.active-mode { border-color:#5b9dff; background:rgba(91,157,255,0.1); }
+        .cc-mode-name { font-size:12px; font-weight:800; color:#5b9dff; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+        .cc-mode-info.active-mode .cc-mode-name { color:#fff; }
+        .cc-mode-name::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; box-shadow:0 0 8px currentColor; }
+        .cc-mode-desc { font-size:11px; color:#aaa; line-height:1.5; }
+        .cc-modal-btn { width:100%; padding:14px; border:none; border-radius:12px; background:linear-gradient(135deg, #5b9dff, #b678e8); color:#fff; font-weight:800; font-size:13px; text-transform:uppercase; letter-spacing:1px; cursor:pointer; margin-top:10px; box-shadow:0 4px 15px rgba(91,157,255,0.3); }
+        .cc-modal-btn:active { transform:scale(0.97); }
+        .cc-modal-close { position:absolute; top:12px; right:14px; background:rgba(255,255,255,0.1); border:none; color:#fff; font-size:18px; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    `;
+    document.head.appendChild(modalStyle);
+
+    const modal = document.createElement('div');
+    modal.id = 'cc-services-modal';
+    modal.className = 'cc-modal-overlay';
+    modal.innerHTML = `
+        <div class="cc-modal-box">
+            <button class="cc-modal-close" onclick="document.getElementById('cc-services-modal').classList.remove('active')">&times;</button>
+            <div class="cc-modal-title">MTK AI Services</div>
+            <div class="cc-mode-info" id="modal-lite-mode">
+                <div class="cc-mode-name">LITE MODE</div>
+                <div class="cc-mode-desc">A lightweight daemon that uses touch as trigger detection, it only wakes up if touching occurs.</div>
+            </div>
+            <div class="cc-mode-info" id="modal-hard-mode">
+                <div class="cc-mode-name">HARD MODE</div>
+                <div class="cc-mode-desc">Instant detection it uses both touch detection & logcat so it will slightly consumes more cpu.</div>
+            </div>
+            <button class="cc-modal-btn" id="modal-toggle-btn">Switch Mode</button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Close when clicking outside the box
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.classList.remove('active');
+    });
+
+    // Toggle button action inside the popup
+    document.getElementById('modal-toggle-btn').addEventListener('click', () => {
+        modal.classList.remove('active');
+        toggleMTKServices();
+    });
+}
+
+// Function to open the popup and highlight the current active mode
+window.showServicesModal = function() {
+    const modal = document.getElementById('cc-services-modal');
+    if (!modal) return;
+    
+    const liteEl = document.getElementById('modal-lite-mode');
+    const hardEl = document.getElementById('modal-hard-mode');
+    const btn = document.getElementById('modal-toggle-btn');
+    
+    if (mtkServicesEnabled) {
+        hardEl.classList.add('active-mode');
+        liteEl.classList.remove('active-mode');
+        btn.textContent = 'Switch to LITE MODE';
+    } else {
+        liteEl.classList.add('active-mode');
+        hardEl.classList.remove('active-mode');
+        btn.textContent = 'Switch to HARD MODE';
+    }
+    
+    modal.classList.add('active');
+};
+// --- END: SERVICES POPUP MODAL ---
     const card = document.createElement('div');
     card.id = 'cc-card'; card.className = 'cc-card';
     card.innerHTML = `
         <div class="cc-header"><i class="fas fa-sliders"></i><span>CONTROL CENTER</span></div>
         <div class="cc-grid">
-            <button class="cc-btn" id="cc-btn-services" onclick="toggleMTKServices()"><span class="cc-ico"><i class="fas fa-microchip"></i></span><span class="cc-lbl">Services</span><span class="cc-sub">LITE</span></button>
+            <button class="cc-btn" id="cc-btn-services" onclick="showServicesModal()"><span class="cc-ico"><i class="fas fa-microchip"></i></span><span class="cc-lbl">Services</span><span class="cc-sub">LITE</span></button>
             <button class="cc-btn" id="cc-btn-overlay" onclick="toggleOverlay()"><span class="cc-ico"><i class="fas fa-eye-slash"></i></span><span class="cc-lbl">FPS Overlay</span><span class="cc-sub">OFF</span></button>
             <button class="cc-btn" id="cc-btn-save" onclick="cfgSave()"><span class="cc-ico"><i class="fas fa-file-zipper"></i></span><span class="cc-lbl">Save config</span><span class="cc-sub">ZIP→/sdcard</span></button>
             <button class="cc-btn" id="cc-btn-local" onclick="cfgRestoreLocal()"><span class="cc-ico"><i class="fas fa-box-open"></i></span><span class="cc-lbl">Load local config</span><span class="cc-sub">UNZIP</span></button>
