@@ -24,6 +24,11 @@ pm list packages | cut -d: -f2 | while read -r pkg; do
 done
 fi
 
+#DND
+if [ -f "$CONFIG_DIR/enable_dnd_during_game" ]; then
+    cmd notification set_dnd off
+fi
+
 echo "-1" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
 echo "-1" > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
 
