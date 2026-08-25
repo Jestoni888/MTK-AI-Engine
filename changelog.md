@@ -4,6 +4,8 @@
 
 •added auto in refresh rate selection
 
+•lite mode now uses /proc/ as game detection more accuracy & battery friendly but it will only trigger normal mode without touching screen outside of the game within 5 seconds 
+
 --- version 0.0.0.97 ---
 
 •adding disable logs on SD card for less cpu work, less heating & save power (in module settings)
