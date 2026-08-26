@@ -108,6 +108,8 @@ module.prop
 update_checker.sh
 .required_files
 system.prop
+gaming_icon.png
+icon.png
 webroot/index.html 
 webroot/application.js 
 webroot/animationspeed.js 
@@ -144,8 +146,6 @@ webroot/setedit.js
 webroot/update.js
 webroot/hibernator.js
 webroot/wifi.js
-MTK_AI/gaming_icon.png
-MTK_AI/icon.png
 "
 
 # === 4. Download helper ===
