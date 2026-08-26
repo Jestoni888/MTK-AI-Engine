@@ -4,6 +4,8 @@
 
 •some optimization on gaming (need reboot)
 
+•screen on/off detection optimize, now uses 'find /sys/' to locate anywhere so that it can support to all devices
+
 --- version 0.0.0.98 ---
 
 •setedit added normal & gaming script generator that later on automatically triggered in our daemon
