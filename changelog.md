@@ -1,3 +1,7 @@
+--- version 0.0.0.99 ---
+
+•added custom shell notification icons in lite mode between normal & gaming
+
 --- version 0.0.0.98 ---
 
 •setedit added normal & gaming script generator that later on automatically triggered in our daemon
