@@ -11,8 +11,19 @@ TOUCH_ACTIVE="$EXTERNAL_CFG/enable_limiter"
 # --- NOTIFICATION FUNCTION ---
 # Uses UID 2000 to bypass SELinux restrictions
 notify_status() {
-# Skip if notification toggle is OFF
+    # Skip if notification toggle is OFF
     [ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
+
+    # --- 0. Determine Mode, Icon, and Title ---
+    if [ -f /dev/.mtk_ai_active_game ]; then
+        # Use file:// prefix and lowercase -i for the status bar icon
+        ICON="file:///data/local/tmp/gaming_icon.png"
+        TITLE="Gaming Mode"
+    else
+        ICON="file:///data/local/tmp/icon.png"
+        TITLE="Lite Mode"
+    fi
+
     # --- 1. Temperature ---
     RAW_TEMP=$(cat /sys/class/power_supply/battery/temp 2>/dev/null || echo "0")
     B_TEMP="$((RAW_TEMP / 10)).$((RAW_TEMP % 10))°C"
@@ -23,7 +34,7 @@ notify_status() {
     CPU_GOV="Unknown"
     [ -f "$GOV_FILE" ] && CPU_GOV=$(cat "$GOV_FILE" 2>/dev/null | tr -d '[:space:]')
 
-    # --- 3. Power Calculation (FIXED FOR LARGE NUMBERS) ---
+    # --- 3. Power Calculation ---
     VOLT_FILE="/sys/class/power_supply/battery/voltage_now"
     CURR_FILE="/sys/class/power_supply/battery/current_now"
     [ ! -f "$VOLT_FILE" ] && VOLT_FILE="/sys/class/power_supply/bms/voltage_now"
@@ -35,20 +46,11 @@ notify_status() {
         VOLT=$(cat "$VOLT_FILE" 2>/dev/null | tr -d '[:space:]')
         CURR=$(cat "$CURR_FILE" 2>/dev/null | tr -d '[:space:]')
 
-        # FIX: Divide inputs by 1,000,000 FIRST to get Volts and Amps.
-        # Then multiply. This prevents integer overflow in awk.
         POWER_WATTS=$(awk -v v="$VOLT" -v c="$CURR" 'BEGIN {
-            # Convert micro-units to base units immediately
             volts = v / 1000000
             amps = c / 1000000
-            
-            # Make amps positive
             if (amps < 0) amps = -amps
-            
-            # Calculate Watts
             val = volts * amps
-            
-            # Sanity Check (0.01W to 60W)
             if (val >= 0.01 && val <= 60) {
                 printf "%.2fW", val
             } else {
@@ -60,7 +62,10 @@ notify_status() {
     local status_msg="$1"
     local full_msg="$status_msg | Gov: $CPU_GOV | Pwr: $POWER_WATTS | Temp: $B_TEMP"
 
-    su -lp 2000 -c "cmd notification post -I /data/adb/modules/MTK_AI/icon.png -S bigtext -t 'Lite mode' tag '$full_msg'" >/dev/null 2>&1
+    # --- 4. Post Notification ---
+    # -i (lowercase) puts the icon ON TOP in the status bar.
+    # file:// prefix is REQUIRED for local paths.
+    su -lp 2000 -c "cmd notification post -t '$TITLE' -i '$ICON' -S bigtext mtk_ai_tag '$full_msg'" >/dev/null 2>&1
 }
 
 touch_active() {
