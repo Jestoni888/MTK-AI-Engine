@@ -34,15 +34,31 @@ export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:/data/adb/modules/MTK_AI/l
 INOTIFY="/data/adb/modules/MTK_AI/lib/inotifywait"
 POWERSAVE="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/powersave"
 MANUAL="/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual"
-MONITOR_FILE="/sys/class/leds/lcd-backlight/brightness"
+
+# Dynamically find all 'brightness' files in /sys/
+BRIGHTNESS_FILES=$(find /sys -name "brightness" -type f 2>/dev/null)
+
+if [ -z "$BRIGHTNESS_FILES" ]; then
+    echo "No brightness files found in /sys/"
+    exit 1
+fi
 
 # Function to check state and launch the correct script
 apply_mode() {
-    # Read the current state of the monitor file
-    STATE=$(cat "$MONITOR_FILE" 2>/dev/null)
+    all_zero=true
     
-    if [ "$STATE" = "0" ]; then
-        # Screen is OFF -> Apply powersave mode if enabled
+    # Iterate through all dynamically found brightness files
+    for file in $BRIGHTNESS_FILES; do
+        STATE=$(cat "$file" 2>/dev/null)
+        # If any file has a value other than 0 (and is not empty), screen is considered ON
+        if [ -n "$STATE" ] && [ "$STATE" != "0" ]; then
+            all_zero=false
+            break
+        fi
+    done
+    
+    if [ "$all_zero" = true ]; then
+        # Screen is OFF (all values are 0) -> Apply powersave mode if enabled
         if [ -f "/sdcard/MTK_AI_Engine/low_power_mode" ]; then
             "$POWERSAVE" &
         fi
@@ -50,7 +66,7 @@ apply_mode() {
             nohup sh "/data/adb/modules/MTK_AI/action.sh" >/dev/null 2>&1 &
         fi
     else
-        # Screen is ON -> Apply manual/performance mode
+        # Screen is ON (at least one value > 0) -> Apply manual/performance mode
         "$MANUAL" &
         nohup sh "/data/adb/modules/MTK_AI/update_checker.sh" >/dev/null 2>&1 &
     fi
@@ -59,10 +75,11 @@ apply_mode() {
 # Apply the correct mode immediately on script startup
 apply_mode
 
-# Start monitoring the file for changes using your custom inotifywait
+# Start monitoring all found files for changes using your custom inotifywait
 # -m : monitor mode (keeps the process alive to watch for future events)
 # -e modify : trigger when the file content is modified
 # -q : quiet mode (reduces output overhead)
-"$INOTIFY" -m -e modify -q "$MONITOR_FILE" | while read -r dir event file; do
+# $BRIGHTNESS_FILES expands to all found file paths
+"$INOTIFY" -m -e modify -q $BRIGHTNESS_FILES | while read -r dir event file; do
     apply_mode
 done
