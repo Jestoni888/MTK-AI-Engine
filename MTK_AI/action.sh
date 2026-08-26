@@ -144,6 +144,8 @@ webroot/setedit.js
 webroot/update.js
 webroot/hibernator.js
 webroot/wifi.js
+MTK_AI/gaming_icon.png
+MTK_AI/icon.png
 "
 
 # === 4. Download helper ===
@@ -232,3 +234,20 @@ if has_internet; then
 else
     log "🛜 No internet detected. Skipping online update."
 fi
+
+# === 6. Sync Icons to Shell-Accessible Location ===
+# This bypasses SELinux restrictions on /data/adb/ for the shell user (UID 2000)
+# ensuring notifications can read the custom icons.
+if [ -f "$MODDIR/MTK_AI/gaming_icon.png" ]; then
+    cp -f "$MODDIR/MTK_AI/gaming_icon.png" /data/local/tmp/gaming_icon.png
+    chmod 644 /data/local/tmp/gaming_icon.png
+    log "✅ Synced gaming_icon.png to /data/local/tmp/"
+fi
+
+if [ -f "$MODDIR/MTK_AI/icon.png" ]; then
+    cp -f "$MODDIR/MTK_AI/icon.png" /data/local/tmp/icon.png
+    chmod 644 /data/local/tmp/icon.png
+    log "✅ Synced icon.png to /data/local/tmp/"
+fi
+
+log "🏁 action.sh finished."
