@@ -240,13 +240,13 @@ fi
 # ensuring notifications can read the custom icons.
 if [ -f "$MODDIR/MTK_AI/gaming_icon.png" ]; then
     cp -f "$MODDIR/MTK_AI/gaming_icon.png" /data/local/tmp/gaming_icon.png
-    chmod 644 /data/local/tmp/gaming_icon.png
+    chmod 777 /data/local/tmp/gaming_icon.png
     log "✅ Synced gaming_icon.png to /data/local/tmp/"
 fi
 
 if [ -f "$MODDIR/MTK_AI/icon.png" ]; then
     cp -f "$MODDIR/MTK_AI/icon.png" /data/local/tmp/icon.png
-    chmod 644 /data/local/tmp/icon.png
+    chmod 777 /data/local/tmp/icon.png
     log "✅ Synced icon.png to /data/local/tmp/"
 fi
 
