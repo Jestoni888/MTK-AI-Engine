@@ -238,14 +238,14 @@ fi
 # === 6. Sync Icons to Shell-Accessible Location ===
 # This bypasses SELinux restrictions on /data/adb/ for the shell user (UID 2000)
 # ensuring notifications can read the custom icons.
-if [ -f "$MODDIR/MTK_AI/gaming_icon.png" ]; then
-    cp -f "$MODDIR/MTK_AI/gaming_icon.png" /data/local/tmp/gaming_icon.png
+if [ -f "$MODDIR/gaming_icon.png" ]; then
+    cp -f "$MODDIR/gaming_icon.png" /data/local/tmp/gaming_icon.png
     chmod 777 /data/local/tmp/gaming_icon.png
     log "✅ Synced gaming_icon.png to /data/local/tmp/"
 fi
 
-if [ -f "$MODDIR/MTK_AI/icon.png" ]; then
-    cp -f "$MODDIR/MTK_AI/icon.png" /data/local/tmp/icon.png
+if [ -f "$MODDIR/icon.png" ]; then
+    cp -f "$MODDIR/icon.png" /data/local/tmp/icon.png
     chmod 777 /data/local/tmp/icon.png
     log "✅ Synced icon.png to /data/local/tmp/"
 fi
