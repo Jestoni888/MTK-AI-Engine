@@ -325,13 +325,19 @@ apply_gpu_freq() {
 # ============================================================
 notify_status() {
     if [ -f /dev/.mtk_ai_active_game ]; then
+    [ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
+        if [ -f /dev/.mtk_ai_active_game ]; then
+        # Use file:// prefix and lowercase -i for the status bar icon
+        ICON="file:///data/local/tmp/gaming_icon.png"
+        TITLE="lite gaming"
+        fi
         local cpu_limit_pct="$1"
         [ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
         RAW_TEMP=$(cat "$TARGET_TEMP_FILE" 2>/dev/null | tr -d '[:space:]')
         [ -z "$RAW_TEMP" ] && RAW_TEMP=0
         case "$RAW_TEMP" in ''|*[!0-9]*) RAW_TEMP=0 ;; esac
         B_TEMP="$((RAW_TEMP / 10)).$((RAW_TEMP % 10))°C"
-        su -lp 2000 -c "cmd notification post -I /data/adb/modules/MTK_AI/icon.png -S bigtext -t 'lite gaming' tag 'Temp: $B_TEMP | CPU: ${cpu_limit_pct}%'" >/dev/null 2>&1
+        su -lp 2000 -c "cmd notification post -i '$ICON' -S bigtext -t '$TITLE' tag 'Temp: $B_TEMP | CPU: ${cpu_limit_pct}%'" >/dev/null 2>&1
     fi
 }
 
