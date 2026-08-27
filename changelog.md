@@ -6,6 +6,8 @@
 
 •screen on/off detection optimize, now uses 'find /sys/' to locate anywhere so that it can support to all devices
 
+•action.sh now uses file checked by only updating the modified & updated ones
+
 --- version 0.0.0.98 ---
 
 •setedit added normal & gaming script generator that later on automatically triggered in our daemon
