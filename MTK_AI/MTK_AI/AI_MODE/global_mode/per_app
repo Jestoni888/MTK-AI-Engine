@@ -1,0 +1,66 @@
+#!/system/bin/sh
+
+### === SINGLE INSTANCE LOCK ===
+LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
+mkdir -p "$LOCK_DIR"
+LOCK_FILE="$LOCK_DIR/per_app.pid"
+
+# 1️⃣ Global pgrep check FIRST
+if pgrep -f "per_app" | grep -v "^$$" > /dev/null 2>&1; then
+    exit 0
+else
+    rm -rf "$LOCK_DIR"
+fi
+
+# 2️⃣ If PID file exists and process is alive → exit silently
+if [ -f "$LOCK_FILE" ]; then
+    OLD_PID=$(cat "$LOCK_FILE" 2>/dev/null)
+    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+        exit 0
+    fi
+fi
+
+# 3️⃣ Register current process as the single instance
+mkdir -p "$LOCK_DIR"
+echo $$ > "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT
+### ============================
+
+local DUMP
+DUMP=$(dumpsys activity activities 2>/dev/null)
+CURRENT_TOP_APP=$(echo "$DUMP" | grep -m1 -E 'mResumedActivity|mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+
+refresh_rate() {
+    # --- Execute per-app refresh rate ---
+    REFRESH_FILE="/sdcard/MTK_AI_Engine/manual_refresh_lock.txt"
+    MODE_FILE="/sdcard/MTK_AI_Engine/refresh_locks/${CURRENT_TOP_APP}.mode"
+
+    # 1. Read the global mode ID (strip spaces, tabs, newlines)
+    MODE_ID=""
+    if [ -f "$REFRESH_FILE" ]; then
+        MODE_ID=$(cat "$REFRESH_FILE" 2>/dev/null | tr -d '[:space:]')
+    fi
+
+    # 2. Determine which mode to apply (Per-app vs Global)
+    TARGET_MODE=""
+    if [ -f "$MODE_FILE" ]; then
+        # Read the per-app mode ID
+        MODE=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
+        
+        if [ -n "$MODE" ]; then
+            TARGET_MODE="$MODE"      # Use per-app mode if valid
+        else
+            TARGET_MODE="$MODE_ID"   # Fallback to global if per-app file is empty
+        fi
+    else
+        TARGET_MODE="$MODE_ID"       # Fallback to global if per-app file doesn't exist
+    fi
+
+    # 3. Execute the refresh rate change ONLY if we have a valid mode
+    if [ -n "$TARGET_MODE" ]; then
+        service call SurfaceFlinger 1035 i32 "$TARGET_MODE"
+    fi
+    # -----------------------------------------
+}
+refresh_rate
+
