@@ -188,43 +188,46 @@ su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/mo
         }
     };
 
-    // ============ STATE FILE MANAGEMENT ============
-    const STATE_FILE_PATH = '/sdcard/MTK_AI_Engine/automode';
-    const PROFILE_FILE_PATH = '/sdcard/MTK_AI_Engine/current_profile';
+// ============ STATE FILE MANAGEMENT ============
+const STATE_FILE_PATH = '/sdcard/MTK_AI_Engine/automode';
+const PROFILE_FILE_PATH = '/sdcard/MTK_AI_Engine/current_profile';
 
-    async function saveServicesState(enabled) {
-        try {
-            await exec(`mkdir -p /sdcard/MTK_AI_Engine 2>/dev/null`);
-            await exec(`echo "${enabled ? '1' : '0'}" > "${STATE_FILE_PATH}" 2>/dev/null`);
-            return true;
-        } catch (e) { console.error('Failed to save services state:', e); return false; }
-    }
+async function saveServicesState(enabledOrMode) {
+    try {
+        await exec(`mkdir -p /sdcard/MTK_AI_Engine 2>/dev/null`);
+        // FIX: Accept actual mode (0, 1, 2) instead of just boolean
+        let val = (typeof enabledOrMode === 'number') ? enabledOrMode : (enabledOrMode ? 1 : 0);
+        await exec(`echo "${val}" > "${STATE_FILE_PATH}" 2>/dev/null`);
+        return true;
+    } catch (e) { console.error('Failed to save services state:', e); return false; }
+}
 
-    async function loadServicesState() {
-        try {
-            const result = await exec(`cat "${STATE_FILE_PATH}" 2>/dev/null`);
-            const val = result.trim();
-            if (val === '1') return true;
-            if (val === '0') return false;
-            return null;
-        } catch (e) { console.error('Failed to load services state:', e); return null; }
-    }
+async function loadServicesState() {
+    try {
+        const result = await exec(`cat "${STATE_FILE_PATH}" 2>/dev/null`);
+        const val = result.trim();
+        if (val === '1' || val === '2') return true; // FIX: 2 is also enabled
+        if (val === '0') return false;
+        return null;
+    } catch (e) { console.error('Failed to load services state:', e); return null; }
+}
 
-    async function saveProfileState(profile) {
-        try {
-            await exec(`mkdir -p /sdcard/MTK_AI_Engine 2>/dev/null`);
-            await exec(`echo "${profile}" > "${PROFILE_FILE_PATH}" 2>/dev/null`);
-            return true;
-        } catch (e) { console.error('Failed to save profile state:', e); return false; }
-    }
-    async function loadProfileState() {
-        try {
-            const result = await exec(`cat "${PROFILE_FILE_PATH}" 2>/dev/null`);
-            const val = result.trim().toLowerCase();
-            if (PROFILE_MODES[val]) return val;
-            return null;
-        } catch (e) { console.error('Failed to load profile state:', e); return null; }
-    }
+async function saveProfileState(profile) {
+    try {
+        await exec(`mkdir -p /sdcard/MTK_AI_Engine 2>/dev/null`);
+        await exec(`echo "${profile}" > "${PROFILE_FILE_PATH}" 2>/dev/null`);
+        return true;
+    } catch (e) { console.error('Failed to save profile state:', e); return false; }
+}
+
+async function loadProfileState() {
+    try {
+        const result = await exec(`cat "${PROFILE_FILE_PATH}" 2>/dev/null`);
+        const val = result.trim().toLowerCase();
+        if (PROFILE_MODES[val]) return val;
+        return null;
+    } catch (e) { console.error('Failed to load profile state:', e); return null; }
+}
 
     // ============ SAFE EXEC WRAPPER ============
     async function exec(command, timeout = 10000) {
@@ -840,50 +843,75 @@ su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/mo
 
     // ============ MTK SERVICES & OVERLAY ============
     let mtkServicesEnabled = false;
-    
-    window.toggleMTKServices = async function() {
-        const txt = document.getElementById('mon_services'), dot = document.getElementById('services-status-dot');
-        try {
-            if (mtkServicesEnabled) {
-                await exec(`su -c "pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null"`);
-                await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
-                mtkServicesEnabled = false;
-                await saveServicesState(false);
-                if (txt) { txt.textContent = 'LITE MODE'; txt.style.color = '#FF453A'; }
-                if (dot) { dot.style.background = '#FF453A'; dot.style.display = 'block'; }
-                showStatus('⏹️ MTK AI services disabled - LITE MODE', '#0000ff');
-            } else {
-                await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
-                mtkServicesEnabled = true;
-                await saveServicesState(true);
-                if (txt) { txt.textContent = 'HARD MODE'; txt.style.color = '#32D74B'; }
-                if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; }                showStatus('▶️ MTK AI services enabled - HARD MODE', '#32D74B');
-            }
-            setTimeout(() => { if (dot) dot.style.display = 'none'; }, 2000);
-        } catch (e) { 
-            showStatus('❌ Toggle failed: ' + e.message, '#FF453A'); 
+
+window.toggleMTKServices = async function() {
+    const txt = document.getElementById('mon_services'), dot = document.getElementById('services-status-dot');
+    try {
+        // 1. Read current mode from file (defaults to 0 if file doesn't exist)
+        const readRes = await exec('cat /sdcard/MTK_AI_Engine/automode 2>/dev/null || echo 0');
+        let mode = parseInt(readRes.trim()) || 0;
+        
+        // 2. Cycle to next mode: 0 (Lite) -> 1 (Hard) -> 2 (Standard) -> 0
+        mode = (mode + 1) % 3;
+        
+        // 3. Save the new mode to the file
+        await exec(`su -c "mkdir -p /sdcard/MTK_AI_Engine && echo '${mode}' > /sdcard/MTK_AI_Engine/automode"`);
+        
+        // 4. Restart the services
+        await exec(`su -c "pkill -9 -f \\"/data/adb/modules/MTK_AI\\" 2>/dev/null"`);
+        await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
+        
+        mtkServicesEnabled = (mode !== 0);
+        await saveServicesState(mode); // Pass the actual mode (0, 1, or 2)
+
+        // 5. Update UI based on the new mode
+        let modeText = '', modeColor = '', statusMsg = '';
+        if (mode === 0) {
+            modeText = 'LITE MODE'; modeColor = '#FF453A'; statusMsg = '⏹️ MTK AI services - LITE MODE';
+        } else if (mode === 1) {
+            modeText = 'HARD MODE'; modeColor = '#32D74B'; statusMsg = '▶️ MTK AI services - HARD MODE';
+        } else if (mode === 2) {
+            modeText = 'STANDARD MODE'; modeColor = '#FF9500'; statusMsg = '⚡ MTK AI services - STANDARD MODE';
         }
-    };
-    
-    async function checkMTKServicesStatus() {
-        try {
-            const result = await exec('pgrep -f "mtk_ai_engine" 2>/dev/null');
-            const isRunning = result.trim().length > 0;
-            mtkServicesEnabled = isRunning;
-            const txt = document.getElementById('mon_services');
-            const dot = document.getElementById('services-status-dot');
-            if (isRunning) {
-                if (txt) { txt.textContent = 'HARD MODE'; txt.style.color = '#32D74B'; }
-                if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; }
-            } else {
-                if (txt) { txt.textContent = 'LITE MODE'; txt.style.color = '#0000ff'; }
-                if (dot) { dot.style.background = '#0000ff'; dot.style.display = 'block'; }
-            }
-            setTimeout(() => { if (dot) dot.style.display = 'none'; }, 1000);
-        } catch (e) {
-            console.error('Service check error:', e);
-        }
+
+        if (txt) { txt.textContent = modeText; txt.style.color = modeColor; }
+        if (dot) { dot.style.background = modeColor; dot.style.display = 'block'; }
+        showStatus(statusMsg, modeColor);
+
+        setTimeout(() => { if (dot) dot.style.display = 'none'; }, 2000);
+    } catch (e) { 
+        showStatus('❌ Toggle failed: ' + e.message, '#FF453A'); 
     }
+};
+
+async function checkMTKServicesStatus() {
+    try {
+        // Read mode from file instead of using pgrep
+        const result = await exec('cat /sdcard/MTK_AI_Engine/automode 2>/dev/null || echo 0');
+        const mode = parseInt(result.trim()) || 0;
+        
+        mtkServicesEnabled = (mode !== 0);
+        
+        const txt = document.getElementById('mon_services');
+        const dot = document.getElementById('services-status-dot');
+        
+        let modeText = '', modeColor = '';
+        if (mode === 1) {
+            modeText = 'HARD MODE'; modeColor = '#32D74B';
+        } else if (mode === 2) {
+            modeText = 'STANDARD MODE'; modeColor = '#FF9500'; // Orange for Standard
+        } else {
+            modeText = 'LITE MODE'; modeColor = '#0000ff';
+        }
+        
+        if (txt) { txt.textContent = modeText; txt.style.color = modeColor; }
+        if (dot) { dot.style.background = modeColor; dot.style.display = 'block'; }
+        
+        setTimeout(() => { if (dot) dot.style.display = 'none'; }, 1000);
+    } catch (e) {
+        console.error('Service check error:', e);
+    }
+}
 
     let isOverlayOn = false;
     window.toggleOverlay = async function() {
@@ -975,19 +1003,26 @@ su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/mo
         await loadSystemStatus();
         
         // Load saved states
-        const savedState = await loadServicesState();
-        if (savedState !== null) {
-            mtkServicesEnabled = savedState;
-            const txt = document.getElementById('mon_services');
-            const dot = document.getElementById('services-status-dot');
-            if (mtkServicesEnabled) {
-                if (txt) { txt.textContent = 'HARD MODE'; txt.style.color = '#32D74B'; }
-                if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; setTimeout(() => dot.style.display = 'none', 1000); }
-            } else {
-                if (txt) { txt.textContent = 'LITE MODE'; txt.style.color = '#0000ff'; }
-                if (dot) { dot.style.background = '#FF453A'; dot.style.display = 'block'; setTimeout(() => dot.style.display = 'none', 1000); }
-            }
-        }
+const savedState = await loadServicesState();
+if (savedState !== null) {
+    mtkServicesEnabled = savedState;
+    const txt = document.getElementById('mon_services');
+    const dot = document.getElementById('services-status-dot');
+    
+    // Read mode from file: 0=Lite, 1=Hard, 2=Standard
+    const mode = parseInt((await exec('cat /sdcard/MTK_AI_Engine/automode 2>/dev/null || echo 0')).trim()) || 0;
+
+    if (mode === 2) {
+        if (txt) { txt.textContent = 'STANDARD MODE'; txt.style.color = '#FF9500'; }
+        if (dot) { dot.style.background = '#FF9500'; dot.style.display = 'block'; setTimeout(() => dot.style.display = 'none', 1000); }
+    } else if (mode === 1) {
+        if (txt) { txt.textContent = 'HARD MODE'; txt.style.color = '#32D74B'; }
+        if (dot) { dot.style.background = '#32D74B'; dot.style.display = 'block'; setTimeout(() => dot.style.display = 'none', 1000); }
+    } else {
+        if (txt) { txt.textContent = 'LITE MODE'; txt.style.color = '#0000ff'; }
+        if (dot) { dot.style.background = '#FF453A'; dot.style.display = 'block'; setTimeout(() => dot.style.display = 'none', 1000); }
+    }
+}
         
         // Load saved profile
         const savedProfile = await loadProfileState();
@@ -1076,18 +1111,42 @@ function enforcePosition() {
 window.toggleMTKServices = async function() {
     if (ccBusy) return;
     try {
-        if (mtkServicesEnabled) {
-            await exec(`su -c "pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null"`);
-            await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
-            mtkServicesEnabled = false; await saveServicesState(false);
-            showStatus('⏹️ MTK AI services → LITE MODE', '#FF453A');
+        // 1. Read current mode (0: Lite, 1: Hard, 2: Standard)
+        const readRes = await exec('cat /sdcard/MTK_AI_Engine/automode 2>/dev/null || echo 0');
+        let mode = parseInt(readRes.trim()) || 0;
+        
+        // 2. Cycle to next mode
+        mode = (mode + 1) % 3;
+        
+        // 3. Save new mode to file
+        await exec(`su -c "mkdir -p /sdcard/MTK_AI_Engine && echo '${mode}' > /sdcard/MTK_AI_Engine/automode"`);
+        
+        // 4. Restart services
+        await exec(`su -c "pkill -9 -f '/data/adb/modules/MTK_AI' 2>/dev/null"`);
+        await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
+        
+        // 5. Update state and UI based on new mode
+        let statusMsg = '', statusColor = '';
+        if (mode === 0) {
+            mtkServicesEnabled = false;
+            statusMsg = '⏹️ MTK AI services → LITE MODE';
+            statusColor = '#FF453A';
+        } else if (mode === 1) {
+            mtkServicesEnabled = true;
+            statusMsg = '▶️ MTK AI services → HARD MODE';
+            statusColor = '#32D74B';
         } else {
-            await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
-            mtkServicesEnabled = true; await saveServicesState(true);
-            showStatus('▶️ MTK AI services → HARD MODE', '#32D74B');
+            mtkServicesEnabled = true;
+            statusMsg = '⚡ MTK AI services → STANDARD MODE';
+            statusColor = '#FF9500'; // Orange for Standard
         }
+        
+        await saveServicesState(mode); // Pass the actual mode (0, 1, or 2)
+        showStatus(statusMsg, statusColor);
         updateControlStates();
-    } catch (e) { showStatus('❌ Toggle failed: ' + e.message, '#FF453A'); }
+    } catch (e) { 
+        showStatus('❌ Toggle failed: ' + e.message, '#FF453A'); 
+    }
 };
 window.toggleOverlay = async function() {
     const next = !isOverlayOn;
@@ -1141,12 +1200,23 @@ async function writeBytesToSdcard(bytes, path) {
 // ---- UI state helpers ----
 function setCCStatus(m, c) { const el = document.getElementById('cc-status'); if (el) { el.textContent = m; el.style.color = c || '#8f7bd0'; } }
 function setCCBusy(b) { ccBusy = b; document.querySelectorAll('.cc-btn').forEach(x => { x.disabled = b; x.classList.toggle('busy', b); }); }
-function updateControlStates() {
+async function updateControlStates() {
     const s = document.getElementById('cc-btn-services');
     if (s) {
-        s.dataset.active = mtkServicesEnabled;
-        s.querySelector('.cc-ico i').className = 'fas ' + (mtkServicesEnabled ? 'fa-rocket' : 'fa-microchip');
-        s.querySelector('.cc-sub').textContent = mtkServicesEnabled ? 'HARD' : 'LITE';
+        // Read actual mode from file (0=Lite, 1=Hard, 2=Standard)
+        const mode = parseInt((await exec('cat /sdcard/MTK_AI_Engine/automode 2>/dev/null || echo 0')).trim()) || 0;
+        
+        s.dataset.active = (mode !== 0);
+        s.querySelector('.cc-ico i').className = 'fas ' + (mode !== 0 ? 'fa-rocket' : 'fa-microchip');
+        
+        // Show correct mode name based on file value
+        if (mode === 2) {
+            s.querySelector('.cc-sub').textContent = 'STANDARD';
+        } else if (mode === 1) {
+            s.querySelector('.cc-sub').textContent = 'HARD';
+        } else {
+            s.querySelector('.cc-sub').textContent = 'LITE';
+        }
     }
     const o = document.getElementById('cc-btn-overlay');
     if (o) {
@@ -1232,8 +1302,9 @@ if (!document.getElementById('cc-services-modal')) {
         .cc-modal-title { color:#fff; font-size:16px; font-weight:800; text-align:center; margin-bottom:20px; text-transform:uppercase; letter-spacing:1px; }
         .cc-mode-info { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:12px; padding:14px; margin-bottom:12px; transition:all 0.2s; }
         .cc-mode-info.active-mode { border-color:#5b9dff; background:rgba(91,157,255,0.1); }
+        .cc-mode-info.active-mode-standard { border-color:#FF9500; background:rgba(255,149,0,0.1); }
         .cc-mode-name { font-size:12px; font-weight:800; color:#5b9dff; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
-        .cc-mode-info.active-mode .cc-mode-name { color:#fff; }
+        .cc-mode-info.active-mode .cc-mode-name, .cc-mode-info.active-mode-standard .cc-mode-name { color:#fff; }
         .cc-mode-name::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; box-shadow:0 0 8px currentColor; }
         .cc-mode-desc { font-size:11px; color:#aaa; line-height:1.5; }
         .cc-modal-btn { width:100%; padding:14px; border:none; border-radius:12px; background:linear-gradient(135deg, #5b9dff, #b678e8); color:#fff; font-weight:800; font-size:13px; text-transform:uppercase; letter-spacing:1px; cursor:pointer; margin-top:10px; box-shadow:0 4px 15px rgba(91,157,255,0.3); }
@@ -1243,54 +1314,108 @@ if (!document.getElementById('cc-services-modal')) {
     document.head.appendChild(modalStyle);
 
     const modal = document.createElement('div');
-    modal.id = 'cc-services-modal';
-    modal.className = 'cc-modal-overlay';
-    modal.innerHTML = `
-        <div class="cc-modal-box">
-            <button class="cc-modal-close" onclick="document.getElementById('cc-services-modal').classList.remove('active')">&times;</button>
-            <div class="cc-modal-title">MTK AI Services</div>
-            <div class="cc-mode-info" id="modal-lite-mode">
-                <div class="cc-mode-name">LITE MODE</div>
-                <div class="cc-mode-desc">A lightweight daemon that uses touch as trigger detection, it only wakes up if touching occurs.</div>
-            </div>
-            <div class="cc-mode-info" id="modal-hard-mode">
-                <div class="cc-mode-name">HARD MODE</div>
-                <div class="cc-mode-desc">Instant detection it uses both touch detection & logcat so it will slightly consumes more cpu.</div>
-            </div>
-            <button class="cc-modal-btn" id="modal-toggle-btn">Switch Mode</button>
+modal.id = 'cc-services-modal';
+modal.className = 'cc-modal-overlay';
+modal.innerHTML = `
+    <div class="cc-modal-box">
+        <button class="cc-modal-close" onclick="document.getElementById('cc-services-modal').classList.remove('active')">&times;</button>
+        <div class="cc-modal-title">MTK AI Services</div>
+        <div class="cc-mode-info" id="modal-lite-mode" style="cursor:pointer" onclick="switchToMode(0)">
+            <div class="cc-mode-name">LITE MODE</div>
+            <div class="cc-mode-desc">A lightweight daemon that uses Java runtime environment as fastest detection than dumpsys & logcat.</div>
         </div>
-    `;
-    document.body.appendChild(modal);
+        <div class="cc-mode-info" id="modal-standard-mode" style="cursor:pointer" onclick="switchToMode(2)">
+            <div class="cc-mode-name" style="color:#FF9500">STANDARD MODE</div>
+            <div class="cc-mode-desc">Uses dumpsys as standard detection that can support all devices, slow but reliable.</div>
+        </div>
+        <div class="cc-mode-info" id="modal-hard-mode" style="cursor:pointer" onclick="switchToMode(1)">
+            <div class="cc-mode-name">HARD MODE</div>
+            <div class="cc-mode-desc">Instant detection it uses both touch detection & logcat so it will slightly consumes more cpu.</div>
+        </div>
+    </div>
+`;
+document.body.appendChild(modal);
 
     // Close when clicking outside the box
     modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.classList.remove('active');
     });
-
-    // Toggle button action inside the popup
-    document.getElementById('modal-toggle-btn').addEventListener('click', () => {
-        modal.classList.remove('active');
-        toggleMTKServices();
-    });
 }
 
+window.switchToMode = async function(mode) {
+    const modal = document.getElementById('cc-services-modal');
+    if (modal) modal.classList.remove('active');
+    
+    try {
+        // Save the selected mode to file
+        await exec(`su -c "mkdir -p /sdcard/MTK_AI_Engine && echo '${mode}' > /sdcard/MTK_AI_Engine/automode"`);
+        
+        // Restart services
+        await exec(`su -c "pkill -9 -f '/data/adb/modules/MTK_AI' 2>/dev/null"`);
+        await exec(`su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`);
+        
+        // Update state
+        mtkServicesEnabled = (mode !== 0);
+        await saveServicesState(mode); // Pass the actual mode (0, 1, or 2)
+        
+        // Show status
+        let statusMsg = '', statusColor = '';
+        if (mode === 0) {
+            statusMsg = '⏹️ MTK AI services → LITE MODE';
+            statusColor = '#FF453A';
+        } else if (mode === 1) {
+            statusMsg = '▶️ MTK AI services → HARD MODE';
+            statusColor = '#32D74B';
+        } else {
+            statusMsg = '⚡ MTK AI services → STANDARD MODE';
+            statusColor = '#FF9500';
+        }
+        
+        showStatus(statusMsg, statusColor);
+        updateControlStates();
+    } catch (e) {
+        showStatus('❌ Switch failed: ' + e.message, '#FF453A');
+    }
+};
+
 // Function to open the popup and highlight the current active mode
-window.showServicesModal = function() {
+window.showServicesModal = async function() {
     const modal = document.getElementById('cc-services-modal');
     if (!modal) return;
     
     const liteEl = document.getElementById('modal-lite-mode');
+    const standardEl = document.getElementById('modal-standard-mode');
     const hardEl = document.getElementById('modal-hard-mode');
-    const btn = document.getElementById('modal-toggle-btn');
     
-    if (mtkServicesEnabled) {
-        hardEl.classList.add('active-mode');
-        liteEl.classList.remove('active-mode');
-        btn.textContent = 'Switch to LITE MODE';
-    } else {
-        liteEl.classList.add('active-mode');
-        hardEl.classList.remove('active-mode');
-        btn.textContent = 'Switch to HARD MODE';
+    // ❌ REMOVE THIS LINE: const btn = document.getElementById('modal-toggle-btn');
+    
+    // Clear previous active states
+    liteEl.classList.remove('active-mode');
+    standardEl.classList.remove('active-mode', 'active-mode-standard');
+    hardEl.classList.remove('active-mode');
+    
+    try {
+        // Read current mode from file to know exactly which one is active
+        const readRes = await exec('cat /sdcard/MTK_AI_Engine/automode 2>/dev/null || echo 0');
+        const mode = parseInt(readRes.trim()) || 0;
+        
+        if (mode === 0) {
+            liteEl.classList.add('active-mode');
+            // ❌ REMOVE: btn.textContent = 'Switch to HARD MODE';
+        } else if (mode === 2) {
+            standardEl.classList.add('active-mode-standard');
+            // ❌ REMOVE: btn.textContent = 'Switch to LITE MODE';
+        } else {
+            hardEl.classList.add('active-mode');
+            // ❌ REMOVE: btn.textContent = 'Switch to STANDARD MODE';
+        }
+    } catch (e) {
+        // Fallback to boolean state if file read fails
+        if (mtkServicesEnabled) {
+            hardEl.classList.add('active-mode');
+        } else {
+            liteEl.classList.add('active-mode');
+        }
     }
     
     modal.classList.add('active');
@@ -1310,7 +1435,7 @@ window.showServicesModal = function() {
         </div>
         <div class="cc-status" id="cc-status">Ready</div>`;
     placeControlCenter(card);
-    updateControlStates();
+    setInterval(() => updateControlStates(), 2000);
     setInterval(updateControlStates, 2000);
 }
 
