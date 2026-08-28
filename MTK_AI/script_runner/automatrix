@@ -140,9 +140,12 @@ while true; do
         if [ "$STATE" = "SAVE" ]; then
             STATE="PERF"
             touch_active
-            # 🔧 FIX: Skip current_app if automode is "1"
-            if [ ! -f "$EXTERNAL_CFG/automode" ] || [ "$(cat "$EXTERNAL_CFG/automode" 2>/dev/null)" != "1" ]; then
-                current_app
+            # 🔧 FIX: Skip current_app if automode is "1" or "0"
+            if [ ! -f "$EXTERNAL_CFG/automode" ] || {
+            value=$(cat "$EXTERNAL_CFG/automode" 2>/dev/null)
+    [ "$value" != "1" ] && [ "$value" != "0" ]
+}; then
+            current_app
             fi
         fi
     else
@@ -153,9 +156,12 @@ while true; do
             STATE="SAVE"
             touch_inactive
             run_cmd
-            # 🔧 FIX: Skip current_app if automode is "1"
-            if [ ! -f "$EXTERNAL_CFG/automode" ] || [ "$(cat "$EXTERNAL_CFG/automode" 2>/dev/null)" != "1" ]; then
-                current_app
+            # 🔧 FIX: Skip current_app if automode is "1" or "0"
+            if [ ! -f "$EXTERNAL_CFG/automode" ] || {
+            value=$(cat "$EXTERNAL_CFG/automode" 2>/dev/null)
+    [ "$value" != "1" ] && [ "$value" != "0" ]
+}; then
+            current_app
             fi
         fi
     fi
