@@ -87,7 +87,6 @@ for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); d
 done
 
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
-rm -f /dev/.mtk_ai_active_game
 STATE="/sdcard/MTK_AI_Engine/use_tweaks"
 [ "$(cat "$STATE" 2>/dev/null | tr -d '[:space:]')" != "1" ] && exit 0
 
