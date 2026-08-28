@@ -26,7 +26,6 @@ echo $$ > "$LOCK_FILE"
 trap 'rm -f "$LOCK_FILE"' EXIT
 ### ============================
 
-local DUMP
 DUMP=$(dumpsys activity activities 2>/dev/null)
 CURRENT_TOP_APP=$(echo "$DUMP" | grep -m1 -E 'mResumedActivity|mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
 
@@ -85,3 +84,5 @@ shell_cmd() {
     fi
 }
 shell_cmd
+
+[ ! -f /sdcard/MTK_AI_Engine/enable_cleaner ] && nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" >/dev/null 2>&1 &
