@@ -1,6 +1,5 @@
 #!/system/bin/sh
 # Fallback to BusyBox sh if available for better POSIX compliance
-
 CONFIG_DIR="/sdcard/MTK_AI_Engine"
 CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
 LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
@@ -8,340 +7,126 @@ CPULIMIT="/data/adb/modules/MTK_AI/lib/cpulimit"
 CPU_SYS="/sys/devices/system/cpu"
 
 log_msg() {
-if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
-  echo "log disabled"
-else
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE" 2>/dev/null || echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
-fi
+    if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+        echo "log disabled"
+    else
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE" 2>/dev/null || echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    fi
 }
 
 chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_max_freq 2>/dev/null || true
 chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_min_freq 2>/dev/null || true
-
 for d in /sys/devices/system/cpu/cpu[0-9]*/cpufreq; do
-  [ -d "$d" ] || continue
-  H_MAX=$(cat "$d/cpuinfo_max_freq" 2>/dev/null) || continue
-  H_MIN=$(cat "$d/cpuinfo_min_freq" 2>/dev/null) || echo 0
-  [ -n "$H_MAX" ] && { echo "$H_MAX" > "$d/scaling_max_freq" 2>/dev/null || true; echo "$H_MIN" > "$d/scaling_min_freq" 2>/dev/null || true; }
+    [ -d "$d" ] || continue
+    H_MAX=$(cat "$d/cpuinfo_max_freq" 2>/dev/null) || continue
+    H_MIN=$(cat "$d/cpuinfo_min_freq" 2>/dev/null) || echo 0
+    [ -n "$H_MAX" ] && { echo "$H_MAX" > "$d/scaling_max_freq" 2>/dev/null || true; echo "$H_MIN" > "$d/scaling_min_freq" 2>/dev/null || true; }
 done
-
 for policy in $CPU_SYS/cpufreq/policy*; do
     chmod 000 "$policy/scaling_max_freq"
 done
 
-    # ==============================
-    # 🗄️ I/O Scheduler & Read-Ahead
-    # ==============================
-    find /sys \( -name "read_ahead_kb" -o -name "scheduler" \) ! -type d 2>/dev/null | while IFS= read -r file; do
-        chmod 777 "$file" 2>/dev/null || true
-        case "$file" in
-            *read_ahead_kb) echo 8192 | tee "$file" 2>/dev/null || true ;;
-            *scheduler)     echo none  | tee "$file" 2>/dev/null || true ;;
-        esac
-    done
+# ==============================
+# 🗄️ I/O Scheduler & Read-Ahead
+# ==============================
+find /sys \( -name "read_ahead_kb" -o -name "scheduler" \) ! -type d 2>/dev/null | while IFS= read -r file; do
+    chmod 777 "$file" 2>/dev/null || true
+    case "$file" in
+        *read_ahead_kb) echo 8192 | tee "$file" 2>/dev/null || true ;;
+        *scheduler)     echo none  | tee "$file" 2>/dev/null || true ;;
+    esac
+done
 
 log_msg "→ Applying Gaming EEM offsets from sdcard..."
 for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/proc/eem/EEM_DET_CCI/eem_offset bl:/proc/eem/EEM_DET_BL/eem_offset gpu:/proc/eemg/EEMG_DET_GPU/eemg_offset gpu_hi:/proc/eemg/EEMG_DET_GPU_HI/eemg_offset; do
-  k=${i%%:*}; p=${i#*:}; v=$(cat /sdcard/MTK_AI_Engine/eem_offsets/gaming/$k.txt 2>/dev/null)
-  [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
+    k=${i%%:*}; p=${i#*:}; v=$(cat /sdcard/MTK_AI_Engine/eem_offsets/gaming/$k.txt 2>/dev/null)
+    [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
 done || true
 
 # ==============================
-    # ⚡ CPU/CCI Power Mode
-    # ==============================
-    if [ -f "$CONFIG_DIR/cpufreq_mode" ]; then
+# ⚡ CPU/CCI Power Mode
+# ==============================
+if [ -f "$CONFIG_DIR/cpufreq_mode" ]; then
     echo "3" > /proc/cpufreq/cpufreq_power_mode 2>/dev/null || true
     echo "1" > /proc/cpufreq/cpufreq_cci_mode 2>/dev/null || true
-    fi
+fi
 
 #DND
 if [ -f "$CONFIG_DIR/enable_dnd_during_game" ]; then
     cmd notification set_dnd priority
 fi
-    
-echo disabled|tee /sys/devices/virtual/thermal/thermal_zone*/mode
 
+echo disabled | tee /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null || true
 nohup sh "/sdcard/MTK_AI_Engine/modes/gaming_mode.sh" >/dev/null 2>&1 &
 nohup sh "/sdcard/MTK_AI_Engine/setedit-modes/gaming.sh" >/dev/null 2>&1 &
-
 pkill -f cpulimit >/dev/null 2>&1 || true
 
 STATE="/sdcard/MTK_AI_Engine/use_tweaks"
 [ "$(cat "$STATE" 2>/dev/null | tr -d '[:space:]')" != "1" ] && exit 0
 
-    # ==============================
-    # 🎮 FPSGO / FSTB / FBT Tweaks
-    # ==============================
-    for path in \
-        /sys/kernel/fpsgo/common/fpsgo_enable \
-        /sys/kernel/fpsgo/fstb/fstb_self_ctrl_fps_enable \
-        /sys/kernel/fpsgo/fbt/enable_switch_down_throttle \
-        /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable \
-        /sys/kernel/fpsgo/fstb/set_cam_active; do
-        [ -f "$path" ] && echo "1" > "$path" 2>/dev/null || true
-    done    
-    # ==============================
-    # ✋ Touchscreen Modes (Glove/Cover)
-    # ==============================
-    for path in \
-        /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_cover_mode \
-        /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_glove_mode; do
-        [ -f "$path" ] && echo "1" > "$path" 2>/dev/null || true
-    done
-
-    # ==============================
-    # 🛡️ Kernel Panic & System Props
-    # ==============================
-    echo "0" > /proc/sys/kernel/panic 2>/dev/null || true
-
-    settings put global 'activity_manager_constants' 'max_cached_processes=0,background_settle_time=0,fgs_start_deny_exposure_time=10000,fgservice_min_show_time=0,fgservice_bg_start_timeout=0,max_phantom_processes=0,process_limit=-1,enable_fg_boost=true' || true
-    setprop persist.sys.max_background 0 2>/dev/null || true
-    setprop persist.sys.framepredict.enable true 2>/dev/null || true
-    setprop 'persist.sys.power_mode_perf' '1' || true
-    settings put system persist.sys.power_mode_perf 1 2>/dev/null || true
-    settings put global sustained_performance_mode_enabled 1 2>/dev/null || true
-
-    device_config put activity_manager max_phantom_processes 0 2>/dev/null || true
-    device_config put activity_manager max_cached_processes 0 2>/dev/null || true
-    device_config put activity_manager use_compaction true 2>/dev/null || true
-
-    am kill-all 2>/dev/null || true
-    cmd activity trim-memory critical 2>/dev/null || true
-    cmd activity compact-apps 3 2>/dev/null || true
-
-    # ==============================
-    # 🧠 VM / Sysctl Tuning
-    # ==============================
-    for sysctl in \
-        "vm.swappiness=50" \
-        "vm.vfs_cache_pressure=150" \
-        "vm.dirty_ratio=5" \
-        "vm.dirty_background_ratio=2"; do
-        sysctl -w "$sysctl" 2>/dev/null || true
-    done
-
-    settings put global app_standby_enabled 1 2>/dev/null || true
-    settings put global background_dex_opt_job false 2>/dev/null || true
-    setprop persist.sys.game_mode 1 2>/dev/null || true
-
-    # ==============================
-    # 🔥 Thermal Toggle (Optional)
-    # ==============================
-    [ -f "/sdcard/MTK_AI_Engine/enable_disable_thermal" ] && \
-        [ -f "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" ] && \
-        sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" 2>/dev/null || true
-    settings put global low_power 0 2>/dev/null || true    
-    settings put global low_power_sticky 0 2>/dev/null || true
-    echo "4 0" > /proc/ppm/policy_status 2>/dev/null || true
-
-    # ==============================
-    # 🎯 Foreground App Optimization
-    # ==============================
-    FPID=""
-    for pid in /proc/[0-9]*; do
-        if grep -q "top-app" "$pid/cpuset" 2>/dev/null; then
-            PNAME=$(cat "$pid/cmdline" 2>/dev/null | tr '\0' ' ')
-            case "$PNAME" in
-                *surfaceflinger*|*systemui*|*com.android.*) continue ;;
-            esac
-            FPID=${pid##*/}
-            break
-        fi
-    done
-
-    if [ -z "$FPID" ]; then
-        log_msg "⚠️ Foreground app not found in top-app cpuset (skipping app-specific tuning)"
-    else
-        log_msg "✓ Optimize App PID: $FPID"
-        [ -f "/proc/$FPID/oom_score_adj" ] && echo -1000 > "/proc/$FPID/oom_score_adj" 2>/dev/null || true
-        renice -n -20 -p "$FPID" 2>/dev/null || true
-        ionice -c 1 -n 0 -p "$FPID" 2>/dev/null || true
-        for tid in /proc/$FPID/task/*; do
-            TID=${tid##*/}
-            [ "$TID" = "$FPID" ] && continue
-            renice -n -20 -p "$TID" 2>/dev/null || true
-            echo "$TID" > /dev/cpuset/top-app/tasks 2>/dev/null || true
-        done
-    fi
-
-    # ==============================
-    # ✋ Edge Touch Control
-    # ==============================
-    ENABLE=1
-    EDGE_PATHS="
-    /sys/class/sec/tsp/cmd_edge_swipe_enable
-    /sys/devices/virtual/touch/touch_dev/edge_filter
-    /sys/class/input/touchscreen0/edge_suppression
-    /sys/module/goodix_core/parameters/edge_limit
-    /sys/class/drm/card0/device/edge_touch_disable
-    /sys/kernel/touch/edge_ignore"
-
-    for path in $EDGE_PATHS; do
-        if [ -w "$path" ]; then
-            log_msg "✓ Found writable edge control at: $path"
-            if [ "$ENABLE" -eq 1 ] 2>/dev/null; then
-                echo 0 > "$path" 2>/dev/null || echo 1 > "$path" 2>/dev/null || true
-            else                echo 1 > "$path" 2>/dev/null || echo 0 > "$path" 2>/dev/null || true
-            fi
-            sync 2>/dev/null || true
-        fi
-    done
-
-    if command -v sec_touch_grip >/dev/null 2>&1; then
-        if [ "$ENABLE" -eq 1 ] 2>/dev/null; then
-            sec_touch_grip --enable 0 2>/dev/null || true
-        else
-            sec_touch_grip --enable 1 2>/dev/null || true
-        fi
-    fi
-
-    [ -f /sdcard/MTK_AI_Engine/enable_gaming_prop2 ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 || true
-
-    # ==============================
-    # ⚙️ Devfreq Config Loader
-    # ==============================
-    if [ ! -f "$CONFIG_FILE" ]; then
-        log_msg "⚠️ Config file not found: $CONFIG_FILE (skipping devfreq tuning)"
-    else
-        log_msg "✓ Loading devfreq settings from: $CONFIG_FILE"
-        while IFS= read -r line || [ -n "$line" ]; do
-            case "$line" in \#*|"") continue ;; esac
-            if echo "$line" | grep -q '=".*"$'; then
-                clean_line=$(echo "$line" | sed 's/"//g')
-                DEVICE=$(echo "$clean_line" | cut -d'=' -f1)
-                GOVERNOR=$(echo "$clean_line" | cut -d'=' -f2)
-                if [ -n "$DEVICE" ] && [ -n "$GOVERNOR" ]; then
-                    GOV_PATH="/sys/class/devfreq/$DEVICE/governor"
-                    if [ -f "$GOV_PATH" ]; then
-                        echo "$GOVERNOR" > "$GOV_PATH" 2>/dev/null && \
-                            log_msg "✅ Applied $GOVERNOR to $DEVICE" || \
-                            log_msg "❌ Failed to apply $GOVERNOR to $DEVICE"
-                    else
-                        log_msg "⚠️ Device path not found: $DEVICE"
-                    fi
-                fi
-            fi
-        done < "$CONFIG_FILE"
-    fi
-
-    # ==============================
-    # 🔁 Restore Values (Optional)
-    # ==============================
-    if [ -f "/data/adb/service.d/99_mtk_ai_restore_values.sh" ]; then
-        log_msg "✓ Triggering restore script in background..."
-        sh /data/adb/service.d/99_mtk_ai_restore_values.sh 2>/dev/null &
-    fi
-
-# ==============================
-# App hibernation on background app to focus on gaming
-# ==============================
-
-for app in $(cmd package list packages | cut -f 2 -d ":"); do
-if [[ ! "$app" == "com.topjohnwu.magisk" ]] && [[ ! "$app" == "me.weishu.kernelsu" ]]; then
-echo "$app has been hibernated"
-cmd app_hibernation set-state --user 0 --global "$app" true
-echo ""
-fi
-
-device_config put app_hibernation app_hibernation_enabled true
-device_config put permissions \
-  auto_revoke_unused_threshold_millis2 99
-done
-
-# ==============================
-# Boost wifi for ping stabilization
-# ==============================
-
-su -c "cmd wifi force-hi-perf-mode enabled" || true
-su -c "cmd wifi force-low-latency-mode enabled" || true
-su -c "iw dev wlan0 set power_save off" || true
-su -c "iw phy phy0 set retry short 7 long 7" || true
-su -c "ifconfig wlan0 txqueuelen 100" || true
-su -c "cmd wifi set-poll-rssi-interval-msecs 1000" || true
-su -c "cmd wifi set-wifi-sleep-policy never" || true
-su -c "settings put global wifi_sleep_policy 0" || true
-su -c "cmd wifi set-roaming-scan-interval 30" || true
-su -c "settings put global wifi_watchdog_poor_network_test_enabled 0" || true
-su -c "settings put global wifi_watchdog_ap_count 10" || true
-su -c "settings put global wifi_watchdog_max_ap_checks 3" || true
-su -c "settings put global wifi_framework_enabled 1" || true
-su -c "cmd wifi reassociate" || true
-su -c "echo Y > /sys/module/wlan/parameters/ps" || true
-su -c "echo 1 > /sys/module/wlan/parameters/wlm" || true
-
-# ==============================
-# 🔍 Performance Optimizations
-# ==============================
-    log_msg "=== Starting MTK AI Engine Performance Optimizer ==="
-
-    # ==============================
-    # 🗄️ CPUlimit on Certain process to focus on gaming
-    # ==============================#!/system/bin/sh
-
 # ==============================
 # 🎮 FPSGO / FSTB / FBT Tweaks
 # ==============================
 for path in \
-    /sys/kernel/fpsgo/common/fpsgo_enable \
-    /sys/kernel/fpsgo/fstb/fstb_self_ctrl_fps_enable \
-    /sys/kernel/fpsgo/fbt/enable_switch_down_throttle \
-    /sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable \
-    /sys/kernel/fpsgo/fstb/set_cam_active; do
-    [ -f "$path" ] && echo "1" > "$path" 2>/dev/null
-done    
+/sys/kernel/fpsgo/common/fpsgo_enable \
+/sys/kernel/fpsgo/fstb/fstb_self_ctrl_fps_enable \
+/sys/kernel/fpsgo/fbt/enable_switch_down_throttle \
+/sys/kernel/fpsgo/fstb/tfps_to_powerhal_enable \
+/sys/kernel/fpsgo/fstb/set_cam_active; do
+    [ -f "$path" ] && echo "1" > "$path" 2>/dev/null || true
+done
 
 # ==============================
 # ✋ Touchscreen Modes (Glove/Cover)
 # ==============================
 for path in \
-    /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_cover_mode \
-    /sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_glove_mode; do
-    [ -f "$path" ] && echo "1" > "$path" 2>/dev/null
+/sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_cover_mode \
+/sys/devices/platform/soc/11015000.i2c/i2c-0/0-0038/fts_glove_mode; do
+    [ -f "$path" ] && echo "1" > "$path" 2>/dev/null || true
 done
 
 # ==============================
 # 🛡️ Kernel Panic & System Props
 # ==============================
-echo "0" > /proc/sys/kernel/panic 2>/dev/null
-
-settings put global activity_manager_constants 'max_cached_processes=0,background_settle_time=0,fgs_start_deny_exposure_time=10000,fgservice_min_show_time=0,fgservice_bg_start_timeout=0,max_phantom_processes=0,process_limit=-1,enable_fg_boost=true' 2>/dev/null
-setprop persist.sys.max_background 0 2>/dev/null
-setprop persist.sys.framepredict.enable true 2>/dev/null
-setprop persist.sys.power_mode_perf '1' 2>/dev/null
-settings put system persist.sys.power_mode_perf 1 2>/dev/null
-settings put global sustained_performance_mode_enabled 1 2>/dev/null
-
-device_config put activity_manager max_phantom_processes 0 2>/dev/null
-device_config put activity_manager max_cached_processes 0 2>/dev/null
-device_config put activity_manager use_compaction true 2>/dev/null
+echo "0" > /proc/sys/kernel/panic 2>/dev/null || true
+settings put global 'activity_manager_constants' 'max_cached_processes=0,background_settle_time=0,fgs_start_deny_exposure_time=10000,fgservice_min_show_time=0,fgservice_bg_start_timeout=0,max_phantom_processes=0,process_limit=-1,enable_fg_boost=true' || true
+setprop persist.sys.max_background 0 2>/dev/null || true
+setprop persist.sys.framepredict.enable true 2>/dev/null || true
+setprop 'persist.sys.power_mode_perf' '1' || true
+settings put system persist.sys.power_mode_perf 1 2>/dev/null || true
+settings put global sustained_performance_mode_enabled 1 2>/dev/null || true
+device_config put activity_manager max_phantom_processes 0 2>/dev/null || true
+device_config put activity_manager max_cached_processes 0 2>/dev/null || true
+device_config put activity_manager use_compaction true 2>/dev/null || true
 
 # ⚠️ WARNING: Commented out to prevent immediate UI stutter from I/O spikes.
-# am kill-all 2>/dev/null
-# cmd activity trim-memory critical 2>/dev/null
-# cmd activity compact-apps 3 2>/dev/null
+# am kill-all 2>/dev/null || true
+# cmd activity trim-memory critical 2>/dev/null || true
+# cmd activity compact-apps 3 2>/dev/null || true
 
 # ==============================
 # 🧠 VM / Sysctl Tuning
 # ==============================
-sysctl -w vm.swappiness=50 2>/dev/null
-sysctl -w vm.vfs_cache_pressure=150 2>/dev/null
-sysctl -w vm.dirty_ratio=5 2>/dev/null
-sysctl -w vm.dirty_background_ratio=2 2>/dev/null
-
-settings put global app_standby_enabled 1 2>/dev/null
-settings put global background_dex_opt_job false 2>/dev/null
-setprop persist.sys.game_mode 1 2>/dev/null
+for sysctl in \
+"vm.swappiness=50" \
+"vm.vfs_cache_pressure=150" \
+"vm.dirty_ratio=5" \
+"vm.dirty_background_ratio=2"; do
+    sysctl -w "$sysctl" 2>/dev/null || true
+done
+settings put global app_standby_enabled 1 2>/dev/null || true
+settings put global background_dex_opt_job false 2>/dev/null || true
+setprop persist.sys.game_mode 1 2>/dev/null || true
 
 # ==============================
 # 🔥 Thermal Toggle (Optional)
 # ==============================
-if [ -f "/sdcard/MTK_AI_Engine/enable_disable_thermal" ] && [ -f "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" ]; then
-    sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" 2>/dev/null
-fi
-
-settings put global low_power 0 2>/dev/null
-settings put global low_power_sticky 0 2>/dev/null
-echo "4 0" > /proc/ppm/policy_status 2>/dev/null
+[ -f "/sdcard/MTK_AI_Engine/enable_disable_thermal" ] && \
+[ -f "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" ] && \
+sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" 2>/dev/null || true
+settings put global low_power 0 2>/dev/null || true
+settings put global low_power_sticky 0 2>/dev/null || true
+echo "4 0" > /proc/ppm/policy_status 2>/dev/null || true
 
 # ==============================
 # 🎯 Foreground App Optimization (OPTIMIZED)
@@ -360,15 +145,14 @@ if [ -f /dev/cpuset/top-app/tasks ]; then
 fi
 
 if [ -z "$FPID" ]; then
-    echo "⚠️ Foreground app not found in top-app cpuset (skipping app-specific tuning)"
+    log_msg "⚠️ Foreground app not found in top-app cpuset (skipping app-specific tuning)"
 else
-    echo "✓ Optimize App PID: $FPID"
-    echo -1000 > "/proc/$FPID/oom_score_adj" 2>/dev/null
-    renice -n -20 -p "$FPID" 2>/dev/null
-    ionice -c 1 -n 0 -p "$FPID" 2>/dev/null
-    
+    log_msg "✓ Optimize App PID: $FPID"
+    [ -f "/proc/$FPID/oom_score_adj" ] && echo -1000 > "/proc/$FPID/oom_score_adj" 2>/dev/null || true
+    renice -n -20 -p "$FPID" 2>/dev/null || true
+    ionice -c 1 -n 0 -p "$FPID" 2>/dev/null || true
     # Apply to process group instead of looping every thread individually
-    renice -n -20 -g "$FPID" 2>/dev/null
+    renice -n -20 -g "$FPID" 2>/dev/null || true
 fi
 
 # ==============================
@@ -382,49 +166,47 @@ EDGE_PATHS="
 /sys/module/goodix_core/parameters/edge_limit
 /sys/class/drm/card0/device/edge_touch_disable
 /sys/kernel/touch/edge_ignore"
-
 for path in $EDGE_PATHS; do
     if [ -w "$path" ]; then
-        echo "✓ Found writable edge control at: $path"
-        if [ "$ENABLE" -eq 1 ]; then
-            echo 0 > "$path" 2>/dev/null || echo 1 > "$path" 2>/dev/null
-        else                
-            echo 1 > "$path" 2>/dev/null || echo 0 > "$path" 2>/dev/null
+        log_msg "✓ Found writable edge control at: $path"
+        if [ "$ENABLE" -eq 1 ] 2>/dev/null; then
+            echo 0 > "$path" 2>/dev/null || echo 1 > "$path" 2>/dev/null || true
+        else
+            echo 1 > "$path" 2>/dev/null || echo 0 > "$path" 2>/dev/null || true
         fi
+        sync 2>/dev/null || true
     fi
 done
-
 if command -v sec_touch_grip >/dev/null 2>&1; then
-    if [ "$ENABLE" -eq 1 ]; then
-        sec_touch_grip --enable 0 2>/dev/null
+    if [ "$ENABLE" -eq 1 ] 2>/dev/null; then
+        sec_touch_grip --enable 0 2>/dev/null || true
     else
-        sec_touch_grip --enable 1 2>/dev/null
+        sec_touch_grip --enable 1 2>/dev/null || true
     fi
 fi
-
-[ -f /sdcard/MTK_AI_Engine/enable_gaming_prop2 ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 2>/dev/null
+[ -f /sdcard/MTK_AI_Engine/enable_gaming_prop2 ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 || true
 
 # ==============================
 # ⚙️ Devfreq Config Loader (OPTIMIZED)
 # ==============================
-CONFIG_FILE="/path/to/your/config" # Ensure this variable is defined earlier in your script
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "⚠️ Config file not found: $CONFIG_FILE (skipping devfreq tuning)"
+    log_msg "⚠️ Config file not found: $CONFIG_FILE (skipping devfreq tuning)"
 else
-    echo "✓ Loading devfreq settings from: $CONFIG_FILE"
+    log_msg "✓ Loading devfreq settings from: $CONFIG_FILE"
     # 100% shell built-in parsing. Zero external process spawning (no grep/sed/cut).
     while IFS= read -r line || [ -n "$line" ]; do
         case "$line" in \#*|"") continue ;; esac
         clean_line="${line//\"/}"
         DEVICE="${clean_line%%=*}"
         GOVERNOR="${clean_line#*=}"
-        
         if [ -n "$DEVICE" ] && [ -n "$GOVERNOR" ]; then
             GOV_PATH="/sys/class/devfreq/$DEVICE/governor"
             if [ -f "$GOV_PATH" ]; then
                 echo "$GOVERNOR" > "$GOV_PATH" 2>/dev/null && \
-                    echo "✅ Applied $GOVERNOR to $DEVICE" || \
-                    echo "❌ Failed to apply $GOVERNOR to $DEVICE"
+                log_msg "✅ Applied $GOVERNOR to $DEVICE" || \
+                log_msg "❌ Failed to apply $GOVERNOR to $DEVICE"
+            else
+                log_msg "⚠️ Device path not found: $DEVICE"
             fi
         fi
     done < "$CONFIG_FILE"
@@ -434,7 +216,7 @@ fi
 # 🔁 Restore Values (Optional)
 # ==============================
 if [ -f "/data/adb/service.d/99_mtk_ai_restore_values.sh" ]; then
-    echo "✓ Triggering restore script in background..."
+    log_msg "✓ Triggering restore script in background..."
     sh /data/adb/service.d/99_mtk_ai_restore_values.sh 2>/dev/null &
 fi
 
@@ -442,41 +224,41 @@ fi
 # App Hibernation (OPTIMIZED)
 # ==============================
 # Enable hibernation globally ONCE, NOT inside the loop!
-device_config put app_hibernation app_hibernation_enabled true 2>/dev/null
-device_config put permissions auto_revoke_unused_threshold_millis2 99 2>/dev/null
+device_config put app_hibernation app_hibernation_enabled true 2>/dev/null || true
+device_config put permissions auto_revoke_unused_threshold_millis2 99 2>/dev/null || true
 
 for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":"); do
     if [ "$app" != "com.topjohnwu.magisk" ] && [ "$app" != "me.weishu.kernelsu" ]; then
-        cmd app_hibernation set-state --user 0 --global "$app" true 2>/dev/null
+        log_msg "$app has been hibernated"
+        cmd app_hibernation set-state --user 0 --global "$app" true 2>/dev/null || true
     fi
 done
 
 # ==============================
 # Boost WiFi for Ping Stabilization (OPTIMIZED)
 # ==============================
-# NOTE: If this script runs as root (Magisk/KSU), 'su -c' is redundant and causes massive lag. 
-# It has been removed below. If NOT running as root, wrap this entire block in one 'su -c "..." '
-cmd wifi force-hi-perf-mode enabled 2>/dev/null
-cmd wifi force-low-latency-mode enabled 2>/dev/null
-iw dev wlan0 set power_save off 2>/dev/null
-iw phy phy0 set retry short 7 long 7 2>/dev/null
-ip link set wlan0 txqueuelen 100 2>/dev/null # 'ip' is preferred over deprecated 'ifconfig'
-cmd wifi set-poll-rssi-interval-msecs 1000 2>/dev/null
-cmd wifi set-wifi-sleep-policy never 2>/dev/null
-settings put global wifi_sleep_policy 0 2>/dev/null
-cmd wifi set-roaming-scan-interval 30 2>/dev/null
-settings put global wifi_watchdog_poor_network_test_enabled 0 2>/dev/null
-settings put global wifi_watchdog_ap_count 10 2>/dev/null
-settings put global wifi_watchdog_max_ap_checks 3 2>/dev/null
-settings put global wifi_framework_enabled 1 2>/dev/null
-cmd wifi reassociate 2>/dev/null
-echo Y > /sys/module/wlan/parameters/ps 2>/dev/null
-echo 1 > /sys/module/wlan/parameters/wlm 2>/dev/null
+# NOTE: 'su -c' is redundant if script runs as root. Removed for less lag.
+cmd wifi force-hi-perf-mode enabled 2>/dev/null || true
+cmd wifi force-low-latency-mode enabled 2>/dev/null || true
+iw dev wlan0 set power_save off 2>/dev/null || true
+iw phy phy0 set retry short 7 long 7 2>/dev/null || true
+ip link set wlan0 txqueuelen 100 2>/dev/null || true # 'ip' is preferred over deprecated 'ifconfig'
+cmd wifi set-poll-rssi-interval-msecs 1000 2>/dev/null || true
+cmd wifi set-wifi-sleep-policy never 2>/dev/null || true
+settings put global wifi_sleep_policy 0 2>/dev/null || true
+cmd wifi set-roaming-scan-interval 30 2>/dev/null || true
+settings put global wifi_watchdog_poor_network_test_enabled 0 2>/dev/null || true
+settings put global wifi_watchdog_ap_count 10 2>/dev/null || true
+settings put global wifi_watchdog_max_ap_checks 3 2>/dev/null || true
+settings put global wifi_framework_enabled 1 2>/dev/null || true
+cmd wifi reassociate 2>/dev/null || true
+echo Y > /sys/module/wlan/parameters/ps 2>/dev/null || true
+echo 1 > /sys/module/wlan/parameters/wlm 2>/dev/null || true
 
 # ==============================
-# 🔍 Performance Optimizations
+# 🔍 Performance Optimizations & Cpulimit Execution
 # ==============================
-echo "=== Starting MTK AI Engine Performance Optimizer ==="
+log_msg "=== Starting MTK AI Engine Performance Optimizer ==="
 
 # Stop thermal throttling services safely
 ps -A -w 2>/dev/null | grep -i thermal | grep -v grep | awk '{print $NF}' | while read -r svc_path; do
@@ -485,31 +267,27 @@ ps -A -w 2>/dev/null | grep -i thermal | grep -v grep | awk '{print $NF}' | whil
     if [ ${#clean_svc} -gt 12 ] && echo "$clean_svc" | grep -q "thermal"; then
         target_svc="${clean_svc}*thermal*"
     fi
-    
-    setprop ctl.stop "$clean_svc" 2>/dev/null
-    stop "$target_svc" 2>/dev/null
-    pkill -STOP -f "$clean_svc" 2>/dev/null
-    
+    setprop ctl.stop "$clean_svc" 2>/dev/null || true
+    stop "$target_svc" 2>/dev/null || true
+    pkill -STOP -f "$clean_svc" 2>/dev/null || true
     pid=$(pgrep -f "$clean_svc" | head -n 1)
     if [ -n "$pid" ]; then
-        nohup /data/adb/modules/MTK_AI/lib/cpulimit -p "$pid" -l 1 -z 2>/dev/null &
+        nohup "$CPULIMIT" -p "$pid" -l 1 -z 2>/dev/null &
     fi
 done
 
-CPULIMIT_BIN="/data/adb/modules/MTK_AI/lib/cpulimit"
-
+# 🗄️ CPUlimit on Certain process to focus on gaming
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" 2>/dev/null &
-nohup "$CPULIMIT_BIN" -e com.google.android.gms -l 5 2>/dev/null &
-nohup "$CPULIMIT_BIN" -e com.google.android.gsf -l 5 2>/dev/null &
-nohup "$CPULIMIT_BIN" -e com.google.android.gsf.login -l 5 2>/dev/null &
-nohup "$CPULIMIT_BIN" -e com.google.android.gms.persistent -l 5 2>/dev/null &
-nohup "$CPULIMIT_BIN" -e com.google.android.backuptransport -l 5 2>/dev/null &
-nohup "$CPULIMIT_BIN" -e com.google.android.partnersetup -l 5 2>/dev/null &
-nohup "$CPULIMIT_BIN" -e com.google.android.setupwizard -l 5 2>/dev/null &
-nohup "$CPULIMIT_BIN" -e com.android.systemui -l 50 2>/dev/null &
-nohup "$CPULIMIT_BIN" -e com.android.vending -l 50 2>/dev/null &
+nohup "$CPULIMIT" -e com.google.android.gms -l 5 2>/dev/null &
+nohup "$CPULIMIT" -e com.google.android.gsf -l 5 2>/dev/null &
+nohup "$CPULIMIT" -e com.google.android.gsf.login -l 5 2>/dev/null &
+nohup "$CPULIMIT" -e com.google.android.gms.persistent -l 5 2>/dev/null &
+nohup "$CPULIMIT" -e com.google.android.backuptransport -l 5 2>/dev/null &
+nohup "$CPULIMIT" -e com.google.android.partnersetup -l 5 2>/dev/null &
+nohup "$CPULIMIT" -e com.google.android.setupwizard -l 5 2>/dev/null &
+nohup "$CPULIMIT" -e com.android.systemui -l 50 2>/dev/null &
+nohup "$CPULIMIT" -e com.android.vending -l 50 2>/dev/null &
 
-echo "=== MTK AI Engine Optimizer Complete ==="
-echo "✅ All optimizations applied successfully!!"
-
+log_msg "=== MTK AI Engine Optimizer Complete ==="
+log_msg "✅ All optimizations applied successfully!!"
 exit 0
