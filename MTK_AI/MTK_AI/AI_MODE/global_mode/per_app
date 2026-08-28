@@ -64,3 +64,24 @@ refresh_rate() {
 }
 refresh_rate
 
+shell_cmd() {
+    # Define the path for the specific app's base64 command file
+    CMD_FILE="/sdcard/MTK_AI_Engine/per_app/${CURRENT_TOP_APP}.cmd"
+
+    # Check if the file exists
+    if [ -f "$CMD_FILE" ]; then
+        # Read the base64 content and strip any whitespace/newlines
+        B64_CMD=$(cat "$CMD_FILE" 2>/dev/null | tr -d '[:space:]')
+
+        if [ -n "$B64_CMD" ]; then
+            # Decode the base64 string
+            DECODED_CMD=$(echo "$B64_CMD" | base64 -d 2>/dev/null)
+
+            # Execute the decoded shell command if it's not empty
+            if [ -n "$DECODED_CMD" ]; then
+                eval "$DECODED_CMD"
+            fi
+        fi
+    fi
+}
+shell_cmd
