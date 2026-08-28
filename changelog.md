@@ -1,6 +1,7 @@
 --- version 0.0.1.00 ---
 
 •this update needs to flash zip from our GitHub repo, it's using latest daemon converted C++. the fastest one I've ever made
+link --> https://github.com/Jestoni888/MTK-AI-Engine/releases/download/V100/MediaTek.AI.Engine-0.0.1.00.zip
 
 •added 3rd standard daemon which is dumpsys, this one is reliable it can support to all devices
 
