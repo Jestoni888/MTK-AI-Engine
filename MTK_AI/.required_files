@@ -40,6 +40,7 @@ MTK_AI/AI_MODE/global_mode/trim_memory
 MTK_AI/AI_MODE/global_mode/webview_tweaks
 MTK_AI/AI_MODE/global_mode/module_executer
 MTK_AI/AI_MODE/global_mode/heartbeat
+MTK_AI/AI_MODE/global_mode/per_app
 
 # Script Runner
 script_runner/display_mode
