@@ -50,6 +50,11 @@ echo "0" > /proc/cpufreq/cpufreq_power_mode || true
 echo "0" > /proc/cpufreq/cpufreq_cci_mode || true
 fi
 
+#DND
+if [ -f "$SDCARD/enable_dnd_during_game" ]; then
+    cmd notification set_dnd off
+fi
+
 # --- APP HIBERNATION ---
 echo "Applying app hibernation rules..."
 
@@ -80,11 +85,6 @@ for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); d
 
     echo ""
 done
-
-#DND
-if [ -f "$SDCARD/enable_dnd_during_game" ]; then
-    cmd notification set_dnd off
-fi
 
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
 STATE="/sdcard/MTK_AI_Engine/use_tweaks"
