@@ -81,6 +81,7 @@ nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency
 fi
 [ ! -f "$TOUCH_ACTIVE" ] && return 0
 ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
+[ -f "/dev/.mtk_ai_active_game" ] && return 0
 
     INACTIVE_PERCENT=30
     if [ -f "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" ]; then
