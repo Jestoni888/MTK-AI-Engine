@@ -56,6 +56,10 @@ if [ -f "$CONFIG_DIR/enable_dnd_during_game" ]; then
     cmd notification set_dnd priority
 fi
 
+#VM Memory optimize
+F=/proc/sys/vm/watermark_scale_factor; [ -f $F ] && [ $(cat $F) -lt 100 ] && echo 100 > $F
+F=/proc/sys/vm/min_free_kbytes; [ -f $F ] && [ $(cat $F) -lt 65536 ] && echo 65536 > $F
+
 echo disabled | tee /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null || true
 nohup sh "/sdcard/MTK_AI_Engine/modes/gaming_mode.sh" >/dev/null 2>&1 &
 nohup sh "/sdcard/MTK_AI_Engine/setedit-modes/gaming.sh" >/dev/null 2>&1 &
