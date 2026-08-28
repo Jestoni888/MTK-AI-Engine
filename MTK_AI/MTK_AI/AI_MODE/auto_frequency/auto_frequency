@@ -21,7 +21,7 @@ notify_status() {
         TITLE="Gaming Mode"
     else
         ICON="file:///data/local/tmp/icon.png"
-        TITLE="Lite Mode"
+        TITLE="Normal Mode"
     fi
 
     # --- 1. Temperature ---
@@ -34,33 +34,8 @@ notify_status() {
     CPU_GOV="Unknown"
     [ -f "$GOV_FILE" ] && CPU_GOV=$(cat "$GOV_FILE" 2>/dev/null | tr -d '[:space:]')
 
-    # --- 3. Power Calculation ---
-    VOLT_FILE="/sys/class/power_supply/battery/voltage_now"
-    CURR_FILE="/sys/class/power_supply/battery/current_now"
-    [ ! -f "$VOLT_FILE" ] && VOLT_FILE="/sys/class/power_supply/bms/voltage_now"
-    [ ! -f "$CURR_FILE" ] && CURR_FILE="/sys/class/power_supply/bms/current_now"
-
-    POWER_WATTS="N/A"
-
-    if [ -f "$VOLT_FILE" ] && [ -f "$CURR_FILE" ]; then
-        VOLT=$(cat "$VOLT_FILE" 2>/dev/null | tr -d '[:space:]')
-        CURR=$(cat "$CURR_FILE" 2>/dev/null | tr -d '[:space:]')
-
-        POWER_WATTS=$(awk -v v="$VOLT" -v c="$CURR" 'BEGIN {
-            volts = v / 1000000
-            amps = c / 1000000
-            if (amps < 0) amps = -amps
-            val = volts * amps
-            if (val >= 0.01 && val <= 60) {
-                printf "%.2fW", val
-            } else {
-                print "N/A"
-            }
-        }')
-    fi
-
     local status_msg="$1"
-    local full_msg="$status_msg | Gov: $CPU_GOV | Pwr: $POWER_WATTS | Temp: $B_TEMP"
+    local full_msg="$status_msg | Gov: $CPU_GOV | Temp: $B_TEMP"
 
     # --- 4. Post Notification ---
     # -i (lowercase) puts the icon ON TOP in the status bar.
@@ -425,9 +400,9 @@ current_app() {
 
         # Other app has really replaced the game
         log_msg "📉 $ACTIVE_GAME left foreground (${bg_count}x), exiting gaming mode"
-        normal_mode
         rm -f /dev/.mtk_ai_active_game /dev/.mtk_ai_bg_count
         notify_status "Normal mode"
+        normal_mode
         return 0
     fi
 
