@@ -55,6 +55,7 @@ if [ -f "$SDCARD/enable_dnd_during_game" ]; then
     cmd notification set_dnd off
 fi
 
+if [ -f "/sdcard/MTK_AI_Engine/enable_cleaner" ]; then 
 # --- APP HIBERNATION ---
 echo "Applying app hibernation rules..."
 
@@ -85,6 +86,7 @@ for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); d
 
     echo ""
 done
+fi
 
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
 STATE="/sdcard/MTK_AI_Engine/use_tweaks"
