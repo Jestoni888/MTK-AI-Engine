@@ -84,6 +84,7 @@ MTK_AI/AI_MODE/global_mode/trim_memory
 MTK_AI/AI_MODE/global_mode/webview_tweaks
 MTK_AI/AI_MODE/global_mode/module_executer
 MTK_AI/AI_MODE/global_mode/heartbeat
+MTK_AI/AI_MODE/global_mode/per_app
 script_runner/display_mode
 script_runner/automatrix
 script_runner/mtk_ai_manual
