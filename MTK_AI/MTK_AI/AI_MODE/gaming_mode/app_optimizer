@@ -59,6 +59,7 @@ fi
 echo disabled | tee /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null || true
 nohup sh "/sdcard/MTK_AI_Engine/modes/gaming_mode.sh" >/dev/null 2>&1 &
 nohup sh "/sdcard/MTK_AI_Engine/setedit-modes/gaming.sh" >/dev/null 2>&1 &
+nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" 2>/dev/null &
 pkill -f cpulimit >/dev/null 2>&1 || true
 
 STATE="/sdcard/MTK_AI_Engine/use_tweaks"
@@ -277,7 +278,6 @@ ps -A -w 2>/dev/null | grep -i thermal | grep -v grep | awk '{print $NF}' | whil
 done
 
 # 🗄️ CPUlimit on Certain process to focus on gaming
-nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" 2>/dev/null &
 nohup "$CPULIMIT" -e com.google.android.gms -l 5 2>/dev/null &
 nohup "$CPULIMIT" -e com.google.android.gsf -l 5 2>/dev/null &
 nohup "$CPULIMIT" -e com.google.android.gsf.login -l 5 2>/dev/null &
