@@ -24,11 +24,6 @@ pm list packages | cut -d: -f2 | while read -r pkg; do
 done
 fi
 
-#DND
-if [ -f "$SDCARD/enable_dnd_during_game" ]; then
-    cmd notification set_dnd off
-fi
-
 echo "-1" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
 echo "-1" > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
 
@@ -85,6 +80,11 @@ for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); d
 
     echo ""
 done
+
+#DND
+if [ -f "$SDCARD/enable_dnd_during_game" ]; then
+    cmd notification set_dnd off
+fi
 
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
 STATE="/sdcard/MTK_AI_Engine/use_tweaks"
