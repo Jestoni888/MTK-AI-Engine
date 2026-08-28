@@ -680,7 +680,7 @@ async function openAppConfigPopup(pkg) {
                 </div>
                 <div style="flex:1;">
                     <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Downscaling</div>
-                    <div style="font-size:13px;color:#888;">Scale UI density via wm density (no resolution change).</div>
+                    <div style="font-size:13px;color:#888;">Reduce game graphics for stable fps & smoother gameplay</div>
                 </div>
                 <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;">
                     <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span>
