@@ -87,20 +87,25 @@ else
 fi
 
 # Start main engine
+export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
+export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"
 ENGINE="$MODDIR/main_control/mtk_ai_engine.sh"
+LITE="$MODDIR/main_control/lite_mode.sh"
+# Start main engine
 if [ -x "$ENGINE" ]; then
     setsid "$ENGINE" > /dev/null 2>&1 &
     log_msg "MTK_AI Engine started"
-else
-    log_msg "⚠ Engine not found: $ENGINE"
+fi
+
+# Start lite mode
+if [ -x "$LITE" ]; then
+    setsid "$LITE" > /dev/null 2>&1 &
+    log_msg "Lite mode started"
 fi
 
 # ✅ FIXED: Performance mode with proper export order
 if grep -qx "performance" /sdcard/MTK_AI_Engine/current_profile 2>/dev/null; then
-    log_msg "Performance profile detected, starting performance mode..."
-    
-    export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
-    export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"
+    log_msg "Performance profile detected, starting performance mode..."  
     
     nohup sh /data/adb/modules/MTK_AI/main_control/performance.sh </dev/null >/dev/null 2>&1 &
     log_msg "Performance script started"
