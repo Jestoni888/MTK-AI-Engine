@@ -90,6 +90,14 @@ fi
 
 #Powermode
 setprop 'persist.sys.power_mode_perf' '0' || true
+setprop 'persist.sys.perf_boost_enabled' '0' || true
+setprop 'persist.sys.perf_mode' '0' || true
+setprop 'persist.sys.performance' '0' || true
+setprop 'persist.sys.performance_mode' '0' || true
+setprop 'sys.hwc.gpu_perf_mode' '0' || true
+setprop 'vendor.perf.framepacing.enable' '0' || true
+setprop 'vendor.performance.gbe' '0' || true
+settings put global 'sustained_performance_mode_enabled' '0'
 settings put system persist.sys.power_mode_perf 0 2>/dev/null || true
 cmd power set-mode 2 false
 su -c "cmd power set-fixed-performance-mode-enabled false" || true
