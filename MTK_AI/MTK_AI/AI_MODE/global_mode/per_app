@@ -29,6 +29,8 @@ trap 'rm -f "$LOCK_FILE"' EXIT
 DUMP=$(dumpsys activity activities 2>/dev/null)
 CURRENT_TOP_APP=$(echo "$DUMP" | grep -m1 -E 'mResumedActivity|mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
 
+cmd deviceidle whitelist +"${CURRENT_TOP_APP}"
+
 refresh_rate() {
     # --- Execute per-app refresh rate ---
     REFRESH_FILE="/sdcard/MTK_AI_Engine/manual_refresh_lock.txt"
