@@ -31,6 +31,8 @@ input keyevent 279 && input swipe 500 1200 500 400 300
 
 # Powermode
 cmd power set-mode 2 true
+cmd power set-fixed-performance-mode-enabled true
+settings put global power_manager_constants fixed_performance_mode=true
 
 # Optimize app launch 
 cmd device_config put runtime_native_boot iorap_perfetto_enable true
