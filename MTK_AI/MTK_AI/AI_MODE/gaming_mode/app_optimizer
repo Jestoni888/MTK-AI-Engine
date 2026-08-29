@@ -26,6 +26,9 @@ for policy in $CPU_SYS/cpufreq/policy*; do
     chmod 000 "$policy/scaling_max_freq"
 done
 
+# Universally compatible syntax across all Android versions:
+input keyevent 279 && input swipe 500 1200 500 400 300
+
 # ==============================
 # 🗄️ I/O Scheduler & Read-Ahead
 # ==============================
