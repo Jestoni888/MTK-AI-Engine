@@ -40,7 +40,7 @@ const vmTweaks = {
 };
 
 // =====================================================================
-// 📡 CMD TWEAKS STATE
+// 📡 CMD TWEAKS STATE (EXPANDED)
 // =====================================================================
 const cmdTweaks = {
     // === 📶 NETWORK / WIFI ===
@@ -70,6 +70,42 @@ const cmdTweaks = {
         read: 'settings get global private_dns_specifier',
         parse: (r) => r.trim() || 'OFF',
         type: 'toggle', default: false
+    },
+    mobile_data_always_on: {
+        category: 'network', title: 'Mobile Data Always Active', icon: '📱',
+        info: 'Keeps mobile data active while connected to WiFi for faster network switching.',
+        apply: 'settings put global mobile_data_always_on 1',
+        revert: 'settings put global mobile_data_always_on 0',
+        read: 'settings get global mobile_data_always_on',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    wifi_verbose_logging: {
+        category: 'network', title: 'WiFi Verbose Logging', icon: '📝',
+        info: 'Increases WiFi logging detail. Useful for debugging connection drops.',
+        apply: 'settings put global wifi_verbose_logging_enabled 1',
+        revert: 'settings put global wifi_verbose_logging_enabled 0',
+        read: 'settings get global wifi_verbose_logging_enabled',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    captive_portal_disable: {
+        category: 'network', title: 'Disable Captive Portal Detection', icon: '🚫',
+        info: 'Stops Android from constantly checking internet connectivity. Saves battery/data.',
+        apply: 'settings put global captive_portal_mode 0',
+        revert: 'settings put global captive_portal_mode 1',
+        read: 'settings get global captive_portal_mode',
+        parse: (r) => r.trim() === '0' ? 'DISABLED' : 'ENABLED',
+        type: 'toggle', default: false
+    },
+    bluetooth_absolute_volume: {
+        category: 'network', title: 'Bluetooth Absolute Volume', icon: '🎧',
+        info: 'Syncs Bluetooth device volume with system volume. Disable if volume is too loud/quiet.',
+        apply: 'settings put global bluetooth_absolute_volume 1',
+        revert: 'settings put global bluetooth_absolute_volume 0',
+        read: 'settings get global bluetooth_absolute_volume',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
+        type: 'toggle', default: true
     },
 
     // === 🔋 BATTERY ===
@@ -107,6 +143,33 @@ const cmdTweaks = {
         revert: 'cmd appops set com.android.systemui WAKE_LOCK allow',
         read: 'cmd appops get com.android.systemui WAKE_LOCK',
         parse: (r) => /ignore/i.test(r) ? 'RESTRICTED' : 'ALLOWED',
+        type: 'toggle', default: false
+    },
+    stay_awake_plugged: {
+        category: 'battery', title: 'Stay Awake While Plugged In', icon: '🔌',
+        info: 'Prevents screen from sleeping while charging (AC, USB, or Wireless).',
+        apply: 'settings put global stay_on_while_plugged_in 7', // 1=USB, 2=AC, 4=Wireless, 7=All
+        revert: 'settings put global stay_on_while_plugged_in 0',
+        read: 'settings get global stay_on_while_plugged_in',
+        parse: (r) => r.trim() !== '0' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    screen_timeout_30s: {
+        category: 'battery', title: 'Screen Timeout (30s)', icon: '⏱️',
+        info: 'Sets screen timeout to 30 seconds to save battery.',
+        apply: 'settings put system screen_off_timeout 30000',
+        revert: 'settings put system screen_off_timeout 60000',
+        read: 'settings get system screen_off_timeout',
+        parse: (r) => r.trim() === '30000' ? '30s' : (r.trim() || 'default'),
+        type: 'toggle', default: false
+    },
+    adaptive_charging: {
+        category: 'battery', title: 'Adaptive Charging', icon: '🛡️',
+        info: 'Slows down charging overnight to preserve long-term battery health.',
+        apply: 'settings put global adaptive_charging_enabled 1',
+        revert: 'settings put global adaptive_charging_enabled 0',
+        read: 'settings get global adaptive_charging_enabled',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
         type: 'toggle', default: false
     },
 
@@ -192,8 +255,62 @@ const cmdTweaks = {
         parse: (r) => r.trim() || '1.0',
         type: 'toggle', default: false
     },
+    force_4x_msaa: {
+        category: 'performance', title: 'Force 4x MSAA', icon: '🎨',
+        info: 'Forces 4x Multisample Anti-Aliasing in OpenGL ES 2.0 apps. Better visuals, higher GPU load.',
+        apply: 'settings put global force_4x_msaa 1',
+        revert: 'settings put global force_4x_msaa 0',
+        read: 'settings get global force_4x_msaa',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    disable_usb_audio_routing: {
+        category: 'performance', title: 'Disable USB Audio Auto-Routing', icon: '🔌',
+        info: 'Prevents Android from automatically switching audio to USB devices. Fixes audio lag in games.',
+        apply: 'settings put global usb_audio_automatic_routing_disabled 1',
+        revert: 'settings put global usb_audio_automatic_routing_disabled 0',
+        read: 'settings get global usb_audio_automatic_routing_disabled',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    gfxinfo_framerate: {
+        category: 'performance', title: 'Show GPU Rendering Profile', icon: '📊',
+        info: 'Displays on-screen bars showing frame rendering times. Great for performance monitoring.',
+        apply: 'settings put global gfxinfo_framerate 1',
+        revert: 'settings put global gfxinfo_framerate 0',
+        read: 'settings get global gfxinfo_framerate',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    zram_compaction: {
+        category: 'performance', title: 'Force ZRAM Compaction', icon: '💾',
+        info: 'Enables aggressive memory compaction in ZRAM to free up usable RAM during heavy gaming.',
+        apply: 'cmd device_config put activity_manager use_compaction true',
+        revert: 'cmd device_config reset activity_manager use_compaction',
+        read: 'cmd device_config get activity_manager use_compaction',
+        parse: (r) => r.trim() === 'true' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    skia_gl_renderer: {
+        category: 'performance', title: 'Force Skia OpenGL Renderer', icon: '🖼️',
+        info: 'Forces the HWUI to use OpenGL (skiagl) instead of Vulkan. Preferred for gaming compatibility.',
+        apply: 'settings put global debug.hwui.renderer "skiagl"',
+        revert: 'settings put global debug.hwui.renderer "skiavk"',
+        read: 'settings get global debug.hwui.renderer',
+        parse: (r) => /skiagl/i.test(r) ? 'OPENGL' : 'OTHER',
+        type: 'toggle', default: false
+    },
+    restrict_background_network: {
+        category: 'performance', title: 'Restrict Background Network', icon: '🛑',
+        info: 'Blocks background apps from using network, preventing wakeups and resource contention during gaming.',
+        apply: 'cmd netpolicy set restrict-background true',
+        revert: 'cmd netpolicy set restrict-background false',
+        read: 'cmd netpolicy get restrict-background',
+        parse: (r) => /true/i.test(r) ? 'RESTRICTED' : 'ALLOWED',
+        type: 'toggle', default: false
+    },
 
-    // === ⚖️ BALANCED ===
+    // === ⚖️ BALANCED / UI ===
     display_density: {
         category: 'balance', title: 'Display Density (DPI)', icon: '🖥️',
         info: 'Sets display density. Lower = larger UI elements, higher = more screen real estate.',
@@ -220,6 +337,165 @@ const cmdTweaks = {
         read: null,
         parse: null,
         type: 'oneshot', default: false
+    },
+    dark_mode: {
+        category: 'balance', title: 'Force Dark Mode', icon: '🌙',
+        info: 'Forces system-wide dark theme across all apps that support it.',
+        apply: 'cmd uimode night yes',
+        revert: 'cmd uimode night no',
+        read: 'cmd uimode night',
+        parse: (r) => /yes/i.test(r) ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    disable_auto_brightness: {
+        category: 'balance', title: 'Disable Auto Brightness', icon: '☀️',
+        info: 'Locks manual brightness, preventing the system from adjusting it automatically (saves CPU cycles).',
+        apply: 'settings put system screen_brightness_mode 0',
+        revert: 'settings put system screen_brightness_mode 1',
+        read: 'settings get system screen_brightness_mode',
+        parse: (r) => r.trim() === '0' ? 'MANUAL' : 'AUTO',
+        type: 'toggle', default: false
+    },
+    immersive_mode: {
+        category: 'balance', title: 'Immersive Mode (Full)', icon: '📺',
+        info: 'Hides both status and navigation bars. Swipe from edges to reveal them.',
+        apply: 'settings put secure policy_control immersive.full=*',
+        revert: 'settings put secure policy_control null',
+        read: 'settings get secure policy_control',
+        parse: (r) => r.includes('immersive.full=*') ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    font_scale_large: {
+        category: 'balance', title: 'Larger Font Scale (1.15x)', icon: '🔤',
+        info: 'Increases system font size slightly for better readability.',
+        apply: 'settings put system font_scale 1.15',
+        revert: 'settings put system font_scale 1.0',
+        read: 'settings get system font_scale',
+        parse: (r) => r.trim() === '1.15' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+
+    // === 🛡️ PRIVACY / SECURITY ===
+    disable_usage_stats: {
+        category: 'privacy', title: 'Disable Usage Stats Collection', icon: '📉',
+        info: 'Prevents Android from collecting and sending app usage statistics.',
+        apply: 'settings put secure statsd_enabled 0',
+        revert: 'settings put secure statsd_enabled 1',
+        read: 'settings get secure statsd_enabled',
+        parse: (r) => r.trim() === '0' ? 'DISABLED' : 'ENABLED',
+        type: 'toggle', default: false
+    },
+    adb_notify_disable: {
+        category: 'privacy', title: 'Hide USB Debugging Notification', icon: '🤫',
+        info: 'Removes the persistent "USB debugging connected" notification.',
+        apply: 'settings put global adb_notify 0',
+        revert: 'settings put global adb_notify 1',
+        read: 'settings get global adb_notify',
+        parse: (r) => r.trim() === '0' ? 'HIDDEN' : 'VISIBLE',
+        type: 'toggle', default: false
+    },
+    disable_automatic_updates: {
+        category: 'privacy', title: 'Disable Automatic System Updates', icon: '🚫',
+        info: 'Prevents the system from automatically downloading and installing OTA updates.',
+        apply: 'settings put global ota_disable_automatic_update 1',
+        revert: 'settings put global ota_disable_automatic_update 0',
+        read: 'settings get global ota_disable_automatic_update',
+        parse: (r) => r.trim() === '1' ? 'DISABLED' : 'ENABLED',
+        type: 'toggle', default: false
+    },
+
+    // === 🛠️ DEVELOPER / DEBUGGING ===
+    show_touches: {
+        category: 'developer', title: 'Show Touches / Taps', icon: '👆',
+        info: 'Displays a visual indicator (white circle) where you touch the screen.',
+        apply: 'settings put system show_touches 1',
+        revert: 'settings put system show_touches 0',
+        read: 'settings get system show_touches',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    pointer_location: {
+        category: 'developer', title: 'Pointer Location', icon: '📍',
+        info: 'Shows current touch coordinates and path. Useful for testing and gaming analysis.',
+        apply: 'settings put system pointer_location 1',
+        revert: 'settings put system pointer_location 0',
+        read: 'settings get system pointer_location',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    show_layout_bounds: {
+        category: 'developer', title: 'Show Layout Bounds', icon: '📐',
+        info: 'Draws rectangles around UI elements to show margins, padding, and clipping.',
+        apply: 'settings put global show_layout_bounds 1',
+        revert: 'settings put global show_layout_bounds 0',
+        read: 'settings get global show_layout_bounds',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    show_cpu_usage: {
+        category: 'developer', title: 'Show CPU Usage Overlay', icon: '⚙️',
+        info: 'Displays a real-time overlay of CPU usage per core and load.',
+        apply: 'settings put system show_cpu_usage 1',
+        revert: 'settings put system show_cpu_usage 0',
+        read: 'settings get system show_cpu_usage',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    enable_adb_wifi: {
+        category: 'developer', title: 'Enable ADB over WiFi', icon: '📶',
+        info: 'Allows wireless debugging connection without USB cable (requires initial USB setup).',
+        apply: 'settings put global adb_wifi_enabled 1',
+        revert: 'settings put global adb_wifi_enabled 0',
+        read: 'settings get global adb_wifi_enabled',
+        parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+    keep_screen_on_dev: {
+        category: 'developer', title: 'Keep Screen On (Developer)', icon: '☀️',
+        info: 'Alternative to battery stay-awake, forces screen to never sleep via max timeout.',
+        apply: 'settings put system screen_off_timeout 2147483647',
+        revert: 'settings put system screen_off_timeout 60000',
+        read: 'settings get system screen_off_timeout',
+        parse: (r) => r.trim() === '2147483647' ? 'ON' : 'OFF',
+        type: 'toggle', default: false
+    },
+
+    // === ⚡ SYSTEM ONE-SHOT ACTIONS ===
+    battery_reset: {
+        category: 'system', title: 'Reset Battery Stats', icon: '🔋',
+        info: 'Resets the battery statistics tracker. Does not physically calibrate the battery.',
+        apply: 'cmd battery reset',
+        revert: null,
+        read: null,
+        parse: null,
+        type: 'oneshot', default: false
+    },
+    location_toggle_off: {
+        category: 'system', title: 'Disable Location Globally', icon: '📍',
+        info: 'Turns off all location services instantly via shell command.',
+        apply: 'cmd location set-enabled false',
+        revert: 'cmd location set-enabled true',
+        read: 'cmd location is-enabled',
+        parse: (r) => /true/i.test(r) ? 'ON' : 'OFF',
+        type: 'toggle', default: true
+    },
+    refresh_overlays: {
+        category: 'system', title: 'Force Refresh Overlays', icon: '🎨',
+        info: 'Forces the system to reload all runtime resource overlays (themes).',
+        apply: 'cmd overlay reload',
+        revert: null,
+        read: null,
+        parse: null,
+        type: 'oneshot', default: false
+    },
+    clear_dns_cache: {
+        category: 'system', title: 'Clear DNS Cache', icon: '🌐',
+        info: 'Flushes the system DNS resolver cache. Fixes weird connectivity issues.',
+        apply: 'cmd resolver flushdefaultnet',
+        revert: null,
+        read: null,
+        parse: null,
+        type: 'oneshot', default: false
     }
 };
 
@@ -228,25 +504,78 @@ const cmdPresets = {
     gaming: {
         label: '🎮 Gaming Mode',
         color: '#ef4444',
-        keys: ['wifi_hiperf', 'max_cached_procs', 'iorap_readahead', 'iorap_perfetto', 'phantom_procs', 'anim_window', 'anim_transition', 'anim_animator', 'doze_enable'],
-        actions: { doze_enable: 'revert' } // disable doze in gaming
+        keys: [
+            'wifi_hiperf', 'max_cached_procs', 'iorap_readahead', 'iorap_perfetto', 
+            'phantom_procs', 'anim_window', 'anim_transition', 'anim_animator', 
+            'disable_usb_audio_routing', 'force_4x_msaa', 'skia_gl_renderer', 
+            'restrict_background_network', 'zram_compaction'
+        ],
+        actions: { 
+            doze_enable: 'revert', 
+            wake_lock_restrict: 'revert',
+            disable_auto_brightness: 'apply' // Lock brightness to prevent OS interference
+        }
     },
     battery: {
         label: '🔋 Battery Saver',
         color: '#10b981',
-        keys: ['low_power', 'doze_enable', 'wake_lock_restrict', 'wifi_hiperf', 'anim_window', 'anim_transition', 'anim_animator'],
-        actions: { wifi_hiperf: 'revert', anim_window: 'revert', anim_transition: 'revert', anim_animator: 'revert' }
+        keys: [
+            'low_power', 'doze_enable', 'wake_lock_restrict', 'captive_portal_disable', 
+            'screen_timeout_30s', 'adaptive_charging', 'restrict_background_network'
+        ],
+        actions: { 
+            wifi_hiperf: 'revert', 
+            anim_window: 'revert', 
+            anim_transition: 'revert', 
+            anim_animator: 'revert', 
+            mobile_data_always_on: 'revert',
+            skia_gl_renderer: 'revert'
+        }
     },
     balanced: {
         label: '⚖️ Balanced',
         color: '#3b82f6',
-        keys: ['iorap_readahead', 'iorap_perfetto', 'max_cached_procs', 'stats_logging'],
+        keys: [
+            'iorap_readahead', 'iorap_perfetto', 'max_cached_procs', 'stats_logging', 
+            'bluetooth_absolute_volume', 'zram_compaction'
+        ],
+        actions: {}
+    },
+    privacy: {
+        label: '🛡️ Privacy Focus',
+        color: '#8b5cf6',
+        keys: [
+            'disable_usage_stats', 'adb_notify_disable', 'disable_oem_unlock', 
+            'disable_automatic_updates', 'captive_portal_disable', 'location_toggle_off'
+        ],
+        actions: { wifi_scan_always: 'revert' }
+    },
+    ui_clean: {
+        label: '🎨 Clean UI',
+        color: '#f59e0b',
+        keys: [
+            'dark_mode', 'immersive_mode', 'anim_window', 'anim_transition', 
+            'anim_animator', 'disable_auto_brightness'
+        ],
+        actions: { 
+            show_touches: 'revert', 
+            pointer_location: 'revert', 
+            show_layout_bounds: 'revert', 
+            show_cpu_usage: 'revert' 
+        }
+    },
+    developer: {
+        label: '🛠️ Developer Debug',
+        color: '#64748b',
+        keys: [
+            'show_touches', 'pointer_location', 'show_layout_bounds', 'show_cpu_usage', 
+            'gfxinfo_framerate', 'enable_adb_wifi', 'keep_screen_on_dev'
+        ],
         actions: {}
     }
 };
 
 let cmdTweakStates = {};
-
 // =====================================================================
 // 🔍 DYNAMIC TUNABLE SCANNER
 // =====================================================================
