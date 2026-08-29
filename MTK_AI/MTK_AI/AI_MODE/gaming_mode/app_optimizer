@@ -29,6 +29,10 @@ done
 # Universally compatible syntax across all Android versions:
 input keyevent 279 && input swipe 500 1200 500 400 300
 
+# Optimize app launch 
+cmd device_config put runtime_native_boot iorap_perfetto_enable true
+cmd device_config put runtime_native_boot iorap_readahead_enable true
+
 # ==============================
 # 🗄️ I/O Scheduler & Read-Ahead
 # ==============================
