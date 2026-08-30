@@ -31,6 +31,10 @@ CURRENT_TOP_APP=$(echo "$DUMP" | grep -m1 -E 'mResumedActivity|mFocusedApp' | gr
 
 cmd deviceidle whitelist +"${CURRENT_TOP_APP}"
 cmd activity start-in-vsync -W -n "${CURRENT_TOP_APP}"/.MainActivity
+cmd app_hibernation set-state --user 0 --global "${CURRENT_TOP_APP}" false >/dev/null 2>&1 || true
+cmd appops set "${CURRENT_TOP_APP}" RUN_IN_BACKGROUND allow 2>/dev/null
+cmd appops set "${CURRENT_TOP_APP}" RUN_ANY_IN_BACKGROUND allow 2>/dev/null
+am set-standby-bucket "${CURRENT_TOP_APP}" active 2>/dev/null
 
 refresh_rate() {
     # --- Execute per-app refresh rate ---
