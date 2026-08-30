@@ -6,8 +6,6 @@
 
 •downscaling graphics on per-app fully working upon reboot no need to setup again
 
-•per-app functions fully working even without adding on the gamelists (via lite mode daemon)
-
 --- version 0.0.1.01 ---
 
 •performance analyzer in tools tab now has tweaks analyzer inside (under beta testing)
