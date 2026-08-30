@@ -1,8 +1,10 @@
+--- version 0.0.1.02 ---
+
+•added game mode intervention via CMD on per-app functions & also fixing cpu governor with it's dynamic governor available & GPU frequency showing frequency
+
 --- version 0.0.1.01 ---
 
 •performance analyzer in tools tab now has tweaks analyzer inside (under beta testing)
-
-•added game mode intervention via CMD on per-app functions & also fixing cpu governor with it's dynamic governor available & GPU frequency showing frequency
 
 --- version 0.0.1.00 ---
 
