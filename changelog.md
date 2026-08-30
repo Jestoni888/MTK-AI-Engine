@@ -1,6 +1,6 @@
 --- version 0.0.1.02 ---
 
-•added game mode intervention via CMD on per-app functions & also fixing cpu governor with it's dynamic governor available & GPU frequency showing frequency
+•added game mode intervention via CMD on per-app functions & also fixing cpu governor with it's dynamic governor available & GPU showing frequency
 
 --- version 0.0.1.01 ---
 
