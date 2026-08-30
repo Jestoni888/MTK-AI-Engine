@@ -239,6 +239,9 @@ STATE=$(cat "$MONITOR_FILE" 2>/dev/null)
        cpu_governor
     fi
 
+[ -f "/dev/.mtk_ai_active_game" ] && return 0
+nohup sh "$MOD_DIR/MTK_AI/AI_MODE/normal_mode/normal_prop" >/dev/null 2>&1 &
+
 echo "✅ Devfreq settings loaded successfully!"
 echo "=== MTK AI MANUAL OVERRIDES COMPLETED ==="
 
