@@ -2,6 +2,8 @@
 
 •performance analyzer in tools tab now has tweaks analyzer inside (under beta testing)
 
+•added game mode intervention via CMD on per-app functions & also fixing cpu governor with it's dynamic governor available & GPU frequency showing frequency
+
 --- version 0.0.1.00 ---
 
 •this update needs to flash zip from our GitHub repo, it's using latest daemon converted C++. the fastest one I've ever made
