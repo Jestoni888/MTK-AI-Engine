@@ -172,7 +172,42 @@ const cmdTweaks = {
         parse: (r) => r.trim() === '1' ? 'ON' : 'OFF',
         type: 'toggle', default: false
     },
-
+    
+    // === 🌡️ THERMAL MANAGEMENT ===
+thermal_override_normal: {
+    category: 'performance', title: 'Thermal Override: Normal (No Throttle)', icon: '🌡️',
+    info: 'Locks thermal status to NORMAL (0). Prevents the OS from throttling CPU/GPU due to heat. Great for gaming.',
+    apply: 'cmd thermalservice override-status 0',
+    revert: 'cmd thermalservice reset',
+    read: 'dumpsys thermalservice | grep -iE "status|state"',
+    parse: (r) => {
+        const match = r.match(/(?:status|state)\s*[:=]\s*(\w+)/i);
+        return match ? match[1].toUpperCase() : 'CHECK';
+    },
+    type: 'toggle', default: false
+},
+thermal_override_severe: {
+    category: 'developer', title: 'Simulate Thermal Throttling (Severe)', icon: '🔥',
+    info: 'Forces thermal status to SEVERE (3). Useful for testing how apps/games react to heavy thermal throttling.',
+    apply: 'cmd thermalservice override-status 3',
+    revert: 'cmd thermalservice reset',
+    read: 'dumpsys thermalservice | grep -iE "status|state"',
+    parse: (r) => {
+        const match = r.match(/(?:status|state)\s*[:=]\s*(\w+)/i);
+        return match ? match[1].toUpperCase() : 'CHECK';
+    },
+    type: 'toggle', default: false
+},
+thermal_headroom_check: {
+    category: 'performance', title: 'Check Thermal Headroom (30s Forecast)', icon: '📉',
+    info: 'Queries the thermal headroom forecast for the next 30 seconds. Shows your available performance margin before throttling.',
+    apply: 'cmd thermalservice headroom 30',
+    revert: null,
+    read: null,
+    parse: null,
+    type: 'oneshot', default: false
+},
+    
     // === 🚀 PERFORMANCE ===
     max_cached_procs: {
         category: 'performance', title: 'Max Cached Processes', icon: '📦',
