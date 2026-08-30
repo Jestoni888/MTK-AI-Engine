@@ -4,6 +4,8 @@
 
 •added custom fps limit on per-app functions (note: this only CMD based depends on the device if it's working)
 
+•downscaling graphics on per-app fully working upon reboot no need to setup again
+
 --- version 0.0.1.01 ---
 
 •performance analyzer in tools tab now has tweaks analyzer inside (under beta testing)
