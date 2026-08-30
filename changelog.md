@@ -2,6 +2,8 @@
 
 •added game mode intervention via CMD on per-app functions & also fixing cpu governor with it's dynamic governor available & GPU showing frequency
 
+•added custom fps limit on per-app functions (note: this only CMD based depends on the device if it's working)
+
 --- version 0.0.1.01 ---
 
 •performance analyzer in tools tab now has tweaks analyzer inside (under beta testing)
