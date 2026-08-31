@@ -1,5 +1,9 @@
 --- version 0.0.1.02 ---
 
+•Backup rom in settings tab remove & replaced by backup firmware image in tools tab maintenance section , you can choose whatever firmware image to backup in /sdcard/AndroidBackups
+
+--- version 0.0.1.02 ---
+
 •added game mode intervention via CMD on per-app functions & also fixing cpu governor with it's dynamic governor available & GPU showing frequency
 
 •added custom fps limit on per-app functions (note: this only CMD based depends on the device if it's working)
