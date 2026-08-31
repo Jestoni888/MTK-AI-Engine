@@ -1,6 +1,10 @@
 #!/system/bin/sh
 #!/data/adb/modules/MTK_AI/busybox sh
 
+if pgrep -f "normal_prop" | grep -v "^$$" > /dev/null 2>&1; then
+    exit 0
+fi
+
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 
 log_msg() {
