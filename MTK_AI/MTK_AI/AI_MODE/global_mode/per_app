@@ -1,31 +1,5 @@
 #!/system/bin/sh
 
-### === SINGLE INSTANCE LOCK ===
-LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
-mkdir -p "$LOCK_DIR"
-LOCK_FILE="$LOCK_DIR/per_app.pid"
-
-# 1️⃣ Global pgrep check FIRST
-if pgrep -f "per_app" | grep -v "^$$" > /dev/null 2>&1; then
-    exit 0
-else
-    rm -rf "$LOCK_DIR"
-fi
-
-# 2️⃣ If PID file exists and process is alive → exit silently
-if [ -f "$LOCK_FILE" ]; then
-    OLD_PID=$(cat "$LOCK_FILE" 2>/dev/null)
-    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        exit 0
-    fi
-fi
-
-# 3️⃣ Register current process as the single instance
-mkdir -p "$LOCK_DIR"
-echo $$ > "$LOCK_FILE"
-trap 'rm -f "$LOCK_FILE"' EXIT
-### ============================
-
 DUMP=$(dumpsys activity activities 2>/dev/null)
 CURRENT_TOP_APP=$(echo "$DUMP" | grep -m1 -E 'mResumedActivity|mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
 
