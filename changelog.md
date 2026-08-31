@@ -1,4 +1,4 @@
---- version 0.0.1.02 ---
+--- version 0.0.1.03 ---
 
 •Backup rom in settings tab remove & replaced by backup firmware image in tools tab maintenance section , you can choose whatever firmware image to backup in /sdcard/AndroidBackups
 
