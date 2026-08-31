@@ -91,6 +91,21 @@ shell_cmd() {
 }
 shell_cmd
 
+boost_process() {
+    local PIDS=$(pidof "$CURRENT_TOP_APP" 2>/dev/null)
+    [ -z "$PIDS" ] && return 0
+    
+    for pid in $PIDS; do
+        renice -20 $pid 2>/dev/null
+        chrt -f -p 99 $pid 2>/dev/null
+        taskset -p 0xF0 $pid 2>/dev/null
+        ionice -c 1 -n 0 -p $pid 2>/dev/null
+        echo -17 > /proc/$pid/oom_score_adj 2>/dev/null
+        echo $pid > /dev/cpuset/top-app/tasks 2>/dev/null
+    done
+}
+boost_process
+
 game_mode_fps() {
     FPS=$(cat /sdcard/MTK_AI_Engine/per_app/${CURRENT_TOP_APP}.fps 2>/dev/null | tr -d '[:space:]')
     GM=$(cat /sdcard/MTK_AI_Engine/per_app/${CURRENT_TOP_APP}.gamemode 2>/dev/null | tr -d '[:space:]')
