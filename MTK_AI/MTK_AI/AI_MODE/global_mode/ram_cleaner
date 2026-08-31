@@ -185,6 +185,10 @@ esac
 # --- STANDARD KILL ---
 log_msg "    Killing: $pkg (PID: $pid)"
 am force-stop "$pkg" 2>/dev/null
+cmd app_hibernation set-state --user 0 --global $pkg false >/dev/null 2>&1 || true
+cmd appops set $pkg RUN_IN_BACKGROUND allow 2>/dev/null
+cmd appops set $pkg RUN_ANY_IN_BACKGROUND allow 2>/dev/null
+am set-standby-bucket $pkg active 2>/dev/null
 sleep 0.5
 if ps -p "$pid" >/dev/null 2>&1; then
 log_msg "   ⚠️ Force-stop failed, using SIGKILL..."
