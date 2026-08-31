@@ -98,7 +98,7 @@ done
 chmod +x "$OUT"
 echo "Created $OUT"
 }
-
+default_vm
 # 5. Execute backups
 if [ -f "/sdcard/MTK_AI_Engine/backup_rom" ]; then
             backup_part "boot" "boot*"
