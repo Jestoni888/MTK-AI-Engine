@@ -92,4 +92,14 @@ shell_cmd() {
 }
 shell_cmd
 
+game_mode_fps() {
+    FPS=$(cat /sdcard/MTK_AI_Engine/per_app/${CURRENT_TOP_APP}.fps 2>/dev/null | tr -d '[:space:]')
+    GM=$(cat /sdcard/MTK_AI_Engine/per_app/${CURRENT_TOP_APP}.gamemode 2>/dev/null | tr -d '[:space:]')
+    
+    [ -z "$FPS" ] || [ "$FPS" = "0" ] && return 0
+    [ -n "$GM" ] && cmd game mode "$GM" "${CURRENT_TOP_APP}" 2>/dev/null
+    [ "$GM" = "4" ] && cmd game set --fps "$FPS" "${CURRENT_TOP_APP}" 2>/dev/null
+}
+game_mode_fps
+
 [ ! -f /sdcard/MTK_AI_Engine/enable_cleaner ] && nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" >/dev/null 2>&1 &
