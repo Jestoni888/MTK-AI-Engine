@@ -2,6 +2,8 @@
 
 •Backup rom in settings tab remove & replaced by backup firmware image in tools tab maintenance section , you can choose whatever firmware image to backup in /sdcard/AndroidBackups
 
+•boost process added every launching apps or games using renice, ionice, taskset & chrt with all in absolute maximum priority value
+
 --- version 0.0.1.02 ---
 
 •added game mode intervention via CMD on per-app functions & also fixing cpu governor with it's dynamic governor available & GPU showing frequency
