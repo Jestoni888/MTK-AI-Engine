@@ -4,6 +4,8 @@
 
 •boost process added every launching apps or games using renice, ionice, taskset & chrt with all in absolute maximum priority value (lite mode daemon)
 
+•more info in tools tab process manager section
+
 --- version 0.0.1.02 ---
 
 •added game mode intervention via CMD on per-app functions & also fixing cpu governor with it's dynamic governor available & GPU showing frequency
