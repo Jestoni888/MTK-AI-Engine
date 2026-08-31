@@ -2,7 +2,7 @@
 
 •Backup rom in settings tab remove & replaced by backup firmware image in tools tab maintenance section , you can choose whatever firmware image to backup in /sdcard/AndroidBackups
 
-•boost process added every launching apps or games using renice, ionice, taskset & chrt with all in absolute maximum priority value
+•boost process added every launching apps or games using renice, ionice, taskset & chrt with all in absolute maximum priority value (lite mode daemon)
 
 --- version 0.0.1.02 ---
 
