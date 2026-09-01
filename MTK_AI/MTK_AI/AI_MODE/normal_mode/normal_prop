@@ -1,9 +1,19 @@
 #!/system/bin/sh
-#!/data/adb/modules/MTK_AI/busybox sh
 
-if pgrep -f "normal_prop" | grep -v "^$$" > /dev/null 2>&1; then
-    exit 0
+# ==========================================
+# KILL PREVIOUS RUNNING INSTANCE
+# ==========================================
+PID_FILE="/data/local/tmp/normal_prop.pid"
+if [ -f "$PID_FILE" ]; then
+    OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
+    # If an old PID exists and it's not the current script ($$), force kill it
+    if [ -n "$OLD_PID" ] && [ "$OLD_PID" != "$$" ]; then
+        kill -9 "$OLD_PID" 2>/dev/null
+    fi
 fi
+# Save the current script's PID for the next run to find
+echo $$ > "$PID_FILE"
+# ==========================================
 
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 
