@@ -1,6 +1,6 @@
 #!/system/bin/sh
 
-OUT="/sdcard/MTK_AI_Engine/restore_vm.sh"
+OUT="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/stock_tweaks.sh"
 
 echo '#!/bin/bash' > "$OUT"
 sysctl -a 2>/dev/null | grep '^vm\.' | while read -r line; do
