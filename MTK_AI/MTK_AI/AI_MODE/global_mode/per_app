@@ -75,15 +75,6 @@ boost_process_aggressive() {
     # 1. Identify main process and ALL child threads/sub-processes
     local pids
     pids=$(pidof "$target_app" 2>/dev/null)
-    
-    [ -z "$pids" ] && return 1
-
-    # 2. Aggressively push background processes out of CPU & IO contention
-    # Lower niceness and drop IO priority for background tasks
-    for bg_pid in $(ps -e -o pid= | grep -vE "$(echo "$pids" | tr ' ' '|')" | tail -n +2); do
-        renice -n 19 -p "$bg_pid" >/dev/null 2>&1
-        ionice -c 3 -p "$bg_pid" >/dev/null 2>&1
-    done
 
     # 3. Apply maximum real-time boost across ALL threads of the target process
     for pid in $pids; do
