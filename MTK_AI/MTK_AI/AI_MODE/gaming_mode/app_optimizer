@@ -1,4 +1,20 @@
 #!/system/bin/sh
+
+# ==========================================
+# KILL PREVIOUS RUNNING INSTANCE
+# ==========================================
+PID_FILE="/data/local/tmp/app_optimizer.pid"
+if [ -f "$PID_FILE" ]; then
+    OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
+    # If an old PID exists and it's not the current script ($$), force kill it
+    if [ -n "$OLD_PID" ] && [ "$OLD_PID" != "$$" ]; then
+        kill -9 "$OLD_PID" 2>/dev/null
+    fi
+fi
+# Save the current script's PID for the next run to find
+echo $$ > "$PID_FILE"
+# ==========================================
+
 # Fallback to BusyBox sh if available for better POSIX compliance
 CONFIG_DIR="/sdcard/MTK_AI_Engine"
 CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
