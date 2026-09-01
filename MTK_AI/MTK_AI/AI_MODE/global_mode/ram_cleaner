@@ -181,6 +181,9 @@ local check_cmdline=$(tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null)
         esac
 
 am force-stop "$pkg" 2>/dev/null
+if [ -f "$LOG_DIR/suspend_bg" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
+pm suspend "$pkg" 2>/dev/null
+fi
 sleep 0.5
 if ps -p "$pid" >/dev/null 2>&1; then
 log_msg "   ⚠️ Force-stop failed, using SIGKILL..."
