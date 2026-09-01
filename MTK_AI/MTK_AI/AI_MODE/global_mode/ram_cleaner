@@ -170,8 +170,16 @@ cmd app_hibernation set-state --user 0 --global $pkg true >/dev/null 2>&1 || tru
 cmd appops set $pkg RUN_IN_BACKGROUND ignore 2>/dev/null
 cmd appops set $pkg RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
 am set-standby-bucket $pkg restricted 2>/dev/null
-renice -n 19 -p "$pid" >/dev/null 2>&1
-ionice -c 3 -p "$pid" >/dev/null 2>&1
+
+local check_cmdline=$(tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null)
+        case "$check_cmdline" in
+            */data/adb/modules/MTK_AI/*) ;; # Skip MTK_AI module
+            *)
+                renice -n 19 -p "$pid" >/dev/null 2>&1
+                ionice -c 3 -p "$pid" >/dev/null 2>&1
+                ;;
+        esac
+
 am force-stop "$pkg" 2>/dev/null
 sleep 0.5
 if ps -p "$pid" >/dev/null 2>&1; then
