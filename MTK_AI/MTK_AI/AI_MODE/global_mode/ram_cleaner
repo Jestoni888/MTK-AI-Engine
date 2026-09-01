@@ -25,6 +25,7 @@ LOG_FILE="$LOG_DIR/MTK_AI_Engine.log"
 RAM_THRESHOLD_FILE="$CONFIG_DIR/ram_threshold.txt"
 FORCE_KILL_FILE="$CONFIG_DIR/force_kill.list"
 NEVER_KILL_FILE="$CONFIG_DIR/never_kill.list"
+ACTIVE_GAME="/dev/.mtk_ai_active_game"
 # CPU Limit Config (10 = 10% of ONE core, 0 = disabled)
 CPU_LIMIT_FILE="$CONFIG_DIR/cpu_limit_per_core.txt"
 [ -f "$CPU_LIMIT_FILE" ] || echo "0" > "$CPU_LIMIT_FILE"  # 0 = disabled by default
@@ -47,6 +48,7 @@ echo "$RAM_THRESHOLD" | grep -qE '^[0-9]+$' || RAM_THRESHOLD=50
 # Load Lists (strip comments & whitespace)
 FORCE_KILL_LIST=$(grep -v '^#' "$FORCE_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 NEVER_KILL_LIST=$(grep -v '^#' "$NEVER_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+ACTIVE_GAME=$(grep -v '^#' "$NEVER_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 }
 log_msg() {
 if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
@@ -155,13 +157,19 @@ if ps -p "$pid" >/dev/null 2>&1; then kill -9 "$pid" 2>/dev/null; fi
 killed_count=$((killed_count + 1))
 continue
 fi
-# 🛡️ PRIORITY 3: NEVER KILL LIST
+# 🛡️ PRIORITY 3: ACTIVE GAME
+if [ -n "$ACTIVE_GAME" ] && echo "$ACTIVE_GAME" | grep -qx "$pkg"; then
+log_msg "   🛡️ ACTIVE GAME: $pkg (PID: $pid)"
+protected_count=$((protected_count + 1))
+continue
+fi
+# 🛡️ PRIORITY 4: NEVER KILL LIST
 if [ -n "$NEVER_KILL_LIST" ] && echo "$NEVER_KILL_LIST" | grep -qx "$pkg"; then
 log_msg "   🛡️ NEVER KILL: $pkg (PID: $pid)"
 protected_count=$((protected_count + 1))
 continue
 fi
-# 🔍 PRIORITY 4: Standard Safety Checks
+# 🔍 PRIORITY 5: Standard Safety Checks
 if ! is_package_installed "$pkg"; then
 skipped_count=$((skipped_count + 1))
 continue
