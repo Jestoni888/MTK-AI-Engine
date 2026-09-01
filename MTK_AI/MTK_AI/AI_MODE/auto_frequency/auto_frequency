@@ -47,7 +47,6 @@ touch_active() {
 if [ -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
 nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
 fi
-[ ! -f "$TOUCH_ACTIVE" ] && return 0
 ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
 [ -f "/dev/.mtk_ai_active_game" ] && return 0
 
