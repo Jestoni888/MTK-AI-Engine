@@ -69,7 +69,10 @@ apply_mode() {
     else
         # Screen is ON (at least one value > 0) -> Apply manual/performance mode
         "$MANUAL" &
-        nohup sh "/data/adb/modules/MTK_AI/update_checker.sh" >/dev/null 2>&1 &
+        if [ ! -f "/sdcard/MTK_AI_Engine/auto_update" ]; then
+            nohup sh "/data/adb/modules/MTK_AI/update_checker.sh" >/dev/null 2>&1 &
+        fi
+        nohup sh "/data/adb/modules/MTK_AI/service.sh" >/dev/null 2>&1 &
     fi
 }
 
