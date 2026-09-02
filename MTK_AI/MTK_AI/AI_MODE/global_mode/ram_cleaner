@@ -48,7 +48,6 @@ echo "$RAM_THRESHOLD" | grep -qE '^[0-9]+$' || RAM_THRESHOLD=50
 # Load Lists (strip comments & whitespace)
 FORCE_KILL_LIST=$(grep -v '^#' "$FORCE_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 NEVER_KILL_LIST=$(grep -v '^#' "$NEVER_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-ACTIVE_GAME=$(grep -v '^#' "$ACTIVE_GAME" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 }
 log_msg() {
 if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
@@ -155,12 +154,6 @@ am set-standby-bucket "$pkg" restricted 2>/dev/null
 sleep 0.5
 if ps -p "$pid" >/dev/null 2>&1; then kill -9 "$pid" 2>/dev/null; fi
 killed_count=$((killed_count + 1))
-continue
-fi
-# 🛡️ PRIORITY 3: ACTIVE GAME
-if [ -n "$ACTIVE_GAME" ] && echo "$ACTIVE_GAME" | grep -qx "$pkg"; then
-log_msg "   🛡️ ACTIVE GAME: $pkg (PID: $pid)"
-protected_count=$((protected_count + 1))
 continue
 fi
 # 🛡️ PRIORITY 4: NEVER KILL LIST
