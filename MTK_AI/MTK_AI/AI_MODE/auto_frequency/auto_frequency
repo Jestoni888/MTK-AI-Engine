@@ -290,14 +290,13 @@ refresh_rate() {
 }
 
 exclude_killing() {
-    # Get all PIDs under MTK_AI, exclude action.sh, powersavex, and lib/lib64 paths
+    # Get all PIDs under MTK_AI
     for pid in $(pgrep -f "/data/adb/modules/MTK_AI"); do
-        # Added 2>/dev/null to cat to prevent log spam if a process dies between pgrep and cat
         cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')
         
-        # Exclude if cmdline contains action.sh, powersavex, or the lib/lib64 paths
-        # The regex lib(64)? matches both "/lib" and "/lib64"
-        if ! echo "$cmdline" | grep -qE "action\.sh|powersavex|/data/adb/modules/MTK_AI/lib(64)?"; then
+        # Exclude if cmdline contains action.sh, powersavex, or is inside the lib/lib64 folders
+        # The trailing '/' ensures we match the folder path, not just a filename starting with 'lib'
+        if ! echo "$cmdline" | grep -qE "action\.sh|powersavex|/data/adb/modules/MTK_AI/lib(64)?/"; then
             kill -9 $pid 2>/dev/null
         fi
     done
