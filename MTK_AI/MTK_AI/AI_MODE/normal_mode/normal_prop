@@ -1,5 +1,6 @@
 #!/system/bin/sh
 
+pkill -f app_optimizer
 # ==========================================
 # KILL PREVIOUS RUNNING INSTANCE
 # ==========================================
