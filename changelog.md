@@ -1,3 +1,8 @@
+--- version 0.0.1.04 ---
+
+•backup config change to backup current module version + current config & also load save module version + config
+I make this for those who want to revert old version Incase the latest version is unstable
+
 --- version 0.0.1.03 ---
 
 •Backup rom in settings tab remove & replaced by backup firmware image in tools tab maintenance section , you can choose whatever firmware image to backup in /sdcard/AndroidBackups
