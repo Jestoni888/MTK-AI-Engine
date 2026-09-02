@@ -188,7 +188,7 @@ local check_cmdline=$(tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null)
         case "$check_cmdline" in
             */data/adb/modules/MTK_AI/*) ;; # Skip MTK_AI module
             *)
-                renice -n 19 -p "$pid" >/dev/null 2>&1
+                renice -n 15 -p "$pid" >/dev/null 2>&1
                 ionice -c 3 -p "$pid" >/dev/null 2>&1
                 ;;
         esac
