@@ -1,5 +1,6 @@
 #!/system/bin/sh
 
+pkill -f normal_prop >/dev/null 2>&1 || true
 # ==========================================
 # KILL PREVIOUS RUNNING INSTANCE
 # ==========================================
