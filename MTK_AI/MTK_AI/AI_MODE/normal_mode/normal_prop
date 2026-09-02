@@ -1,6 +1,6 @@
 #!/system/bin/sh
 
-pkill -f app_optimizer
+pkill -f app_optimizer >/dev/null 2>&1 || true
 # ==========================================
 # KILL PREVIOUS RUNNING INSTANCE
 # ==========================================
