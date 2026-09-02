@@ -289,6 +289,19 @@ refresh_rate() {
     # -----------------------------------------
 }
 
+exclude_killing() {
+# Get all PIDs under MTK_AI, exclude action.sh and powersavex
+for pid in $(pgrep -f "/data/adb/modules/MTK_AI"); do
+    # Added 2>/dev/null to cat to prevent log spam if a process dies between pgrep and cat
+    cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')
+    
+    # Exclude if cmdline contains action.sh OR powersavex
+    if ! echo "$cmdline" | grep -qE "action\.sh|powersavex"; then
+        kill -9 $pid 2>/dev/null
+    fi
+done
+}
+
 downscale() {
 for f in /sdcard/MTK_AI_Engine/per_app/*.downscale; do
     [ -f "$f" ] || continue
