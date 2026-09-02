@@ -48,7 +48,7 @@ echo "$RAM_THRESHOLD" | grep -qE '^[0-9]+$' || RAM_THRESHOLD=50
 # Load Lists (strip comments & whitespace)
 FORCE_KILL_LIST=$(grep -v '^#' "$FORCE_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 NEVER_KILL_LIST=$(grep -v '^#' "$NEVER_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-ACTIVE_GAME=$(grep -v '^#' "$NEVER_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+ACTIVE_GAME=$(grep -v '^#' "$ACTIVE_GAME" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 }
 log_msg() {
 if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
