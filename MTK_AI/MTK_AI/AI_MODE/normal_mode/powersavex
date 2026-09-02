@@ -30,7 +30,7 @@ trap 'rm -f "$LOCK_FILE"' EXIT
 ### ============================
 
 export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:/data/adb/modules/MTK_AI/lib:$LD_LIBRARY_PATH
-
+. /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/auto_frequency
 INOTIFY="/data/adb/modules/MTK_AI/lib/inotifywait"
 POWERSAVE="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/powersave"
 MANUAL="/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual"
@@ -65,6 +65,7 @@ apply_mode() {
         if [ -f "/sdcard/MTK_AI_Engine/auto_update" ]; then
             nohup sh "/data/adb/modules/MTK_AI/action.sh" >/dev/null 2>&1 &
         fi
+        exclude_killing
     else
         # Screen is ON (at least one value > 0) -> Apply manual/performance mode
         "$MANUAL" &
