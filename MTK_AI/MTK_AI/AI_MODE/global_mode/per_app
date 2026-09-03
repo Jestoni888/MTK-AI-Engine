@@ -14,6 +14,7 @@ fi
 # Save the current script's PID for the next run to find
 echo $$ > "$PID_FILE"
 # ==========================================
+. /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/auto_frequency
 
 DUMP=$(dumpsys activity activities 2>/dev/null)
 CURRENT_TOP_APP=$(echo "$DUMP" | grep -m1 -E 'mResumedActivity|mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
@@ -142,15 +143,6 @@ boost_process_aggressive() {
     fi
 }
 boost_process_aggressive
-
-game_mode_fps() {
-    FPS=$(cat /sdcard/MTK_AI_Engine/per_app/${CURRENT_TOP_APP}.fps 2>/dev/null | tr -d '[:space:]')
-    GM=$(cat /sdcard/MTK_AI_Engine/per_app/${CURRENT_TOP_APP}.gamemode 2>/dev/null | tr -d '[:space:]')
-    
-    [ -z "$FPS" ] || [ "$FPS" = "0" ] && return 0
-    [ -n "$GM" ] && cmd game mode "$GM" "${CURRENT_TOP_APP}" 2>/dev/null
-    [ "$GM" = "4" ] && cmd game set --fps "$FPS" "${CURRENT_TOP_APP}" 2>/dev/null
-}
-game_mode_fps
+game_api
 
 [ ! -f /sdcard/MTK_AI_Engine/enable_cleaner ] && nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" >/dev/null 2>&1 &
