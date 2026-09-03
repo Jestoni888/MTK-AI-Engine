@@ -91,7 +91,7 @@ boost_process_aggressive() {
     local pids
     pids=$(pidof "$target_app" 2>/dev/null)
 
-    # 3. Apply maximum real-time boost across ALL threads of the target process
+    # 2. Apply maximum real-time boost across ALL threads of the target process
     for pid in $pids; do
         # Target all lightweight processes (threads) under this PID
         for tid in $(ls "/proc/$pid/task" 2>/dev/null); do
@@ -108,9 +108,38 @@ boost_process_aggressive() {
             ionice -c 1 -n 0 -p "$tid" >/dev/null 2>&1
         done
 
-        # 4. Make target completely immune to OOM Killer
+        # 3. Make target completely immune to OOM Killer
         echo -1000 > "/proc/$pid/oom_score_adj" 2>/dev/null
     done
+
+    # 4. Apply LOWEST priority to all PIDs currently in the background cpuset
+    if [ -f "/dev/cpuset/background/cgroup.procs" ]; then
+        local bg_pids
+        bg_pids=$(cat "/dev/cpuset/background/cgroup.procs" 2>/dev/null)
+        
+        for pid in $bg_pids; do
+            # Skip if this PID accidentally belongs to our boosted target app
+            echo "$pids" | grep -qw "$pid" && continue
+
+            for tid in $(ls "/proc/$pid/task" 2>/dev/null); do
+                # Lowest Nice value
+                renice -n 19 -p "$tid" >/dev/null 2>&1
+                
+                # Switch to IDLE scheduling policy (Absolute lowest CPU priority)
+                chrt -i -p 0 "$tid" >/dev/null 2>&1
+                
+                # CPU Affinity: Force strictly onto little cores (e.g., 0x0F for cores 0-3)
+                # Adjust 0x0F if your device has a different little-core layout (e.g., 0x3F for 6 little cores)
+                taskset -p 0x0F "$tid" >/dev/null 2>&1
+                
+                # IO Priority: Idle class (lowest precedence)
+                ionice -c 3 -p "$tid" >/dev/null 2>&1
+            done
+            
+            # Make background processes highly susceptible to OOM Killer (first to be killed)
+            echo 1000 > "/proc/$pid/oom_score_adj" 2>/dev/null
+        done
+    fi
 }
 boost_process_aggressive
 
