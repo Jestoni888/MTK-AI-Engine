@@ -112,6 +112,8 @@ vm.user_reserve_kbytes=131072 vm.vfs_cache_pressure=200 vm.watermark_boost_facto
 vm.watermark_scale_factor=10
 
 echo disabled | tee /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null || true
+[ -f /sdcard/MTK_AI_Engine/enable_gaming_prop2 ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 || true
+
 nohup sh "/sdcard/MTK_AI_Engine/modes/gaming_mode.sh" >/dev/null 2>&1 &
 nohup sh "/sdcard/MTK_AI_Engine/setedit-modes/gaming.sh" >/dev/null 2>&1 &
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" 2>/dev/null &
@@ -230,7 +232,6 @@ if command -v sec_touch_grip >/dev/null 2>&1; then
         sec_touch_grip --enable 1 2>/dev/null || true
     fi
 fi
-[ -f /sdcard/MTK_AI_Engine/enable_gaming_prop2 ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 || true
 
 # ==============================
 # ⚙️ Devfreq Config Loader (OPTIMIZED)
