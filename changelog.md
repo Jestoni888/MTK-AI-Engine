@@ -4,6 +4,8 @@
 
 Ex: su -c cmd game list-configs com.mobile.legends
 
+•fixed sudden restart when clicking master mode its Webui errors not on internal module itself 
+
 --- version 0.0.1.04 ---
 
 •backup config change to backup current module version + current config & also load save module version + config.
