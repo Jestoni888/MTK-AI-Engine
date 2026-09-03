@@ -1014,14 +1014,18 @@ const out = new Uint8Array(total); let pos = 0;
 for (const p of [...parts, ...central, eo]) { out.set(p, pos); pos += p.length; }
 return out;
 }
+// ★ FIXED: Reduced chunk size to 8000 to prevent shell ARG_MAX truncation
 async function writeBytesToSdcard(bytes, path) {
-const b64 = bytesToB64(bytes);
-await exec(`rm -f "${path}" "${CC_TMP_B64}" 2>/dev/null`);
-for (let i = 0; i < b64.length; i += 16000) {
-await exec(`printf '%s' '${b64.slice(i, i + 16000)}' >> "${CC_TMP_B64}"`);
-}
-await exec(`(base64 -d "${CC_TMP_B64}" 2>/dev/null || busybox base64 -d "${CC_TMP_B64}") > "${path}"`);
-await exec(`rm -f "${CC_TMP_B64}" 2>/dev/null`);
+    const b64 = bytesToB64(bytes);
+    await exec(`rm -f "${path}" "${CC_TMP_B64}" 2>/dev/null`);
+    
+    // Reduced from 16000 to 8000 to safely bypass shell/IPC command length limits
+    for (let i = 0; i < b64.length; i += 8000) {
+        await exec(`printf '%s' '${b64.slice(i, i + 8000)}' >> "${CC_TMP_B64}"`);
+    }
+    
+    await exec(`(base64 -d "${CC_TMP_B64}" 2>/dev/null || busybox base64 -d "${CC_TMP_B64}") > "${path}"`);
+    await exec(`rm -f "${CC_TMP_B64}" 2>/dev/null`);
 }
 // ---- UI state helpers ----
 function setCCStatus(m, c) { const el = document.getElementById('cc-status'); if (el) { el.textContent = m; el.style.color = c || '#8f7bd0'; } }
@@ -1084,20 +1088,55 @@ showStatus('💾 Full config zipped to /sdcard', '#32D74B');
 finally { setCCBusy(false); }
 };
 
-// ★ MODIFIED: cfgRestoreLocal restores to BOTH directories
+// ★ FIXED: Encodes to a temp text file first to avoid binary pipe corruption
 window.cfgRestoreLocal = async function() {
-if (ccBusy) return;
-if (!(parseInt(await exec(`stat -c %s "${CC_BACKUP_ZIP}" 2>/dev/null`)) || 0)) { setCCStatus('❌ No local backup zip found', '#FF453A'); return; }
-if (!confirm('Restore local backup?\nBoth /sdcard/MTK_AI_Engine AND /data/adb/modules/MTK_AI will be overwritten.')) return;
-setCCBusy(true); setCCStatus('⏳ Restoring local backup...', '#5b9dff');
-try {
-const b64 = await exec(`base64 "${CC_BACKUP_ZIP}" 2>/dev/null`, 60000);
-if (!b64.trim()) throw new Error('cannot read backup zip');
-const n = await extractZipBytesToSdcard(b64ToBytes(b64));
-if (!n) throw new Error('backup zip empty');
-await afterConfigChange('✅ Local config restored (' + n + ' files)');
-} catch (e) { setCCStatus('❌ ' + e.message, '#FF453A'); }
-finally { setCCBusy(false); }
+    if (ccBusy) return;
+    
+    const sizeStr = await exec(`stat -c %s "${CC_BACKUP_ZIP}" 2>/dev/null`);
+    const size = parseInt(sizeStr) || 0;
+    if (!size) { setCCStatus('❌ No local backup zip found', '#FF453A'); return; }
+    if (!confirm('Restore local backup?\nBoth /sdcard/MTK_AI_Engine AND /data/adb/modules/MTK_AI will be overwritten.')) return;
+    
+    setCCBusy(true); 
+    setCCStatus('⏳ Restoring local backup...', '#5b9dff');
+    
+    try {
+        // 1. Encode the ZIP to a base64 temp file to avoid binary pipe issues
+        setCCStatus('⏳ Encoding backup...', '#5b9dff');
+        await exec(`(busybox base64 -w 0 "${CC_BACKUP_ZIP}" > /sdcard/.mtk_b64.tmp 2>/dev/null || base64 -w 0 "${CC_BACKUP_ZIP}" > /sdcard/.mtk_b64.tmp 2>/dev/null)`);
+        
+        const b64SizeStr = await exec(`stat -c %s /sdcard/.mtk_b64.tmp 2>/dev/null`);
+        const b64Size = parseInt(b64SizeStr) || 0;
+        if (!b64Size) throw new Error('cannot encode backup to base64');
+        
+        // 2. Read the base64 text file in chunks to bypass KSU IPC limits
+        let b64 = "";
+        const chunkSizeKB = 50; // 50KB of text per chunk
+        const totalChunks = Math.ceil(b64Size / (chunkSizeKB * 1024));
+        
+        for (let i = 0; i < totalChunks; i++) {
+            setCCStatus(`⏳ Reading backup... ${Math.round((i / totalChunks) * 100)}%`, '#5b9dff');
+            const chunk = await exec(`dd if=/sdcard/.mtk_b64.tmp bs=1024 skip=${i * chunkSizeKB} count=${chunkSizeKB} 2>/dev/null`);
+            if (!chunk) throw new Error('cannot read backup chunk');
+            b64 += chunk;
+        }
+        
+        // 3. Cleanup temp file
+        await exec(`rm -f /sdcard/.mtk_b64.tmp 2>/dev/null`);
+        
+        if (!b64) throw new Error('cannot read backup zip');
+        
+        // 4. Decode and extract
+        const n = await extractZipBytesToSdcard(b64ToBytes(b64));
+        if (!n) throw new Error('backup zip empty');
+        
+        await afterConfigChange('✅ Local config restored (' + n + ' files)');
+    } catch (e) { 
+        await exec(`rm -f /sdcard/.mtk_b64.tmp 2>/dev/null`); // Ensure cleanup on error
+        setCCStatus('❌ ' + e.message, '#FF453A'); 
+    } finally { 
+        setCCBusy(false); 
+    }
 };
 
 // ★ MODIFIED: cfgReset removes BOTH directories
