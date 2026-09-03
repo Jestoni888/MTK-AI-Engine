@@ -112,7 +112,10 @@ vm.user_reserve_kbytes=131072 vm.vfs_cache_pressure=200 vm.watermark_boost_facto
 vm.watermark_scale_factor=10
 
 echo disabled | tee /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null || true
+[ -f /sdcard/MTK_AI_Engine/enable_gaming_prop ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop || true
 [ -f /sdcard/MTK_AI_Engine/enable_gaming_prop2 ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 || true
+[ -f /sdcard/MTK_AI_Engine/enable_performance ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/performance || true
+[ -f /sdcard/MTK_AI_Engine/enable_disable_thermal ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal || true
 
 nohup sh "/sdcard/MTK_AI_Engine/modes/gaming_mode.sh" >/dev/null 2>&1 &
 nohup sh "/sdcard/MTK_AI_Engine/setedit-modes/gaming.sh" >/dev/null 2>&1 &
@@ -166,12 +169,6 @@ settings put global app_standby_enabled 1 2>/dev/null || true
 settings put global background_dex_opt_job false 2>/dev/null || true
 setprop persist.sys.game_mode 1 2>/dev/null || true
 
-# ==============================
-# 🔥 Thermal Toggle (Optional)
-# ==============================
-[ -f "/sdcard/MTK_AI_Engine/enable_disable_thermal" ] && \
-[ -f "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" ] && \
-sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal" 2>/dev/null || true
 settings put global low_power 0 2>/dev/null || true
 settings put global low_power_sticky 0 2>/dev/null || true
 echo "4 0" > /proc/ppm/policy_status 2>/dev/null || true
