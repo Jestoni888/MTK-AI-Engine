@@ -1051,41 +1051,49 @@ const mode = parseInt((await exec('cat /sdcard/MTK_AI_Engine/automode 2>/dev/nul
      o.querySelector('.cc-sub').textContent = isOverlayOn ? 'ON' : 'OFF';
  }
 }
-// ---- CONFIG ACTIONS ----
-// ★ MODIFIED: cfgSave now backs up BOTH CC_DIR and CC_DIR2
+// ★ FIXED: Dynamically strips the exact CC_DIR2 path, preserving nested 'MTK_AI/' folders
 window.cfgSave = async function() {
-if (ccBusy) return; setCCBusy(true); setCCStatus('⏳ Zipping both config folders...', '#FF9F0A');
-try {
-const entries = [];
-// --- Backup CC_DIR (/sdcard/MTK_AI_Engine) ---
-const list1 = await exec(`find "${CC_DIR}" -type f 2>/dev/null`);
-const files1 = list1.split('\n').map(x => x.trim()).filter(Boolean);
-for (const f of files1) {
-    setCCStatus(`⏳ Packing [SD] ${entries.length + 1}...`, '#FF9F0A');
-    const b64 = await exec(`base64 "${f}" 2>/dev/null`);
-    if (b64.trim()) {
-        entries.push({ name: f.replace(/^\/sdcard\//, ''), data: b64ToBytes(b64) });
+    if (ccBusy) return; 
+    setCCBusy(true); 
+    setCCStatus('⏳ Zipping both config folders...', '#FF9F0A');
+    try {
+        const entries = [];
+        
+        // --- Backup CC_DIR (/sdcard/MTK_AI_Engine) ---
+        const list1 = await exec(`find "${CC_DIR}" -type f 2>/dev/null`);
+        const files1 = list1.split('\n').map(x => x.trim()).filter(Boolean);
+        for (const f of files1) {
+            setCCStatus(`⏳ Packing [SD] ${entries.length + 1}...`, '#FF9F0A');
+            const b64 = await exec(`base64 "${f}" 2>/dev/null`);
+            if (b64.trim()) {
+                entries.push({ name: f.replace(/^\/sdcard\//, ''), data: b64ToBytes(b64) });
+            }
+        }
+
+        // --- Backup CC_DIR2 (/data/adb/modules/MTK_AI) ---
+        const list2 = await exec(`find "${CC_DIR2}" -type f 2>/dev/null`);
+        const files2 = list2.split('\n').map(x => x.trim()).filter(Boolean);
+        for (const f of files2) {
+            setCCStatus(`⏳ Packing [MOD] ${entries.length + 1}...`, '#FF9F0A');
+            const b64 = await exec(`base64 "${f}" 2>/dev/null`);
+            if (b64.trim()) {
+                // ★ FIX: Uses a dynamic regex to strip ONLY the exact base path (/data/adb/modules/MTK_AI/)
+                // This leaves 'MTK_AI/AI_MODE' intact instead of stripping it.
+                const relPath = f.replace(new RegExp(`^${CC_DIR2.replace(/\//g, '\\/')}/`), '');
+                entries.push({ name: 'MTK_AI_Module/' + relPath, data: b64ToBytes(b64) });
+            }
+        }
+
+        if (!entries.length) throw new Error('both folders missing / empty');
+        const zip = buildZip(entries);
+        await writeBytesToSdcard(zip, CC_BACKUP_ZIP);
+        setCCStatus(`✅ Backup → ${CC_BACKUP_ZIP} (${entries.length} files from both dirs)`, '#32D74B');
+        showStatus('💾 Full config zipped to /sdcard', '#32D74B');
+    } catch (e) { 
+        setCCStatus('❌ ' + e.message, '#FF453A'); 
+    } finally { 
+        setCCBusy(false); 
     }
-}
-// --- Backup CC_DIR2 (/data/adb/modules/MTK_AI) --- ★ NEW
-const list2 = await exec(`find "${CC_DIR2}" -type f 2>/dev/null`);
-const files2 = list2.split('\n').map(x => x.trim()).filter(Boolean);
-for (const f of files2) {
-    setCCStatus(`⏳ Packing [MOD] ${entries.length + 1}...`, '#FF9F0A');
-    const b64 = await exec(`base64 "${f}" 2>/dev/null`);
-    if (b64.trim()) {
-        // Store under MTK_AI_Module/ prefix to distinguish from sdcard files
-        const relPath = f.replace(/^\/data\/adb\/modules\//, '');
-        entries.push({ name: 'MTK_AI_Module/' + relPath, data: b64ToBytes(b64) });
-    }
-}
-if (!entries.length) throw new Error('both folders missing / empty');
-const zip = buildZip(entries);
-await writeBytesToSdcard(zip, CC_BACKUP_ZIP);
-setCCStatus(`✅ Backup → ${CC_BACKUP_ZIP} (${entries.length} files from both dirs)`, '#32D74B');
-showStatus('💾 Full config zipped to /sdcard', '#32D74B');
-} catch (e) { setCCStatus('❌ ' + e.message, '#FF453A'); }
-finally { setCCBusy(false); }
 };
 
 // ★ FIXED: Encodes to a temp text file first to avoid binary pipe corruption
@@ -1293,61 +1301,50 @@ await exec(`mkdir -p "${dir}" 2>/dev/null`);
 }
 }
 
-// ★ MODIFIED: extractZipBytesToSdcard now routes to BOTH target directories
+// ★ FIXED: Preserves nested same-name folders like 'MTK_AI/MTK_AI/AI_MODE'
 async function extractZipBytesToSdcard(u8) {
-const entries = parseZip(u8);
-let written = 0;
-for (const e of entries) {
-     if (e.name.includes('..')) continue;
-     let target = '';
-     let name = e.name;
-
-     // ★ NEW: Route based on zip entry prefix
-     if (name.startsWith('MTK_AI_Module/')) {
-         // Module files → /data/adb/modules/MTK_AI/...
-         const relPath = name.replace(/^MTK_AI_Module\//, '');
-         target = '/data/adb/modules/MTK_AI/' + relPath;
-     } else if (name.startsWith('MTK_AI_Engine/')) {
-         // Sdcard config → /sdcard/MTK_AI_Engine/...
-         target = '/sdcard/' + name;
-     } else {
-         // Backward compat: check if it looks like a module file or default to sdcard
-         // If the zip has a single unknown root, try to detect
-         const roots = new Set(entries.map(x => x.name.split('/')[0]));
-         if (roots.size === 1 && !name.startsWith('MTK_AI_Engine/') && !name.startsWith('MTK_AI_Module/')) {
-             // Legacy single-root zip → default to sdcard
-             const root = [...roots][0];
-             if (name.startsWith(root + '/')) {
-                 name = 'MTK_AI_Engine/' + name.slice(root.length + 1);
-             } else {
-                 name = 'MTK_AI_Engine/' + name;
-             }
-             target = '/sdcard/' + name;
-         } else {
-             target = '/sdcard/MTK_AI_Engine/' + name;
-         }
-     }
-
-     if (e.name.endsWith('/')) {
-         await exec(`mkdir -p "${target}" 2>/dev/null`);
-         continue;
-     }
-     await ensureDirectoryExists(target);
-     try {
-         let data = zipEntryData(u8, e);
-         if (e.method === 8) {
-             data = await inflateRaw(data);
-         } else if (e.method !== 0) {
-             console.warn(`Skipping unsupported compression method ${e.method} for ${e.name}`);
-             continue; 
-         }
-         await writeBytesToSdcard(data, target);
-         written++;
-     } catch (err) {
-         console.error(`Failed to extract ${e.name}:`, err);
-     }
- }
- return written;
+    const entries = parseZip(u8);
+    let written = 0;
+    for (const e of entries) {
+        if (e.name.includes('..')) continue;
+        let target = '';
+        let name = e.name;
+        
+        if (name.startsWith('MTK_AI_Module/')) {
+            // Module files → /data/adb/modules/MTK_AI/...
+            let relPath = name.replace(/^MTK_AI_Module\//, '');
+            
+            // ★ FIX: Removed the aggressive backward-compat strip. 
+            // If relPath is 'MTK_AI/AI_MODE', it stays 'MTK_AI/AI_MODE'.
+            target = '/data/adb/modules/MTK_AI/' + relPath;
+        } else if (name.startsWith('MTK_AI_Engine/')) {
+            // Sdcard config → /sdcard/MTK_AI_Engine/...
+            target = '/sdcard/' + name;
+        } else {
+            // Fallback for unknown structures
+            target = '/sdcard/MTK_AI_Engine/' + name;
+        }
+        
+        if (e.name.endsWith('/')) {
+            await exec(`mkdir -p "${target}" 2>/dev/null`);
+            continue;
+        }
+        await ensureDirectoryExists(target);
+        try {
+            let data = zipEntryData(u8, e);
+            if (e.method === 8) {
+                data = await inflateRaw(data);
+            } else if (e.method !== 0) {
+                console.warn(`Skipping unsupported compression method ${e.method} for ${e.name}`);
+                continue; 
+            }
+            await writeBytesToSdcard(data, target);
+            written++;
+        } catch (err) {
+            console.error(`Failed to extract ${e.name}:`, err);
+        }
+    }
+    return written;
 }
 
 // ---- ONLINE: multi-transport downloader ----
