@@ -1153,7 +1153,6 @@ if (ccBusy) return;
 if (!confirm('⚠️ RESET will run:\nrm -rf /sdcard/MTK_AI_Engine\nrm -rf /data/adb/modules/MTK_AI\n\nContinue?')) return;
 setCCBusy(true); setCCStatus('⏳ rm -rf both dirs...', '#FF453A');
 await exec(`rm -rf "${CC_DIR}" 2>/dev/null`);
-await exec(`rm -rf "${CC_DIR2}" 2>/dev/null`);  // ★ NEW
 setCCStatus('✅ Config reset (both folders removed)', '#32D74B');
 showStatus('♻️ Full config reset', '#FF453A');
 setCCBusy(false);
