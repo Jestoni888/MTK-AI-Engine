@@ -2,7 +2,7 @@
 
 •added angle driver & loading boost duration on per-app , they are also CMD based depends on devices if it's working 
 
-to check: cmd game list-configs <package.name>
+to check: cmd game list-configs package.name
 example: cmd game list-configs com.mobile.legends
 
 --- version 0.0.1.04 ---
