@@ -105,7 +105,6 @@ run_cmd() {
     else
         pkill -f "module_executer" 2>/dev/null
     fi
-        game_api
 }
 
 find_touchscreen() {
