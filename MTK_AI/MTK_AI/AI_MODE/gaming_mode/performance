@@ -1,5 +1,19 @@
 #!/system/bin/sh
 
+# KILL PREVIOUS RUNNING INSTANCE
+# ==========================================
+PID_FILE="/data/local/tmp/performance.pid"
+if [ -f "$PID_FILE" ]; then
+    OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
+    # If an old PID exists and it's not the current script ($$), force kill it
+    if [ -n "$OLD_PID" ] && [ "$OLD_PID" != "$$" ]; then
+        kill -9 "$OLD_PID" 2>/dev/null
+    fi
+fi
+# Save the current script's PID for the next run to find
+echo $$ > "$PID_FILE"
+# ==========================================
+
 # Maximum Performance Script — Final Version
 # Based on your kr-script/mtk XML logic
 # Targets: mt6983, mt6895, and gpufreqv2-based Dimensity SoCs
