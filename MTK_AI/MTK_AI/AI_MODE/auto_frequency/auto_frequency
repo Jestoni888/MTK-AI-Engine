@@ -302,13 +302,36 @@ exclude_killing() {
     done
 }
 
-downscale() {
-for f in /sdcard/MTK_AI_Engine/per_app/*.downscale; do
-    [ -f "$f" ] || continue
-    p=$(basename "$f" .downscale)
-    m=$(awk '{printf "%.2f", $1/100}' "$f")
-    cmd game set --downscale "$m" "$p"
-done
+game_api() {
+local DIR="/sdcard/MTK_AI_Engine/per_app"
+    [ -d "$DIR" ] || return
+    local APPLIED=" "
+
+    for f in "$DIR"/*; do
+        [ -f "$f" ] || continue
+        local p="${f##*/}"; p="${p%.*}"
+        case "$APPLIED" in *" $p "*) continue;; esac
+        APPLIED="$APPLIED$p "
+
+        local ds=$(cat "$DIR/$p.downscale" 2>/dev/null | tr -d '[:space:]')
+        ds=${ds:-100}; local ds_f=$(awk "BEGIN{printf \"%.1f\",$ds/100}")
+
+        local fps=$(cat "$DIR/$p.fps" 2>/dev/null | tr -d '[:space:]')
+        fps=${fps:-0}; local fps_str=""; [ "$fps" -gt 0 ] 2>/dev/null && fps_str="$fps"
+
+        local angle=$(cat "$DIR/$p.use_angle" 2>/dev/null | tr -d '[:space:]')
+        local angle_str="false"; [ "$angle" = "1" ] && angle_str="true"
+
+        local boost=$(cat "$DIR/$p.loading_boost" 2>/dev/null | tr -d '[:space:]')
+        boost=${boost:--1}
+        
+        cmd game reset "$p" 2>/dev/null
+
+        device_config put game_overlay "$p" "mode=2,downscaleFactor=1.0,useAngle=false,loadingBoost=-1:mode=4,downscaleFactor=${ds_f},fps=${fps_str},useAngle=${angle_str},loadingBoost=${boost}"
+
+        local gm=$(cat "$DIR/$p.gamemode" 2>/dev/null | tr -d '[:space:]')
+        [ -n "$gm" ] && cmd game mode "$gm" "$p" 2>/dev/null
+    done
 }
 
 game_mode() {
