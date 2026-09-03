@@ -151,27 +151,26 @@
  };
  const pathStatusCache = {};
  // ============ PROFILE MODES CONFIGURATION ============
- const PROFILE_MODES = {
-     performance: {
-         label: 'PERFORMANCE',
-         color: '#FF3B30',
-         desc: 'Max clocks • Thermal disabled • Aggressive boost • Can cause auto reboot • Automode stops',
-         commands: `
-         su -c "pkill -9 -f "/data/adb/modules/MTK_AI" 2>/dev/null"
-export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
-su -c 'export PATH= "/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH "; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode  "performance mode "  >/dev/null 2 > &1  &'
-nohup sh /data/adb/modules/MTK_AI/service.sh 2 > &1  &
- `}, balance: { label: 'BALANCE', color: '#FF9500', desc: 'schedutil • Normal thermal • Smart switch on gaming/normal', commands:` 
-su -c  "pkill -9 -f  "/data/adb/modules/MTK_AI " 2 >/dev/null "
-rm -f /sdcard/MTK_AI_Engine/enable_limiter
-su -c 'export PATH= "/system/bin:/system/xbin:/sbin:/vendor/bin "; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh  >/dev/null 2 > &1  & disown'
- `}, powersave: { label: 'POWERSAVE', color: '#34C759', desc: 'schedutil • Frequency relax • Offset -10 • Smart switch on gaming/normal', commands:` 
-su -c  "pkill -9 -f  "/data/adb/modules/MTK_AI " 2 >/dev/null "
-touch /sdcard/MTK_AI_Engine/enable_limiter 2 >/dev/null
-echo  "1 "  > /sdcard/MTK_AI_Engine/enable_limiter 2 >/dev/null
-su -c 'export PATH= "/system/bin:/system/xbin:/sbin:/vendor/bin "; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh  >/dev/null 2 > &1  & disown'
-`
-}
+ // ============ PROFILE MODES CONFIGURATION ============
+const PROFILE_MODES = {
+    performance: {
+        label: 'PERFORMANCE',
+        color: '#FF3B30',
+        desc: 'Max clocks • Thermal disabled • Aggressive boost • Can cause auto reboot • Automode stops',
+        commands: `su -c "pkill -9 -f '/data/adb/modules/MTK_AI' 2>/dev/null"; export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH; su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"; cd /data/adb/modules/MTK_AI; nohup /data/adb/modules/MTK_AI/main_control/mode "performance mode" >/dev/null 2>&1 &'; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 &`
+    },
+    balance: {
+        label: 'BALANCE',
+        color: '#FF9500',
+        desc: 'schedutil • Normal thermal • Smart switch on gaming/normal',
+        commands: `su -c "pkill -9 -f '/data/adb/modules/MTK_AI' 2>/dev/null"; rm -f /sdcard/MTK_AI_Engine/enable_limiter; su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`
+    },
+    powersave: {
+        label: 'POWERSAVE',
+        color: '#34C759',
+        desc: 'schedutil • Frequency relax • Offset -10 • Smart switch on gaming/normal',
+        commands: `su -c "pkill -9 -f '/data/adb/modules/MTK_AI' 2>/dev/null"; touch /sdcard/MTK_AI_Engine/enable_limiter 2>/dev/null; echo "1" > /sdcard/MTK_AI_Engine/enable_limiter 2>/dev/null; su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`
+    }
 };
 // ============ STATE FILE MANAGEMENT ============
 const STATE_FILE_PATH = '/sdcard/MTK_AI_Engine/automode';
