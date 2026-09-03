@@ -1,9 +1,11 @@
+--- version 0.0.1.05 ---
+
+•added angle driver & loading boost duration on per-app , they are also CMD based depends on devices if it's working 
+
 --- version 0.0.1.04 ---
 
 •backup config change to backup current module version + current config & also load save module version + config.
 I make this for those who want to revert old version Incase the latest version is unstable
-
-•added angle driver & loading boost duration on per-app , they are also CMD based depends on devices if it's working 
 
 --- version 0.0.1.03 ---
 
