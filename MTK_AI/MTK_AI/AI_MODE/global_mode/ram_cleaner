@@ -33,97 +33,232 @@ CPU_LIMIT_FILE="$CONFIG_DIR/cpu_limit_per_core.txt"
 CPULIMIT_BIN="/data/adb/modules/MTK_AI/lib/cpulimit"
 # Initialize config files if missing (WebUI can overwrite these later)
 [ -f "$RAM_THRESHOLD_FILE" ] || echo "50" > "$RAM_THRESHOLD_FILE"
-[ -f "$FORCE_KILL_FILE" ] || printf "# Force Kill List
-# Packages here are ALWAYS killed when background (bypasses all protections)
-# One package per line
-" > "$FORCE_KILL_FILE"
-[ -f "$NEVER_KILL_FILE" ] || printf "# Never Kill List
-# Packages here are NEVER killed (always protected)
-# One package per line
-" > "$NEVER_KILL_FILE"
+[ -f "$FORCE_KILL_FILE" ] || printf "# Force Kill List\n# Packages here are ALWAYS killed when background (bypasses all protections)\n# One package per line\n" > "$FORCE_KILL_FILE"
+[ -f "$NEVER_KILL_FILE" ] || printf "# Never Kill List\n# Packages here are NEVER killed (always protected)\n# One package per line\n" > "$NEVER_KILL_FILE"
+
 load_configs() {
-# Load RAM Threshold
-RAM_THRESHOLD=$(cat "$RAM_THRESHOLD_FILE" 2>/dev/null | tr -d '[:space:]')
-echo "$RAM_THRESHOLD" | grep -qE '^[0-9]+$' || RAM_THRESHOLD=50
-# Load Lists (strip comments & whitespace)
-FORCE_KILL_LIST=$(grep -v '^#' "$FORCE_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-NEVER_KILL_LIST=$(grep -v '^#' "$NEVER_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    # Load RAM Threshold
+    RAM_THRESHOLD=$(cat "$RAM_THRESHOLD_FILE" 2>/dev/null | tr -d '[:space:]')
+    echo "$RAM_THRESHOLD" | grep -qE '^[0-9]+$' || RAM_THRESHOLD=50
+    # Load Lists (strip comments & whitespace)
+    FORCE_KILL_LIST=$(grep -v '^#' "$FORCE_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    NEVER_KILL_LIST=$(grep -v '^#' "$NEVER_KILL_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 }
+
 log_msg() {
-if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
-echo "log disabled"
-else
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
-[ "$(wc -l < "$LOG_FILE")" -gt 200 ] &&
-tail -n 200 "$LOG_FILE" > "$LOG_FILE.tmp" &&
-mv "$LOG_FILE.tmp" "$LOG_FILE"
-fi
+    if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+        echo "log disabled"
+    else
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+        [ "$(wc -l < "$LOG_FILE")" -gt 200 ] &&
+        tail -n 200 "$LOG_FILE" > "$LOG_FILE.tmp" &&
+        mv "$LOG_FILE.tmp" "$LOG_FILE"
+    fi
 }
+
 # -------------------------
 # PACKAGE HELPERS
 # -------------------------
 get_installed_packages() {
-pm list packages 2>/dev/null | cut -d':' -f2 | sort -u
+    pm list packages 2>/dev/null | cut -d':' -f2 | sort -u
 }
+
 is_package_installed() {
-echo "$INSTALLED_PACKAGES" | grep -qx "$1"
+    echo "$INSTALLED_PACKAGES" | grep -qx "$1"
 }
+
 extract_package_from_cmdline() {
-local cmdline="$1"
-local pkg=$(echo "$cmdline" | grep -oiE '(com|org|net|io)\.[a-z0-9_.]+' | head -1)
-if [ -z "$pkg" ]; then
-pkg=$(echo "$cmdline" | grep -oE '[a-z0-9_.]+/[A-Za-z0-9_.]+' | head -1 | cut -d'/' -f1)
-fi
-if [ -z "$pkg" ]; then
-pkg=$(echo "$cmdline" | grep -oE '[a-z][a-z0-9_]*\.[a-z][a-z0-9_.]+' | head -1)
-fi
-echo "$pkg"
+    local cmdline="$1"
+    local pkg=$(echo "$cmdline" | grep -oiE '(com|org|net|io)\.[a-z0-9_.]+' | head -1)
+    if [ -z "$pkg" ]; then
+        pkg=$(echo "$cmdline" | grep -oE '[a-z0-9_.]+/[A-Za-z0-9_.]+' | head -1 | cut -d'/' -f1)
+    fi
+    if [ -z "$pkg" ]; then
+        pkg=$(echo "$cmdline" | grep -oE '[a-z][a-z0-9_]*\.[a-z][a-z0-9_.]+' | head -1)
+    fi
+    echo "$pkg"
 }
+
 # -------------------------
 # ACCURATE BACKGROUND KILLER
 # -------------------------
 force_kill_cgroup_safe() {
-log_msg "️ Loading configs & building package list..."
-load_configs
-INSTALLED_PACKAGES=$(get_installed_packages)
-# 📱 1. Detect current foreground/top app ONCE (outside the loop)
-log_msg "📱 Detecting current top app..."
-CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mResumedActivity' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
-if [ -z "$CURRENT_TOP_APP" ]; then
-CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
-fi
-if [ -z "$CURRENT_TOP_APP" ]; then
-CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
-fi
-# Validate package format to avoid matching null/empty/garbage
-if ! echo "$CURRENT_TOP_APP" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
-CURRENT_TOP_APP=""
-log_msg "⚠️ Could not detect a valid top app."
-else
-log_msg "✅ Current Top App: $CURRENT_TOP_APP"
-fi
-log_msg "️ Scanning /dev/cpuset/background/cgroup.procs..."
-local PIDS_FILE="/tmp/bg_pids_$$.txt"
-cat /dev/cpuset/background/cgroup.procs > "$PIDS_FILE" 2>/dev/null
-if [ ! -s "$PIDS_FILE" ]; then
-log_msg " Background CGroup is empty."
-rm -f "$PIDS_FILE"
-return
-fi
-local killed_count=0
-local protected_count=0
-local skipped_count=0
-while read -r pid; do
-[ -z "$pid" ] && continue
-local proc_name=$(ps -o comm= -p "$pid" 2>/dev/null | tr -d ' ')
-[ -z "$proc_name" ] && continue
+    log_msg "️ Loading configs & building package list..."
+    load_configs
+    INSTALLED_PACKAGES=$(get_installed_packages)
     
-    # 🔄 NEW SIMPLER PACKAGE EXTRACTION
-    local pkg=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' '\n' | head -n 1 | cut -d':' -f1)
+    # 🎮 Read active game package once for protection
+    ACTIVE_GAME_PKG=$(cat "$ACTIVE_GAME" 2>/dev/null | tr -d '[:space:]')
+
+    # 📱 1. Detect current foreground/top app ONCE (outside the loop)
+    log_msg "📱 Detecting current top app..."
+    CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mResumedActivity' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    if [ -z "$CURRENT_TOP_APP" ]; then
+        CURRENT_TOP_APP=$(dumpsys activity activities 2>/dev/null | grep -m1 'mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    fi
+    if [ -z "$CURRENT_TOP_APP" ]; then
+        CURRENT_TOP_APP=$(dumpsys window 2>/dev/null | grep -m1 'mCurrentFocus' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    fi
+    # Validate package format to avoid matching null/empty/garbage
+    if ! echo "$CURRENT_TOP_APP" | grep -qE '^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$'; then
+        CURRENT_TOP_APP=""
+        log_msg "⚠️ Could not detect a valid top app."
+    else
+        log_msg "✅ Current Top App: $CURRENT_TOP_APP"
+    fi
+
+    log_msg "️ Scanning /dev/cpuset/background/cgroup.procs..."
+    local PIDS_FILE="/tmp/bg_pids_$$.txt"
+    cat /dev/cpuset/background/cgroup.procs > "$PIDS_FILE" 2>/dev/null
+    if [ ! -s "$PIDS_FILE" ]; then
+        log_msg " Background CGroup is empty."
+        rm -f "$PIDS_FILE"
+        return
+    fi
+
+    local killed_count=0
+    local protected_count=0
+    local skipped_count=0
+    while read -r pid; do
+        [ -z "$pid" ] && continue
+        local proc_name=$(ps -o comm= -p "$pid" 2>/dev/null | tr -d ' ')
+        [ -z "$proc_name" ] && continue
+        
+        # 🔄 NEW SIMPLER PACKAGE EXTRACTION
+        local pkg=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' '\n' | head -n 1 | cut -d':' -f1)
+        
+        # Validate package format (must contain a dot)
+        if [ -z "$pkg" ] || ! echo "$pkg" | grep -q '\.'; then
+            # Fallback to old method if simpler one fails
+            if [ "$proc_name" = "app_process" ] || [ "$proc_name" = "app_process64" ]; then
+                local cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')
+                pkg=$(extract_package_from_cmdline "$cmdline")
+            elif echo "$proc_name" | grep -qE '\.'; then
+                pkg="$proc_name"
+            else
+                local cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')
+                pkg=$(extract_package_from_cmdline "$cmdline")
+            fi
+        fi
+
+        # 🟢 PRIORITY 1: PROTECT CURRENT TOP APP (Highest Priority - Overrides Force-Kill)
+        if [ -n "$CURRENT_TOP_APP" ] && [ "$pkg" = "$CURRENT_TOP_APP" ]; then
+            log_msg "    TOP APP: $pkg (PID: $pid) - Protected"
+            protected_count=$((protected_count + 1))
+            continue
+        fi
+
+        # 🟢 PRIORITY 1.5: PROTECT ACTIVE GAME PACKAGE
+        if [ -n "$ACTIVE_GAME_PKG" ] && [ "$pkg" = "$ACTIVE_GAME_PKG" ]; then
+            log_msg "    🎮 ACTIVE GAME: $pkg (PID: $pid) - Protected"
+            protected_count=$((protected_count + 1))
+            continue
+        fi
+
+        # 🔴 PRIORITY 2: FORCE KILL LIST (Explicit override)
+        if [ -n "$FORCE_KILL_LIST" ] && echo "$FORCE_KILL_LIST" | grep -qx "$pkg"; then
+            log_msg "    FORCE KILL: $pkg (PID: $pid)"
+            if [ -f "$LOG_DIR/suspend_bg" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
+                pm suspend "$pkg" 2>/dev/null
+            fi
+            am force-stop "$pkg" 2>/dev/null
+            cmd appops set "$pkg" RUN_IN_BACKGROUND ignore 2>/dev/null
+            cmd appops set "$pkg" RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
+            am set-standby-bucket "$pkg" restricted 2>/dev/null
+            sleep 0.5
+            if ps -p "$pid" >/dev/null 2>&1; then kill -9 "$pid" 2>/dev/null; fi
+            killed_count=$((killed_count + 1))
+            continue
+        fi
+
+        # 🛡️ PRIORITY 4: NEVER KILL LIST
+        if [ -n "$NEVER_KILL_LIST" ] && echo "$NEVER_KILL_LIST" | grep -qx "$pkg"; then
+            log_msg "   🛡️ NEVER KILL: $pkg (PID: $pid)"
+            protected_count=$((protected_count + 1))
+            continue
+        fi
+
+        # 🔍 PRIORITY 5: Standard Safety Checks
+        if ! is_package_installed "$pkg"; then
+            skipped_count=$((skipped_count + 1))
+            continue
+        fi
+
+        case "$pkg" in
+            android.hardware.*|android.system.*|vendor.*|com.android.systemui|com.google.android.gms|com.google.android.gsf|com.android.phone|com.android.settings|*launcher*|com.google.android.inputmethod.latin|android|bluetooth|com.google.android.webview)
+                log_msg "   🛡️ Protected System: $pkg (PID: $pid)"
+                protected_count=$((protected_count + 1))
+                continue
+            ;;
+        esac
+
+        # --- STANDARD KILL ---
+        log_msg "    Killing: $pkg (PID: $pid)"
+        cmd app_hibernation set-state --user 0 --global $pkg true >/dev/null 2>&1 || true
+        cmd appops set $pkg RUN_IN_BACKGROUND ignore 2>/dev/null
+        cmd appops set $pkg RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
+        am set-standby-bucket $pkg restricted 2>/dev/null
+
+        local check_cmdline=$(tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null)
+        case "$check_cmdline" in
+            */data/adb/modules/MTK_AI/*) ;; # Skip MTK_AI module
+            *)
+                renice -n 15 -p "$pid" >/dev/null 2>&1
+                ionice -c 3 -p "$pid" >/dev/null 2>&1
+                ;;
+        esac
+
+        am force-stop "$pkg" 2>/dev/null
+        if [ -f "$LOG_DIR/suspend_bg" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
+            pm suspend "$pkg" 2>/dev/null
+        fi
+        sleep 0.5
+        if ps -p "$pid" >/dev/null 2>&1; then
+            log_msg "   ⚠️ Force-stop failed, using SIGKILL..."
+            kill -9 "$pid" 2>/dev/null
+            sleep 0.3
+            if ps -p "$pid" >/dev/null 2>&1; then
+                log_msg "    FAILED: $pkg (PID: $pid)"
+            else
+                log_msg "   ✅ Killed via SIGKILL: $pkg"
+                killed_count=$((killed_count + 1))
+            fi
+        else
+            log_msg "   ✅ Killed via am force-stop: $pkg"
+            killed_count=$((killed_count + 1))
+        fi
+        sleep 0.2
+    done < "$PIDS_FILE"
+    rm -f "$PIDS_FILE"
+    log_msg "✅ Cleanup Finished: $killed_count killed, $protected_count protected, $skipped_count skipped"
+}
+
+# -------------------------
+# CPU LIMITER FOR BACKGROUND PROCESSES
+# -------------------------
+limit_cpu_background() {
+    local limit="$1"
+    [ "$limit" -le 0 ] && return  # Disabled
+    log_msg "🎛️ Applying CPU limit: ${limit}% per core to background processes..."
     
-    # Validate package format (must contain a dot)
-    if [ -z "$pkg" ] || ! echo "$pkg" | grep -q '\.'; then
-        # Fallback to old method if simpler one fails
+    # 🎮 Read active game package once for protection
+    local ACTIVE_GAME_PKG=$(cat "$ACTIVE_GAME" 2>/dev/null | tr -d '[:space:]')
+    
+    local PIDS_FILE="/tmp/bg_cpu_pids_$$.txt"
+    cat /dev/cpuset/background/cgroup.procs > "$PIDS_FILE" 2>/dev/null
+    [ ! -s "$PIDS_FILE" ] && { rm -f "$PIDS_FILE"; return; }
+
+    local limited_count=0
+    local skipped_count=0
+    while read -r pid; do
+        [ -z "$pid" ] && continue
+        # Skip if process died
+        kill -0 "$pid" 2>/dev/null || continue
+        local proc_name=$(ps -o comm= -p "$pid" 2>/dev/null | tr -d ' ')
+        [ -z "$proc_name" ] && continue
+        
+        # Extract package name (same logic as your killer)
+        local pkg=""
         if [ "$proc_name" = "app_process" ] || [ "$proc_name" = "app_process64" ]; then
             local cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')
             pkg=$(extract_package_from_cmdline "$cmdline")
@@ -133,190 +268,88 @@ local proc_name=$(ps -o comm= -p "$pid" 2>/dev/null | tr -d ' ')
             local cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')
             pkg=$(extract_package_from_cmdline "$cmdline")
         fi
-    fi
+        
+        # Skip if invalid package
+        [ -z "$pkg" ] && { skipped_count=$((skipped_count + 1)); continue; }
+        
+        # Respect NEVER_KILL list (protected apps shouldn't be throttled either)
+        if [ -n "$NEVER_KILL_LIST" ] && echo "$NEVER_KILL_LIST" | grep -qx "$pkg"; then
+            skipped_count=$((skipped_count + 1))
+            continue
+        fi
+        
+        # 🎮 Respect ACTIVE_GAME package (should not be throttled)
+        if [ -n "$ACTIVE_GAME_PKG" ] && [ "$pkg" = "$ACTIVE_GAME_PKG" ]; then
+            skipped_count=$((skipped_count + 1))
+            continue
+        fi
 
-# 🟢 PRIORITY 1: PROTECT CURRENT TOP APP (Highest Priority - Overrides Force-Kill)
-if [ -n "$CURRENT_TOP_APP" ] && [ "$pkg" = "$CURRENT_TOP_APP" ]; then
-log_msg "    TOP APP: $pkg (PID: $pid) - Protected"
-protected_count=$((protected_count + 1))
-continue
-fi
-# 🔴 PRIORITY 2: FORCE KILL LIST (Explicit override)
-if [ -n "$FORCE_KILL_LIST" ] && echo "$FORCE_KILL_LIST" | grep -qx "$pkg"; then
-log_msg "    FORCE KILL: $pkg (PID: $pid)"
-if [ -f "$LOG_DIR/suspend_bg" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
-pm suspend "$pkg" 2>/dev/null
-fi
-am force-stop "$pkg" 2>/dev/null
-cmd appops set "$pkg" RUN_IN_BACKGROUND ignore 2>/dev/null
-cmd appops set "$pkg" RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
-am set-standby-bucket "$pkg" restricted 2>/dev/null
-sleep 0.5
-if ps -p "$pid" >/dev/null 2>&1; then kill -9 "$pid" 2>/dev/null; fi
-killed_count=$((killed_count + 1))
-continue
-fi
-# 🛡️ PRIORITY 4: NEVER KILL LIST
-if [ -n "$NEVER_KILL_LIST" ] && echo "$NEVER_KILL_LIST" | grep -qx "$pkg"; then
-log_msg "   🛡️ NEVER KILL: $pkg (PID: $pid)"
-protected_count=$((protected_count + 1))
-continue
-fi
-# 🔍 PRIORITY 5: Standard Safety Checks
-if ! is_package_installed "$pkg"; then
-skipped_count=$((skipped_count + 1))
-continue
-fi
-
-#  OOM SCORE CHECK REMOVED AS REQUESTED
-
-case "$pkg" in
-android.hardware.*|android.system.*|vendor.*|com.android.systemui|com.google.android.gms|com.google.android.gsf|com.android.phone|com.android.settings|*launcher*|com.google.android.inputmethod.latin|android|bluetooth|com.google.android.webview)
-log_msg "   🛡️ Protected System: $pkg (PID: $pid)"
-protected_count=$((protected_count + 1))
-continue
-;;
-esac
-# --- STANDARD KILL ---
-log_msg "    Killing: $pkg (PID: $pid)"
-cmd app_hibernation set-state --user 0 --global $pkg true >/dev/null 2>&1 || true
-cmd appops set $pkg RUN_IN_BACKGROUND ignore 2>/dev/null
-cmd appops set $pkg RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
-am set-standby-bucket $pkg restricted 2>/dev/null
-
-local check_cmdline=$(tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null)
-        case "$check_cmdline" in
-            */data/adb/modules/MTK_AI/*) ;; # Skip MTK_AI module
-            *)
-                renice -n 15 -p "$pid" >/dev/null 2>&1
-                ionice -c 3 -p "$pid" >/dev/null 2>&1
-                ;;
+        # Skip system packages (same whitelist as your killer)
+        case "$pkg" in
+            android.hardware.*|android.system.*|vendor.*|com.android.systemui|com.google.android.gms|com.google.android.gsf|com.android.phone|com.android.settings|com.android.launcher3|com.google.android.inputmethod.latin|android|com.android.bluetooth|com.google.android.webview)
+                skipped_count=$((skipped_count + 1))
+                continue
+            ;;
         esac
+        
+        # Apply cpulimit if binary exists
+        if [ -x "$CPULIMIT_BIN" ]; then
+            # Check if already limited (avoid duplicate cpulimit processes)
+            if ! pgrep -f "cpulimit.*-p $pid" >/dev/null 2>&1; then
+                log_msg "   🐌 Limiting $pkg (PID:$pid) to ${limit}%/core"
+                # -z: exit if process dies, -i: include children, & : background
+                $CPULIMIT_BIN -l "$limit" -z -i -p "$pid" >/dev/null 2>&1 &
+                limited_count=$((limited_count + 1))
+                sleep 0.1  # Small delay to avoid spawning too fast
+            fi
+        else
+            log_msg "   ⚠️ cpulimit not found at $CPULIMIT_BIN"
+            break
+        fi
+    done < "$PIDS_FILE"
+    rm -f "$PIDS_FILE"
+    log_msg "✅ CPU Limit Applied: $limited_count processes limited, $skipped_count skipped"
+}
 
-am force-stop "$pkg" 2>/dev/null
-if [ -f "$LOG_DIR/suspend_bg" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
-pm suspend "$pkg" 2>/dev/null
-fi
-sleep 0.5
-if ps -p "$pid" >/dev/null 2>&1; then
-log_msg "   ⚠️ Force-stop failed, using SIGKILL..."
-kill -9 "$pid" 2>/dev/null
-sleep 0.3
-if ps -p "$pid" >/dev/null 2>&1; then
-log_msg "    FAILED: $pkg (PID: $pid)"
-else
-log_msg "   ✅ Killed via SIGKILL: $pkg"
-killed_count=$((killed_count + 1))
-fi
-else
-log_msg "   ✅ Killed via am force-stop: $pkg"
-killed_count=$((killed_count + 1))
-fi
-sleep 0.2
-done < "$PIDS_FILE"
-rm -f "$PIDS_FILE"
-log_msg "✅ Cleanup Finished: $killed_count killed, $protected_count protected, $skipped_count skipped"
-}
-# -------------------------
-# CPU LIMITER FOR BACKGROUND PROCESSES
-# -------------------------
-limit_cpu_background() {
-local limit="$1"
-[ "$limit" -le 0 ] && return  # Disabled
-log_msg "🎛️ Applying CPU limit: ${limit}% per core to background processes..."
-local PIDS_FILE="/tmp/bg_cpu_pids_$$.txt"
-cat /dev/cpuset/background/cgroup.procs > "$PIDS_FILE" 2>/dev/null
-[ ! -s "$PIDS_FILE" ] && { rm -f "$PIDS_FILE"; return; }
-local limited_count=0
-local skipped_count=0
-while read -r pid; do
-[ -z "$pid" ] && continue
-# Skip if process died
-kill -0 "$pid" 2>/dev/null || continue
-local proc_name=$(ps -o comm= -p "$pid" 2>/dev/null | tr -d ' ')
-[ -z "$proc_name" ] && continue
-# Extract package name (same logic as your killer)
-local pkg=""
-if [ "$proc_name" = "app_process" ] || [ "$proc_name" = "app_process64" ]; then
-local cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')
-pkg=$(extract_package_from_cmdline "$cmdline")
-elif echo "$proc_name" | grep -qE '\.'; then
-pkg="$proc_name"
-else
-local cmdline=$(cat /proc/$pid/cmdline 2>/dev/null | tr '\0' ' ')
-pkg=$(extract_package_from_cmdline "$cmdline")
-fi
-# Skip if invalid package
-[ -z "$pkg" ] && { skipped_count=$((skipped_count + 1)); continue; }
-# Respect NEVER_KILL list (protected apps shouldn't be throttled either)
-if [ -n "$NEVER_KILL_LIST" ] && echo "$NEVER_KILL_LIST" | grep -qx "$pkg"; then
-skipped_count=$((skipped_count + 1))
-continue
-fi
-# Skip system packages (same whitelist as your killer)
-case "$pkg" in
-android.hardware.*|android.system.*|vendor.*|com.android.systemui|com.google.android.gms|com.google.android.gsf|com.android.phone|com.android.settings|com.android.launcher3|com.google.android.inputmethod.latin|android|com.android.bluetooth|com.google.android.webview)
-skipped_count=$((skipped_count + 1))
-continue
-;;
-esac
-# Apply cpulimit if binary exists
-if [ -x "$CPULIMIT_BIN" ]; then
-# Check if already limited (avoid duplicate cpulimit processes)
-if ! pgrep -f "cpulimit.*-p $pid" >/dev/null 2>&1; then
-log_msg "   🐌 Limiting $pkg (PID:$pid) to ${limit}%/core"
-# -z: exit if process dies, -i: include children, & : background
-$CPULIMIT_BIN -l "$limit" -z -i -p "$pid" >/dev/null 2>&1 &
-limited_count=$((limited_count + 1))
-sleep 0.1  # Small delay to avoid spawning too fast
-fi
-else
-log_msg "   ⚠️ cpulimit not found at $CPULIMIT_BIN"
-break
-fi
-done < "$PIDS_FILE"
-rm -f "$PIDS_FILE"
-log_msg "✅ CPU Limit Applied: $limited_count processes limited, $skipped_count skipped"
-}
 # -------------------------
 # MAIN RAM FOCUS LOOP
 # -------------------------
 auto_focus_ram() {
-load_configs
-# Load CPU limit setting
-CPU_LIMIT=$(cat "$CPU_LIMIT_FILE" 2>/dev/null | tr -d '[:space:]')
-echo "$CPU_LIMIT" | grep -qE '^[0-9]+$' || CPU_LIMIT=0
-local MEM_TOTAL=$(grep MemTotal /proc/meminfo | awk '{print $2}')
-local MEM_AVAIL_START=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
-local MEM_USED_PCT=$(((MEM_TOTAL - MEM_AVAIL_START) * 100 / MEM_TOTAL))
-log_msg "️ RAM Check: ${MEM_USED_PCT}% usage (Threshold: ${RAM_THRESHOLD}%, CPU Limit: ${CPU_LIMIT}%/core)"
-if [ "$MEM_USED_PCT" -gt "$RAM_THRESHOLD" ]; then
-log_msg "🚨 High RAM usage! Prioritizing Foreground/Top-App..."
-# Option A: Kill first, then limit remaining background processes
-force_kill_cgroup_safe
-# Then apply CPU limit to whatever is still running in background
-if [ "$CPU_LIMIT" -gt 0 ]; then
-limit_cpu_background "$CPU_LIMIT"
-fi
-# Option B (alternative): Skip killing, ONLY throttle:
-# if [ "$CPU_LIMIT" -gt 0 ]; then
-#     limit_cpu_background "$CPU_LIMIT"
-# else
-#     force_kill_cgroup_safe
-# fi
-sync
-echo 3 > /proc/sys/vm/drop_caches
-echo 1 > /proc/sys/vm/compact_memory
-local MEM_AVAIL_END=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
-local FREED=$(((MEM_AVAIL_END - MEM_AVAIL_START) / 1024))
-log_msg "✅ RAM Focused. Freed ${FREED}MB. Foreground protected."
-else
-# Optional: Apply light CPU limit even when RAM is OK
-if [ "$CPU_LIMIT" -gt 0 ] && [ "$CPU_LIMIT" -lt 20 ]; then
-limit_cpu_background "$CPU_LIMIT"
-fi
-fi
+    load_configs
+    # Load CPU limit setting
+    CPU_LIMIT=$(cat "$CPU_LIMIT_FILE" 2>/dev/null | tr -d '[:space:]')
+    echo "$CPU_LIMIT" | grep -qE '^[0-9]+$' || CPU_LIMIT=0
+    
+    local MEM_TOTAL=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+    local MEM_AVAIL_START=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
+    local MEM_USED_PCT=$(((MEM_TOTAL - MEM_AVAIL_START) * 100 / MEM_TOTAL))
+    
+    log_msg "️ RAM Check: ${MEM_USED_PCT}% usage (Threshold: ${RAM_THRESHOLD}%, CPU Limit: ${CPU_LIMIT}%/core)"
+    
+    if [ "$MEM_USED_PCT" -gt "$RAM_THRESHOLD" ]; then
+        log_msg "🚨 High RAM usage! Prioritizing Foreground/Top-App..."
+        # Option A: Kill first, then limit remaining background processes
+        force_kill_cgroup_safe
+        # Then apply CPU limit to whatever is still running in background
+        if [ "$CPU_LIMIT" -gt 0 ]; then
+            limit_cpu_background "$CPU_LIMIT"
+        fi
+        
+        sync
+        echo 3 > /proc/sys/vm/drop_caches
+        echo 1 > /proc/sys/vm/compact_memory
+        
+        local MEM_AVAIL_END=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
+        local FREED=$(((MEM_AVAIL_END - MEM_AVAIL_START) / 1024))
+        log_msg "✅ RAM Focused. Freed ${FREED}MB. Foreground protected."
+    else
+        # Optional: Apply light CPU limit even when RAM is OK
+        if [ "$CPU_LIMIT" -gt 0 ] && [ "$CPU_LIMIT" -lt 20 ]; then
+            limit_cpu_background "$CPU_LIMIT"
+        fi
+    fi
 }
+
 log_msg " RAM Focus Service Started (Config: $CONFIG_DIR)"
 auto_focus_ram
 am kill-all
