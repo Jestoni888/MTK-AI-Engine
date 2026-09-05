@@ -4,6 +4,8 @@
 
 •added info on per-app with functions to backup apk , uninstall, also external download links of popular sites like APKPure, apkmirror, uptodown, fdroid & Google playstore itself
 
+•powersave in master mode are now only adjusting bigger cluster CPU frequencies to low if no touch or activity occurs unlike before which is adjusting all clusters to low that may cause stutters or lags
+
 --- version 0.0.1.05 ---
 
 •added angle driver & loading boost duration on per-app , they are also CMD based depends on devices if it's working 
