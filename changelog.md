@@ -1,3 +1,7 @@
+--- version 0.0.1.06 ---
+
+•improved application with included system on app lists with their real name & icons
+
 --- version 0.0.1.05 ---
 
 •added angle driver & loading boost duration on per-app , they are also CMD based depends on devices if it's working 
