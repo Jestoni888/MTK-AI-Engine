@@ -1,6 +1,6 @@
 --- version 0.0.1.06 ---
 
-•improved application with included system on app lists with their real name & icons
+•improved application with included system on app lists with their real name, icons & reset config to delete the save config on per-app
 
 --- version 0.0.1.05 ---
 
