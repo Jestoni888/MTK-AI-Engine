@@ -1,6 +1,6 @@
 #!/system/bin/sh
 
-pkill -f powersave
+pkill -x powersave
 # ==========================================
 # KILL PREVIOUS RUNNING INSTANCE
 # ==========================================
