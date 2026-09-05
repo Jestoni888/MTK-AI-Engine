@@ -962,7 +962,7 @@ const existingSearch = document.querySelector('.search-box-pro');
 if (existingSearch) existingSearch.remove();
 const searchContainer = document.createElement('div');
 searchContainer.className = 'search-box-pro';
-searchContainer.style.cssText = 'position:sticky;top:0;z-index:100;background:linear-gradient(180deg,#1c1c1e 95%,transparent);padding:12px 16px 16px 16px;backdrop-filter:blur(10px);';
+searchContainer.style.cssText = 'position:sticky;top:56px;z-index:99;background:linear-gradient(180deg,#1c1c1e 95%,transparent);padding:12px 16px 16px 16px;backdrop-filter:blur(10px);margin-top:0;';
 searchContainer.innerHTML = `<div style="position:relative;display:flex;align-items:center;gap:10px;"><span style="color:#888;font-size:18px;position:absolute;left:14px;pointer-events:none;">🔍</span><input type="text" id="app-search-input" placeholder="Search apps..." style="width:100%;padding:12px 12px 12px 42px;background:#2c2c2e;border:1px solid #3a3a3c;border-radius:14px;color:#fff;font-size:15px;outline:none;" onfocus="this.style.borderColor='#0A84FF'" onblur="this.style.borderColor='#3a3a3c'"><button id="search-clear-btn" onclick="clearSearch()" style="position:absolute;right:14px;background:#3a3a3c;border:none;color:#fff;cursor:pointer;font-size:14px;width:24px;height:24px;border-radius:50%;display:none;align-items:center;justify-content:center;" onmouseover="this.style.background='#4a4a4c'" onmouseout="this.style.background='#3a3a3c'">✕</button></div>`;
 const appListSection = document.getElementById('app-list-container');
 if (appListSection) appListSection.parentNode.insertBefore(searchContainer, appListSection);
