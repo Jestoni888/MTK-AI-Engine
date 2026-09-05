@@ -601,7 +601,7 @@ const isActive = gameList.includes(pkg);
 const modal = document.createElement('div');
 modal.id = 'app-config-modal';
 modal.style.cssText = 'position:fixed;inset:0;background:#000;z-index:10000;display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#fff;overflow:hidden;';
-modal.innerHTML = `<!-- Header --> <div style="height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;"> <button onclick="closeAppConfigPopup()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:8px;margin-left:-8px;">←</button> <h2 style="margin:0;font-size:18px;font-weight:600;">App Profile</h2> <div style="position:relative;"> <button onclick="document.getElementById('menu-${pkg}').style.display = document.getElementById('menu-${pkg}').style.display === 'block' ? 'none' : 'block'" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:8px;">⋮</button> <div id="menu-${pkg}" style="display:none;position:absolute;right:0;top:30px;background:#1e1e1e;border-radius:12px;width:180px;box-shadow:0 4px 12px rgba(0,0,0,0.5);z-index:101;"> <div onclick="launchApp('${pkg}')" style="padding:14px 16px;border-bottom:1px solid #333;cursor:pointer;">Launch</div> <div style="padding:14px 16px;border-bottom:1px solid #333;cursor:pointer;">App Info</div> <div onclick="resetAppConfig('${pkg}')" style="padding:14px 16px;color:#ff5c5c;cursor:pointer;">Reset Config</div> </div> </div> </div> <!-- Scrollable Content --> <div style="flex:1;overflow-y:auto;padding-bottom:20px;"> <!-- App Header with Game Toggle --> <div style="display:flex;flex-direction:column;align-items:center;padding:10px 0 20px;"> <img src="ksu://icon/${app.pkg}" style="width:80px;height:80px;border-radius:20px;margin-bottom:12px;object-fit:cover;" onerror="this.src='https://via.placeholder.com/80'"> <h2 style="margin:0;font-size:20px;font-weight:600;">${app.name || app.label || 'Unknown App'}</h2> <p style="margin:4px 0 0;color:#888;font-size:14px;">${pkg}</p> <!-- Game Toggle Switch --> <div style="margin-top:16px;display:flex;align-items:center;gap:12px;background:#1e1e1e;padding:10px 16px;border-radius:16px;"> <span style="color:#888;font-size:14px;">Game Mode</span> <div id="popup-toggle-${pkg}" onclick="event.stopPropagation(); toggleGameList('${pkg}', true)" style=" position: relative; width: 52px; height: 28px; background-color: ${isActive ? '#ff9f0a' : '#3a3a3c'}; border-radius: 28px; cursor: pointer; transition: background-color 0.2s ease; "> <div class="toggle-thumb" style=" position: absolute; top: 3px; ${isActive ? 'right: 3px;' : 'left: 3px;'} width: 22px; height: 22px; background-color: #fff; border-radius: 50%; transition: 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.3); "></div> </div> <span id="popup-status-${pkg}" style="color: ${isActive ? '#ff9f0a' : '#888'}; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;"> ${isActive ? 'ACTIVE' : 'INACTIVE'} </span> </div> </div> <!-- Kernel Section --> <div style="padding:0 16px;margin-bottom:8px;"> <span style="display:inline-block;background:#1e1e1e;padding:4px 12px;border-radius:12px;font-size:13px;color:#8ab4f8;">Kernel</span> </div> <!-- CPU Settings Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">📊</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">CPU Settings</div> <div style="font-size:13px;color:#888;">Set CPU Governor & frequency</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">CPU Governor</label> <select id="config-governor" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;" onchange="saveAppConfig('${pkg}')"> <option value="default">Default</option> </select> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">CPU Max Limit</label> <input type="range" id="config-cpu-limit" min="30" max="100" value="100" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('cpu-limit-val').textContent=this.value+'%'; saveAppConfig('${pkg}')"> <div style="text-align:center;color:#8ab4f8;font-size:12px;"><span id="cpu-limit-val">100%</span></div> </div> </div> <!-- GPU Frequency Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🔒</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">GPU Frequency</div> <div style="font-size:13px;color:#888;">GPU Frequency to the maximum available within system limits.</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">GPU Frequency (OPP Index)</label> <select id="config-gpu-opp" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:4px;" onchange="const opt=this.options[this.selectedIndex]; document.getElementById('gpu-opp-val').textContent=opt?opt.text:''; saveAppConfig('${pkg}')"> <option value="">Loading...</option> </select> <div style="text-align:center;color:#8ab4f8;font-size:12px;"><span id="gpu-opp-val">Select frequency</span></div> </div> </div> <!-- Vsync & Voltage offset Item --> <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">⏱️</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Vsync & Voltage offset</div> <div style="font-size:13px;color:#888;">Android Vsync & Voltage offset to specific game or app</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">VSync Offset (ns)</label> <input type="number" id="config-vsync" value="0" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')"> <label style="display:block;color:#888;font-size:11px;margin-bottom:6px;">EEM Voltage Offset</label> <input type="range" id="config-eem" min="-20" max="10" value="0" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('eem-val').textContent=(this.value>0?'+':'')+this.value; saveAppConfig('${pkg}')"> <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="eem-val">0</span></div> </div> </div> <!-- Game API Section --> <div style="padding:0 16px;margin-bottom:8px;"> <span style="display:inline-block;background:#1e1e1e;padding:4px 12px;border-radius:12px;font-size:13px;color:#8ab4f8;">Game API</span> </div> <!-- Game Mode Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🎮</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Game Mode</div> <div style="font-size:13px;color:#888;">Android Game Intervention mode</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Intervention Mode</label> <select id="config-game-mode" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;" onchange="saveAppConfig('${pkg}')"> <option value="">Default / System</option> <option value="1">Standard</option> <option value="2">Performance</option> <option value="3">Battery</option> <option value="4">Custom</option> </select> <div id="game-mode-status-${pkg}" style="margin-top:8px;font-size:12px;color:#888;min-height:16px;word-break:break-word;"></div> </div> </div> <!-- Custom FPS Limit Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🎯</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Custom FPS Limit</div> <div style="font-size:13px;color:#888;">Lock game frame rate (Auto-enables Custom Game Mode)</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Target FPS (0 = disabled)</label> <input type="range" id="config-fps" min="0" max="144" step="1" value="0" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('fps-val').textContent=this.value+' FPS'; autoEnableCustomGameMode('${pkg}', this.value); saveAppConfig('${pkg}');"> <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="fps-val">0 FPS</span></div> <div id="fps-info-${pkg}" style="margin-top:8px;font-size:11px;color:#888;text-align:center;"></div> </div> </div> <!-- Downscaling Item (DENSITY-ONLY) --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">📉</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Downscaling</div> <div style="font-size:13px;color:#888;">Reduce game graphics for stable fps & smoother gameplay</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin-bottom:6px;">Downscale Factor</label> <input type="range" id="config-downscale" min="10" max="100" value="100" step="5" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('downscale-val').textContent=(this.value/100).toFixed(1)+'x'; saveAppConfig('${pkg}')"> <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="downscale-val">1.0x</span></div> </div> </div> <!-- Refresh Rate Control Item --> <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🔄</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Refresh Rate Control</div> <div style="font-size:13px;color:#888;">Set the refresh rate limit for the app profile.</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Refresh Rate Lock</label> <select id="config-refresh-rate" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')"><option value="">Loading modes...</option></select> </div> </div> <!-- ANGLE & Loading Boost Item -->
+modal.innerHTML = `<!-- Header --> <div style="height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;"> <button onclick="closeAppConfigPopup()" style="background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:8px;margin-left:-8px;">←</button> <h2 style="margin:0;font-size:18px;font-weight:600;">App Profile</h2> <div style="position:relative;"> <button onclick="document.getElementById('menu-${pkg}').style.display = document.getElementById('menu-${pkg}').style.display === 'block' ? 'none' : 'block'" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:8px;">⋮</button> <div id="menu-${pkg}" style="display:none;position:absolute;right:0;top:30px;background:#1e1e1e;border-radius:12px;width:180px;box-shadow:0 4px 12px rgba(0,0,0,0.5);z-index:101;"> <div onclick="launchApp('${pkg}')" style="padding:14px 16px;border-bottom:1px solid #333;cursor:pointer;">Launch</div> <div onclick="openAppInfo('${pkg}')" style="padding:14px 16px;border-bottom:1px solid #333;cursor:pointer;">App Info</div> <div onclick="resetAppConfig('${pkg}')" style="padding:14px 16px;color:#ff5c5c;cursor:pointer;">Reset Config</div> </div> </div> </div> <!-- Scrollable Content --> <div style="flex:1;overflow-y:auto;padding-bottom:20px;"> <!-- App Header with Game Toggle --> <div style="display:flex;flex-direction:column;align-items:center;padding:10px 0 20px;"> <img src="ksu://icon/${app.pkg}" style="width:80px;height:80px;border-radius:20px;margin-bottom:12px;object-fit:cover;" onerror="this.src='https://via.placeholder.com/80'"> <h2 style="margin:0;font-size:20px;font-weight:600;">${app.name || app.label || 'Unknown App'}</h2> <p style="margin:4px 0 0;color:#888;font-size:14px;">${pkg}</p> <!-- Game Toggle Switch --> <div style="margin-top:16px;display:flex;align-items:center;gap:12px;background:#1e1e1e;padding:10px 16px;border-radius:16px;"> <span style="color:#888;font-size:14px;">Game Mode</span> <div id="popup-toggle-${pkg}" onclick="event.stopPropagation(); toggleGameList('${pkg}', true)" style=" position: relative; width: 52px; height: 28px; background-color: ${isActive ? '#ff9f0a' : '#3a3a3c'}; border-radius: 28px; cursor: pointer; transition: background-color 0.2s ease; "> <div class="toggle-thumb" style=" position: absolute; top: 3px; ${isActive ? 'right: 3px;' : 'left: 3px;'} width: 22px; height: 22px; background-color: #fff; border-radius: 50%; transition: 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.3); "></div> </div> <span id="popup-status-${pkg}" style="color: ${isActive ? '#ff9f0a' : '#888'}; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;"> ${isActive ? 'ACTIVE' : 'INACTIVE'} </span> </div> </div> <!-- Kernel Section --> <div style="padding:0 16px;margin-bottom:8px;"> <span style="display:inline-block;background:#1e1e1e;padding:4px 12px;border-radius:12px;font-size:13px;color:#8ab4f8;">Kernel</span> </div> <!-- CPU Settings Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">📊</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">CPU Settings</div> <div style="font-size:13px;color:#888;">Set CPU Governor & frequency</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">CPU Governor</label> <select id="config-governor" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;" onchange="saveAppConfig('${pkg}')"> <option value="default">Default</option> </select> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">CPU Max Limit</label> <input type="range" id="config-cpu-limit" min="30" max="100" value="100" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('cpu-limit-val').textContent=this.value+'%'; saveAppConfig('${pkg}')"> <div style="text-align:center;color:#8ab4f8;font-size:12px;"><span id="cpu-limit-val">100%</span></div> </div> </div> <!-- GPU Frequency Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🔒</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">GPU Frequency</div> <div style="font-size:13px;color:#888;">GPU Frequency to the maximum available within system limits.</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">GPU Frequency (OPP Index)</label> <select id="config-gpu-opp" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:4px;" onchange="const opt=this.options[this.selectedIndex]; document.getElementById('gpu-opp-val').textContent=opt?opt.text:''; saveAppConfig('${pkg}')"> <option value="">Loading...</option> </select> <div style="text-align:center;color:#8ab4f8;font-size:12px;"><span id="gpu-opp-val">Select frequency</span></div> </div> </div> <!-- Vsync & Voltage offset Item --> <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">⏱️</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Vsync & Voltage offset</div> <div style="font-size:13px;color:#888;">Android Vsync & Voltage offset to specific game or app</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">VSync Offset (ns)</label> <input type="number" id="config-vsync" value="0" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')"> <label style="display:block;color:#888;font-size:11px;margin-bottom:6px;">EEM Voltage Offset</label> <input type="range" id="config-eem" min="-20" max="10" value="0" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('eem-val').textContent=(this.value>0?'+':'')+this.value; saveAppConfig('${pkg}')"> <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="eem-val">0</span></div> </div> </div> <!-- Game API Section --> <div style="padding:0 16px;margin-bottom:8px;"> <span style="display:inline-block;background:#1e1e1e;padding:4px 12px;border-radius:12px;font-size:13px;color:#8ab4f8;">Game API</span> </div> <!-- Game Mode Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🎮</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Game Mode</div> <div style="font-size:13px;color:#888;">Android Game Intervention mode</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Intervention Mode</label> <select id="config-game-mode" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;" onchange="saveAppConfig('${pkg}')"> <option value="">Default / System</option> <option value="1">Standard</option> <option value="2">Performance</option> <option value="3">Battery</option> <option value="4">Custom</option> </select> <div id="game-mode-status-${pkg}" style="margin-top:8px;font-size:12px;color:#888;min-height:16px;word-break:break-word;"></div> </div> </div> <!-- Custom FPS Limit Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🎯</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Custom FPS Limit</div> <div style="font-size:13px;color:#888;">Lock game frame rate (Auto-enables Custom Game Mode)</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Target FPS (0 = disabled)</label> <input type="range" id="config-fps" min="0" max="144" step="1" value="0" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('fps-val').textContent=this.value+' FPS'; autoEnableCustomGameMode('${pkg}', this.value); saveAppConfig('${pkg}');"> <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="fps-val">0 FPS</span></div> <div id="fps-info-${pkg}" style="margin-top:8px;font-size:11px;color:#888;text-align:center;"></div> </div> </div> <!-- Downscaling Item (DENSITY-ONLY) --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">📉</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Downscaling</div> <div style="font-size:13px;color:#888;">Reduce game graphics for stable fps & smoother gameplay</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin-bottom:6px;">Downscale Factor</label> <input type="range" id="config-downscale" min="10" max="100" value="100" step="5" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('downscale-val').textContent=(this.value/100).toFixed(1)+'x'; saveAppConfig('${pkg}')"> <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="downscale-val">1.0x</span></div> </div> </div> <!-- Refresh Rate Control Item --> <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🔄</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Refresh Rate Control</div> <div style="font-size:13px;color:#888;">Set the refresh rate limit for the app profile.</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Refresh Rate Lock</label> <select id="config-refresh-rate" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')"><option value="">Loading modes...</option></select> </div> </div> <!-- ANGLE & Loading Boost Item -->
 <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;">
     <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;">
         <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;">
@@ -956,6 +956,245 @@ showStatus('✅ Launched (monkey): ' + pkg, '#32D74B');
 showStatus('❌ Failed: ' + e.message, '#FF453A');
 }
 }
+async function openExternal(url) {
+    const fullUrl = url.startsWith('http') ? url : 'https://' + url;
+    // Exact method from profile.js: Intent first → explicit Chrome fallback
+    const cmd = `am start -a android.intent.action.VIEW -d "${fullUrl}" 2>/dev/null || am start -n com.android.chrome/com.google.android.apps.chrome.Main -d "${fullUrl}" 2>/dev/null`;
+    await execFn(cmd, 5000);
+}
+// === APP INFO MODAL ===
+async function openAppInfo(pkg) {
+    const app = allApps.find(a => a.pkg === pkg);
+    const appName = app ? (app.label || app.name) : 'Unknown App';
+    
+    // Get app details
+    let versionName = '';
+    let versionCode = '';
+    let appSize = 'Calculating...';
+    
+    try {
+        const dumpsysResult = await execFn(`dumpsys package ${pkg} 2>/dev/null`, 3000);
+        if (dumpsysResult) {
+            const verNameMatch = dumpsysResult.match(/versionName=([^\s]+)/);
+            if (verNameMatch) versionName = verNameMatch[1];
+            
+            const verCodeMatch = dumpsysResult.match(/versionCode=(\d+)/);
+            if (verCodeMatch) versionCode = verCodeMatch[1];
+            
+            // Try to get accurate app size (handles split APKs + OBB)
+            try {
+                // Method 1: Get all APK paths and sum their sizes
+                const apkPathsResult = await execFn(`pm path ${pkg} 2>/dev/null`, 2000);
+                if (apkPathsResult) {
+                    let totalBytes = 0;
+                    const paths = apkPathsResult.split('\n').filter(line => line.trim());
+                    
+                    for (const line of paths) {
+                        const pathMatch = line.match(/package:(.+)/);
+                        if (pathMatch) {
+                            const apkPath = pathMatch[1].trim();
+                            const sizeResult = await execFn(`stat -c%s "${apkPath}" 2>/dev/null`, 1000);
+                            if (sizeResult && !isNaN(parseInt(sizeResult))) {
+                                totalBytes += parseInt(sizeResult);
+                            }
+                        }
+                    }
+                    
+                    // Add OBB size if exists
+                    const obbSizeResult = await execFn(`du -sb /sdcard/Android/obb/${pkg} 2>/dev/null | awk '{print $1}'`, 1000);
+                    if (obbSizeResult && !isNaN(parseInt(obbSizeResult))) {
+                        totalBytes += parseInt(obbSizeResult);
+                    }
+                    
+                    // Format size
+                    if (totalBytes > 0) {
+                        if (totalBytes >= 1073741824) {
+                            appSize = (totalBytes / 1073741824).toFixed(2) + ' GB';
+                        } else if (totalBytes >= 1048576) {
+                            appSize = (totalBytes / 1048576).toFixed(2) + ' MB';
+                        } else {
+                            appSize = (totalBytes / 1024).toFixed(2) + ' KB';
+                        }
+                    }
+                }
+            } catch(e) {
+                console.warn('Size calculation failed:', e);
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to get app info:', e);
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'appinfo-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10001;display:flex;align-items:center;justify-content:center;padding:10px;';
+    
+    modal.innerHTML = `
+    <div style="background:#1c1c1e;border-radius:20px;width:100%;max-width:450px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
+        <!-- Header -->
+        <div style="padding:20px;border-bottom:1px solid #333;display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;color:#fff;font-size:18px;">App Information</h3>
+            <button onclick="closeAppInfo()" style="background:none;border:none;color:#888;font-size:28px;cursor:pointer;line-height:1;">&times;</button>
+        </div>
+        
+        <!-- App Details -->
+        <div style="flex:1;overflow-y:auto;padding:20px;">
+            <div style="text-align:center;margin-bottom:20px;">
+                <img src="ksu://icon/${pkg}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCI+PHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjMzMzIi8+PHRleHQgeD0iNDAiIHk9IjUwIiBmb250LXNpemU9IjQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjZmZmIj7wn5mFPC90ZXh0Pjwvc3ZnPg=='" style="width:80px;height:80px;border-radius:20px;margin-bottom:12px;object-fit:cover;">
+                <h2 style="margin:0;color:#fff;font-size:20px;">${appName}</h2>
+                <p style="margin:4px 0 0;color:#888;font-size:14px;">${pkg}</p>
+                <p style="margin:4px 0 0;color:#8ab4f8;font-size:13px;">${versionName || 'Unknown'} (${versionCode || '?'})</p>
+            </div>
+            
+            <!-- App Size -->
+            <div style="background:#2a2a2c;border-radius:12px;padding:12px;margin-bottom:20px;">
+                <div style="display:flex;justify-content:space-between;">
+                    <span style="color:#888;font-size:13px;">App Size:</span>
+                    <span style="color:#fff;font-size:13px;">${appSize}</span>
+                </div>
+            </div>
+            
+            <!-- Actions Grid -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                <!-- Backup App -->
+                <button onclick="backupApp('${pkg}')" style="background:linear-gradient(135deg,#007AFF,#5856D6);color:#fff;border:none;border-radius:12px;padding:16px;cursor:pointer;font-weight:600;font-size:14px;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    <div style="font-size:24px;margin-bottom:4px;">💾</div>
+                    <div>Backup App</div>
+                </button>
+                
+                <!-- Uninstall -->
+                <button onclick="uninstallApp('${pkg}')" style="background:linear-gradient(135deg,#FF3B30,#FF9500);color:#fff;border:none;border-radius:12px;padding:16px;cursor:pointer;font-weight:600;font-size:14px;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    <div style="font-size:24px;margin-bottom:4px;">🗑️</div>
+                    <div>Uninstall</div>
+                </button>
+            </div>
+            
+            <!-- Download Sources -->
+            <div style="margin-bottom:12px;">
+                <h4 style="color:#8ab4f8;margin:0 0 12px 0;font-size:14px;">Download Sources</h4>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <!-- Google Play Store -->
+                    <div onclick="openExternal('https://play.google.com/store/apps/details?id=${pkg}')" style="background:#2a2a2c;color:#fff;padding:14px 16px;border-radius:12px;display:flex;align-items:center;gap:12px;transition:background 0.2s;cursor:pointer;" onmouseover="this.style.background='#3a3a3c'" onmouseout="this.style.background='#2a2a2c'">
+                        <div style="width:40px;height:40px;background:#4285F4;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">▶️</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;font-size:14px;">Google Play Store</div>
+                            <div style="color:#888;font-size:12px;">Official app store</div>
+                        </div>
+                        <div style="color:#888;">→</div>
+                    </div>
+                    
+                    <!-- APKPure -->
+                    <div onclick="openExternal('https://apkpure.net/search?q=${pkg}')" style="background:#2a2a2c;color:#fff;padding:14px 16px;border-radius:12px;display:flex;align-items:center;gap:12px;transition:background 0.2s;cursor:pointer;" onmouseover="this.style.background='#3a3a3c'" onmouseout="this.style.background='#2a2a2c'">
+                        <div style="width:40px;height:40px;background:#00A650;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">📦</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;font-size:14px;">APKPure</div>
+                            <div style="color:#888;font-size:12px;">APK mirror & downloads</div>
+                        </div>
+                        <div style="color:#888;">→</div>
+                    </div>
+                    
+                    <!-- F-Droid -->
+                    <div onclick="openExternal('https://f-droid.org/en/packages/${pkg}/')" style="background:#2a2a2c;color:#fff;padding:14px 16px;border-radius:12px;display:flex;align-items:center;gap:12px;transition:background 0.2s;cursor:pointer;" onmouseover="this.style.background='#3a3a3c'" onmouseout="this.style.background='#2a2a2c'">
+                        <div style="width:40px;height:40px;background:#1976D2;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">🤖</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;font-size:14px;">F-Droid</div>
+                            <div style="color:#888;font-size:12px;">Open source apps</div>
+                        </div>
+                        <div style="color:#888;">→</div>
+                    </div>
+                    
+                    <!-- Uptodown -->
+                    <div onclick="openExternal('https://en.uptodown.com/android/search?query=${pkg}')" style="background:#2a2a2c;color:#fff;padding:14px 16px;border-radius:12px;display:flex;align-items:center;gap:12px;transition:background 0.2s;cursor:pointer;" onmouseover="this.style.background='#3a3a3c'" onmouseout="this.style.background='#2a2a2c'">
+                        <div style="width:40px;height:40px;background:#1E88E5;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;">⬇️</div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;font-size:14px;">Uptodown</div>
+                            <div style="color:#888;font-size:12px;">App versions & history</div>
+                        </div>
+                        <div style="color:#888;">→</div>
+                    </div>
+                    
+                    <!-- APKMirror -->
+                    <div onclick="openExternal('https://www.apkmirror.com/?post_type=app_release&s=${pkg}')" style="background:#2a2a2c;color:#fff;padding:14px 16px;border-radius:12px;display:flex;align-items:center;gap:12px;transition:background 0.2s;cursor:pointer;" onmouseover="this.style.background='#3a3a3c'" onmouseout="this.style.background='#2a2a2c'">
+                        <div style="width:40px;height:40px;background:#D32F2F;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;"></div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;font-size:14px;">APKMirror</div>
+                            <div style="color:#888;font-size:12px;">Verified APKs</div>
+                        </div>
+                        <div style="color:#888;">→</div>
+                    </div>
+            </div>
+        </div>
+    </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function closeAppInfo() {
+    const modal = document.getElementById('appinfo-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function backupApp(pkg) {
+    if (!confirm(`Create backup of ${pkg}?`)) return;
+    
+    try {
+        showStatus(' Creating backup...', '#007AFF');
+        
+        const backupDir = '/sdcard/MTK_AI_Engine/backups';
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0] + '_' + new Date().toTimeString().split(' ')[0].replace(/:/g, '');
+        const backupFile = `${backupDir}/${pkg}_${timestamp}.apk`;
+        
+        // Create backup directory
+        await execFn(`mkdir -p ${backupDir}`, 2000);
+        
+        // Find APK path and backup
+        const apkPathResult = await execFn(`pm path ${pkg} 2>/dev/null | head -1 | cut -d: -f2`, 2000);
+        const apkPath = apkPathResult.trim();
+        
+        if (apkPath) {
+            await execFn(`cp "${apkPath}" "${backupFile}"`, 3000);
+            showStatus(`✅ Backup saved!`, '#32D74B');
+        } else {
+            showStatus('❌ Failed to find APK path', '#FF453A');
+        }
+    } catch (e) {
+        showStatus('❌ Backup failed: ' + e.message, '#FF453A');
+    }
+}
+
+async function uninstallApp(pkg) {
+    const app = allApps.find(a => a.pkg === pkg);
+    const appName = app ? app.label : pkg;
+    
+    if (!confirm(`⚠️ WARNING: Uninstall ${appName}?\n\nThis will permanently remove the app and all its data!`)) return;
+    
+    // Double confirmation for system apps
+    try {
+        const dumpsysResult = await execFn(`dumpsys package ${pkg} 2>/dev/null`, 2000);
+        if (dumpsysResult && dumpsysResult.includes('FLAG_SYSTEM')) {
+            if (!confirm('⚠️ This is a SYSTEM APP!\n\nUninstalling may cause system instability. Continue?')) return;
+        }
+    } catch (e) {}
+    
+    try {
+        showStatus('🗑️ Uninstalling app...', '#FF3B30');
+        await execFn(`pm uninstall ${pkg}`, 5000);
+        showStatus('✅ App uninstalled successfully', '#32D74B');
+        
+        // Close modal after uninstall
+        setTimeout(() => {
+            closeAppInfo();
+            closeAppConfigPopup();
+            // Reload app list
+            loadAppList();
+        }, 1500);
+    } catch (e) {
+        showStatus(' Uninstall failed: ' + e.message, '#FF453A');
+    }
+}
 // === SEARCH INIT ===
 function initSearch() {
 const existingSearch = document.querySelector('.search-box-pro');
@@ -1010,6 +1249,11 @@ window.autoEnableCustomGameMode = autoEnableCustomGameMode;
 window.clearIconCache = clearIconCache;
 window.batchFetchIcons = batchFetchIcons;
 window.resetAppConfig = resetAppConfig;
+window.openAppInfo = openAppInfo;
+window.closeAppInfo = closeAppInfo;
+window.backupApp = backupApp;
+window.uninstallApp = uninstallApp;
+window.openExternal = openExternal;
 // Renderer exports
 window.applyGlobalRenderer = applyGlobalRenderer;
 window.verifyRenderer = verifyRenderer;
