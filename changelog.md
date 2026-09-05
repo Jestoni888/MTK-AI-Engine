@@ -2,6 +2,8 @@
 
 •improved application with included system on app lists with their real name, icons & reset config to delete the save config on per-app
 
+•added info on per-app with functions to backup apk , uninstall, also external download links of popular sites like APKPure, apkmirror, uptodown, fdroid & Google playstore itself
+
 --- version 0.0.1.05 ---
 
 •added angle driver & loading boost duration on per-app , they are also CMD based depends on devices if it's working 
