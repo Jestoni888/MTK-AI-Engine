@@ -18,6 +18,110 @@ let monitorInterval = null;
 let isMonitorRunning = false;
 let searchDebounceTimer = null;
 let cloudAppNames = {};
+// === ADVANCED PACKAGE & ICON FETCHING ===
+const ICON_DIR_ABS = CFG_DIR + '/icons';
+const ICON_SCRIPT = CFG_DIR + '/icons_fetch.sh';
+
+function normalizePkgList(raw) {
+  let arr = [];
+  if (Array.isArray(raw)) arr = raw;
+  else if (raw && typeof raw === 'object' && Array.isArray(raw.packages)) arr = raw.packages;
+  else if (typeof raw === 'string') {
+    const s = raw.trim();
+    if (s.startsWith('[')) { try { arr = JSON.parse(s); } catch (_) { arr = s.split('\n'); } }
+    else arr = s.split('\n');
+  }
+  return arr.map(p => (typeof p === 'string' ? p : (p && (p.packageName || p.package)) || ''))
+            .map(s => s.replace(/^package:/, '').trim()).filter(Boolean);
+}
+
+async function getInstalledPackages() {
+  if (window.installedCache) return window.installedCache;
+  let arr = [], via = '';
+  try {
+    if (typeof ksu !== 'undefined' && typeof ksu.listPackages === 'function') {
+      arr = normalizePkgList(await Promise.resolve(ksu.listPackages('all')));
+      if (arr.length) via = 'ksu.listPackages';
+    }
+  } catch (e) { console.warn('ksu.listPackages failed:', e); }
+
+  if (!arr.length && typeof window.$packageManager !== 'undefined' && typeof window.$packageManager.getInstalledPackages === 'function') {
+    try {
+      arr = normalizePkgList(await Promise.resolve(window.$packageManager.getInstalledPackages(0, 0)));
+      if (arr.length) via = '$packageManager';
+    } catch (e) { console.warn('$packageManager failed:', e); }
+  }
+
+  if (!arr.length) {
+    try {
+      arr = normalizePkgList(await execFn('pm list packages', 5000));
+      if (arr.length) via = 'pm list packages';
+    } catch (e) { console.warn('pm list packages failed:', e); }
+  }
+  console.log('Installed packages: ' + arr.length + (via ? ' via ' + via : ' (none)'));
+  window.installedCache = new Set(arr);
+  return window.installedCache;
+}
+
+async function enrichApps(pkgs) {
+  const labels = {}, system = new Set();
+  let sawSystemFlag = false;
+  try {
+    if (typeof ksu !== 'undefined' && typeof ksu.getPackagesInfo === 'function') {
+      let raw = await Promise.resolve(ksu.getPackagesInfo(JSON.stringify(pkgs)));
+      if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (_) { raw = []; } }
+      if (Array.isArray(raw)) {
+        raw.forEach((info, i) => {
+          if (!info) return;
+          const pkg = info.packageName || info.package || pkgs[i];
+          if (pkg && (info.appLabel || info.label)) labels[pkg] = info.appLabel || info.label;
+          let sys = null;
+          if (typeof info.isSystem === 'boolean') sys = info.isSystem;
+          else if (info.applicationInfo?.flags != null) sys = (info.applicationInfo.flags & 0x00000001) !== 0 || (info.applicationInfo.flags & 0x00000080) !== 0;
+          else if (info.flags != null) sys = (info.flags & 0x00000001) !== 0 || (info.flags & 0x00000080) !== 0;
+          if (sys !== null) { sawSystemFlag = true; if (sys && pkg) system.add(pkg); }
+        });
+      }
+    }
+  } catch (e) { console.warn('enrich ksu.getPackagesInfo failed:', e); }
+
+  if (!sawSystemFlag) {
+    try { 
+      const raw = await execFn('pm list packages -s', 5000);
+      if (raw) normalizePkgList(raw).forEach(p => system.add(p));
+    } catch (_) {}
+  }
+  return { labels, system };
+}
+
+function b64(s) { try { return btoa(unescape(encodeURIComponent(s))); } catch (_) { return btoa(s); } }
+
+async function batchFetchIcons(pkgs) {
+  if (!pkgs || !pkgs.length) return false;
+  const list = [...new Set(pkgs)].filter(p => /^[A-Za-z0-9._]+$/.test(p));
+  if (!list.length) return false;
+  const body = [
+    '#!/system/bin/sh', 'ICONS="' + ICON_DIR_ABS + '"', 'UA="Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile"',
+    'mkdir -p "$ICONS"', 'for p in ' + list.join(' ') + '; do', '  f="$ICONS/$p.png"', '  [ -s "$f" ] && continue',
+    '  u=$(curl -sL --compressed --max-time 10 "https://play.google.com/store/apps/details?id=$p&hl=en" 2>/dev/null | grep -o "https://play-lh.googleusercontent.com/[^\"=]*" | head -1)',
+    '  [ -n "$u" ] && curl -sL --compressed --max-time 10 "${u}=s128" -o "$f" 2>/dev/null',
+    '  if [ ! -s "$f" ]; then', '    a=$(curl -sL --compressed --max-time 12 -A "$UA" "https://apkpure.net/-/$p" 2>/dev/null | grep -o "app-icon-img\\"[^>]*src=\\"https://image.winudf.com/[^\\"]*\\"" | head -1 | sed "s/.*src=\\"//; s/\\"$//; s/&amp;/\\&/g")',
+    '    [ -n "$a" ] && curl -sL --compressed --max-time 12 -A "$UA" "$a" -o "$f" 2>/dev/null', '  fi',
+    '  if [ ! -s "$f" ]; then', '    v=$(curl -sL --compressed --max-time 10 "https://f-droid.org/en/packages/$p/" 2>/dev/null | grep -o "https://f-droid.org/repo/[^\\"]*\\.\\(png\\|webp\\)" | head -1)',
+    '    [ -n "$v" ] && curl -sL --compressed --max-time 10 "$v" -o "$f" 2>/dev/null', '  fi',
+    '  if [ -s "$f" ]; then chmod 644 "$f"; else rm -f "$f"; fi', 'done', 'touch "$ICONS/.done"', ''
+  ].join('\n');
+  try {
+    await execFn(`echo '${b64(body)}' | base64 -d > ${ICON_SCRIPT}`, 2000);
+    await execFn(`sh -c 'nohup sh ${ICON_SCRIPT} >/dev/null 2>&1 &'`, 2000);
+    return true;
+  } catch (_) { return false; }
+}
+
+async function clearIconCache() {
+  try { await execFn(`rm -f ${ICON_DIR_ABS}/*.png ${ICON_DIR_ABS}/.done`, 2000); showStatus('Icon cache cleared', '#32D74B'); return true; } 
+  catch (_) { return false; }
+}
 // === EXEC HELPER ===
 async function execFn(cmd, timeout = 1000) {
 return new Promise((resolve) => {
@@ -276,44 +380,52 @@ const existingWhitelist = new Set(whitelistRaw.split('\n').map(l => l.trim()).fi
      showStatus('❌ Sync failed', '#FF453A'); 
  }
 }
-// === APP LIST LOADING ===
 async function loadAppList() {
-const container = document.getElementById('app-list-container');
-if (!container) return;
-await loadCloudAppNames();
-const cachedList = localStorage.getItem('mtk_ai_app_list_cache');
-const cachedCount = localStorage.getItem('mtk_ai_app_count');
-try {
-const countCmd = await execFn('pm list packages -3 | wc -l');
-const currentCount = parseInt(countCmd.trim()) || 0;
-if (cachedList && cachedCount == currentCount) {
-allApps = JSON.parse(cachedList);
-await loadGameList();
-allApps.forEach(app => { app.isInGameList = gameList.includes(app.pkg); });
-renderAppList(allApps); return;
-}
-} catch (e) { console.log("Cache check failed, reloading list."); }
-container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Scanning Installed Apps...</div>';
- try {
-     await loadGameList();
-     const result = await execFn('pm list packages -3 2>/dev/null');
-     const packages = result.split('\n').map(p => p.replace('package:', '').trim()).filter(p => p);
-     allApps = [];
-     const batchSize = 10;
-     for (let i = 0; i < packages.length; i += batchSize) {
-         const batch = packages.slice(i, i + batchSize);
-         const batchApps = await Promise.all(batch.map(async pkg => {
-             const label = await getAppLabel(pkg);
-             return { pkg, label, isInGameList: gameList.includes(pkg) };
-         }));
-         allApps = allApps.concat(batchApps);
-         container.innerHTML = `<div style="text-align:center;padding:40px;color:#888;">⏳ Loading apps... ${Math.min(100, Math.round(((i + batchSize) / packages.length) * 100))}%</div>`;
-     }
-     allApps.sort((a, b) => { if (a.isInGameList && !b.isInGameList) return -1; if (!a.isInGameList && b.isInGameList) return 1; return a.label.localeCompare(b.label); });
-     localStorage.setItem('mtk_ai_app_list_cache', JSON.stringify(allApps));
-     localStorage.setItem('mtk_ai_app_count', packages.length.toString());
-     renderAppList(allApps);
- } catch (e) { container.innerHTML = `<div style="text-align:center;padding:40px;color:#ff453a;">❌ Failed to load apps<br><small>${e.message}</small></div>`; }
+  const container = document.getElementById('app-list-container');
+  if (!container) return;
+  
+  await loadCloudAppNames();
+  container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Scanning Installed Apps...</div>';
+  
+  try {
+    await loadGameList();
+    const pkgSet = await getInstalledPackages();
+    const pkgs = [...pkgSet];
+    
+    // 1. FAST INITIAL RENDER: Use fallback names immediately (NO UI HANG)
+    allApps = pkgs.map(pkg => ({ 
+      pkg, 
+      label: cloudAppNames[pkg] || getLocalAppName(pkg) || formatPackageName(pkg), 
+      isInGameList: gameList.includes(pkg),
+      system: false 
+    }));
+    
+    allApps.sort((a, b) => { 
+      if (a.isInGameList && !b.isInGameList) return -1; 
+      if (!a.isInGameList && b.isInGameList) return 1; 
+      return a.label.localeCompare(b.label); 
+    });
+    renderAppList(allApps);
+    
+    // 2. BACKGROUND ENRICHMENT: Fetch real labels silently, then re-sort
+    enrichApps(pkgs).then(({ labels, system }) => {
+      let needsResort = false;
+      allApps.forEach(app => {
+        if (labels[app.pkg]) { app.label = labels[app.pkg]; needsResort = true; }
+        if (system.has(app.pkg)) app.system = true;
+      });
+      if (needsResort) {
+        allApps.sort((a, b) => { 
+          if (a.isInGameList && !b.isInGameList) return -1; 
+          if (!a.isInGameList && b.isInGameList) return 1; 
+          return a.label.localeCompare(b.label); 
+        });
+        renderAppList(allApps); // Re-render with real names
+      }
+    });
+  } catch (e) { 
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:#ff453a;">❌ Failed to load apps<br><small>${e.message}</small></div>`; 
+  }
 }
 // === SEARCH ===
 function searchApps(query) {
@@ -864,6 +976,8 @@ window.clearSearch = clearSearch;
 window.launchApp = launchApp;
 window.loadCloudAppNames = loadCloudAppNames;
 window.autoEnableCustomGameMode = autoEnableCustomGameMode;
+window.clearIconCache = clearIconCache;
+window.batchFetchIcons = batchFetchIcons;
 // Renderer exports
 window.applyGlobalRenderer = applyGlobalRenderer;
 window.verifyRenderer = verifyRenderer;
