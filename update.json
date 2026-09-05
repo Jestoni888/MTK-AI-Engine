@@ -1,6 +1,6 @@
 {
-  "version": "0.0.1.00",
-  "versionCode": 100,
-  "zipUrl": "https://github.com/Jestoni888/MTK-AI-Engine/releases/download/V100/MediaTek.AI.Engine-0.0.1.00.zip",
+  "version": "0.0.1.07",
+  "versionCode": 107,
+  "zipUrl": "https://github.com/Jestoni888/MTK-AI-Engine/releases/download/V107/MediaTek.AI.Engine-0.0.1.07.zip",
   "changelog": "https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/changelog.md"
 }
