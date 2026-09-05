@@ -91,6 +91,7 @@ export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
 export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"
 ENGINE="$MODDIR/main_control/mtk_ai_engine.sh"
 LITE="$MODDIR/main_control/lite_mode.sh"
+STANDARD="$MODDIR/main_control/dumpsys_mode.sh"
 # Start main engine
 if [ -x "$ENGINE" ]; then
     setsid "$ENGINE" > /dev/null 2>&1 &
@@ -101,6 +102,12 @@ fi
 if [ -x "$LITE" ]; then
     setsid "$LITE" > /dev/null 2>&1 &
     log_msg "Lite mode started"
+fi
+
+# Start standard mode
+if [ -x "$STANDARD" ]; then
+    setsid "$STANDARD" > /dev/null 2>&1 &
+    log_msg "Standard mode started"
 fi
 
 # ✅ FIXED: Performance mode with proper export order
