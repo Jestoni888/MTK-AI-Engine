@@ -1,7 +1,7 @@
 id=MTK_AI
 name=MediaTek AI Engine
-version=0.0.1.05
-versionCode=105
+version=0.0.1.06
+versionCode=106
 author=jestoni cenabre
 description=[🔸ONLINE BETA-TEST🔸] MediaTek Engine has a features in performance, normal use & powersaver in a convenient way. Click ▶️ for updates.
 updateJson=https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/update.json
