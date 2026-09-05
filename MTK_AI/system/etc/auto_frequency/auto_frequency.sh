@@ -367,16 +367,20 @@ current_temp=$(get_batt_temp)
 max_perc=$(get_max_perc "$current_temp")
 log "Battery Temp: ${current_temp}°C → Max CPU Freq: ${max_perc}%"
 
-# CPU throttling
-for policy in $CPU_SYS/cpufreq/policy*; do
-    [ -d "$policy" ] || continue
-    if [ -f "$policy/cpuinfo_max_freq" ] && [ -w "$policy/scaling_max_freq" ]; then
-        max_freq=$(cat "$policy/cpuinfo_max_freq")
+# CPU throttling (Targeting cpu4 to cpu7 only)
+for i in 4 5 6 7; do
+    cpu_dir="$CPU_SYS/cpu$i/cpufreq"
+    [ -d "$cpu_dir" ] || continue
+    
+    if [ -f "$cpu_dir/cpuinfo_max_freq" ]; then
+        max_freq=$(cat "$cpu_dir/cpuinfo_max_freq")
         target_max=$(( max_freq * max_perc / 100 ))
-        chmod 644 "$policy/scaling_max_freq"
-        echo "$target_max" > "$policy/scaling_max_freq"
-        chmod 000 "$policy/scaling_max_freq"
-        log "Policy $(basename "$policy"): Max set to $target_max Hz"
+        
+        chmod 777 "$cpu_dir/scaling_max_freq"
+        echo "$target_max" > "$cpu_dir/scaling_max_freq"
+        chmod 444 "$cpu_dir/scaling_max_freq"
+        
+        log "CPU$i: Max set to $target_max Hz"
     fi
 done
 
