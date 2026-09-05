@@ -43,76 +43,39 @@ notify_status() {
     su -lp 2000 -c "cmd notification post -t '$TITLE' -i '$ICON' -S bigtext mtk_ai_tag '$full_msg'" >/dev/null 2>&1
 }
 
-touch_active() {
-if [ -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
-nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
-fi
-ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
-[ -f "/dev/.mtk_ai_active_game" ] && return 0
-
-    CPU_SYS="/sys/devices/system/cpu"
-
-    TOUCH_ACTIVE_PERCENT=100
-    if [ -f "/sdcard/MTK_AI_Engine/manual_touch_active_freq.txt" ]; then
-        TOUCH_ACTIVE_PERCENT=$(cat "/sdcard/MTK_AI_Engine/manual_touch_active_freq.txt" | tr -d '\r\n ')
-        # Validate range
-        if [ "$TOUCH_ACTIVE_PERCENT" -lt 50 ] 2>/dev/null; then TOUCH_ACTIVE_PERCENT=50; fi
-        if [ "$TOUCH_ACTIVE_PERCENT" -gt 100 ] 2>/dev/null; then TOUCH_ACTIVE_PERCENT=100; fi
-    fi
-
-    # Target explicitly cpu4 to cpu7 (Big/Prime cores)
-    for cpu in $CPU_SYS/cpu4 $CPU_SYS/cpu5 $CPU_SYS/cpu6 $CPU_SYS/cpu7; do
-        [ -d "$cpu" ] || continue
+_apply_freq() {
+    _val=$3; _file=$2; _min=$4; _max=$5
+    [ -f "$_file" ] && _val=$(tr -d '\r\n ' < "$_file")
+    [ "$_val" -lt "$_min" ] 2>/dev/null && _val=$_min
+    [ "$_val" -gt "$_max" ] 2>/dev/null && _val=$_max
+    
+    for i in 4 5 6 7; do
+        _c="/sys/devices/system/cpu/cpu$i/cpufreq"
+        [ -f "$_c/cpuinfo_max_freq" ] || continue
         
-        if [ -f "$cpu/cpufreq/cpuinfo_max_freq" ]; then
-            MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq" | tr -d '\r\n ')
-            TARGET_MAX=$((MAX_FREQ * TOUCH_ACTIVE_PERCENT / 100))
-            
-            chmod 777 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-            echo "$TARGET_MAX" > "$cpu/cpufreq/scaling_max_freq"
-            chmod 444 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-        fi
+        _t=$(( $(cat "$_c/cpuinfo_max_freq") * _val / 100 ))
+        chmod 777 "$_c/scaling_max_freq" 2>/dev/null
+        echo $_t > "$_c/scaling_max_freq"
+        chmod 444 "$_c/scaling_max_freq" 2>/dev/null
     done
-
     sync
 }
 
+touch_active() {
+    [ -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "/dev/.mtk_ai_active_game" ] && nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
+    ps 2>/dev/null | grep -v grep | grep -qw mtk_ai_engine && return 0
+    [ -f "/dev/.mtk_ai_active_game" ] && return 0
+    
+    _apply_freq 100 "/sdcard/MTK_AI_Engine/manual_touch_active_freq.txt" 100 50 100
+}
+
 touch_inactive() {
-if [ -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
-nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
-fi
-[ ! -f "$TOUCH_ACTIVE" ] && return 0
-ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
-[ -f "/dev/.mtk_ai_active_game" ] && return 0
-
-    CPU_SYS="/sys/devices/system/cpu"
-
-    INACTIVE_PERCENT=30
-    if [ -f "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" ]; then
-        INACTIVE_PERCENT=$(cat "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" | tr -d '\r\n ')
-        # Enforce 25-50% range
-        if [ "$INACTIVE_PERCENT" -lt 25 ] 2>/dev/null; then
-            INACTIVE_PERCENT=25
-        elif [ "$INACTIVE_PERCENT" -gt 50 ] 2>/dev/null; then
-            INACTIVE_PERCENT=50
-        fi
-    fi
-
-    # Target explicitly cpu4 to cpu7 (Big/Prime cores)
-    for cpu in $CPU_SYS/cpu4 $CPU_SYS/cpu5 $CPU_SYS/cpu6 $CPU_SYS/cpu7; do
-        [ -d "$cpu" ] || continue
-        
-        if [ -f "$cpu/cpufreq/cpuinfo_max_freq" ]; then
-            max_val=$(cat "$cpu/cpufreq/cpuinfo_max_freq" | tr -d '\r\n ')
-            target_val=$(( max_val * INACTIVE_PERCENT / 100 ))
-            
-            chmod 777 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-            echo "$target_val" > "$cpu/cpufreq/scaling_max_freq"
-            chmod 444 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-        fi
-    done
-
-    sync
+    [ -f "$EXTERNAL_CFG/enable_lite_gaming" ] && [ -f "/dev/.mtk_ai_active_game" ] && nohup sh /data/adb/modules/MTK_AI/Xperformance/etc/auto_frequency/auto_frequency.sh >/dev/null 2>&1 &
+    [ ! -f "$TOUCH_ACTIVE" ] && return 0
+    ps 2>/dev/null | grep -v grep | grep -qw mtk_ai_engine && return 0
+    [ -f "/dev/.mtk_ai_active_game" ] && return 0
+    
+    _apply_freq 30 "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" 30 25 50
 }
 
 force_kill() {
