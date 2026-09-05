@@ -61,11 +61,17 @@ if [ -f "/sdcard/MTK_AI_Engine/manual_touch_active_freq.txt" ]; then
     if [ "$TOUCH_ACTIVE_PERCENT" -gt 100 ] 2>/dev/null; then TOUCH_ACTIVE_PERCENT=100; fi
 fi
 
-for cpu in $CPU_SYS/cpu[0-9]*; do
-    MAX_FREQ=$(cat "$cpu/cpufreq/cpuinfo_max_freq")
-    TARGET_MAX=$((MAX_FREQ * TOUCH_ACTIVE_PERCENT / 100))
-    chmod 644 "$cpu/cpufreq/scaling_max_freq" 
-    echo "$TARGET_MAX" > "$cpu/cpufreq/scaling_max_freq"
+# Target only BIG cores (policy4, policy6, policy7 cover most MTK layouts)
+for policy in $CPU_SYS/cpufreq/policy4 $CPU_SYS/cpufreq/policy6 $CPU_SYS/cpufreq/policy7; do
+    [ -d "$policy" ] || continue
+    
+    if [ -f "$policy/cpuinfo_max_freq" ]; then
+        MAX_FREQ=$(cat "$policy/cpuinfo_max_freq")
+        TARGET_MAX=$((MAX_FREQ * TOUCH_ACTIVE_PERCENT / 100))
+        
+        chmod 644 "$policy/scaling_max_freq" 2>/dev/null
+        echo "$TARGET_MAX" > "$policy/scaling_max_freq"
+    fi
 done
 
 sync
@@ -79,6 +85,8 @@ fi
 ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
 [ -f "/dev/.mtk_ai_active_game" ] && return 0
 
+    CPU_SYS="/sys/devices/system/cpu" # Added for safety in case it's not global
+
     INACTIVE_PERCENT=30
     if [ -f "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" ]; then
         INACTIVE_PERCENT=$(cat "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" | tr -d '\r\n ')
@@ -90,7 +98,8 @@ ps 2>/dev/null | grep -v grep | grep -qw "mtk_ai_engine" && return 0
         fi
     fi
 
-    for policy in $CPU_SYS/cpufreq/policy*; do
+    # Target only BIG cores for maximum power saving / thermal control
+    for policy in $CPU_SYS/cpufreq/policy4 $CPU_SYS/cpufreq/policy6 $CPU_SYS/cpufreq/policy7; do
         [ -d "$policy" ] || continue
         
         if [ -f "$policy/cpuinfo_max_freq" ]; then
