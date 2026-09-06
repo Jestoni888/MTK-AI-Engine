@@ -233,9 +233,6 @@ force_kill_cgroup_safe() {
 # -------------------------
 auto_focus_ram() {
     load_configs
-    # Load CPU limit setting
-    CPU_LIMIT=$(cat "$CPU_LIMIT_FILE" 2>/dev/null | tr -d '[:space:]')
-    echo "$CPU_LIMIT" | grep -qE '^[0-9]+$' || CPU_LIMIT=0
     
     local MEM_TOTAL=$(grep MemTotal /proc/meminfo | awk '{print $2}')
     local MEM_AVAIL_START=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
