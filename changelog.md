@@ -2,6 +2,8 @@
 
 •Standard daemon dumpsys converted to C++ Clang language for faster execution, they can now rivaled both logcat & JRE (Java Runtime Environment) for faster app detection
 
+‼️needs to flash zip version of this to get standard dumpsys daemon‼️
+
 --- version 0.0.1.06 ---
 
 •improved application with included system on app lists with their real name, icons & reset config to delete the save config on per-app
