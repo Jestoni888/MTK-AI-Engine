@@ -36,7 +36,6 @@ EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
 STATE_DIR="$LOCK_DIR"
 
 TRIMMING_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/trim_memory"
-RAM_CLEANER_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/ram_cleaner"
 MODULE_EXECUTER="$MOD_DIR/MTK_AI/AI_MODE/global_mode/module_executer"
 LOGIC_CPU7_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu7"
 LOGIC_CPU6_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu6"
@@ -74,12 +73,6 @@ run_cmd() {
         pgrep -f "trim_memory" > /dev/null || nohup sh "$TRIMMING_PATH" 2>&1 &
     else
         pkill -f "trim_memory" 2>/dev/null
-    fi
-
-    if [ -f "$EXTERNAL_CFG/enable_cleaner" ]; then
-        pgrep -f "ram_cleaner" > /dev/null || nohup sh "$RAM_CLEANER_PATH" 2>&1 &
-    else
-        pkill -f "ram_cleaner" 2>/dev/null
     fi
 
     if [ -f "$EXTERNAL_CFG/random_device" ]; then
