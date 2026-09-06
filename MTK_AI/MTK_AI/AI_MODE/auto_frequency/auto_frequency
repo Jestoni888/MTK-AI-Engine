@@ -275,6 +275,15 @@ exclude_killing() {
     done
 }
 
+start_compile() {
+    cmd package compile -m speed -a
+}
+
+stop_compile() {
+    pkill -f "cmd package compile" >/dev/null 2>&1
+    killall dex2oat dex2oat32 dex2oat64 >/dev/null 2>&1
+}
+
 game_api() {
 local DIR="/sdcard/MTK_AI_Engine/per_app"
     [ -d "$DIR" ] || return
