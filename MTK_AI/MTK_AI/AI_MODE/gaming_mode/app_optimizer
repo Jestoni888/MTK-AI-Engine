@@ -111,12 +111,15 @@ vm.stat_interval=60 vm.swappiness=10 vm.unprivileged_userfaultfd=0 \
 vm.user_reserve_kbytes=131072 vm.vfs_cache_pressure=200 vm.watermark_boost_factor=0 \
 vm.watermark_scale_factor=10
 
+#Thermal Override
 echo disabled | tee /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null || true
+cmd thermalservice override-status 1 2>/dev/null
+
+#External Scripts
 [ -f /sdcard/MTK_AI_Engine/enable_gaming_prop ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop || true
 [ -f /sdcard/MTK_AI_Engine/enable_gaming_prop2 ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 || true
 [ -f /sdcard/MTK_AI_Engine/enable_performance ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/performance || true
 [ -f /sdcard/MTK_AI_Engine/enable_disable_thermal ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal || true
-
 nohup sh "/sdcard/MTK_AI_Engine/modes/gaming_mode.sh" >/dev/null 2>&1 &
 nohup sh "/sdcard/MTK_AI_Engine/setedit-modes/gaming.sh" >/dev/null 2>&1 &
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" 2>/dev/null &
