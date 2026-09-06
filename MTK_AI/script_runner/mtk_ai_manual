@@ -15,7 +15,7 @@ fi
 # Save the current script's PID for the next run to find
 echo $$ > "$PID_FILE"
 # ==========================================
-. /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/auto_frequency
+
 CONFIG_DIR="/sdcard/MTK_AI_Engine"
 CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
 LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
@@ -233,14 +233,11 @@ find "$CONFIG_DIR" -type f -size +50k | while read -r file; do
     head -c $LIMIT_BYTES "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
 done
 
-[ -f /sdcard/MTK_AI_Engine/compiler ] && stop_compile
-
 if [ -f "/dev/.mtk_ai_active_game" ]; then
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer" >/dev/null 2>&1 &
 else
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_prop" >/dev/null 2>&1 &
 fi
-
 
 echo "✅ Devfreq settings loaded successfully!"
 echo "=== MTK AI MANUAL OVERRIDES COMPLETED ==="
