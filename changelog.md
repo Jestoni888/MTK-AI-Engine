@@ -1,6 +1,6 @@
 --- version 0.0.1.08 ---
 
-•added smart compiler dex2oat that runs only during screen-off & automatic stop compiling when screen-on
+•added smart compiler dex2oat that runs only during screen-off & automatic stop compiling when screen-on (toggleable in UI via settings tab)
 
 --- version 0.0.1.07 ---
 
