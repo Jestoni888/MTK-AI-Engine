@@ -233,7 +233,7 @@ find "$CONFIG_DIR" -type f -size +50k | while read -r file; do
     head -c $LIMIT_BYTES "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
 done
 
-stop_compile
+[ -f /sdcard/MTK_AI_Engine/compiler ] && stop_compile
 
 if [ -f "/dev/.mtk_ai_active_game" ]; then
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer" >/dev/null 2>&1 &
