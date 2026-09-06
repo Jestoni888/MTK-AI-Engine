@@ -141,6 +141,6 @@ boost_process_aggressive() {
         done
     fi
 }
-boost_process_aggressive
+[ -f /sdcard/MTK_AI_Engine/app_priority ] && boost_process_aggressive
 
-[ ! -f /sdcard/MTK_AI_Engine/enable_cleaner ] && nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" >/dev/null 2>&1 &
+[ -f /sdcard/MTK_AI_Engine/enable_cleaner ] && nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" >/dev/null 2>&1 &
