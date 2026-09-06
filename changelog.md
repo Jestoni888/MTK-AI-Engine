@@ -3,6 +3,7 @@
 •Standard daemon dumpsys converted to C++ Clang language for faster execution, they can now rivaled both logcat & JRE (Java Runtime Environment) for faster app detection
 
 ‼️needs to flash zip version of this to get standard dumpsys daemon‼️
+Link --> https://github.com/Jestoni888/MTK-AI-Engine/releases/download/V107/MediaTek.AI.Engine-0.0.1.07.zip
 
 --- version 0.0.1.06 ---
 
