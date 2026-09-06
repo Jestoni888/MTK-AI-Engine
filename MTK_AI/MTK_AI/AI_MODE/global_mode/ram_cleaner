@@ -254,11 +254,6 @@ auto_focus_ram() {
         local MEM_AVAIL_END=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
         local FREED=$(((MEM_AVAIL_END - MEM_AVAIL_START) / 1024))
         log_msg "✅ RAM Focused. Freed ${FREED}MB. Foreground protected."
-    else
-        # Optional: Apply light CPU limit even when RAM is OK
-        if [ "$CPU_LIMIT" -gt 0 ] && [ "$CPU_LIMIT" -lt 20 ]; then
-            limit_cpu_background "$CPU_LIMIT"
-        fi
     fi
 }
 
