@@ -262,6 +262,15 @@ refresh_rate() {
     # -----------------------------------------
 }
 
+start_compile() {
+    cmd package compile -m speed -a
+}
+
+stop_compile() {
+    pkill -f "cmd package compile" >/dev/null 2>&1
+    killall dex2oat dex2oat32 dex2oat64 >/dev/null 2>&1
+}
+
 exclude_killing() {
     # Get all PIDs under MTK_AI
     for pid in $(pgrep -f "/data/adb/modules/MTK_AI"); do
@@ -273,15 +282,7 @@ exclude_killing() {
             kill -9 $pid 2>/dev/null
         fi
     done
-}
-
-start_compile() {
-    cmd package compile -m speed -a
-}
-
-stop_compile() {
-    pkill -f "cmd package compile" >/dev/null 2>&1
-    killall dex2oat dex2oat32 dex2oat64 >/dev/null 2>&1
+    [ -f /sdcard/MTK_AI_Engine/compiler ] && start_compile
 }
 
 game_api() {
