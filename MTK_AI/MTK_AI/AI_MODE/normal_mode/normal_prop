@@ -52,10 +52,12 @@ for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/
   [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
 done || true
 
+#Thermal Restored
 for zone in /sys/devices/virtual/thermal/thermal_zone*/mode; do
     chmod 777 "$zone" || true
     echo enabled | tee "$zone" || true
 done || true
+cmd thermalservice reset 2>/dev/null
 
 CONFIG_DIR="/sdcard/MTK_AI_Engine/config"
 NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
