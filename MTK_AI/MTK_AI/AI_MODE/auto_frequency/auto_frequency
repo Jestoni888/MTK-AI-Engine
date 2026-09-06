@@ -263,6 +263,8 @@ refresh_rate() {
 }
 
 start_compile() {
+    setprop dalvik.vm.dex2oat-cpu-set "0"
+    setprop dalvik.vm.dex2oat-threads "1"
     cmd package compile -m speed -a
 }
 
