@@ -26,11 +26,7 @@ RAM_THRESHOLD_FILE="$CONFIG_DIR/ram_threshold.txt"
 FORCE_KILL_FILE="$CONFIG_DIR/force_kill.list"
 NEVER_KILL_FILE="$CONFIG_DIR/never_kill.list"
 ACTIVE_GAME="/dev/.mtk_ai_active_game"
-# CPU Limit Config (10 = 10% of ONE core, 0 = disabled)
-CPU_LIMIT_FILE="$CONFIG_DIR/cpu_limit_per_core.txt"
-[ -f "$CPU_LIMIT_FILE" ] || echo "0" > "$CPU_LIMIT_FILE"  # 0 = disabled by default
-# cpulimit binary path (adjust if you installed it elsewhere)
-CPULIMIT_BIN="/data/adb/modules/MTK_AI/lib/cpulimit"
+
 # Initialize config files if missing (WebUI can overwrite these later)
 [ -f "$RAM_THRESHOLD_FILE" ] || echo "50" > "$RAM_THRESHOLD_FILE"
 [ -f "$FORCE_KILL_FILE" ] || printf "# Force Kill List\n# Packages here are ALWAYS killed when background (bypasses all protections)\n# One package per line\n" > "$FORCE_KILL_FILE"
