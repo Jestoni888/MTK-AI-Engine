@@ -267,8 +267,7 @@ start_compile() {
 }
 
 stop_compile() {
-    pkill -f "cmd package compile" >/dev/null 2>&1
-    killall dex2oat dex2oat32 dex2oat64 >/dev/null 2>&1
+    [ -f /sdcard/MTK_AI_Engine/compiler ] && pkill -f "cmd package compile" >/dev/null 2>&1 && killall dex2oat dex2oat32 dex2oat64 >/dev/null 2>&1
 }
 
 exclude_killing() {
