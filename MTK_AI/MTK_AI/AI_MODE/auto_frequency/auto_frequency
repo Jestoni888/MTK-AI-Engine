@@ -263,13 +263,25 @@ refresh_rate() {
 }
 
 start_compile() {
-    setprop dalvik.vm.dex2oat-cpu-set "0"
-    setprop dalvik.vm.dex2oat-threads "1"
-    cmd package compile -m speed -a
+    [ -f /sdcard/MTK_AI_Engine/compiler ] && {
+    
+    # 2. Dynamically detect physical CPU cores to prevent thermal throttling
+    CORES=$(grep -c ^processor /proc/cpuinfo)
+    
+    # 3. Set threads exactly to core count (prevents context-switching lag)
+    setprop dalvik.vm.dex2oat-threads "$CORES"
+    
+    # 4. Compile all apps (forced, max performance, ignores profile delays)
+    cmd package compile -m speed-profile -f -a
+    }
 }
 
 stop_compile() {
-    [ -f /sdcard/MTK_AI_Engine/compiler ] && { pkill -f "cmd package compile" >/dev/null 2>&1; killall dex2oat dex2oat32 dex2oat64 >/dev/null 2>&1; }
+        # Force kill the main compiler command
+        pkill -9 -f "cmd package compile" >/dev/null 2>&1
+        
+        # Force kill all spawned dex2oat processes
+        killall -9 dex2oat dex2oat32 dex2oat64 >/dev/null 2>&1
 }
 
 exclude_killing() {
