@@ -11,36 +11,15 @@ TOUCH_ACTIVE="$EXTERNAL_CFG/enable_limiter"
 # --- NOTIFICATION FUNCTION ---
 # Uses UID 2000 to bypass SELinux restrictions
 notify_status() {
-    # Skip if notification toggle is OFF
-    [ ! -f "$NOTIFY_ENABLED_FILE" ] && return 0
-
-    # --- 0. Determine Mode, Icon, and Title ---
-    if [ -f /dev/.mtk_ai_active_game ]; then
-        # Use file:// prefix and lowercase -i for the status bar icon
-        ICON="file:///data/local/tmp/gaming_icon.png"
-        TITLE="Gaming Mode"
-    else
         ICON="file:///data/local/tmp/icon.png"
-        TITLE="Normal Mode"
-    fi
-
-    # --- 1. Temperature ---
-    RAW_TEMP=$(cat /sys/class/power_supply/battery/temp 2>/dev/null || echo "0")
-    B_TEMP="$((RAW_TEMP / 10)).$((RAW_TEMP % 10))°C"
-
-    # --- 2. Governor ---
-    GOV_FILE="/sys/devices/system/cpu/cpufreq/policy0/scaling_governor"
-    [ ! -f "$GOV_FILE" ] && GOV_FILE="/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
-    CPU_GOV="Unknown"
-    [ -f "$GOV_FILE" ] && CPU_GOV=$(cat "$GOV_FILE" 2>/dev/null | tr -d '[:space:]')
-
+        TITLE="Notice"
+        
     local status_msg="$1"
-    local full_msg="$status_msg | Gov: $CPU_GOV | Temp: $B_TEMP"
 
-    # --- 4. Post Notification ---
-    # -i (lowercase) puts the icon ON TOP in the status bar.
-    # file:// prefix is REQUIRED for local paths.
-    su -lp 2000 -c "cmd notification post -t '$TITLE' -i '$ICON' -S bigtext mtk_ai_tag '$full_msg'" >/dev/null 2>&1
+    # --- Post Notification ---
+    # Cleaned up: Removed CPU, Temp, and Gov info. 
+    # Now purely displays the compilation status passed to it.
+    su -lp 2000 -c "cmd notification post -t '$TITLE' -i '$ICON' -S bigtext mtk_ai_tag '$status_msg'" >/dev/null 2>&1
 }
 
 _apply_freq() {
@@ -264,44 +243,45 @@ refresh_rate() {
 
 start_compile() {
     [ -f /sdcard/MTK_AI_Engine/compiler ] && {
-
-    # 2. Dynamically detect physical CPU cores to prevent thermal throttling
     CORES=$(grep -c ^processor /proc/cpuinfo)
-    
-    # 3. Set threads exactly to core count (prevents context-switching lag)
     setprop dalvik.vm.dex2oat-threads "$CORES"
     
-    echo "🎯 Attempting to compile all apps..."
-    
-    # ==========================================
-    # METHOD 1: Modern & Forced (Best for immediate results)
-    # ==========================================
-    if cmd package compile -m speed-profile -a >/dev/null 2>&1; then
-        echo "✅ SUCCESS: Compiled all apps via 'cmd package compile'"
-        return 0
-    fi
-    echo "⚠️ Method 1 failed, trying Method 2..."
+    notify_status "🎯 Initializing app compilation..."
 
-    # ==========================================
-    # METHOD 2: Legacy Direct Command
-    # ==========================================
-    if pm compile -m speed-profile -a >/dev/null 2>&1; then
-        echo "✅ SUCCESS: Compiled all apps via 'pm compile'"
-        return 0
-    fi
-    echo "⚠️ Method 2 failed, trying Method 3..."
+    # Get all user-installed apps (Third-party)
+    APPS=$(pm list packages | sed 's/package://')
+    TOTAL=$(echo "$APPS" | wc -l)
+    COUNT=0
 
-    # ==========================================
-    # METHOD 3: Official System-Wide Background Job
-    # (The most reliable fallback for bulk compilation on stubborn ROMs)
-    # ==========================================
-    if cmd package bg-dexopt-job >/dev/null 2>&1; then
-        echo "✅ SUCCESS: Triggered system-wide 'bg-dexopt-job'"
-        return 0
-    fi
-    
-    echo "❌ FAILED: All bulk compilation methods failed."
-    return 1
+    # Loop through each app to show exactly what is being compiled
+    for pkg in $APPS; do
+        COUNT=$((COUNT + 1))
+        
+        # Update notification with current package and progress
+        notify_status "⏳ Compiling ($COUNT/$TOTAL): $pkg"
+        
+        # ==========================================
+        # METHOD 1: Modern & Forced (Best for immediate results)
+        # ==========================================
+        if cmd package compile -m speed-profile "$pkg" >/dev/null 2>&1; then
+            continue
+        fi
+
+        # ==========================================
+        # METHOD 2: Legacy Direct Command
+        # ==========================================
+        if pm compile -m speed-profile "$pkg" >/dev/null 2>&1; then
+            continue
+        fi
+
+        # ==========================================
+        # METHOD 3: Official System-Wide / Dexopt fallback
+        # ==========================================
+        pm dexopt "$pkg" speed-profile bg-dexopt >/dev/null 2>&1
+    done
+
+    # Final notification when everything is finished
+    notify_status "✅ Done: All apps compiled successfully."
 }
 }
 
