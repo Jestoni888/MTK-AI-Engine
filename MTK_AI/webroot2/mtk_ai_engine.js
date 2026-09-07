@@ -73,7 +73,7 @@ const toggleConfig = {
     limit_surfaceflinger: { title:  "Limit Surfaceflinger", desc:  "Limit Surfaceflinger in normal use to reduce overheating 🔥", group:  "System " },
     disable_log: { title:  "Disable log ", desc:  "Disabled logging on sdcard to reduce CPU work & less heating unless for debugging purposes", group:  "System " },
     app_priority: { title:  "App priority ", desc:  "Prioritized current app to its absolute workload on system & lowered priority of background apps", group:  "System " },
-    compiler: { title:  "Smart Compiler ", desc:  "Compile system & user apps for faster launching, battery saving & raw performance | compile only during screen-off & auto stop compiling upon screen on or using", group:  "System " },
+    compiler: { title:  "Smart Compiler ", desc:  "Compile system & user apps for faster launching, battery saving & raw performance | compile only during screen-off & auto stop compiling upon screen on | if device is unresponsive or laggy after enabling this then turn it off & reboot if necessary", group:  "System " },
     enable_cpu: { title:  "Hexacore mode ", desc:  "Auto shutdown cpu 6  & 7 when temp reaches 42°C  & auto revert in 39°C ", group:  "Battery " },
     enable_lite_gaming: { title:  "Lite Gaming Mode ", desc:  "Stable temperature while providing smoother gaming experience", group:  "Gaming " },
     suspend_bg: { title:  "Suspend background apps", desc:  "Suspend background apps for smoother gaming experience (in lite mode stay 5-10 seconds in home launcher to switch between normal/gaming) (Hard mode detects instantly)", group:  "Gaming " },
