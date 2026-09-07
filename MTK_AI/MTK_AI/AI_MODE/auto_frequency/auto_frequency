@@ -264,16 +264,45 @@ refresh_rate() {
 
 start_compile() {
     [ -f /sdcard/MTK_AI_Engine/compiler ] && {
-    
+
     # 2. Dynamically detect physical CPU cores to prevent thermal throttling
     CORES=$(grep -c ^processor /proc/cpuinfo)
     
     # 3. Set threads exactly to core count (prevents context-switching lag)
     setprop dalvik.vm.dex2oat-threads "$CORES"
     
-    # 4. Compile all apps (forced, max performance, ignores profile delays)
-    cmd package compile -m speed-profile -a
-    }
+    echo "🎯 Attempting to compile all apps..."
+    
+    # ==========================================
+    # METHOD 1: Modern & Forced (Best for immediate results)
+    # ==========================================
+    if cmd package compile -m speed-profile -f -a >/dev/null 2>&1; then
+        echo "✅ SUCCESS: Compiled all apps via 'cmd package compile'"
+        return 0
+    fi
+    echo "⚠️ Method 1 failed, trying Method 2..."
+
+    # ==========================================
+    # METHOD 2: Legacy Direct Command
+    # ==========================================
+    if pm compile -m speed-profile -a >/dev/null 2>&1; then
+        echo "✅ SUCCESS: Compiled all apps via 'pm compile'"
+        return 0
+    fi
+    echo "⚠️ Method 2 failed, trying Method 3..."
+
+    # ==========================================
+    # METHOD 3: Official System-Wide Background Job
+    # (The most reliable fallback for bulk compilation on stubborn ROMs)
+    # ==========================================
+    if cmd package bg-dexopt-job >/dev/null 2>&1; then
+        echo "✅ SUCCESS: Triggered system-wide 'bg-dexopt-job'"
+        return 0
+    fi
+    
+    echo "❌ FAILED: All bulk compilation methods failed."
+    return 1
+}
 }
 
 stop_compile() {
