@@ -61,6 +61,7 @@ Xperformance/etc/disable_thermal/disable_thermal.sh
 Xperformance/etc/cooler/cooler.sh
 MTK_AI/AI_MODE/auto_frequency/cpu6
 MTK_AI/AI_MODE/auto_frequency/cpu7
+MTK_AI/AI_MODE/auto_frequency/webui_workload.sh
 MTK_AI/AI_MODE/gaming_mode/app_optimizer
 MTK_AI/AI_MODE/gaming_mode/bypass_on
 MTK_AI/AI_MODE/gaming_mode/bypass_active
