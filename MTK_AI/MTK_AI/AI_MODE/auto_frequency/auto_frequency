@@ -276,7 +276,7 @@ start_compile() {
     # ==========================================
     # METHOD 1: Modern & Forced (Best for immediate results)
     # ==========================================
-    if cmd package compile -m speed-profile -f -a >/dev/null 2>&1; then
+    if cmd package compile -m speed-profile -a >/dev/null 2>&1; then
         echo "✅ SUCCESS: Compiled all apps via 'cmd package compile'"
         return 0
     fi
