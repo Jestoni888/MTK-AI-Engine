@@ -8,19 +8,6 @@ EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
 NOTIFY_ENABLED_FILE="$EXTERNAL_CFG/enable_notifications"
 TOUCH_ACTIVE="$EXTERNAL_CFG/enable_limiter"
 
-# --- NOTIFICATION FUNCTION ---
-# Uses UID 2000 to bypass SELinux restrictions
-notify_status() {
-        ICON="file:///data/local/tmp/icon.png"
-        TITLE="Notice"
-        
-    local status_msg="$1"
-
-    # --- Post Notification ---
-    # Cleaned up: Removed CPU, Temp, and Gov info. 
-    # Now purely displays the compilation status passed to it.
-    su -lp 2000 -c "cmd notification post -t '$TITLE' -i '$ICON' -S bigtext mtk_ai_tag '$status_msg'" >/dev/null 2>&1
-}
 
 _apply_freq() {
     _val=$3; _file=$2; _min=$4; _max=$5
@@ -241,58 +228,6 @@ refresh_rate() {
     # -----------------------------------------
 }
 
-start_compile() {
-    [ -f /sdcard/MTK_AI_Engine/compiler ] && {
-    CORES=$(grep -c ^processor /proc/cpuinfo)
-    setprop dalvik.vm.dex2oat-threads "$CORES"
-    
-    notify_status "🎯 Initializing app compilation..."
-
-    # Get all user-installed apps (Third-party)
-    APPS=$(pm list packages | sed 's/package://')
-    TOTAL=$(echo "$APPS" | wc -l)
-    COUNT=0
-
-    # Loop through each app to show exactly what is being compiled
-    for pkg in $APPS; do
-        COUNT=$((COUNT + 1))
-        
-        # Update notification with current package and progress
-        notify_status "⏳ Compiling ($COUNT/$TOTAL): $pkg"
-        
-        # ==========================================
-        # METHOD 1: Modern & Forced (Best for immediate results)
-        # ==========================================
-        if cmd package compile -m speed-profile "$pkg" >/dev/null 2>&1; then
-            continue
-        fi
-
-        # ==========================================
-        # METHOD 2: Legacy Direct Command
-        # ==========================================
-        if pm compile -m speed-profile "$pkg" >/dev/null 2>&1; then
-            continue
-        fi
-
-        # ==========================================
-        # METHOD 3: Official System-Wide / Dexopt fallback
-        # ==========================================
-        pm dexopt "$pkg" speed-profile bg-dexopt >/dev/null 2>&1
-    done
-
-    # Final notification when everything is finished
-    notify_status "✅ Done: All apps compiled successfully."
-}
-}
-
-stop_compile() {
-        # Force kill the main compiler command
-        pkill -9 -f "cmd package compile" >/dev/null 2>&1
-        
-        # Force kill all spawned dex2oat processes
-        killall -9 dex2oat dex2oat32 dex2oat64 >/dev/null 2>&1
-}
-
 exclude_killing() {
     # Get all PIDs under MTK_AI
     for pid in $(pgrep -f "/data/adb/modules/MTK_AI"); do
@@ -304,7 +239,6 @@ exclude_killing() {
             kill -9 $pid 2>/dev/null
         fi
     done
-    [ -f /sdcard/MTK_AI_Engine/compiler ] && start_compile
 }
 
 game_api() {
