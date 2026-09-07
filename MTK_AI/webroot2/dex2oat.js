@@ -192,9 +192,46 @@
         }
     }
 
+    // 🔧 Helper: Tries all 3 compilation methods sequentially for a given package and filter
+    // Place this RIGHT ABOVE your compileWithFallback function
+    async function tryCompileMethods(pkg, filter) {
+        const methods = [
+            { 
+                name: 'cmd package compile', 
+                cmd: `cmd package compile -m ${filter} -f ${pkg} 2>&1` 
+            },
+            { 
+                name: 'pm compile', 
+                cmd: `su -c "pm compile -m ${filter} ${pkg}" 2>&1` 
+            },
+            { 
+                name: 'pm dexopt', 
+                cmd: `su -c "pm dexopt ${pkg} ${filter} bg-dexopt" 2>&1` 
+            }
+        ];
+
+        for (const method of methods) {
+            try {
+                log(`🔧 Trying [${method.name}] for ${pkg}...`);
+                const res = await execFn(method.cmd, 120000);
+                
+                // If no response or response doesn't contain "failure", consider it a success
+                if (!res || !res.toLowerCase().includes('failure')) {
+                    log(`✅ SUCCESS: ${pkg} compiled via [${method.name}]`);
+                    return true;
+                }
+                log(`⚠️ [${method.name}] reported failure for ${pkg}`);
+            } catch (e) {
+                log(`❌ [${method.name}] exception for ${pkg}: ${e.message}`);
+            }
+        }
+        return false; // All 3 methods failed for this filter
+    }
+
     // 🔁 Enhanced compileWithFallback with pre-cleanup option
     async function compileWithFallback(pkg, preferredFilter, forceClean = false) {
-        if (forceClean || currentFilter === 'everything' || currentFilter === 'speed') {            await deleteDexArtifacts(pkg);
+        if (forceClean || currentFilter === 'everything' || currentFilter === 'speed') {
+            await deleteDexArtifacts(pkg);
             await new Promise(r => setTimeout(r, 200));
         }
         
@@ -207,12 +244,14 @@
                 log('⏭️ ' + pkg + ' already compiled with ' + targetFilter);
                 return true;
             }
-            const res = await execFn('su -c "pm compile -m ' + targetFilter + ' ' + pkg + '" 2>&1', 120000);
-            if (!res || !res.toLowerCase().includes('failure')) {
-                log('✅ ' + pkg + ' compiled with TARGET filter: ' + targetFilter);
+            
+            // Try all 3 methods for the target filter
+            const success = await tryCompileMethods(pkg, targetFilter);
+            if (success) {
                 return true;
             }
-            log('⚠️ ' + pkg + ' failed with target filter [' + targetFilter + '], falling back...');
+            
+            log('⚠️ ' + pkg + ' failed all methods with target filter [' + targetFilter + '], falling back...');
         } catch (e) { 
             log('❌ ' + pkg + ' exception with target filter: ' + e.message); 
         }
@@ -226,18 +265,20 @@
                     log('⏭️ ' + pkg + ' already compiled with fallback ' + filter);
                     return true;
                 }
-                const res = await execFn('su -c "pm compile -m ' + filter + ' ' + pkg + '" 2>&1', 120000);
-                if (!res || !res.toLowerCase().includes('failure')) {
-                    log('✅ ' + pkg + ' compiled with fallback [' + filter + ']');
+                
+                // Try all 3 methods for the fallback filter
+                const success = await tryCompileMethods(pkg, filter);
+                if (success) {
                     return true;
                 }
-                log('⚠️ ' + pkg + ' failed with fallback [' + filter + ']');
+                
+                log('⚠️ ' + pkg + ' failed all methods with fallback [' + filter + ']');
             } catch (e) { 
                 log('❌ ' + pkg + ' fallback exception: ' + e.message); 
             }
         }
         
-        log('❌ ' + pkg + ' failed all filters (target: ' + targetFilter + ')');
+        log('❌ ' + pkg + ' failed all filters and all methods (target: ' + targetFilter + ')');
         return false;
     }
 
