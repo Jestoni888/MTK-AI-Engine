@@ -69,7 +69,6 @@ else
 fi
 
 run_cmd() {
-        stop_compile
     if [ -f "$EXTERNAL_CFG/enable_trim" ]; then
         pgrep -f "trim_memory" > /dev/null || nohup sh "$TRIMMING_PATH" 2>&1 &
     else
