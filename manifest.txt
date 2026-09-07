@@ -4,7 +4,7 @@ Xperformance/etc/cooler/cooler.sh https://raw.githubusercontent.com/Jestoni888/M
 Xperformance/etc/disable_thermal/disable_thermal.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/system/etc/disable_thermal/disable_thermal.sh
 MTK_AI/AI_MODE/auto_frequency/cpu6 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/cpu6
 MTK_AI/AI_MODE/auto_frequency/cpu7 https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/cpu7
-MTK_AI/AI_MODE/auto_frequency/surfaceflinger https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/surfaceflinger
+MTK_AI/AI_MODE/auto_frequency/webui_workload.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/auto_frequency/webui_workload.sh
 MTK_AI/AI_MODE/gaming_mode/app_optimizer https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer
 MTK_AI/AI_MODE/gaming_mode/bypass_on https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/bypass_on
 MTK_AI/AI_MODE/gaming_mode/bypass_active https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/MTK_AI/AI_MODE/gaming_mode/bypass_active
