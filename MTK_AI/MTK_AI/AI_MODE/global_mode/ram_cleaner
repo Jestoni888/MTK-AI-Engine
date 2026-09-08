@@ -190,6 +190,14 @@ force_kill_cgroup_safe() {
 
         # --- STANDARD KILL ---
         log_msg "    Killing: $pkg (PID: $pid)"
+        cmd activity make-uid-idle "$pkg" >/dev/null 2>&1 || true
+        # 3. Mark app as inactive for system optimizations
+        cmd activity set-inactive "$pkg" true >/dev/null 2>&1 || true
+        # 4. Apply deep background restriction
+        cmd activity set-bg-restriction-level "$pkg" background_restricted >/dev/null 2>&1 || true
+        
+        # 5. Compact process memory & hibernate
+        cmd activity compact full "$pid" 2>&1 || true
         cmd app_hibernation set-state --user 0 --global $pkg true >/dev/null 2>&1 || true
         cmd appops set $pkg RUN_IN_BACKGROUND ignore 2>/dev/null
         cmd appops set $pkg RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
