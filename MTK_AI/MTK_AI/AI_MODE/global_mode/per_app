@@ -24,6 +24,15 @@ cmd app_hibernation set-state --user 0 --global "${CURRENT_TOP_APP}" false >/dev
 cmd appops set "${CURRENT_TOP_APP}" RUN_IN_BACKGROUND allow 2>/dev/null
 cmd appops set "${CURRENT_TOP_APP}" RUN_ANY_IN_BACKGROUND allow 2>/dev/null
 am set-standby-bucket "${CURRENT_TOP_APP}" active 2>/dev/null
+
+# ==========================================
+# NEW: Additional boosting commands from `cmd activity`
+# ==========================================
+# Set background restriction level to unrestricted (highest priority/least restricted)
+cmd activity set-bg-restriction-level "${CURRENT_TOP_APP}" unrestricted >/dev/null 2>&1
+
+# Ensure the app is explicitly marked as active (not inactive)
+cmd activity set-inactive "${CURRENT_TOP_APP}" false >/dev/null 2>&1
 }
 unhibernation
 
