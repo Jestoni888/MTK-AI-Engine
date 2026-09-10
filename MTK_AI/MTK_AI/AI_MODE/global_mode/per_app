@@ -36,6 +36,87 @@ cmd activity set-inactive "${CURRENT_TOP_APP}" false >/dev/null 2>&1
 }
 unhibernation
 
+# ==========================================
+# CPU GOVERNOR & FREQUENCY LIMIT
+# ==========================================
+apply_cpu_settings() {
+    local target_app="$CURRENT_TOP_APP"
+    [ -z "$target_app" ] && return 1
+    
+    local PERAPP_DIR="/sdcard/MTK_AI_Engine/per_app"
+    
+    # 1. Apply CPU Governor
+    local gov_file="${PERAPP_DIR}/${target_app}.governor"
+    if [ -f "$gov_file" ]; then
+        local gov=$(cat "$gov_file" 2>/dev/null | tr -d '[:space:]')
+        if [ -n "$gov" ] && [ "$gov" != "default" ]; then
+            for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+                echo "$gov" > "$cpu/cpufreq/scaling_governor" 2>/dev/null
+            done
+        fi
+    fi
+    
+    # 2. Apply CPU Frequency Limit (Percentage)
+    local cpu_limit_file="${PERAPP_DIR}/${target_app}.cpu_percent"
+    if [ -f "$cpu_limit_file" ]; then
+        local limit_pct=$(cat "$cpu_limit_file" 2>/dev/null | tr -d '[:space:]')
+        if [ -n "$limit_pct" ] && [ "$limit_pct" -gt 0 ] 2>/dev/null; then
+            for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+                local abs_max=$(cat "$cpu/cpufreq/cpuinfo_max_freq" 2>/dev/null)
+                if [ -n "$abs_max" ]; then
+                    local new_max=$((abs_max * limit_pct / 100))
+                    echo "$new_max" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+                fi
+            done
+        fi
+    fi
+}
+apply_cpu_settings
+
+# ==========================================
+# GPU FREQUENCY (OPP INDEX)
+# ==========================================
+apply_gpu_settings() {
+    local target_app="$CURRENT_TOP_APP"
+    [ -z "$target_app" ] && return 1
+    
+    local PERAPP_DIR="/sdcard/MTK_AI_Engine/per_app"
+    local gpu_opp_file="${PERAPP_DIR}/${target_app}.gpu_opp"
+    
+    if [ -f "$gpu_opp_file" ]; then
+        local opp_idx=$(cat "$gpu_opp_file" 2>/dev/null | tr -d '[:space:]')
+        if [ -n "$opp_idx" ]; then
+            # MTK GPU frequency lock (Supports both gpufreq v1 & v2)
+            echo "$opp_idx" > /proc/gpufreq/gpufreq_opp_freq 2>/dev/null
+            echo "$opp_idx" > /proc/gpufreqv2/gpu_fixed_freq 2>/dev/null
+        fi
+    fi
+}
+apply_gpu_settings
+
+# ==========================================
+# VSYNC OFFSET
+# ==========================================
+apply_vsync_settings() {
+    local target_app="$CURRENT_TOP_APP"
+    [ -z "$target_app" ] && return 1
+    
+    local VSYNC_DIR="/sdcard/MTK_AI_Engine/vsync_configs"
+    local vsync_file="${VSYNC_DIR}/${target_app}.vsync"
+    
+    if [ -f "$vsync_file" ]; then
+        local vsync_offset=$(cat "$vsync_file" 2>/dev/null | tr -d '[:space:]')
+        if [ -n "$vsync_offset" ]; then
+            # Apply Vsync phase offsets to SurfaceFlinger
+            setprop debug.sf.early_phase_offset_ns "$vsync_offset" 2>/dev/null
+            setprop debug.sf.early_app_phase_offset_ns "$vsync_offset" 2>/dev/null
+            setprop debug.sf.early_gl_phase_offset_ns "$vsync_offset" 2>/dev/null
+            setprop debug.sf.late_phase_offset_ns "$vsync_offset" 2>/dev/null
+        fi
+    fi
+}
+apply_vsync_settings
+
 refresh_rate() {
     # --- Execute per-app refresh rate ---
     REFRESH_FILE="/sdcard/MTK_AI_Engine/manual_refresh_lock.txt"
