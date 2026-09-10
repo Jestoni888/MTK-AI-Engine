@@ -6,6 +6,8 @@
 
 •per-app trigger about cpu governor, cpu frequency, GPU frequency & Vsync offset now added on shell script
 
+•Ram hibernator optimize with real app name & no more accidentally killed the current app unless you put them in force kill lists
+
 --- version 0.0.1.08 ---
 
 •dex2oat now running in background script & show in notifications 
