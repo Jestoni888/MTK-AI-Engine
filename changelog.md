@@ -4,6 +4,8 @@
 
 •IO Tweaks manager in tools tab now opens fast
 
+•per-app trigger about cpu governor, cpu frequency, GPU frequency & Vsync offset now added on shell script
+
 --- version 0.0.1.08 ---
 
 •dex2oat now running in background script & show in notifications 
