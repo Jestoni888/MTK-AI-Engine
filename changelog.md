@@ -2,6 +2,8 @@
 
 •app freeze manager in tools tab now includes system apps with apps real name & icon 
 
+•IO Tweaks manager in tools tab now opens fast
+
 --- version 0.0.1.08 ---
 
 •dex2oat now running in background script & show in notifications 
