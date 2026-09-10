@@ -8,6 +8,8 @@
 
 •Ram hibernator optimize with real app name & no more accidentally killed the current app unless you put them in force kill lists
 
+•Fixes Inotify about screen brightness changes, daemon script will not spamming anymore when auto brightness enabled
+
 --- version 0.0.1.08 ---
 
 •dex2oat now running in background script & show in notifications 
