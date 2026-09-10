@@ -1,3 +1,7 @@
+--- version 0.0.1.09 ---
+
+•app freeze manager in tools tab now includes system apps with apps real name & icon 
+
 --- version 0.0.1.08 ---
 
 •dex2oat now running in background script & show in notifications 
