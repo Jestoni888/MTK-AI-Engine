@@ -1,34 +1,28 @@
 #!/system/bin/sh
-
 ### === SINGLE INSTANCE LOCK ===
 LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
 mkdir -p "$LOCK_DIR"
 LOCK_FILE="$LOCK_DIR/powersave_runner.pid"
-
 # Helper: safe logging (works on all Android versions)
 log_msg() { log -t MTK_AI "$@" 2>/dev/null || echo "[MTK_AI] $*"; }
-
 # 1️⃣ Global pgrep check FIRST
 if pgrep -f "powersavex" | grep -v "^$$" > /dev/null 2>&1; then
-    exit 0
+exit 0
 else
-    rm -rf "$LOCK_DIR"
+rm -rf "$LOCK_DIR"
 fi
-
 # 2️⃣ If PID file exists and process is alive → exit silently
 if [ -f "$LOCK_FILE" ]; then
-    OLD_PID=$(cat "$LOCK_FILE" 2>/dev/null)
-    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        exit 0
-    fi
+OLD_PID=$(cat "$LOCK_FILE" 2>/dev/null)
+if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+exit 0
 fi
-
+fi
 # 3️⃣ Register current process as the single instance
 mkdir -p "$LOCK_DIR"
 echo $$ > "$LOCK_FILE"
 trap 'rm -f "$LOCK_FILE"' EXIT
 ### ============================
-
 export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:/data/adb/modules/MTK_AI/lib:$LD_LIBRARY_PATH
 . /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/auto_frequency
 INOTIFY="/data/adb/modules/MTK_AI/lib/inotifywait"
@@ -37,16 +31,17 @@ MANUAL="/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual"
 
 # Dynamically find all 'brightness' files in /sys/
 BRIGHTNESS_FILES=$(find /sys -name "brightness" -type f 2>/dev/null)
-
 if [ -z "$BRIGHTNESS_FILES" ]; then
-    echo "No brightness files found in /sys/"
-    exit 1
+echo "No brightness files found in /sys/"
+exit 1
 fi
+
+# 🛑 NEW: Variable to track the last known screen state to prevent redundant executions
+LAST_SCREEN_STATE="unknown"
 
 # Function to check state and launch the correct script
 apply_mode() {
     all_zero=true
-    
     # Iterate through all dynamically found brightness files
     for file in $BRIGHTNESS_FILES; do
         STATE=$(cat "$file" 2>/dev/null)
@@ -57,7 +52,22 @@ apply_mode() {
         fi
     done
     
+    # 🛑 NEW: Determine the current state based on brightness values
     if [ "$all_zero" = true ]; then
+        CURRENT_STATE="off"
+    else
+        CURRENT_STATE="on"
+    fi
+
+    # 🛑 NEW: If the state hasn't changed, exit the function early to prevent spamming
+    if [ "$CURRENT_STATE" = "$LAST_SCREEN_STATE" ]; then
+        return 0
+    fi
+    
+    # 🛑 NEW: Update the last known state for the next trigger
+    LAST_SCREEN_STATE="$CURRENT_STATE"
+
+    if [ "$CURRENT_STATE" = "off" ]; then
         # Screen is OFF (all values are 0) -> Apply powersave mode if enabled
         if [ -f "/sdcard/MTK_AI_Engine/low_power_mode" ]; then
             "$POWERSAVE" &
