@@ -20,7 +20,6 @@ const scriptPaths = {
     enable_screen_off_throttle: { on: null, off: null, isDaemon: false, critical: false },
     low_power_mode: { on: null, off: null, isDaemon: false, critical: false },
     enable_notifications: { on: null, off: null, isDaemon: false, critical: false },
-    throttle_user_apps_in_gaming: { on: null, off: null, isDaemon: false, critical: false },
     enable_limiter: { on: null, off: null, isDaemon: false, critical: false },
     enable_dnd_during_game: { on: null, off: null, isDaemon: false, critical: false },
     enable_module: { on: null, off: null, isDaemon: false, critical: false },
@@ -55,10 +54,8 @@ const toggleConfig = {
         warning: "⚠️ May skip some system checks like dex2oat profile - use with caution"
     },
     enable_performance: { title:  "Performance Mode ", desc:  "Maximize CPU/GPU clocks  & scheduler ", group:  "Performance " },
-    enable_screen_off_throttle: { title:  "Screen Off Throttle ", desc:  "Limit performance when display is off ", group:  "Battery " },
     low_power_mode: { title:  "Deep sleep system ", desc:  "Enable deep sleep power mode during screen-off ", group:  "Battery " },
     enable_notifications: { title:  "Module Notifications ", desc:  "Manage notification behavior of this module ", group:  "System " },
-    throttle_user_apps_in_gaming: { title:  "Throttle Background Apps ", desc:  "Limit background apps while gaming ", group:  "Gaming " },
     enable_limiter: { title:  "Enable Touch Control ", desc:  "Master toggle for TOUCH Control  & Smart Refresh rate ", group:  "Touch Control " },
     enable_highframerate: { title:  "Unlock High FPS ", desc:  "Remove system-level FPS caps ", group:  "Gaming " },
     enable_disable_thermal: { title:  "Disable Thermals ", desc:  "Bypass thermal throttling (⚠️ Risk of overheating) ", group:  "Thermal " },
