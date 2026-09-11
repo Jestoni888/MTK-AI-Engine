@@ -176,7 +176,7 @@ get_gpu_opp_index() {
         opp_idx=0                       # coolest → max perf
     else
         # Step of 2 OPPs per degree above 34°C
-        opp_idx=$(( (temp - 34) * 2 ))
+        opp_idx=$(( (temp - 34) * 3 ))
     fi
 
     # Clamp to valid range
