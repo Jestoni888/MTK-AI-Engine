@@ -46,6 +46,11 @@ done
 # Universally compatible syntax across all Android versions:
 input keyevent 279 && input swipe 500 1200 500 400 300
 
+# Dynamically find and set boost_affinity to 1 (Force Big/Super Cores)
+for f in $(find /sys/ -name "boost_affinity" 2>/dev/null); do
+    echo 1 > "$f"
+done
+
 # Powermode
 cmd power set-mode 2 true
 cmd power set-fixed-performance-mode-enabled true
