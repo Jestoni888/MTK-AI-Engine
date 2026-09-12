@@ -37,6 +37,8 @@ STATE_DIR="$LOCK_DIR"
 
 TRIMMING_PATH="$MOD_DIR/MTK_AI/AI_MODE/global_mode/trim_memory"
 MODULE_EXECUTER="$MOD_DIR/MTK_AI/AI_MODE/global_mode/module_executer"
+BYPASS_ON="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/bypass_on"
+BYPASS_OFF="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/bypass_off"
 LOGIC_CPU7_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu7"
 LOGIC_CPU6_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu6"
 
@@ -73,6 +75,12 @@ run_cmd() {
         pgrep -f "trim_memory" > /dev/null || nohup sh "$TRIMMING_PATH" 2>&1 &
     else
         pkill -f "trim_memory" 2>/dev/null
+    fi
+
+    if [ -f "$EXTERNAL_CFG/enable_bypass" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
+        pgrep -f "bypass_on" > /dev/null || nohup sh "$BYPASS_ON" 2>&1 &
+    else
+        pgrep -f "bypass_off" > /dev/null || nohup sh "$BYPASS_OFF" 2>&1 &
     fi
 
     if [ -f "$EXTERNAL_CFG/random_device" ]; then
