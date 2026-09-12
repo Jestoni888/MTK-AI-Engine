@@ -44,6 +44,13 @@ if [ -f "/sdcard/MTK_AI_Engine/disable_vsync" ]; then
     su -c resetprop -d debug.hwui.disable_vsync 2>/dev/null
 fi
 
+# Snappier UI Touch
+   sysctl -w kernel.sched_latency_ns=2000000
+   sysctl -w kernel.sched_min_granularity_ns=500000
+   sysctl -w kernel.sched_wakeup_granularity_ns=500000
+   sysctl -w kernel.sched_migration_cost_ns=500000
+   sysctl -w kernel.sched_tunable_scaling=0
+
 echo "-1" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
 echo "-1" > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
 
