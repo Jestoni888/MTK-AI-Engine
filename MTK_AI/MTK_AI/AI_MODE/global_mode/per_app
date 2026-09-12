@@ -51,7 +51,7 @@ apply_gpu_settings() {
         if [ -n "$opp_idx" ]; then
             # MTK GPU frequency lock (Supports both gpufreq v1 & v2)
             echo "$opp_idx" > /proc/gpufreq/gpufreq_opp_freq 2>/dev/null
-            echo "$opp_idx" > /proc/gpufreqv2/gpu_fixed_freq 2>/dev/null
+            echo "$opp_idx" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
         fi
     fi
 }
