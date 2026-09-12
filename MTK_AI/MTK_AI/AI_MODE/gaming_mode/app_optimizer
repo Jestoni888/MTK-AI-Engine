@@ -46,6 +46,13 @@ done
 # Universally compatible syntax across all Android versions:
 input keyevent 279 && input swipe 500 1200 500 400 300
 
+# Fast UI touch
+   sysctl -w kernel.sched_latency_ns=1000000
+   sysctl -w kernel.sched_min_granularity_ns=250000
+   sysctl -w kernel.sched_wakeup_granularity_ns=250000
+   sysctl -w kernel.sched_migration_cost_ns=250000
+   sysctl -w kernel.sched_tunable_scaling=0
+
 # Dynamically find and set boost_affinity to 1 (Force Big/Super Cores)
 for f in $(find /sys/ -name "boost_affinity" 2>/dev/null); do
     echo 1 > "$f"
