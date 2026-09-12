@@ -59,7 +59,7 @@ const toggleConfig = {
     enable_notifications: { title:  "Module Notifications ", desc:  "Manage notification behavior of this module ", group:  "System " },
     enable_limiter: { title:  "Enable Touch Control ", desc:  "Master toggle for TOUCH Control  & Smart Refresh rate ", group:  "Touch Control " },
     enable_highframerate: { title:  "Unlock High FPS ", desc:  "Remove system-level FPS caps ", group:  "Gaming " },
-    disable_vsync: { title:  "Disable Vsync ", desc:  "Disables VSync for the UI, allowing higher frame rates (can cause screen tearing). Auto remove properties in normal mode ", group:  "Gaming " },
+    disable_vsync: { title:  "Disable Vsync ", desc:  "Disables VSync for the UI, allowing higher frame rates (can cause screen tearing, consumes more battery & overheating). Auto remove properties in normal mode ", group:  "Gaming " },
     enable_disable_thermal: { title:  "Disable Thermals ", desc:  "Bypass thermal throttling (⚠️ Risk of overheating) ", group:  "Thermal " },
     enable_gaming_prop: { title:  "Gaming Properties ", desc:  "Apply gaming-specific system properties ", group:  "Gaming " },
     enable_dnd_during_game: { title:  "DND During Game ", desc:  "Auto-enable Do Not Disturb while gaming ", group:  "Gaming " },
