@@ -66,6 +66,11 @@ setprop 'vendor.perf.framepacing.enable' '1' || true
 setprop 'vendor.performance.gbe' '1' || true
 settings put global 'sustained_performance_mode_enabled' '1'
 
+# Disable Vsync
+if [ -f "$CONFIG_DIR/disable_vsync" ]; then
+    setprop debug.hwui.disable_vsync true
+fi
+
 # Optimize app launch 
 cmd device_config put runtime_native_boot iorap_perfetto_enable true
 cmd device_config put runtime_native_boot iorap_readahead_enable true
