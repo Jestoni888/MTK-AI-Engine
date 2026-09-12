@@ -36,6 +36,18 @@ cmd activity set-inactive "${CURRENT_TOP_APP}" false >/dev/null 2>&1
 }
 unhibernation
 
+apply_renderer() {
+    [ -z "$CURRENT_TOP_APP" ] && return 1
+    local r=$(cat "/sdcard/MTK_AI_Engine/threading_configs/$CURRENT_TOP_APP.renderer" 2>/dev/null | tr -d '[:space:]')
+    local c=$(getprop debug.hwui.renderer)
+    
+    case "$r" in
+        skiavk|skiagl) [ "$c" != "$r" ] && setprop debug.hwui.renderer "$r" ;;
+        *) [ -n "$c" ] && setprop debug.hwui.renderer "" ;;
+    esac
+}
+apply_renderer
+
 # ==========================================
 # GPU FREQUENCY (OPP INDEX)
 # ==========================================
