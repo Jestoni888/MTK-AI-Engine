@@ -226,6 +226,7 @@ apply_cpu_settings() {
         local gov=$(cat "$gov_file" 2>/dev/null | tr -d '[:space:]')
         if [ -n "$gov" ] && [ "$gov" != "default" ]; then
             for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+                chmod 777 "$cpu/cpufreq/scaling_governor" 2>/dev/null
                 echo "$gov" > "$cpu/cpufreq/scaling_governor" 2>/dev/null
             done
         fi
@@ -248,6 +249,7 @@ apply_cpu_settings() {
                     local new_max=$((abs_max * limit_pct / 100))
                     chmod 777 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
                     echo "$new_max" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+                    chmod 000 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
                 fi
             done
         fi
