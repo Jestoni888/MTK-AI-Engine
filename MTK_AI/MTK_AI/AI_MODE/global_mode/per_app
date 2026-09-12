@@ -37,44 +37,6 @@ cmd activity set-inactive "${CURRENT_TOP_APP}" false >/dev/null 2>&1
 unhibernation
 
 # ==========================================
-# CPU GOVERNOR & FREQUENCY LIMIT
-# ==========================================
-apply_cpu_settings() {
-    local target_app="$CURRENT_TOP_APP"
-    [ -z "$target_app" ] && return 1
-    
-    local PERAPP_DIR="/sdcard/MTK_AI_Engine/per_app"
-    
-    # 1. Apply CPU Governor
-    local gov_file="${PERAPP_DIR}/${target_app}.governor"
-    if [ -f "$gov_file" ]; then
-        local gov=$(cat "$gov_file" 2>/dev/null | tr -d '[:space:]')
-        if [ -n "$gov" ] && [ "$gov" != "default" ]; then
-            for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
-                echo "$gov" > "$cpu/cpufreq/scaling_governor" 2>/dev/null
-            done
-        fi
-    fi
-    
-    # 2. Apply CPU Frequency Limit (Percentage)
-    local cpu_limit_file="${PERAPP_DIR}/${target_app}.cpu_percent"
-    if [ -f "$cpu_limit_file" ]; then
-        local limit_pct=$(cat "$cpu_limit_file" 2>/dev/null | tr -d '[:space:]')
-        if [ -n "$limit_pct" ] && [ "$limit_pct" -gt 0 ] 2>/dev/null; then
-            for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
-                local abs_max=$(cat "$cpu/cpufreq/cpuinfo_max_freq" 2>/dev/null)
-                if [ -n "$abs_max" ]; then
-                    local new_max=$((abs_max * limit_pct / 100))
-                    chmod 777 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-                    echo "$new_max" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-                fi
-            done
-        fi
-    fi
-}
-apply_cpu_settings
-
-# ==========================================
 # GPU FREQUENCY (OPP INDEX)
 # ==========================================
 apply_gpu_settings() {
@@ -233,5 +195,54 @@ boost_process_aggressive() {
     fi
 }
 [ -f /sdcard/MTK_AI_Engine/app_priority ] && boost_process_aggressive
+
+# CPU GOVERNOR & FREQUENCY LIMIT
+apply_cpu_settings() {
+    local target_app="$CURRENT_TOP_APP"
+    [ -z "$target_app" ] && return 1
+    
+    local PERAPP_DIR="/sdcard/MTK_AI_Engine/per_app"
+    
+    # Define fallback files
+    local FALLBACK_GOV="/sdcard/MTK_AI_Engine/manual_governor.txt"
+    local FALLBACK_FREQ="/sdcard/MTK_AI_Engine/manual_touch_active_freq.txt"
+    
+    # 1. Apply CPU Governor
+    local gov_file="${PERAPP_DIR}/${target_app}.governor"
+    # Fallback if per-app config is missing
+    [ ! -f "$gov_file" ] && gov_file="$FALLBACK_GOV"
+    
+    if [ -f "$gov_file" ]; then
+        local gov=$(cat "$gov_file" 2>/dev/null | tr -d '[:space:]')
+        if [ -n "$gov" ] && [ "$gov" != "default" ]; then
+            for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+                echo "$gov" > "$cpu/cpufreq/scaling_governor" 2>/dev/null
+            done
+        fi
+    fi
+    
+    # 2. Apply CPU Frequency Limit (Percentage)
+    local cpu_limit_file="${PERAPP_DIR}/${target_app}.cpu_percent"
+    # Fallback if per-app config is missing
+    [ ! -f "$cpu_limit_file" ] && cpu_limit_file="$FALLBACK_FREQ"
+    
+    if [ -f "$cpu_limit_file" ]; then
+        local limit_pct=$(cat "$cpu_limit_file" 2>/dev/null | tr -d '[:space:]')
+        if [ -n "$limit_pct" ] && [ "$limit_pct" -gt 0 ] 2>/dev/null; then
+            for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+                local abs_max=$(cat "$cpu/cpufreq/cpuinfo_max_freq" 2>/dev/null)
+                if [ -n "$abs_max" ]; then
+                    # Note: This assumes the fallback file also contains a percentage (0-100). 
+                    # If the fallback file contains an absolute frequency (e.g., 2000000), 
+                    # you may need to adjust the math below.
+                    local new_max=$((abs_max * limit_pct / 100))
+                    chmod 777 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+                    echo "$new_max" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+                fi
+            done
+        fi
+    fi
+}
+apply_cpu_settings
 
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" >/dev/null 2>&1 &
