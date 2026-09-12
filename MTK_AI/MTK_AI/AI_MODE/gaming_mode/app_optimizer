@@ -51,6 +51,9 @@ for f in $(find /sys/ -name "boost_affinity" 2>/dev/null); do
     echo 1 > "$f"
 done
 
+# Boost foreground 
+setprop persist.sys.foreground_boost 1
+
 # Powermode
 cmd power set-mode 2 true
 cmd power set-fixed-performance-mode-enabled true
