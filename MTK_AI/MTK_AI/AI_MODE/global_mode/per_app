@@ -52,20 +52,18 @@ apply_renderer
 # GPU FREQUENCY (OPP INDEX)
 # ==========================================
 apply_gpu_settings() {
-    local target_app="$CURRENT_TOP_APP"
-    [ -z "$target_app" ] && return 1
+    local app="$CURRENT_TOP_APP" idx
+    [ -z "$app" ] && return 1
     
-    local PERAPP_DIR="/sdcard/MTK_AI_Engine/per_app"
-    local gpu_opp_file="${PERAPP_DIR}/${target_app}.gpu_opp"
+    # 1. Read per-app, fallback to global if empty/missing
+    idx=$(cat "/sdcard/MTK_AI_Engine/per_app/${app}.gpu_opp" 2>/dev/null | tr -d '[:space:]')
+    [ -z "$idx" ] && idx=$(cat "/sdcard/MTK_AI_Engine/global_gpu_opp_index.txt" 2>/dev/null | tr -d '[:space:]')
     
-    if [ -f "$gpu_opp_file" ]; then
-        local opp_idx=$(cat "$gpu_opp_file" 2>/dev/null | tr -d '[:space:]')
-        if [ -n "$opp_idx" ]; then
-            # MTK GPU frequency lock (Supports both gpufreq v1 & v2)
-            echo "$opp_idx" > /proc/gpufreq/gpufreq_opp_freq 2>/dev/null
-            echo "$opp_idx" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
-        fi
-    fi
+    # 2. Apply to MTK GPU paths (supports -1 for unlock)
+    [ -n "$idx" ] && {
+        echo "$idx" > /proc/gpufreq/gpufreq_opp_freq 2>/dev/null
+        echo "$idx" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
+    }
 }
 apply_gpu_settings
 
