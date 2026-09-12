@@ -8,6 +8,8 @@
 
 •all per-app functions working even without adding in gamelists
 
+•Added Disable Vsync in settings section toggle (Works only during gaming if enabled)
+
 --- version 0.0.1.09 ---
 
 •adding discord, TikTok & Gmail in my profile if you wants to reach me out
