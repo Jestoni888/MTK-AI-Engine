@@ -2,6 +2,8 @@
 
 •Bypass charging revive (Works only during gaming)
 
+•Added fallback script on per-app about cpu governor & frequencies if no config found then it will fallback on global setup in Webui on advance CPU governor & frequency 
+
 --- version 0.0.1.09 ---
 
 •adding discord, TikTok & Gmail in my profile if you wants to reach me out
