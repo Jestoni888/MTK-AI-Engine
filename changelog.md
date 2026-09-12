@@ -1,3 +1,7 @@
+--- version 0.0.1.10 ---
+
+•Bypass charging revive
+
 --- version 0.0.1.09 ---
 
 •adding discord, TikTok & Gmail in my profile if you wants to reach me out
