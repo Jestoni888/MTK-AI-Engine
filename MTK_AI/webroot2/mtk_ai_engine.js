@@ -70,7 +70,7 @@ const toggleConfig = {
     disable_log: { title:  "Disable log ", desc:  "Disabled logging on sdcard to reduce CPU work & less heating unless for debugging purposes", group:  "System " },
     app_priority: { title:  "App priority ", desc:  "Prioritized current app to its absolute workload on system & lowered priority of background apps", group:  "System " },
     enable_cpu: { title:  "Hexacore mode ", desc:  "Auto shutdown cpu 6  & 7 when temp reaches 42°C  & auto revert in 39°C ", group:  "Battery " },
-    enable_lite_gaming: { title:  "Lite Gaming Mode ", desc:  "Stable temperature while providing smoother gaming experience", group:  "Gaming " },
+    enable_lite_gaming: { title:  "Lite Gaming Mode ", desc:  "Stable temperature while providing smoother gaming experience. Auto scales CPU frequencies & GPU frequencies to lower if temperature goes higher", group:  "Gaming " },
     suspend_bg: { title:  "Suspend background apps", desc:  "Suspend background apps for smoother gaming experience (in lite mode stay 5-10 seconds in home launcher to switch between normal/gaming) (Hard mode detects instantly)", group:  "Gaming " },
     cpufreq_mode: { title:  "Cpufreq CCI/Power", desc:  "Enable Cpufreq CCI & Power mode to optimal performance", group:  "Gaming " },
     disable_tap_to_rotate: { title:  "Disable Tap to Rotate ", desc:  "Hide the manual rotation button on the navigation bar ", group:  "Display " }
