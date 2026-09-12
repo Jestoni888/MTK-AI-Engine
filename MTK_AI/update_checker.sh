@@ -84,12 +84,13 @@ compare_ver() {
 }
 
 is_text_file() {
-    case "$1" in
-        *.sh|*.js|*.html|*.prop|*.txt|*.cfg|*.conf|*.xml|*.json|*.css|*.md) return 0 ;;
-    esac
-    _sh=$($BUSYBOX head -c 2 "${MODDIR}/$1" 2>/dev/null)
-    [ "$_sh" = "#!" ] && return 0
-    return 1 # 🔥 Fixed: was 'return +1' which is invalid in POSIX sh
+case "$1" in
+# 🔥 Added *required_files to the text file extensions list
+*.sh|*.js|*.html|*.prop|*.txt|*.cfg|*.conf|*.xml|*.json|*.css|*.md|*required_files) return 0 ;;
+esac
+_sh=$($BUSYBOX head -c 2 "${MODDIR}/$1" 2>/dev/null)
+[ "$_sh" = "#!" ] && return 0
+return 1 
 }
 
 get_sha256() {
