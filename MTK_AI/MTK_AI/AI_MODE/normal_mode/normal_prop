@@ -40,7 +40,7 @@ done
 fi
 
 # Remove Vsync
-if [ -f "$CONFIG_DIR/disable_vsync" ]; then
+if [ -f "$SDCARD/disable_vsync" ]; then
     resetprop -d debug.hwui.disable_vsync
 fi
 
