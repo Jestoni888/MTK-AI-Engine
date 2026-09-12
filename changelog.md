@@ -4,6 +4,8 @@
 
 •Added fallback script on per-app about cpu governor & frequencies if no config found then it will fallback on global setup in Webui on advance CPU governor & frequency 
 
+•fixed GPU frequency on per-app functions 
+
 •all per-app functions working even without adding in gamelists
 
 --- version 0.0.1.09 ---
