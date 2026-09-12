@@ -5,15 +5,16 @@ profile.js - Developer Profile & Donation Modal
 (function() {
 'use strict';
 const PROFILE = {
-    name:  "Jestoni Ceniza Cenabre 🇵🇭",
+    name: "Jestoni Ceniza Cenabre 🇵🇭",
     country: "Philippines",
-    message:  "If you like my work, you can give me a small donation for this project. ",
-    note:  "Contact me via any of the links above  ",
+    message: "If you like my work, you can give me a small donation for this project.",
+    note: "Contact me via any of the links above",
     links: [
         // 🆕 Main Module Website for Updates
         { label: "🔧 MTK-AI-Engine", url: "https://github.com/Jestoni888/MTK-AI-Engine", icon: "fab fa-github" },
         { label: "Gmail", url: "mailto:jestoniarnado@gmail.com", icon: "fas fa-envelope" },
         { label: "Discord", url: "https://discord.com/users/jestoni888", icon: "fab fa-discord" },
+        { label: "TikTok", url: "https://www.tiktok.com/@jestonicenabre", icon: "fab fa-tiktok" },
         { label: "Telegram", url: "https://t.me/mikamisaturo", icon: "fab fa-telegram" },
         { label: "Facebook", url: "https://www.facebook.com/jestonicenabre888", icon: "fab fa-facebook" },
         { label: "YouTube", url: "https://youtube.com/@jestonicenabre", icon: "fab fa-youtube" }
@@ -33,7 +34,7 @@ const execCmd = window.exec || async function(cmd, timeout = 15000) {
 
 /**
 🚀 Direct shell launch ONLY
-Handles mailto: for email apps, and https:// for browsers/Discord app
+Handles mailto: for email apps, and https:// for browsers/apps (like TikTok, Discord, etc.)
 */
 async function openExternal(url) {
     // Handle email links specifically with SENDTO intent
