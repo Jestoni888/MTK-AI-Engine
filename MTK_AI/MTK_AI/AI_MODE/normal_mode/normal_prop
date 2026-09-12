@@ -40,8 +40,8 @@ done
 fi
 
 # Remove Vsync
-if [ -f "$SDCARD/disable_vsync" ]; then
-    resetprop -d debug.hwui.disable_vsync
+if [ -f "/sdcard/MTK_AI_Engine/disable_vsync" ]; then
+    su -c resetprop -d debug.hwui.disable_vsync 2>/dev/null
 fi
 
 echo "-1" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
