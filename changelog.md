@@ -1,5 +1,7 @@
 --- version 0.0.1.09 ---
 
+•adding discord & Gmail in my profile if you wants to reach me out
+
 •app freeze manager in tools tab now includes system apps with apps real name & icon 
 
 •IO Tweaks manager in tools tab now opens fast
