@@ -1,6 +1,6 @@
 --- version 0.0.1.10 ---
 
-•Bypass charging revive
+•Bypass charging revive (Works only during gaming)
 
 --- version 0.0.1.09 ---
 
