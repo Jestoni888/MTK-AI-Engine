@@ -52,18 +52,46 @@ apply_renderer
 # GPU FREQUENCY (OPP INDEX)
 # ==========================================
 apply_gpu_settings() {
-    local app="$CURRENT_TOP_APP" idx
+    local app="$CURRENT_TOP_APP" idx gov base
+    
     [ -z "$app" ] && return 1
     
-    # 1. Read per-app, fallback to global if empty/missing
+    # ==========================================
+    # 1. GPU OPP (Frequency)
+    # ==========================================
+    # Read per-app, fallback to global if empty/missing
     idx=$(cat "/sdcard/MTK_AI_Engine/per_app/${app}.gpu_opp" 2>/dev/null | tr -d '[:space:]')
     [ -z "$idx" ] && idx=$(cat "/sdcard/MTK_AI_Engine/global_gpu_opp_index.txt" 2>/dev/null | tr -d '[:space:]')
     
-    # 2. Apply to MTK GPU paths (supports -1 for unlock)
+    # Apply to MTK GPU paths (supports -1 for unlock)
     [ -n "$idx" ] && {
         echo "$idx" > /proc/gpufreq/gpufreq_opp_freq 2>/dev/null
         echo "$idx" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
     }
+
+    # ==========================================
+    # 2. GPU Governor
+    # ==========================================
+    # Read per-app, fallback to global
+    gov=$(cat "/sdcard/MTK_AI_Engine/per_app/${app}.gpu_governor" 2>/dev/null | tr -d '[:space:]')
+    [ -z "$gov" ] && gov=$(cat "/sdcard/MTK_AI_Engine/gpu_governor.txt" 2>/dev/null | tr -d '[:space:]')
+    
+    # Apply governor if a valid value is found
+    if [ -n "$gov" ]; then
+        # Auto-detect GPU devfreq path (mirrors the candidate bases from gpu.js)
+        for base in \
+            "/sys/devices/platform/13000000.mali/devfreq/13000000.mali" \
+            "/sys/devices/platform/soc/13000000.mali/devfreq/13000000.mali" \
+            "/sys/class/devfreq/13000000.mali" \
+            "/sys/devices/platform/26000000.mali/devfreq/26000000.mali" \
+            "/sys/devices/platform/gpu/devfreq/gpu"; do
+            
+            if [ -f "${base}/governor" ]; then
+                echo "$gov" > "${base}/governor" 2>/dev/null
+                break
+            fi
+        done
+    fi
 }
 apply_gpu_settings
 
