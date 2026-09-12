@@ -154,7 +154,8 @@ out="$2"
 
 is_text_file() {
 case "$1" in
-*.sh|*.js|*.html|*.prop|*.txt|*.cfg|*.conf|*.xml|*.json|*.css|*.md) return 0 ;;
+# 🔥 Added *required_files to the text file extensions list
+*.sh|*.js|*.html|*.prop|*.txt|*.cfg|*.conf|*.xml|*.json|*.css|*.md|*required_files) return 0 ;;
 esac
 _sh=$("$MODDIR/busybox" head -c 2 "$1" 2>/dev/null)
 [ "$_sh" = "#!" ] && return 0
