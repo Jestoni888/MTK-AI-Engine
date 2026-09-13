@@ -56,7 +56,7 @@ run_cmd() {
     fi
 
     if [ -f "$EXTERNAL_CFG/ai_mode" ]; then
-        pgrep -f "monitor_app_stats" > /dev/null || nohup sh "$AI_MODE" 2>&1 &
+        nohup sh "$AI_MODE" 2>&1 &
     fi
 
     if [ -f "$EXTERNAL_CFG/enable_bypass" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
