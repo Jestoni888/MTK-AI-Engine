@@ -121,7 +121,7 @@ vm.oom_dump_tasks=1 vm.oom_kill_allocating_task=0 vm.overcommit_kbytes=0 \
 vm.overcommit_memory=0 vm.overcommit_ratio=50 vm.page-cluster=3 \
 vm.page_lock_unfairness=5 vm.panic_on_oom=0 vm.percpu_pagelist_fraction=0 \
 vm.stat_interval=60 vm.swappiness=10 vm.unprivileged_userfaultfd=0 \
-vm.user_reserve_kbytes=131072 vm.vfs_cache_pressure=200 vm.watermark_boost_factor=0 \
+vm.user_reserve_kbytes=131072 vm.vfs_cache_pressure=50 vm.watermark_boost_factor=0 \
 vm.watermark_scale_factor=10
 
 #Thermal Override
