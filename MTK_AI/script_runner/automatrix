@@ -18,6 +18,7 @@ BYPASS_ON="$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/bypass_on"
 BYPASS_OFF="$MOD_DIR/MTK_AI/AI_MODE/normal_mode/bypass_off"
 LOGIC_CPU7_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu7"
 LOGIC_CPU6_PATH="$MOD_DIR/MTK_AI/AI_MODE/auto_frequency/cpu6"
+AI_MODE="$MOD_DIR/script_runner/monitor_app_stats"
 
 chmod +x "$TRIMMING_PATH" "$RAM_CLEANER_PATH" \
         "$LOGIC_CPU6_PATH" "$LOGIC_CPU7_PATH" \
@@ -52,6 +53,10 @@ run_cmd() {
         pgrep -f "trim_memory" > /dev/null || nohup sh "$TRIMMING_PATH" 2>&1 &
     else
         pkill -f "trim_memory" 2>/dev/null
+    fi
+
+    if [ -f "$EXTERNAL_CFG/enable_trim" ]; then
+        pgrep -f "monitor_app_stats" > /dev/null || nohup sh "$AI_MODE" 2>&1 &
     fi
 
     if [ -f "$EXTERNAL_CFG/enable_bypass" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
