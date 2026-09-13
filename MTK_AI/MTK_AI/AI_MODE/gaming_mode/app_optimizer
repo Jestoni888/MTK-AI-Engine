@@ -109,6 +109,7 @@ if [ -f "$CONFIG_DIR/enable_dnd_during_game" ]; then
 fi
 
 #VM Memory & Scheduler optimize
+if [ -f "$CONFIG_DIR/sysctl_tweaks" ]; then
 sysctl -w \
 vm.admin_reserve_kbytes=8192 vm.block_dump=0 vm.compact_unevictable_allowed=1 \
 vm.compaction_proactiveness=20 vm.dirty_background_bytes=0 vm.dirty_background_ratio=5 \
@@ -131,6 +132,7 @@ kernel.sched_rr_timeslice_ms=100 kernel.sched_rt_period_us=1000000 \
 kernel.sched_rt_runtime_us=950000 kernel.sched_util_clamp_max=1024 \
 kernel.sched_util_clamp_min_rt_default=0 kernel.sched_energy_aware=1 \
 kernel.sched_child_runs_first=0
+fi
 
 #Thermal Override
 echo disabled | tee /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null || true
