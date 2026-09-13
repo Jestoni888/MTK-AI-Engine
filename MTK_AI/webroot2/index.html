@@ -1,4 +1,10 @@
-<!DOCTYPE html>
+<script src="mtk_ai_assistant.js"></script>
+<script>
+    const assistant = new MTKAIAssistant({
+        statePath: '/sdcard/MTK_AI_Engine/ai_mode'
+    });
+    assistant.init();
+</script><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2151,6 +2157,7 @@ Matches MTK AI Engine Theme
     <script src="setedit.js"></script>
     <script src="hibernator.js"></script>
     <script src="wifi.js"></script>
+    <script src="mtk_ai_assistant.js"></script>
     <script>
 // Theme Management
 function changeTheme(themeName) {
