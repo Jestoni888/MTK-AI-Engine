@@ -64,9 +64,6 @@ for zone in /sys/devices/virtual/thermal/thermal_zone*/mode; do
 done || true
 cmd thermalservice reset 2>/dev/null
 
-CONFIG_DIR="/sdcard/MTK_AI_Engine/config"
-NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
-
 #CPUFREQ POWER MODE
 if [ -f "$SDCARD/cpufreq_mode" ]; then
 echo "0" > /proc/cpufreq/cpufreq_power_mode || true
@@ -77,37 +74,6 @@ fi
 if [ -f "$SDCARD/enable_dnd_during_game" ]; then
     cmd notification set_dnd off
 fi
-
-# --- APP HIBERNATION ---
-echo "Applying app hibernation rules..."
-
-for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); do
-    # Clean package name
-    app=$(echo "$app" | tr -d '[:space:]')
-
-    # Skip empty package names
-    [ -z "$app" ] && continue
-
-    # Skip Magisk / KernelSU
-    [ "$app" = "com.topjohnwu.magisk" ] && continue
-    [ "$app" = "me.weishu.kernelsu" ] && continue
-
-    # Skip apps found in Never Kill list
-    if [ -f "$NEVER_KILL_FILE" ] && grep -Fqx -- "$app" "$NEVER_KILL_FILE"; then
-        echo "🛡️ $app is protected by Never Kill list, skipping"
-        echo ""
-        continue
-    fi
-
-    echo "$app has been hibernated"
-
-    cmd app_hibernation set-state --user 0 --global "$app" true >/dev/null 2>&1 || true
-    cmd appops set "$app" RUN_IN_BACKGROUND ignore 2>/dev/null
-    cmd appops set "$app" RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
-    am set-standby-bucket "$app" restricted 2>/dev/null
-
-    echo ""
-done
 
 #Powermode
 setprop 'persist.sys.power_mode_perf' '0' || true
