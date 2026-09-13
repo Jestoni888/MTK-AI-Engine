@@ -2,6 +2,8 @@
 
 •Tweaking sched & vm in sysctl for gaming (toggleable in Webui) with stock backup value that can restore in normal mode (⚠️post-fs-data.sh needs reboot) 
 
+•Remove use tweaks in settings as it considered unstable & wisely supported to all devices
+
 --- version 0.0.1.10 ---
 
 •Bypass charging revive (Works only during gaming)
