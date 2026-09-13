@@ -34,6 +34,7 @@ const scriptPaths = {
     suspend_bg: { on: null, off: null, isDaemon: false, critical: false },
     cpufreq_mode: { on: null, off: null, isDaemon: false, critical: false },
     disable_vsync: { on: null, off: null, isDaemon: false, critical: false },
+    sysctl_tweaks: { on: null, off: null, isDaemon: false, critical: false },
     disable_tap_to_rotate: { on: null, off: null, isDaemon: false, critical: false }
 };
 const toggleConfig = {
