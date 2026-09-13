@@ -90,6 +90,10 @@ cmd power set-mode 2 false
 su -c "cmd power set-fixed-performance-mode-enabled false" || true
 su -c "settings put global power_manager_constants fixed_performance_mode=false" || true
 
+# Powersaving in normal use
+setprop persist.sys.batterysaver true || true
+setprop persist.sys.doze_mode true || true
+
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
 STATE="/sdcard/MTK_AI_Engine/use_tweaks"
 [ "$(cat "$STATE" 2>/dev/null | tr -d '[:space:]')" != "1" ] && exit 0
@@ -249,10 +253,6 @@ setprop debug.sf.high_fps_early_phase_offset_ns 0 || true
 setprop debug.sf.high_fps_early_gl_phase_offset_ns 0 || true
 setprop debug.hwui.disable_vsync false || true
 setprop debug.sf.enable_hwc_vds 0 || true
-
-# Powersaving in normal use
-setprop persist.sys.batterysaver true || true
-setprop persist.sys.doze_mode true || true
 
 # OpenGL Default (Skia OpenGL ES)
 setprop debug.hwui.renderer skiagl || true
