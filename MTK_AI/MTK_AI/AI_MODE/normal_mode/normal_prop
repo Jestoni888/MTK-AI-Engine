@@ -102,4 +102,8 @@ setprop 'dalvik.vm.usap_pool_enabled' 'true' || true
 settings put global app_standby_enabled 1 || true
 settings put global background_dex_opt_job true || true
 
+# Restore Disable HW & 4XMSAA
+setprop debug.egl.force_msaa false || true
+service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1 || true
+
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
