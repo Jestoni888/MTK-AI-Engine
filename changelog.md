@@ -1,6 +1,6 @@
 --- version 0.0.1.11 ---
 
-•Tweaking sched & vm in sysctl for gaming with stock backup value that can restore in normal mode (⚠️post-fs-data.sh needs reboot) 
+•Tweaking sched & vm in sysctl for gaming with stock (toggleable in Webui) backup value that can restore in normal mode (⚠️post-fs-data.sh needs reboot) 
 
 --- version 0.0.1.10 ---
 
