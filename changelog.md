@@ -1,6 +1,10 @@
---- version 0.0.1.11 ---
+--- version 0.0.1.12 ---
 
-•Remove lite mode that cause interference on per app config on CPU frequency & GPU frequency (Just lower the cpu frequency & GPU frequency on per-app to cap temp not goes on higher)
+•Added auto in GPU frequency on per-app that dynamically switching frequencies depends on load
+
+•Remove lite mode that cause interference on per app config on CPU frequency & GPU frequency (Tips: Just lower the cpu frequency & GPU frequency on per-app to cap temp not goes on higher)
+
+--- version 0.0.1.11 ---
 
 •Introducing new AI integrated floating button under BETA TEST (more improvement later)
 
