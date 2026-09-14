@@ -272,25 +272,31 @@ apply_cpu_settings() {
     
     # 2. Apply CPU Frequency Limit (Percentage)
     local cpu_limit_file="${PERAPP_DIR}/${target_app}.cpu_percent"
-    # Fallback if per-app config is missing
-    [ ! -f "$cpu_limit_file" ] && cpu_limit_file="$FALLBACK_FREQ"
+    local limit_pct=""
     
+    # Check per-app config, then fallback file, then default to 100%
     if [ -f "$cpu_limit_file" ]; then
-        local limit_pct=$(cat "$cpu_limit_file" 2>/dev/null | tr -d '[:space:]')
-        if [ -n "$limit_pct" ] && [ "$limit_pct" -gt 0 ] 2>/dev/null; then
-            for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
-                local abs_max=$(cat "$cpu/cpufreq/cpuinfo_max_freq" 2>/dev/null)
-                if [ -n "$abs_max" ]; then
-                    # Note: This assumes the fallback file also contains a percentage (0-100). 
-                    # If the fallback file contains an absolute frequency (e.g., 2000000), 
-                    # you may need to adjust the math below.
-                    local new_max=$((abs_max * limit_pct / 100))
-                    chmod 777 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-                    echo "$new_max" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-                    chmod 000 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-                fi
-            done
-        fi
+        limit_pct=$(cat "$cpu_limit_file" 2>/dev/null | tr -d '[:space:]')
+    elif [ -f "$FALLBACK_FREQ" ]; then
+        limit_pct=$(cat "$FALLBACK_FREQ" 2>/dev/null | tr -d '[:space:]')
+    else
+        # Fallback to maximum 100% frequency if no manual touch active file found
+        limit_pct=100
+    fi
+    
+    if [ -n "$limit_pct" ] && [ "$limit_pct" -gt 0 ] 2>/dev/null; then
+        for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
+            local abs_max=$(cat "$cpu/cpufreq/cpuinfo_max_freq" 2>/dev/null)
+            if [ -n "$abs_max" ]; then
+                # Note: This assumes the fallback file also contains a percentage (0-100). 
+                # If the fallback file contains an absolute frequency (e.g., 2000000), 
+                # you may need to adjust the math below.
+                local new_max=$((abs_max * limit_pct / 100))
+                chmod 777 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+                echo "$new_max" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+                chmod 000 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
+            fi
+        done
     fi
 }
 apply_cpu_settings
