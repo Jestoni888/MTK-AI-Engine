@@ -1,13 +1,14 @@
 #!/system/bin/sh
 
 # ==========================================
+# ==========================================
 # KILL PREVIOUS RUNNING INSTANCE
 # ==========================================
 PID_FILE="/data/local/tmp/per_app.pid"
 if [ -f "$PID_FILE" ]; then
     OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
     # If an old PID exists and it's not the current script ($$), force kill it
-    if [ -n "$OLD_PID" ] && [ "$OLD_PID" != "$$" ]; then
+    if [ "$OLD_PID" != "$$" ]; then
         kill -9 "$OLD_PID" 2>/dev/null
     fi
 fi
