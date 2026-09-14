@@ -143,6 +143,7 @@ webroot/setedit.js
 webroot/update.js
 webroot/hibernator.js
 webroot/wifi.js
+webroot/mtk_ai_assistant.js
 "
 
 # === 4. Download helper & Hash checkers ===
