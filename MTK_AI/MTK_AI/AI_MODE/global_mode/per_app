@@ -2,18 +2,18 @@
 
 # ==========================================
 # ==========================================
-# KILL PREVIOUS RUNNING INSTANCE
+# KILL PREVIOUS RUNNING INSTANCES (ROBUST)
 # ==========================================
-PID_FILE="/data/local/tmp/per_app.pid"
-if [ -f "$PID_FILE" ]; then
-    OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
-    # If an old PID exists and it's not the current script ($$), force kill it
-    if [ "$OLD_PID" != "$$" ]; then
-        kill -9 "$OLD_PID" 2>/dev/null
+# PID files fail due to race conditions and stale PIDs. 
+# Instead, we directly check running processes for this exact script path.
+SCRIPT_PATH="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/per_app"
+
+for pid in $(pgrep -f "$SCRIPT_PATH"); do
+    # Kill all instances except the current running script ($$)
+    if [ "$pid" != "$$" ]; then
+        kill -9 "$pid" 2>/dev/null
     fi
-fi
-# Save the current script's PID for the next run to find
-echo $$ > "$PID_FILE"
+done
 # ==========================================
 . /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/auto_frequency
 MOD_DIR="/data/adb/modules/MTK_AI"
