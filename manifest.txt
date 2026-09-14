@@ -86,3 +86,4 @@ webroot/setedit.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/re
 webroot/update.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/update.js
 webroot/hibernator.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/hibernator.js
 webroot/wifi.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/wifi.js
+webroot/mtk_ai_assistant.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/wifi.js
