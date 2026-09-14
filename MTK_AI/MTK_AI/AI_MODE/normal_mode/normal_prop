@@ -43,9 +43,7 @@ if [ -f "/sdcard/MTK_AI_Engine/suspend_bg" ]; then
 fi
 
 # Remove Vsync
-if [ -f "/sdcard/MTK_AI_Engine/disable_vsync" ]; then
-    su -c resetprop -d debug.hwui.disable_vsync 2>/dev/null
-fi
+su -c resetprop -d debug.hwui.disable_vsync 2>/dev/null
 
 echo "-1" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
 echo "-1" > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
