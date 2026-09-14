@@ -87,7 +87,7 @@ if [ -f "$TRIGGER_FILE" ]; then
     
     # 1. Temperature Check
     if [ "$TEMP_VAL" -ge 44 ]; then
-        echo "1" > "$STATS_DIR/enable_lite_gaming"
+        echo "1" >/dev/null 2>&1 || true
     fi
 
     # 2. FPS Check (if we have a valid package)
