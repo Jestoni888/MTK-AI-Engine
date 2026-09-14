@@ -735,20 +735,31 @@ try {
     }
 } catch (e) { console.warn('Failed to fetch GPU governors:', e); }
  // Fetch GPU OPPs dynamically (Adapted from gpu.js)
- try {
-     const gpuMap = await fetchGpuOppTable();
-     const gpuSelect = document.getElementById('config-gpu-opp');
-     if (gpuSelect) {
-         gpuSelect.innerHTML = '';
-         const indices = Object.keys(gpuMap).map(Number).sort((a, b) => gpuMap[b] - gpuMap[a]);
-         for (const idx of indices) {
-             const opt = document.createElement('option');
-             opt.value = idx;
-             opt.textContent = `OPP ${idx} - ${gpuMap[idx]} MHz`;
-             gpuSelect.appendChild(opt);
-         }
-     }
- } catch (e) { console.warn('Failed to fetch GPU OPPs:', e); }
+try {
+  const gpuMap = await fetchGpuOppTable();
+  const gpuSelect = document.getElementById('config-gpu-opp');
+  
+  if (gpuSelect) {
+    gpuSelect.innerHTML = '';
+    
+    // === ADD AUTO OPTION (OPP -1) ===
+    const autoOpt = document.createElement('option');
+    autoOpt.value = '-1';
+    autoOpt.textContent = 'Auto (System Default)';
+    gpuSelect.appendChild(autoOpt);
+    // ================================
+
+    const indices = Object.keys(gpuMap).map(Number).sort((a, b) => gpuMap[b] - gpuMap[a]);
+    for (const idx of indices) {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = `OPP ${idx} - ${gpuMap[idx]} MHz`;
+      gpuSelect.appendChild(opt);
+    }
+  }
+} catch (e) { 
+  console.warn('Failed to fetch GPU OPPs:', e); 
+}
  // Initialize density & load config
  await loadAppConfig(pkg);
  // === Initialize Renderer Toggles ===
