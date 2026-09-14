@@ -1,4 +1,4 @@
-// process.js - Process Manager (Monitor, Search, Kill - Advanced) + Priority Control
+// process.js - Process Manager (Monitor, Search, Kill)
 (function() {
 'use strict';
 let allProcesses = [];
@@ -6,6 +6,7 @@ let currentSort = 'cpu';
 let currentFilter = 'all';
 let refreshTimer = null;
 let isRefreshing = false;
+
 const execFn = window.exec || async function(cmd, timeout = 5000) {
     return new Promise(resolve => {
         const cb = `proc_exec_${Date.now()}_${Math.random().toString(36).substring(2)}`;
@@ -54,6 +55,10 @@ function parsePsOutput(raw) {
             const appName = cmdParts[0] || 'unknown';
             const isSystem = user === 'root' || user === 'system' || cmd.startsWith('/system') || cmd.includes('system_server');
             const packageName = extractPackageName(cmd);
+            
+            // Estimate power usage in mA (divided by 100 for realistic values)
+            const estimatedMA = Math.max(1, Math.round(((cpu * 10) + (parseInt(rss) / 100)) / 100));
+            
             processes.push({
                 pid: parseInt(pid),
                 ppid: parseInt(ppid),
@@ -65,7 +70,8 @@ function parsePsOutput(raw) {
                 cmd: cmd.trim(),
                 appName: appName,
                 packageName: packageName,
-                isSystem: isSystem
+                isSystem: isSystem,
+                estimatedMA: estimatedMA
             });
         }
     }
@@ -96,52 +102,62 @@ function updateCardDisplay() {
 function showProcessModal() {
     const existing = document.getElementById('process-modal');
     if (existing) existing.remove();
+    
     const modal = document.createElement('div');
     modal.id = 'process-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);';
+    
     const box = document.createElement('div');
     box.style.cssText = 'background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #f97316;border-radius:20px;padding:24px;width:95%;max-width:520px;';
+    
     box.innerHTML = `
         <h3 style="color:#f97316;margin:0 0 5px;font-size:20px;text-align:center;">⚙️ Process Manager</h3>
         <p style="color:#8b92b4;font-size:12px;text-align:center;margin-bottom:15px;">Monitor & kill running processes</p>
         <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <input type="text" id="process-search" placeholder="🔍 Search process name..." 
-                style="flex:1;padding:10px;background:rgba(0,0,0,0.3);border:1px solid #4b5563;border-radius:10px;color:#fff;font-size:12px;outline:none;">
-            <select id="process-filter" style="padding:10px;background:rgba(0,0,0,0.3);border:1px solid #4b5563;border-radius:10px;color:#fff;font-size:12px;cursor:pointer;">
-                <option value="all">All</option>
-                <option value="apps">Apps Only</option>
-                <option value="system">System Only</option>
-            </select>
+            <input type="text" id="process-search" placeholder="🔍 Search process name..." style="flex:1;padding:10px;background:rgba(0,0,0,0.3);border:1px solid #4b5563;border-radius:10px;color:#fff;font-size:12px;outline:none;">
             <select id="process-sort" style="padding:10px;background:rgba(0,0,0,0.3);border:1px solid #4b5563;border-radius:10px;color:#fff;font-size:12px;cursor:pointer;">
                 <option value="cpu">By CPU</option>
                 <option value="memory">By Memory</option>
+                <option value="power">By Power</option>
                 <option value="name">By Name</option>
             </select>
         </div>
+        
+        <!-- Category List -->
+        <div id="category-list" style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:4px;scrollbar-width:none;">
+            <button class="cat-btn active" data-cat="all" style="padding:6px 12px;background:rgba(249,115,22,0.2);border:1px solid #f97316;border-radius:15px;color:#f97316;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">All</button>
+            <button class="cat-btn" data-cat="apps" style="padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #4b5563;border-radius:15px;color:#8b92b4;font-size:11px;cursor:pointer;white-space:nowrap;">Apps</button>
+            <button class="cat-btn" data-cat="system" style="padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #4b5563;border-radius:15px;color:#8b92b4;font-size:11px;cursor:pointer;white-space:nowrap;">System</button>
+            <button class="cat-btn" data-cat="highcpu" style="padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #4b5563;border-radius:15px;color:#8b92b4;font-size:11px;cursor:pointer;white-space:nowrap;">High CPU</button>
+            <button class="cat-btn" data-cat="highmem" style="padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #4b5563;border-radius:15px;color:#8b92b4;font-size:11px;cursor:pointer;white-space:nowrap;">High RAM</button>
+            <button class="cat-btn" data-cat="root" style="padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #4b5563;border-radius:15px;color:#8b92b4;font-size:11px;cursor:pointer;white-space:nowrap;">Root</button>
+        </div>
+
         <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:8px;margin-bottom:12px;">
             <div style="color:#fca5a5;font-size:10px;text-align:center;">
                 ⚠️ <strong>WARNING:</strong> Killing system processes may cause instability or bootloop. Use with caution!
             </div>
         </div>
+        
         <div id="process-list" style="max-height:400px;overflow-y:auto;margin-bottom:15px;">
             <div style="text-align:center;color:#666;padding:20px;">Loading processes...</div>
         </div>
+        
         <div style="display:flex;gap:10px;">
-            <button id="process-refresh-btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:12px;cursor:pointer;">
-                🔄 Refresh
-            </button>
-            <button id="process-cancel-btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:12px;cursor:pointer;">
-                Close
-            </button>
+            <button id="process-refresh-btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:12px;cursor:pointer;">🔄 Refresh</button>
+            <button id="process-cancel-btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:12px;cursor:pointer;">Close</button>
         </div>
     `;
+    
     modal.appendChild(box);
     document.body.appendChild(modal);
+    
     modal.onclick = e => { if (e.target === modal) modal.remove(); };
     document.getElementById('process-cancel-btn').onclick = () => {
         clearInterval(refreshTimer);
         modal.remove();
     };
+    
     refreshTimer = setInterval(() => loadProcesses(), 1000);
     renderProcessList();
     bindModalEvents(modal);
@@ -150,33 +166,40 @@ function showProcessModal() {
 function renderProcessList() {
     const container = document.getElementById('process-list');
     if (!container) return;
+    
     const searchTerm = document.getElementById('process-search')?.value.toLowerCase() || '';
-    const filterType = document.getElementById('process-filter')?.value || 'all';
+    const filterType = document.querySelector('.cat-btn.active')?.dataset.cat || 'all';
     const sortBy = document.getElementById('process-sort')?.value || 'cpu';
+    
     let filtered = allProcesses.filter(p => {
         if (filterType === 'apps' && p.isSystem) return false;
         if (filterType === 'system' && !p.isSystem) return false;
+        if (filterType === 'highcpu' && p.cpu < 5.0) return false;
+        if (filterType === 'highmem' && p.rss < 50 * 1024 * 1024) return false;
+        if (filterType === 'root' && p.user !== 'root') return false;
+        
         if (searchTerm) {
             const searchStr = `${p.appName} ${p.packageName} ${p.cmd}`.toLowerCase();
             return searchStr.includes(searchTerm);
         }
         return true;
     });
+    
     filtered.sort((a, b) => {
         switch (sortBy) {
             case 'cpu': return b.cpu - a.cpu;
             case 'memory': return b.rss - a.rss;
+            case 'power': return b.estimatedMA - a.estimatedMA;
             case 'name': return a.appName.localeCompare(b.appName);
             default: return b.cpu - a.cpu;
         }
     });
+    
     if (filtered.length === 0) {
-        container.innerHTML = `
-            <div style="text-align:center;color:#666;padding:20px;">
-                ${searchTerm ? '🔍 No processes match your search' : 'No processes found'}
-            </div>`;
+        container.innerHTML = `<div style="text-align:center;color:#666;padding:20px;">${searchTerm ? ' No processes match your search' : 'No processes found'}</div>`;
         return;
     }
+    
     container.innerHTML = filtered.map(p => `
         <div class="process-item" data-pid="${p.pid}" style="background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(249,115,22,0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.2)'">
             <div style="flex:1;min-width:0;">
@@ -189,9 +212,11 @@ function renderProcessList() {
             <div style="text-align:right;min-width:100px;">
                 <div style="color:#f97316;font-size:12px;font-weight:600;">${p.cpu.toFixed(1)}%</div>
                 <div style="color:#8b92b4;font-size:10px;">${formatBytes(p.rss)}</div>
+                <div style="color:#fbbf24;font-size:10px;font-weight:600;">⚡ ${p.estimatedMA} mA</div>
             </div>
         </div>
     `).join('');
+    
     container.querySelectorAll('.process-item').forEach(item => {
         item.addEventListener('click', () => {
             const pid = parseInt(item.dataset.pid);
@@ -202,12 +227,31 @@ function renderProcessList() {
 
 function bindModalEvents(modal) {
     const searchInput = document.getElementById('process-search');
-    const filterSelect = document.getElementById('process-filter');
     const sortSelect = document.getElementById('process-sort');
     const refreshBtn = document.getElementById('process-refresh-btn');
+    
     searchInput.addEventListener('input', () => renderProcessList());
-    filterSelect.addEventListener('change', () => renderProcessList());
     sortSelect.addEventListener('change', () => renderProcessList());
+    
+    // Category Buttons Logic
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = 'rgba(255,255,255,0.05)';
+                b.style.borderColor = '#4b5563';
+                b.style.color = '#8b92b4';
+                b.style.fontWeight = 'normal';
+            });
+            btn.classList.add('active');
+            btn.style.background = 'rgba(249,115,22,0.2)';
+            btn.style.borderColor = '#f97316';
+            btn.style.color = '#f97316';
+            btn.style.fontWeight = '600';
+            renderProcessList();
+        });
+    });
+    
     refreshBtn.onclick = async () => {
         refreshBtn.innerHTML = '🔄 Loading...';
         await loadProcesses();
@@ -216,103 +260,15 @@ function bindModalEvents(modal) {
     };
 }
 
-// === NEW: Fetch Priority Info (renice, ionice, chrt, taskset) ===
-async function fetchPriorityInfo(pid) {
-    const info = {
-        nice: 'N/A',
-        ionice: 'N/A',
-        chrt: 'N/A',
-        taskset: 'N/A',
-        cpusAllowed: 'N/A'
-    };
-    try {
-        // Nice value from /proc/PID/stat (field 19)
-        const statRaw = await execFn(`cat /proc/${pid}/stat 2>/dev/null`);
-        if (statRaw) {
-            const statMatch = statRaw.match(/^\d+\s+\(.+?\)\s+\S+\s+(?:\S+\s+){15}(-?\d+)/);
-            if (statMatch) info.nice = statMatch[1];
-        }
-        // ionice
-        const ioniceRaw = await execFn(`ionice -p ${pid} 2>/dev/null`);
-        if (ioniceRaw && ioniceRaw.trim()) {
-            info.ionice = ioniceRaw.trim().replace(/\s+/g, ' ');
-        }
-        // chrt (scheduling policy)
-        const chrtRaw = await execFn(`chrt -p ${pid} 2>/dev/null`);
-        if (chrtRaw && chrtRaw.trim()) {
-            info.chrt = chrtRaw.trim().replace(/\s+/g, ' ');
-        }
-        // taskset (CPU affinity)
-        const tasksetRaw = await execFn(`taskset -p ${pid} 2>/dev/null`);
-        if (tasksetRaw && tasksetRaw.trim()) {
-            info.taskset = tasksetRaw.trim();
-        }
-        // Cpus_allowed from /proc/PID/status
-        const statusRaw = await execFn(`cat /proc/${pid}/status 2>/dev/null | grep -E "^(Cpus_allowed|Cpus_allowed_list):"`);
-        if (statusRaw) {
-            info.cpusAllowed = statusRaw.trim().replace(/\n/g, ' | ');
-        }
-    } catch (e) {
-        console.warn('Failed to fetch priority info:', e);
-    }
-    return info;
-}
-
-// === NEW: Apply Priority Changes ===
-async function applyNice(pid, value) {
-    try {
-        const res = await execFn(`su -c "renice -n ${value} -p ${pid}" 2>&1`);
-        return { success: !res.toLowerCase().includes('error') && !res.toLowerCase().includes('failed'), msg: res.trim() };
-    } catch (e) {
-        return { success: false, msg: e.message };
-    }
-}
-
-async function applyIonice(pid, ioclass, iolevel) {
-    try {
-        const res = await execFn(`su -c "ionice -c ${ioclass} -n ${iolevel} -p ${pid}" 2>&1`);
-        return { success: !res.toLowerCase().includes('error') && !res.toLowerCase().includes('failed'), msg: res.trim() };
-    } catch (e) {
-        return { success: false, msg: e.message };
-    }
-}
-
-async function applyChrt(pid, policy, priority) {
-    let flag = '';
-    switch (policy) {
-        case 'fifo': flag = '-f'; break;
-        case 'rr': flag = '-r'; break;
-        case 'other': flag = '-o'; break;
-        case 'batch': flag = '-b'; break;
-        case 'idle': flag = '-i'; break;
-        default: flag = '-o';
-    }
-    try {
-        const res = await execFn(`su -c "chrt ${flag} -p ${priority} ${pid}" 2>&1`);
-        return { success: !res.toLowerCase().includes('error') && !res.toLowerCase().includes('failed'), msg: res.trim() };
-    } catch (e) {
-        return { success: false, msg: e.message };
-    }
-}
-
-async function applyTaskset(pid, mask) {
-    try {
-        const res = await execFn(`su -c "taskset -p ${mask} ${pid}" 2>&1`);
-        return { success: !res.toLowerCase().includes('error') && !res.toLowerCase().includes('failed'), msg: res.trim() };
-    } catch (e) {
-        return { success: false, msg: e.message };
-    }
-}
-
 async function showProcessDetails(pid) {
     const process = allProcesses.find(p => p.pid === pid);
     if (!process) return;
+    
     const detailModal = document.createElement('div');
     detailModal.id = 'process-detail-modal';
     detailModal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10001;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px 0;';
-
+    
     let additionalInfo = '';
-    let priorityInfo = { nice: 'N/A', ionice: 'N/A', chrt: 'N/A', taskset: 'N/A', cpusAllowed: 'N/A' };
     try {
         const procInfo = await execFn(`cat /proc/${pid}/status 2>/dev/null | grep -E "^(Name|State|VmRSS|VmSize|Threads|Uid|Gid):"`);
         const cmdline = await execFn(`cat /proc/${pid}/cmdline 2>/dev/null | tr '\\0' ' '`);
@@ -320,9 +276,6 @@ async function showProcessDetails(pid) {
         const oomScoreAdj = await execFn(`cat /proc/${pid}/oom_score_adj 2>/dev/null`);
         const cgroup = await execFn(`cat /proc/${pid}/cgroup 2>/dev/null | head -5`);
         
-        // Fetch priority info
-        priorityInfo = await fetchPriorityInfo(pid);
-
         additionalInfo = `
             <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:12px;margin-bottom:15px;">
                 <div style="color:#8b92b4;font-size:11px;margin-bottom:8px;">📊 Extended Info</div>
@@ -338,90 +291,13 @@ async function showProcessDetails(pid) {
     } catch (e) {
         additionalInfo = '<div style="color:#666;font-size:11px;">Additional details unavailable</div>';
     }
-
-    // === NEW: Priority Control Section ===
-    const prioritySection = `
-        <div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.3);border-radius:10px;padding:14px;margin-bottom:15px;">
-            <div style="color:#f97316;font-size:13px;font-weight:700;margin-bottom:12px;">⚡ Priority & Scheduling Control</div>
-            
-            <!-- Current Priority Info Display -->
-            <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:10px;margin-bottom:12px;font-size:11px;line-height:1.7;">
-                <div><span style="color:#8b92b4;">Nice Value:</span> <span style="color:#32D74B;font-weight:600;">${priorityInfo.nice}</span></div>
-                <div><span style="color:#8b92b4;">I/O Class:</span> <span style="color:#60a5fa;font-weight:600;">${priorityInfo.ionice}</span></div>
-                <div><span style="color:#8b92b4;">Scheduling:</span> <span style="color:#fbbf24;font-weight:600;">${priorityInfo.chrt}</span></div>
-                <div><span style="color:#8b92b4;">CPU Affinity:</span> <span style="color:#f472b6;font-weight:600;">${priorityInfo.taskset}</span></div>
-                ${priorityInfo.cpusAllowed !== 'N/A' ? `<div style="margin-top:4px;"><span style="color:#8b92b4;">Allowed CPUs:</span> <span style="color:#a78bfa;font-size:10px;">${priorityInfo.cpusAllowed}</span></div>` : ''}
-            </div>
-
-            <!-- Renice Control -->
-            <div style="margin-bottom:12px;">
-                <label style="display:block;color:#8b92b4;font-size:11px;margin-bottom:4px;">🎯 <strong>renice</strong> — Nice Value (-20 highest to 19 lowest)</label>
-                <div style="display:flex;gap:6px;align-items:center;">
-                    <input type="number" id="nice-input" value="${priorityInfo.nice !== 'N/A' ? priorityInfo.nice : 0}" min="-20" max="19" style="flex:1;padding:8px;background:rgba(0,0,0,0.4);border:1px solid #4b5563;border-radius:6px;color:#fff;font-size:12px;font-family:monospace;">
-                    <button onclick="window.ProcessManager.applyNice(${pid})" style="padding:8px 14px;background:linear-gradient(135deg,#32D74B,#2ecc71);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">Apply</button>
-                </div>
-            </div>
-
-            <!-- Ionice Control -->
-            <div style="margin-bottom:12px;">
-                <label style="display:block;color:#8b92b4;font-size:11px;margin-bottom:4px;">💾 <strong>ionice</strong> — I/O Scheduling Class</label>
-                <div style="display:flex;gap:6px;">
-                    <select id="ionice-class" style="flex:1;padding:8px;background:rgba(0,0,0,0.4);border:1px solid #4b5563;border-radius:6px;color:#fff;font-size:11px;">
-                        <option value="1">1 - Realtime (highest)</option>
-                        <option value="2" selected>2 - Best-effort (default)</option>
-                        <option value="3">3 - Idle (lowest)</option>
-                    </select>
-                    <input type="number" id="ionice-level" value="4" min="0" max="7" style="width:50px;padding:8px;background:rgba(0,0,0,0.4);border:1px solid #4b5563;border-radius:6px;color:#fff;font-size:11px;" title="Level (0-7)">
-                    <button onclick="window.ProcessManager.applyIonice(${pid})" style="padding:8px 14px;background:linear-gradient(135deg,#60a5fa,#3b82f6);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">Apply</button>
-                </div>
-            </div>
-
-            <!-- Chrt Control -->
-            <div style="margin-bottom:12px;">
-                <label style="display:block;color:#8b92b4;font-size:11px;margin-bottom:4px;">⏱️ <strong>chrt</strong> — Scheduling Policy</label>
-                <div style="display:flex;gap:6px;">
-                    <select id="chrt-policy" style="flex:1;padding:8px;background:rgba(0,0,0,0.4);border:1px solid #4b5563;border-radius:6px;color:#fff;font-size:11px;">
-                        <option value="other">OTHER (normal)</option>
-                        <option value="batch">BATCH (non-interactive)</option>
-                        <option value="idle">IDLE (lowest)</option>
-                        <option value="rr">RR (round-robin RT)</option>
-                        <option value="fifo">FIFO (real-time)</option>
-                    </select>
-                    <input type="number" id="chrt-priority" value="0" min="0" max="99" style="width:50px;padding:8px;background:rgba(0,0,0,0.4);border:1px solid #4b5563;border-radius:6px;color:#fff;font-size:11px;" title="Priority (0-99)">
-                    <button onclick="window.ProcessManager.applyChrt(${pid})" style="padding:8px 14px;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">Apply</button>
-                </div>
-            </div>
-
-            <!-- Taskset Control -->
-            <div style="margin-bottom:8px;">
-                <label style="display:block;color:#8b92b4;font-size:11px;margin-bottom:4px;">🎮 <strong>taskset</strong> — CPU Affinity Mask</label>
-                <div style="display:flex;gap:6px;margin-bottom:6px;">
-                    <input type="text" id="taskset-mask" value="" placeholder="e.g., F0 (big cores)" style="flex:1;padding:8px;background:rgba(0,0,0,0.4);border:1px solid #4b5563;border-radius:6px;color:#fff;font-size:11px;font-family:monospace;">
-                    <button onclick="window.ProcessManager.applyTaskset(${pid})" style="padding:8px 14px;background:linear-gradient(135deg,#f472b6,#ec4899);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">Apply</button>
-                </div>
-                <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                    <button onclick="document.getElementById('taskset-mask').value='FF'" style="padding:4px 8px;background:rgba(244,114,182,0.15);border:1px solid rgba(244,114,182,0.3);border-radius:4px;color:#f472b6;font-size:10px;cursor:pointer;">All Cores (FF)</button>
-                    <button onclick="document.getElementById('taskset-mask').value='F0'" style="padding:4px 8px;background:rgba(244,114,182,0.15);border:1px solid rgba(244,114,182,0.3);border-radius:4px;color:#f472b6;font-size:10px;cursor:pointer;">Big Cores (F0)</button>
-                    <button onclick="document.getElementById('taskset-mask').value='0F'" style="padding:4px 8px;background:rgba(244,114,182,0.15);border:1px solid rgba(244,114,182,0.3);border-radius:4px;color:#f472b6;font-size:10px;cursor:pointer;">Little Cores (0F)</button>
-                    <button onclick="document.getElementById('taskset-mask').value='F'" style="padding:4px 8px;background:rgba(244,114,182,0.15);border:1px solid rgba(244,114,182,0.3);border-radius:4px;color:#f472b6;font-size:10px;cursor:pointer;">Cores 0-3 (F)</button>
-                    <button onclick="document.getElementById('taskset-mask').value='30'" style="padding:4px 8px;background:rgba(244,114,182,0.15);border:1px solid rgba(244,114,182,0.3);border-radius:4px;color:#f472b6;font-size:10px;cursor:pointer;">Cores 4-5 (30)</button>
-                </div>
-                <div style="color:#666;font-size:9px;margin-top:6px;line-height:1.4;">
-                    💡 Hex mask: each bit = one core. F0 = cores 4-7 (big), 0F = cores 0-3 (little)
-                </div>
-            </div>
-
-            <!-- Status Message -->
-            <div id="priority-status" style="text-align:center;color:#8b92b4;font-size:11px;min-height:16px;margin-top:8px;"></div>
-        </div>
-    `;
-
+    
     const killButtonHtml = `
         <button id="kill-btn" style="flex:1;padding:12px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">
             ☠️ KILL Process
         </button>
     `;
-
+    
     detailModal.innerHTML = `
         <div style="background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #f97316;border-radius:20px;padding:24px;width:95%;max-width:520px;margin:auto;">
             <h3 style="color:#f97316;margin:0 0 15px;font-size:18px;text-align:center;">📱 Process Details</h3>
@@ -433,19 +309,18 @@ async function showProcessDetails(pid) {
                     <div><span style="color:#8b92b4;">State:</span> <span style="color:#fff;">Running</span></div>
                     <div><span style="color:#8b92b4;">CPU:</span> <span style="color:#f97316;font-weight:600;">${process.cpu.toFixed(1)}%</span></div>
                     <div><span style="color:#8b92b4;">Memory:</span> <span style="color:#3b82f6;font-weight:600;">${formatBytes(process.rss)}</span></div>
+                    <div><span style="color:#8b92b4;">Power:</span> <span style="color:#fbbf24;font-weight:600;"> ${process.estimatedMA} mA</span></div>
                     <div style="grid-column:1/-1;"><span style="color:#8b92b4;">Command:</span> <span style="color:#fff;font-size:10px;word-break:break-all;">${process.cmd}</span></div>
                 </div>
             </div>
             ${additionalInfo}
-            ${prioritySection}
             <div style="display:flex;gap:10px;">
                 ${killButtonHtml}
-                <button id="detail-close-btn" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;">
-                    Close
-                </button>
+                <button id="detail-close-btn" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;">Close</button>
             </div>
         </div>
     `;
+    
     document.body.appendChild(detailModal);
     detailModal.onclick = e => { if (e.target === detailModal) detailModal.remove(); };
     document.getElementById('detail-close-btn').onclick = () => detailModal.remove();
@@ -455,26 +330,33 @@ async function showProcessDetails(pid) {
 async function killProcess(pid, detailModal) {
     const process = allProcesses.find(p => p.pid === pid);
     const processType = process?.isSystem ? 'SYSTEM' : 'APP';
+    
     if (!confirm(`⚠️ WARNING: You are about to kill a ${processType} process!\n\nPID: ${pid}\nName: ${process?.appName}\n\nThis may cause system instability. Continue?`)) return;
+    
     try {
         detailModal.querySelector('#kill-btn').innerHTML = '💀 Killing...';
         detailModal.querySelector('#kill-btn').disabled = true;
+        
         await execFn(`su -c "kill -15 ${pid}"`);
         await execFn(`su -c "pkill -f ${pid}"`);
         await execFn(`su -c "pkill -f ${process?.appName}"`);
         await execFn(`su -c "stop ${process?.appName}"`);
+        
         await new Promise(r => setTimeout(r, 500));
         const stillAlive = await execFn(`ps -p ${pid} -o pid= 2>/dev/null`);
         if (stillAlive.trim()) {
             await execFn(`su -c "kill -9 ${pid}"`);
         }
+        
         await new Promise(r => setTimeout(r, 300));
         const verify = await execFn(`ps -p ${pid} -o pid= 2>/dev/null`);
+        
         if (!verify.trim()) {
             alert(`✅ Process ${pid} killed successfully!`);
         } else {
-            alert(`⚠️ Process ${pid} may still be running (protected)`);
+            alert(`️ Process ${pid} may still be running (protected)`);
         }
+        
         detailModal.remove();
         await loadProcesses();
         renderProcessList();
@@ -485,52 +367,9 @@ async function killProcess(pid, detailModal) {
     }
 }
 
-window.ProcessManager = { 
-    init, 
-    showProcessModal,
-    // === NEW: Expose priority control functions ===
-    applyNice: async (pid) => {
-        const val = document.getElementById('nice-input')?.value;
-        const statusEl = document.getElementById('priority-status');
-        if (statusEl) statusEl.innerHTML = '<span style="color:#fbbf24;">⏳ Applying renice...</span>';
-        const res = await applyNice(pid, val);
-        if (statusEl) statusEl.innerHTML = res.success 
-            ? `<span style="color:#32D74B;">✅ renice ${val} applied</span>` 
-            : `<span style="color:#ef4444;">❌ ${res.msg || 'Failed'}</span>`;
-    },
-    applyIonice: async (pid) => {
-        const cls = document.getElementById('ionice-class')?.value;
-        const lvl = document.getElementById('ionice-level')?.value;
-        const statusEl = document.getElementById('priority-status');
-        if (statusEl) statusEl.innerHTML = '<span style="color:#fbbf24;">⏳ Applying ionice...</span>';
-        const res = await applyIonice(pid, cls, lvl);
-        if (statusEl) statusEl.innerHTML = res.success 
-            ? `<span style="color:#32D74B;">✅ ionice class ${cls} level ${lvl} applied</span>` 
-            : `<span style="color:#ef4444;">❌ ${res.msg || 'Failed'}</span>`;
-    },
-    applyChrt: async (pid) => {
-        const policy = document.getElementById('chrt-policy')?.value;
-        const prio = document.getElementById('chrt-priority')?.value;
-        const statusEl = document.getElementById('priority-status');
-        if (statusEl) statusEl.innerHTML = '<span style="color:#fbbf24;">⏳ Applying chrt...</span>';
-        const res = await applyChrt(pid, policy, prio);
-        if (statusEl) statusEl.innerHTML = res.success 
-            ? `<span style="color:#32D74B;">✅ chrt ${policy.toUpperCase()} priority ${prio} applied</span>` 
-            : `<span style="color:#ef4444;">❌ ${res.msg || 'Failed'}</span>`;
-    },
-    applyTaskset: async (pid) => {
-        const mask = document.getElementById('taskset-mask')?.value;
-        const statusEl = document.getElementById('priority-status');
-        if (!mask) {
-            if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;">❌ Enter a hex mask first</span>';
-            return;
-        }
-        if (statusEl) statusEl.innerHTML = '<span style="color:#fbbf24;">⏳ Applying taskset...</span>';
-        const res = await applyTaskset(pid, mask);
-        if (statusEl) statusEl.innerHTML = res.success 
-            ? `<span style="color:#32D74B;">✅ taskset mask ${mask} applied</span>` 
-            : `<span style="color:#ef4444;">❌ ${res.msg || 'Failed'}</span>`;
-    }
+window.ProcessManager = {
+    init,
+    showProcessModal
 };
 
 if (document.readyState === 'loading') {
