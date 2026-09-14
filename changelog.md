@@ -1,6 +1,6 @@
 --- version 0.0.1.12 ---
 
-•Added mA usage on each process (Tools tab in process section)
+•Added mA usage on each process (Tools tab in process manager)
 
 •Added auto in GPU frequency on per-app that dynamically switching frequencies depends on load
 
