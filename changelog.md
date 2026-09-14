@@ -1,5 +1,7 @@
 --- version 0.0.1.12 ---
 
+•Added mA usage on each process (Tools tab in process section)
+
 •Added auto in GPU frequency on per-app that dynamically switching frequencies depends on load
 
 •Remove lite mode that cause interference on per app config on CPU frequency & GPU frequency (Tips: Just lower the cpu frequency & GPU frequency on per-app to cap temp not goes on higher)
