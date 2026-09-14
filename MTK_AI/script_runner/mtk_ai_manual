@@ -239,6 +239,24 @@ else
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_prop" >/dev/null 2>&1 &
 fi
 
+OUT="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/stock_tweaks.sh"
+thermal() {
+    # 1. Safely ensure the directory and file exist without modifying existing content
+    mkdir -p "$(dirname "$OUT")"
+    [ -f "$OUT" ] || touch "$OUT"
+
+    # 2. Optimized pipeline: replaces multiple greps with a single awk command for better performance
+    getprop | awk -F'[][]' '/init\.svc\..*thermal.*\[running\]/ {print $2}' | sed 's/^init\.svc\.//' | while read -r svc; do
+        if [ -n "$svc" ]; then
+            # 3. Duplicate check: only append if the exact command is NOT already in the file
+            if ! grep -qxF "start $svc" "$OUT"; then
+                echo "start $svc" >> "$OUT"
+            fi
+        fi
+    done
+}
+thermal
+
 # --- APP HIBERNATION ---
 NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
 echo "Applying app hibernation rules..."
