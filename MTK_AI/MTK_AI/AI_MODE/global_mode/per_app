@@ -63,11 +63,12 @@ apply_gpu_settings() {
     idx=$(cat "/sdcard/MTK_AI_Engine/per_app/${app}.gpu_opp" 2>/dev/null | tr -d '[:space:]')
     [ -z "$idx" ] && idx=$(cat "/sdcard/MTK_AI_Engine/global_gpu_opp_index.txt" 2>/dev/null | tr -d '[:space:]')
     
-    # Apply to MTK GPU paths (supports -1 for unlock)
-    [ -n "$idx" ] && {
-        echo "$idx" > /proc/gpufreq/gpufreq_opp_freq 2>/dev/null
-        echo "$idx" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
-    }
+    # Default to Auto (-1) if no per-app or global config is found
+    [ -z "$idx" ] && idx="-1"
+    
+    # Apply to MTK GPU paths (supports -1 for unlock/auto)
+    echo "$idx" > /proc/gpufreq/gpufreq_opp_freq 2>/dev/null
+    echo "$idx" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
 
     # ==========================================
     # 2. GPU Governor
