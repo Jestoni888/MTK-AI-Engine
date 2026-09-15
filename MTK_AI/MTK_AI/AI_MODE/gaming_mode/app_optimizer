@@ -160,7 +160,7 @@ fi
 
 #Thermal Override
 find /sys -path "*/thermal/cooling_device*/cur_state" -exec chmod 444 {} + 2>/dev/null || true
-echo disabled | tee /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null || true
+find /sys -path '*/thermal/thermal_zone*/mode' -exec sh -c 'echo disabled > "$1" 2>/dev/null || true' _ {} \;
 cmd thermalservice override-status 1 2>/dev/null
 
 #External Scripts
