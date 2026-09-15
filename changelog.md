@@ -1,6 +1,6 @@
 --- version 0.0.1.14 ---
 
-•Vsync & Voltage offset on per-app replaced by Devfreq Governor
+•Vsync & Voltage offset on per-app replaced by Devfreq Governor & min-max frequencies 
 
 --- version 0.0.1.12 ---
 
