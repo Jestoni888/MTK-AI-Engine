@@ -629,7 +629,28 @@ modal.innerHTML = `<!-- Header --> <div style="height:56px;display:flex;align-it
         <span id="gpu-opp-val">Select frequency</span>  
       </div>  
     </div>  
-  </div> <!-- Vsync & Voltage offset Item --> <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">⏱️</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Vsync & Voltage offset</div> <div style="font-size:13px;color:#888;">Android Vsync & Voltage offset to specific game or app</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">VSync Offset (ns)</label> <input type="number" id="config-vsync" value="0" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')"> <label style="display:block;color:#888;font-size:11px;margin-bottom:6px;">EEM Voltage Offset</label> <input type="range" id="config-eem" min="-20" max="10" value="0" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('eem-val').textContent=(this.value>0?'+':'')+this.value; saveAppConfig('${pkg}')"> <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="eem-val">0</span></div> </div> </div> <!-- Game API Section --> <div style="padding:0 16px;margin-bottom:8px;"> <span style="display:inline-block;background:#1e1e1e;padding:4px 12px;border-radius:12px;font-size:13px;color:#8ab4f8;">Game API</span> </div> <!-- Game Mode Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🎮</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Game Mode</div> <div style="font-size:13px;color:#888;">Android Game Intervention mode</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Intervention Mode</label> <select id="config-game-mode" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;" onchange="saveAppConfig('${pkg}')"> <option value="">Default / System</option> <option value="1">Standard</option> <option value="2">Performance</option> <option value="3">Battery</option> <option value="4">Custom</option> </select> <div id="game-mode-status-${pkg}" style="margin-top:8px;font-size:12px;color:#888;min-height:16px;word-break:break-word;"></div> </div> </div> <!-- Custom FPS Limit Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🎯</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Custom FPS Limit</div> <div style="font-size:13px;color:#888;">Lock game frame rate (Auto-enables Custom Game Mode)</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Target FPS (0 = disabled)</label> <input type="range" id="config-fps" min="0" max="144" step="1" value="0" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('fps-val').textContent=this.value+' FPS'; autoEnableCustomGameMode('${pkg}', this.value); saveAppConfig('${pkg}');"> <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="fps-val">0 FPS</span></div> <div id="fps-info-${pkg}" style="margin-top:8px;font-size:11px;color:#888;text-align:center;"></div> </div> </div> <!-- Downscaling Item (DENSITY-ONLY) --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">📉</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Downscaling</div> <div style="font-size:13px;color:#888;">Reduce game graphics for stable fps & smoother gameplay</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin-bottom:6px;">Downscale Factor</label> <input type="range" id="config-downscale" min="10" max="100" value="100" step="5" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('downscale-val').textContent=(this.value/100).toFixed(1)+'x'; saveAppConfig('${pkg}')"> <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="downscale-val">1.0x</span></div> </div> </div> <!-- Refresh Rate Control Item --> <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🔄</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Refresh Rate Control</div> <div style="font-size:13px;color:#888;">Set the refresh rate limit for the app profile.</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Refresh Rate Lock</label> <select id="config-refresh-rate" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')"><option value="">Loading modes...</option></select> </div> </div> <!-- ANGLE & Loading Boost Item -->
+  </div> <!-- Devfreq Governors Item -->
+<div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;">
+  <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;">
+    <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;">
+      <span style="font-size:18px;">⚡</span>
+    </div>
+    <div style="flex:1;">
+      <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Devfreq Governors</div>
+      <div style="font-size:13px;color:#888;">Memory controller & bus frequency policy</div>
+    </div>
+    <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+      <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span>
+    </div>
+  </div>
+  <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;">
+    <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Devfreq Governor</label>
+    <select id="config-devfreq-governor" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')">
+      <option value="">Default / System</option>
+    </select>
+  </div>
+</div>
+ <!-- Game API Section --> <div style="padding:0 16px;margin-bottom:8px;"> <span style="display:inline-block;background:#1e1e1e;padding:4px 12px;border-radius:12px;font-size:13px;color:#8ab4f8;">Game API</span> </div> <!-- Game Mode Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🎮</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Game Mode</div> <div style="font-size:13px;color:#888;">Android Game Intervention mode</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Intervention Mode</label> <select id="config-game-mode" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;" onchange="saveAppConfig('${pkg}')"> <option value="">Default / System</option> <option value="1">Standard</option> <option value="2">Performance</option> <option value="3">Battery</option> <option value="4">Custom</option> </select> <div id="game-mode-status-${pkg}" style="margin-top:8px;font-size:12px;color:#888;min-height:16px;word-break:break-word;"></div> </div> </div> <!-- Custom FPS Limit Item --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🎯</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Custom FPS Limit</div> <div style="font-size:13px;color:#888;">Lock game frame rate (Auto-enables Custom Game Mode)</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Target FPS (0 = disabled)</label> <input type="range" id="config-fps" min="0" max="144" step="1" value="0" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('fps-val').textContent=this.value+' FPS'; autoEnableCustomGameMode('${pkg}', this.value); saveAppConfig('${pkg}');"> <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="fps-val">0 FPS</span></div> <div id="fps-info-${pkg}" style="margin-top:8px;font-size:11px;color:#888;text-align:center;"></div> </div> </div> <!-- Downscaling Item (DENSITY-ONLY) --> <div class="new-accordion-item" style="margin:0 16px 12px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">📉</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Downscaling</div> <div style="font-size:13px;color:#888;">Reduce game graphics for stable fps & smoother gameplay</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin-bottom:6px;">Downscale Factor</label> <input type="range" id="config-downscale" min="10" max="100" value="100" step="5" style="width:100%;margin-bottom:4px;" oninput="document.getElementById('downscale-val').textContent=(this.value/100).toFixed(1)+'x'; saveAppConfig('${pkg}')"> <div style="text-align:center;color:#ff9f0a;font-size:12px;"><span id="downscale-val">1.0x</span></div> </div> </div> <!-- Refresh Rate Control Item --> <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;"> <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;"> <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;"> <span style="font-size:18px;">🔄</span> </div> <div style="flex:1;"> <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Refresh Rate Control</div> <div style="font-size:13px;color:#888;">Set the refresh rate limit for the app profile.</div> </div> <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;"> <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span> </div> </div> <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;"> <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Refresh Rate Lock</label> <select id="config-refresh-rate" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')"><option value="">Loading modes...</option></select> </div> </div> <!-- ANGLE & Loading Boost Item -->
 <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;">
     <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;">
         <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;">
@@ -760,6 +781,22 @@ try {
 } catch (e) { 
   console.warn('Failed to fetch GPU OPPs:', e); 
 }
+// Fetch Devfreq Governors dynamically
+try {
+  const devfreqGovs = await fetchDevfreqGovernors();
+  const devfreqSelect = document.getElementById('config-devfreq-governor');
+  if (devfreqSelect) {
+    devfreqSelect.innerHTML = '<option value="">Default / System</option>';
+    for (const gov of devfreqGovs) {
+      const opt = document.createElement('option');
+      opt.value = gov;
+      opt.textContent = gov.charAt(0).toUpperCase() + gov.slice(1);
+      devfreqSelect.appendChild(opt);
+    }
+  }
+} catch (e) {
+  console.warn('Failed to populate Devfreq governors UI:', e);
+}
  // Initialize density & load config
  await loadAppConfig(pkg);
  // === Initialize Renderer Toggles ===
@@ -775,6 +812,27 @@ try {
      console.warn("Renderer toggle init failed:", e);
  }
 }
+
+async function fetchDevfreqGovernors() {
+  try {
+    const raw = await execFn(`
+      for dev in /sys/class/devfreq/*; do
+        name=$(basename $dev)
+        if [[ "$name" == *"mem"* ]] || [[ "$name" == *"dvfs"* ]] || [[ "$name" == *"dmc"* ]] || [[ "$name" == *"gpu"* ]] || [[ "$name" == *"gpubw"* ]]; then
+          [ -f "$dev/available_governors" ] && cat "$dev/available_governors"
+        fi
+      done
+    `, 2000);
+
+    const govs = raw.trim().split(/\s+/).filter(Boolean);
+    return [...new Set(govs)]; // Remove duplicates across nodes
+  } catch (e) {
+    console.warn("Failed to fetch Devfreq governors:", e);
+    return ['performance', 'powersave', 'simple_ondemand', 'userspace'];
+  }
+}
+window.fetchDevfreqGovernors = fetchDevfreqGovernors;
+
 // === AUTO ENABLE CUSTOM GAME MODE WHEN FPS IS SET ===
 async function autoEnableCustomGameMode(pkg, fpsValue) {
     const fps = parseInt(fpsValue);
@@ -817,14 +875,14 @@ async function resetAppConfig(pkg) {
         // Delete refresh lock
         await execFn(`rm -f ${REFRESH_LOCKS_DIR}/${pkg}.mode 2>/dev/null`);
         
+        // Include devfreq config removal in reset routine
+await execFn(`rm -f ${PERAPP_DIR}/${pkg}.devfreq_governor 2>/dev/null`);
+        
         // Delete vsync config
         await execFn(`rm -f ${CFG_DIR}/vsync_configs/${pkg}.vsync 2>/dev/null`);
         
         // Delete renderer config
         await execFn(`rm -f /sdcard/MTK_AI_Engine/threading_configs/${pkg}.renderer 2>/dev/null`);
-        
-        // Remove from game list if present
-        await execFn(`sed -i "/^${pkg}$/d" ${GAMELIST_FILE} 2>/dev/null`);
         
         showStatus('✅ Config reset for ' + pkg, '#32D74B');
         
@@ -864,10 +922,12 @@ if (gpuGovResult.trim()) {
              if (selectedOpt) document.getElementById('gpu-opp-val').textContent = selectedOpt.text;
          } 
      }
-     const vsyncResult = await execFn(`cat ${CFG_DIR}/vsync_configs/${pkg}.vsync 2>/dev/null`);
-     if (vsyncResult.trim()) { const i = document.getElementById('config-vsync'); if (i) i.value = vsyncResult.trim().replace(/\D/g, ''); }
-     const eemResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.eem_offset 2>/dev/null`);
-     if (eemResult.trim()) { const sl = document.getElementById('config-eem'); if (sl) { sl.value = eemResult.trim(); document.getElementById('eem-val').textContent = (eemResult.trim() > 0 ? '+' : '') + eemResult.trim(); } }
+     // Load Devfreq Governor
+const devfreqGovResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.devfreq_governor 2>/dev/null`);
+if (devfreqGovResult.trim()) {
+  const s = document.getElementById('config-devfreq-governor');
+  if (s) s.value = devfreqGovResult.trim();
+}
      const cmdResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.cmd 2>/dev/null`);
      if (cmdResult.trim()) { try { const t = document.getElementById('config-custom-cmd'); if (t) t.value = decodeURIComponent(escape(atob(cmdResult.trim()))); } catch (e) { const t = document.getElementById('config-custom-cmd'); if (t) t.value = cmdResult.trim(); } }
      // Load Game Mode preference
@@ -954,10 +1014,13 @@ if (gpuGovernor) {
 }
      const gpuOpp = document.getElementById('config-gpu-opp').value;
      await execFn(`mkdir -p ${PERAPP_DIR} && echo "${gpuOpp}" > ${PERAPP_DIR}/${pkg}.gpu_opp`);
-     const vsync = document.getElementById('config-vsync').value;
-     if (vsync) await execFn(`mkdir -p ${CFG_DIR}/vsync_configs && echo "${vsync}" > ${CFG_DIR}/vsync_configs/${pkg}.vsync`);
-     const eem = document.getElementById('config-eem').value;
-     await execFn(`mkdir -p ${PERAPP_DIR} && echo "${eem}" > ${PERAPP_DIR}/${pkg}.eem_offset`);
+     // Save Devfreq Governor (Will be applied at app runtime by your service script)
+const devfreqGov = document.getElementById('config-devfreq-governor') ? document.getElementById('config-devfreq-governor').value : '';
+if (devfreqGov) {
+  await execFn(`mkdir -p ${PERAPP_DIR} && echo "${devfreqGov}" > ${PERAPP_DIR}/${pkg}.devfreq_governor`);
+} else {
+  await execFn(`rm -f ${PERAPP_DIR}/${pkg}.devfreq_governor 2>/dev/null`);
+}
      const customCmd = document.getElementById('config-custom-cmd').value.trim();
      if (customCmd) { 
          const encoded = btoa(unescape(encodeURIComponent(customCmd))); 
