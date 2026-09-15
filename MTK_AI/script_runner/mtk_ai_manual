@@ -103,20 +103,27 @@ fi
 
 # --- 3. RENDERER ---
 RENDERER_CONFIG="$CONFIG_DIR/manual_renderer.txt"
+RENDERER=""
+
+# 1. Try to read from the config file if it exists
 if [ -f "$RENDERER_CONFIG" ]; then
     RENDERER=$(cat "$RENDERER_CONFIG" 2>/dev/null | tr -d '\r\n\t ') || true
-    if [ -n "$RENDERER" ]; then
-        echo "Applying renderer: $RENDERER"
-        if su -c "setprop debug.hwui.renderer '$RENDERER'" 2>/dev/null; then
-            echo "✓ Renderer applied"
-        else
-            echo "✗ Failed to apply renderer (skipping)"
-        fi
+fi
+
+# 2. Apply the renderer or reset to default
+if [ -n "$RENDERER" ]; then
+    # If a valid config was found, apply it
+    echo "Applying custom renderer: $RENDERER"
+    if su -c "setprop debug.hwui.renderer '$RENDERER'" 2>/dev/null; then
+        echo "✓ Custom renderer applied"
     else
-        echo "Empty renderer config (skipping)"
+        echo "✗ Failed to apply renderer"
     fi
 else
-    echo "No renderer config found (skipping)"
+    # Fallback: Clear the property so Android uses its native default (skiagl)
+    echo "No renderer config found. Resetting to system default."
+    su -c "setprop debug.hwui.renderer ''" 2>/dev/null || true
+    echo "✓ Renderer reset to default"
 fi
 
 # --- 4. REFRESH RATE ---
