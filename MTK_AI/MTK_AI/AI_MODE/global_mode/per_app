@@ -250,7 +250,7 @@ boost_process_aggressive() {
     fi
 }
 [ -f /sdcard/MTK_AI_Engine/app_priority ] && boost_process_aggressive
-
+game_api
 # CPU GOVERNOR & FREQUENCY LIMIT
 apply_cpu_settings() {
     local target_app="$CURRENT_TOP_APP"
@@ -309,7 +309,7 @@ apply_cpu_settings() {
 apply_cpu_settings
 
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" >/dev/null 2>&1 &
-game_api
+
 run_cmd() {
     if [ -f "$EXTERNAL_CFG/enable_trim" ]; then
         pgrep -f "trim_memory" > /dev/null || nohup sh "$TRIMMING_PATH" 2>&1 &
