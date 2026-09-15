@@ -13,15 +13,16 @@ sysctl -a 2>/dev/null | grep -E '^(vm\.|kernel\.sched_)' | while read -r line; d
     echo "sysctl -w ${key}=\"${val}\"" >> "$OUT"
 done
 
-# 2. Backup currently active thermal services
+# 2. Backup current CPU governor for all online cores
 echo "" >> "$OUT"
-echo "# --- Active Thermal Services Backup ---" >> "$OUT"
+echo "# --- Current CPU Governor Backup ---" >> "$OUT"
 
-# Dynamically find all init services containing 'thermal' that are currently 'running'
-# awk extracts the property name, sed removes the 'init.svc.' prefix to get the pure service name
-getprop | grep 'init.svc.' | grep 'thermal' | grep '\[running\]' | awk -F'[][]' '{print $2}' | sed 's/^init\.svc\.//' | while read -r svc; do
-    if [ -n "$svc" ]; then
-        echo "start $svc" >> "$OUT"
+for cpu_path in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+    if [ -f "$cpu_path" ]; then
+        governor=$(cat "$cpu_path" 2>/dev/null | xargs)
+        if [ -n "$governor" ]; then
+            echo "echo '${governor}' > ${cpu_path}" >> "$OUT"
+        fi
     fi
 done
 
