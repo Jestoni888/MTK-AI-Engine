@@ -163,14 +163,6 @@ find /sys -path "*/thermal/cooling_device*/cur_state" -exec chmod 444 {} + 2>/de
 find /sys -path '*/thermal/thermal_zone*/mode' -exec sh -c 'echo disabled > "$1" 2>/dev/null || true' _ {} \;
 cmd thermalservice override-status 1 2>/dev/null
 
-for tz in /sys/class/thermal/thermal_zone*; do
-    if [ -f "$tz/policy" ]; then
-        chmod 664 "$tz/policy" 2>/dev/null
-        # Check supported policies (usually user_space or power_allocator)
-        echo "user_space" > "$tz/policy" 2>/dev/null
-    fi
-done
-
 for weight in /sys/class/thermal/thermal_zone*/cdev*_weight; do
     if [ -f "$weight" ]; then
         chmod 664 "$weight" 2>/dev/null
