@@ -1,3 +1,7 @@
+--- version 0.0.1.14 ---
+
+•Vsync & Voltage offset on per-app replaced by Devfreq Governor
+
 --- version 0.0.1.12 ---
 
 •Renderer selection in advance tab revert to it's simpler setup with only 3 selection Skiagl, Skiavk & OpenGL
