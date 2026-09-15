@@ -377,6 +377,7 @@ while true; do
         if [ "$STATE" = "SAVE" ]; then
             STATE="PERF"
             touch_active
+            apply_cpu_settings
             run_cmd
         fi
     else
