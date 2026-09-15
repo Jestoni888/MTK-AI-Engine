@@ -1,5 +1,7 @@
 --- version 0.0.1.12 ---
 
+•Added last fallback to auto mode (dynamic refresh rate) if no refresh rate set in global or per-app
+
 •Added mA(milliampere) usage on each process (Tools tab in process manager)
 
 •Added auto in GPU frequency on per-app that dynamically switching frequencies depends on load
