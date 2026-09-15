@@ -121,20 +121,25 @@ fi
 
 # --- 4. REFRESH RATE ---
 REFRESH_CONFIG="$CONFIG_DIR/manual_refresh_lock.txt"
+MODE_ID=""
+
+# 1. Read config if it exists
 if [ -f "$REFRESH_CONFIG" ]; then
     MODE_ID=$(cat "$REFRESH_CONFIG" 2>/dev/null | tr -d '\r\n\t ') || true
-    if [ -n "$MODE_ID" ]; then
-        echo "Applying refresh rate mode: $MODE_ID"
-        if su -c "service call SurfaceFlinger 1035 i32 $MODE_ID" 2>/dev/null; then
-            echo "✓ Refresh rate applied"
-        else
-            echo "✗ Failed to apply refresh rate (skipping)"
-        fi
-    else
-        echo "Empty refresh rate config (skipping)"
-    fi
+fi
+
+# 2. Fallback to -1 if no config found or if the file is empty
+if [ -z "$MODE_ID" ]; then
+    MODE_ID="-1"
+    echo "No refresh rate config found or empty, falling back to default mode: -1"
+fi
+
+# 3. Apply the refresh rate
+echo "Applying refresh rate mode: $MODE_ID"
+if su -c "service call SurfaceFlinger 1035 i32 $MODE_ID" 2>/dev/null; then
+    echo "✓ Refresh rate applied"
 else
-    echo "No refresh rate config found (skipping)"
+    echo "✗ Failed to apply refresh rate"
 fi
 
 # --- 5. DEVFREQ SETTINGS ---
