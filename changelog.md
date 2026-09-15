@@ -1,6 +1,7 @@
 --- version 0.0.1.14 ---
 
 •Vsync & Voltage offset on per-app replaced by Devfreq Governor & min-max frequencies 
+
 💡What is devfreq?
 Devfreq acts as the data highway governor. If your CPU or GPU is running at max frequency but devfreq is running at low power, the system creates a memory bandwidth bottleneck—causing frame drops, micro-stuttering, or thermal throttling while waiting for RAM operations to catch up.
 
