@@ -28,7 +28,7 @@ AI_MODE="$MOD_DIR/script_runner/monitor_app_stats"
 
 DUMP=$(dumpsys activity activities 2>/dev/null)
 CURRENT_TOP_APP=$(echo "$DUMP" | grep -m1 -E 'mResumedActivity|mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
-
+game_api
 unhibernation() {
 cmd deviceidle whitelist +"${CURRENT_TOP_APP}"
 cmd app_hibernation set-state --user 0 --global "${CURRENT_TOP_APP}" false >/dev/null 2>&1 || true
@@ -350,7 +350,6 @@ run_cmd() {
     else
         pkill -f "module_executer" 2>/dev/null
     fi
-        game_api
 }
 
 find_touchscreen() {
