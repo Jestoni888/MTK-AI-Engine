@@ -1,5 +1,7 @@
 --- version 0.0.1.12 ---
 
+⚠️If you want to run apps in background like music then protect it in Never kill lists in Tools tab Ram hibernator because even if ram cleaner is not enabled the background is also restricted, no data received, or idle state. The purpose of this module is to hibernate all apps including system apps + users apps
+
 •Added last fallback to auto mode (dynamic refresh rate) if no refresh rate set in global or per-app
 
 •Added mA(milliampere) usage on each process (Tools tab in process manager)
