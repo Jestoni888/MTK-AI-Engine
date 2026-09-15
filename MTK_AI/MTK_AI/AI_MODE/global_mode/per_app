@@ -107,27 +107,26 @@ apply_gpu_settings() {
 apply_gpu_settings
 
 # ==========================================
-# VSYNC OFFSET
+# DEVFREQ DVFS
 # ==========================================
-apply_vsync_settings() {
-    local target_app="$CURRENT_TOP_APP"
-    [ -z "$target_app" ] && return 1
-    
-    local VSYNC_DIR="/sdcard/MTK_AI_Engine/vsync_configs"
-    local vsync_file="${VSYNC_DIR}/${target_app}.vsync"
-    
-    if [ -f "$vsync_file" ]; then
-        local vsync_offset=$(cat "$vsync_file" 2>/dev/null | tr -d '[:space:]')
-        if [ -n "$vsync_offset" ]; then
-            # Apply Vsync phase offsets to SurfaceFlinger
-            setprop debug.sf.early_phase_offset_ns "$vsync_offset" 2>/dev/null
-            setprop debug.sf.early_app_phase_offset_ns "$vsync_offset" 2>/dev/null
-            setprop debug.sf.early_gl_phase_offset_ns "$vsync_offset" 2>/dev/null
-            setprop debug.sf.late_phase_offset_ns "$vsync_offset" 2>/dev/null
-        fi
+apply_devfreq() {
+    PERAPP_DIR="$EXTERNAL_CFG/per_app"
+
+if [ -n "$CURRENT_TOP_APP" ]; then
+    DEVFREQ_FILE="${PERAPP_DIR}/${CURRENT_TOP_APP}.devfreq_governor"
+    TARGET_GOV=$(cat "$DEVFREQ_FILE" 2>/dev/null | tr -d '\r\n')
+    TARGET_GOV=${TARGET_GOV:-"simple_ondemand"} # Default fallback
+
+for dev in /sys/class/devfreq/*; do
+    name=$(basename $dev)
+    # Target memory controllers and GPU bandwidth
+    if [[ "$name" == *"mem"* ]] || [[ "$name" == *"dvfs"* ]] || [[ "$name" == *"dmc"* ]] || [[ "$name" == *"gpu"* ]] || [[ "$name" == *"gpubw"* ]]; then
+        echo "$TARGET_GOV" > $dev/governor 2>/dev/null
     fi
+done
+fi
 }
-apply_vsync_settings
+apply_devfreq
 
 refresh_rate() {
     # --- Execute per-app refresh rate ---
