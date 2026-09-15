@@ -39,6 +39,9 @@ done
 # Boost foreground 
 setprop persist.sys.foreground_boost 1
 
+# Prevent FPS going down
+cmd display set-match-content-frame-rate-pref 0
+
 # Powermode
 cmd power set-mode 2 true
 cmd power set-fixed-performance-mode-enabled true
