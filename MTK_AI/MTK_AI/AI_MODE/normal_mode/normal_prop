@@ -44,6 +44,7 @@ fi
 
 # Remove Vsync
 su -c resetprop -d debug.hwui.disable_vsync 2>/dev/null
+cmd display set-match-content-frame-rate-pref 1
 
 echo "-1" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
 echo "-1" > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
