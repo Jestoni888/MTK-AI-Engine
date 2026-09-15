@@ -40,3 +40,7 @@ if [ -f "$FAST_REBOOT_FLAG" ]; then
 else
     log_msg "Fast reboot flag not found, skipping"
 fi
+
+if [ -f "/dev/freeze/frozen/$pkg" ]; then
+    pm suspend "$pkg" 2>/dev/null
+fi
