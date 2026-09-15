@@ -28,7 +28,7 @@ AI_MODE="$MOD_DIR/script_runner/monitor_app_stats"
 
 DUMP=$(dumpsys activity activities 2>/dev/null)
 CURRENT_TOP_APP=$(echo "$DUMP" | grep -m1 -E 'mResumedActivity|mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
-game_api
+
 unhibernation() {
 cmd deviceidle whitelist +"${CURRENT_TOP_APP}"
 cmd app_hibernation set-state --user 0 --global "${CURRENT_TOP_APP}" false >/dev/null 2>&1 || true
@@ -309,7 +309,7 @@ apply_cpu_settings() {
 apply_cpu_settings
 
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" >/dev/null 2>&1 &
-
+game_api
 run_cmd() {
     if [ -f "$EXTERNAL_CFG/enable_trim" ]; then
         pgrep -f "trim_memory" > /dev/null || nohup sh "$TRIMMING_PATH" 2>&1 &
