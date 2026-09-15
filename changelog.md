@@ -5,6 +5,14 @@
 💡What is devfreq?
 Devfreq acts as the data highway governor. If your CPU or GPU is running at max frequency but devfreq is running at low power, the system creates a memory bandwidth bottleneck—causing frame drops, micro-stuttering, or thermal throttling while waiting for RAM operations to catch up.
 
+command to check: 
+for dev in /sys/class/devfreq/*; do
+  echo "Node: $(basename $dev)"
+  echo "  Governor: $(cat $dev/governor 2>/dev/null)"
+  echo "  Min Freq: $(cat $dev/min_freq 2>/dev/null)"
+  echo "  Max Freq: $(cat $dev/max_freq 2>/dev/null)"
+done
+
 --- version 0.0.1.12 ---
 
 •Renderer selection in advance tab revert to it's simpler setup with only 3 selection Skiagl, Skiavk & OpenGL
