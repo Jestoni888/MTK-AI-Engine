@@ -940,6 +940,7 @@ if (refreshRate !== "") await execFn(`mkdir -p ${REFRESH_LOCKS_DIR} && echo "${r
 else await execFn(`rm -f ${REFRESH_LOCKS_DIR}/${pkg}.mode 2>/dev/null`);
     const downscaleRaw = document.getElementById('config-downscale').value;
      await execFn(`mkdir -p ${PERAPP_DIR} && echo "${downscaleRaw}" > ${PERAPP_DIR}/${pkg}.downscale`);
+     await execFn(`am force-stop ${pkg}`);
      const governor = document.getElementById('config-governor').value;
      if (governor) await execFn(`mkdir -p ${PERAPP_DIR} && echo "${governor}" > ${PERAPP_DIR}/${pkg}.governor`);
      const cpuLimit = document.getElementById('config-cpu-limit').value;
@@ -989,15 +990,18 @@ if (gpuGovernor) {
      // Save & Apply Custom FPS
      const fps = document.getElementById('config-fps').value;
      await execFn(`mkdir -p ${PERAPP_DIR} && echo "${fps}" > ${PERAPP_DIR}/${pkg}.fps`);
+     await execFn(`am force-stop ${pkg}`);
      showStatus('Configuration saved for ' + pkg, '#32D74B');
      // Save ANGLE & Loading Boost
 const angleToggle = document.getElementById(`angle-toggle-${pkg}`);
 const useAngle = angleToggle && angleToggle.dataset.active === 'true' ? '1' : '0';
 await execFn(`mkdir -p ${PERAPP_DIR} && echo "${useAngle}" > ${PERAPP_DIR}/${pkg}.use_angle`);
+await execFn(`am force-stop ${pkg}`);
 
 const loadingBoost = document.getElementById('config-loading-boost');
 if (loadingBoost) {
     await execFn(`mkdir -p ${PERAPP_DIR} && echo "${loadingBoost.value}" > ${PERAPP_DIR}/${pkg}.loading_boost`);
+    await execFn(`am force-stop ${pkg}`);
 }
  } catch (e) { 
      console.error('Save config failed:', e); 
