@@ -629,24 +629,37 @@ modal.innerHTML = `<!-- Header --> <div style="height:56px;display:flex;align-it
         <span id="gpu-opp-val">Select frequency</span>  
       </div>  
     </div>  
-  </div> <!-- Devfreq Governors Item -->
+  </div> <!-- Devfreq Settings Item -->
 <div class="new-accordion-item" style="margin:0 16px 24px;background:#1e1e1e;border-radius:24px;overflow:hidden;">
   <div class="accordion-header" onclick="toggleAccordion(this)" style="padding:18px;display:flex;align-items:center;cursor:pointer;">
     <div style="width:40px;height:40px;background:#2a3a8a;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:14px;">
       <span style="font-size:18px;">⚡</span>
     </div>
     <div style="flex:1;">
-      <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Devfreq Governors</div>
-      <div style="font-size:13px;color:#888;">Memory controller & bus frequency policy</div>
+      <div style="font-size:17px;font-weight:500;margin-bottom:2px;">Devfreq Settings</div>
+      <div style="font-size:13px;color:#888;">Governor & Frequency control</div>
     </div>
     <div style="width:32px;height:32px;background:#2a2a2a;border-radius:50%;display:flex;align-items:center;justify-content:center;">
       <span style="color:#888;font-size:12px;transition:transform 0.2s;">▼</span>
     </div>
   </div>
   <div class="accordion-content" style="display:none;padding:0 18px 18px;border-top:1px solid #333;">
+    <!-- Governor -->
     <label style="display:block;color:#888;font-size:11px;margin:16px 0 6px;">Devfreq Governor</label>
     <select id="config-devfreq-governor" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')">
       <option value="">Default / System</option>
+    </select>
+
+    <!-- Min Frequency -->
+    <label style="display:block;color:#888;font-size:11px;margin:8px 0 6px;">Min Frequency</label>
+    <select id="config-devfreq-min-freq" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')">
+      <option value="">Default / Unlocked</option>
+    </select>
+
+    <!-- Max Frequency -->
+    <label style="display:block;color:#888;font-size:11px;margin:8px 0 6px;">Max Frequency</label>
+    <select id="config-devfreq-max-freq" style="width:100%;padding:10px;background:#121212;border:1px solid #333;border-radius:12px;color:#fff;margin-bottom:12px;" onchange="saveAppConfig('${pkg}')">
+      <option value="">Default / Unlocked</option>
     </select>
   </div>
 </div>
@@ -797,6 +810,34 @@ try {
 } catch (e) {
   console.warn('Failed to populate Devfreq governors UI:', e);
 }
+// Populate Devfreq Frequencies dynamically
+try {
+  const freqs = await fetchDevfreqFrequencies();
+  const minSelect = document.getElementById('config-devfreq-min-freq');
+  const maxSelect = document.getElementById('config-devfreq-max-freq');
+
+  if (minSelect && maxSelect) {
+    minSelect.innerHTML = '<option value="">Default / Unlocked</option>';
+    maxSelect.innerHTML = '<option value="">Default / Unlocked</option>';
+
+    freqs.forEach(freq => {
+      // Format frequency for display (e.g. Hz to MHz)
+      const label = freq >= 1000000 ? `${(freq / 1000000).toFixed(0)} MHz` : `${(freq / 1000).toFixed(0)} MHz (${freq})`;
+      
+      const minOpt = document.createElement('option');
+      minOpt.value = freq;
+      minOpt.textContent = label;
+      minSelect.appendChild(minOpt);
+
+      const maxOpt = document.createElement('option');
+      maxOpt.value = freq;
+      maxOpt.textContent = label;
+      maxSelect.appendChild(maxOpt);
+    });
+  }
+} catch (e) {
+  console.warn('Failed to populate Devfreq frequencies UI:', e);
+}
  // Initialize density & load config
  await loadAppConfig(pkg);
  // === Initialize Renderer Toggles ===
@@ -832,6 +873,32 @@ async function fetchDevfreqGovernors() {
   }
 }
 window.fetchDevfreqGovernors = fetchDevfreqGovernors;
+
+async function fetchDevfreqFrequencies() {
+  try {
+    const raw = await execFn(`
+      for dev in /sys/class/devfreq/*; do
+        name=$(basename $dev)
+        if [[ "$name" == *"mem"* ]] || [[ "$name" == *"dvfs"* ]] || [[ "$name" == *"dmc"* ]] || [[ "$name" == *"gpu"* ]] || [[ "$name" == *"gpubw"* ]]; then
+          [ -f "$dev/available_frequencies" ] && cat "$dev/available_frequencies"
+        fi
+      done
+    `, 2000);
+
+    // Split, clean, and sort frequencies numerically (ascending)
+    const freqs = raw.trim().split(/\s+/)
+      .filter(Boolean)
+      .map(Number)
+      .filter((v, i, a) => !isNaN(v) && a.indexOf(v) === i)
+      .sort((a, b) => a - b);
+
+    return freqs;
+  } catch (e) {
+    console.warn("Failed to fetch Devfreq frequencies:", e);
+    return [];
+  }
+}
+window.fetchDevfreqFrequencies = fetchDevfreqFrequencies;
 
 // === AUTO ENABLE CUSTOM GAME MODE WHEN FPS IS SET ===
 async function autoEnableCustomGameMode(pkg, fpsValue) {
@@ -877,6 +944,9 @@ async function resetAppConfig(pkg) {
         
         // Include devfreq config removal in reset routine
 await execFn(`rm -f ${PERAPP_DIR}/${pkg}.devfreq_governor 2>/dev/null`);
+
+// Clear saved frequencies on reset
+await execFn(`rm -f ${PERAPP_DIR}/${pkg}.devfreq_min_freq ${PERAPP_DIR}/${pkg}.devfreq_max_freq 2>/dev/null`);
         
         // Delete vsync config
         await execFn(`rm -f ${CFG_DIR}/vsync_configs/${pkg}.vsync 2>/dev/null`);
@@ -927,6 +997,18 @@ const devfreqGovResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.devfreq_governor
 if (devfreqGovResult.trim()) {
   const s = document.getElementById('config-devfreq-governor');
   if (s) s.value = devfreqGovResult.trim();
+}
+// Load Devfreq Min/Max Frequencies
+const minFreq = (await execFn(`cat ${PERAPP_DIR}/${pkg}.devfreq_min_freq 2>/dev/null`)).trim();
+if (minFreq) {
+  const el = document.getElementById('config-devfreq-min-freq');
+  if (el) el.value = minFreq;
+}
+
+const maxFreq = (await execFn(`cat ${PERAPP_DIR}/${pkg}.devfreq_max_freq 2>/dev/null`)).trim();
+if (maxFreq) {
+  const el = document.getElementById('config-devfreq-max-freq');
+  if (el) el.value = maxFreq;
 }
      const cmdResult = await execFn(`cat ${PERAPP_DIR}/${pkg}.cmd 2>/dev/null`);
      if (cmdResult.trim()) { try { const t = document.getElementById('config-custom-cmd'); if (t) t.value = decodeURIComponent(escape(atob(cmdResult.trim()))); } catch (e) { const t = document.getElementById('config-custom-cmd'); if (t) t.value = cmdResult.trim(); } }
@@ -1020,6 +1102,20 @@ if (devfreqGov) {
   await execFn(`mkdir -p ${PERAPP_DIR} && echo "${devfreqGov}" > ${PERAPP_DIR}/${pkg}.devfreq_governor`);
 } else {
   await execFn(`rm -f ${PERAPP_DIR}/${pkg}.devfreq_governor 2>/dev/null`);
+}
+// Save Devfreq Min/Max Frequencies
+const minFreqVal = document.getElementById('config-devfreq-min-freq')?.value || '';
+if (minFreqVal) {
+  await execFn(`mkdir -p ${PERAPP_DIR} && echo "${minFreqVal}" > ${PERAPP_DIR}/${pkg}.devfreq_min_freq`);
+} else {
+  await execFn(`rm -f ${PERAPP_DIR}/${pkg}.devfreq_min_freq 2>/dev/null`);
+}
+
+const maxFreqVal = document.getElementById('config-devfreq-max-freq')?.value || '';
+if (maxFreqVal) {
+  await execFn(`mkdir -p ${PERAPP_DIR} && echo "${maxFreqVal}" > ${PERAPP_DIR}/${pkg}.devfreq_max_freq`);
+} else {
+  await execFn(`rm -f ${PERAPP_DIR}/${pkg}.devfreq_max_freq 2>/dev/null`);
 }
      const customCmd = document.getElementById('config-custom-cmd').value.trim();
      if (customCmd) { 
