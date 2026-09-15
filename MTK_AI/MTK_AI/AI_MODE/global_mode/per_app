@@ -155,7 +155,13 @@ refresh_rate() {
         TARGET_MODE="$MODE_ID"       # Fallback to global if per-app file doesn't exist
     fi
 
-    # 3. Execute the refresh rate change ONLY if we have a valid mode
+    # 3. Last fallback if no other files found for mode (or if they were empty)
+    if [ -z "$TARGET_MODE" ]; then
+        TARGET_MODE="-1"
+    fi
+
+    # 4. Execute the refresh rate change
+    # (Note: TARGET_MODE will always have a value now, but the check is kept for safety)
     if [ -n "$TARGET_MODE" ]; then
         service call SurfaceFlinger 1035 i32 "$TARGET_MODE"
     fi
