@@ -31,18 +31,6 @@ log_msg() {
     fi
 }
 
-chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_max_freq 2>/dev/null || true
-chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_min_freq 2>/dev/null || true
-for d in /sys/devices/system/cpu/cpu[0-9]*/cpufreq; do
-    [ -d "$d" ] || continue
-    H_MAX=$(cat "$d/cpuinfo_max_freq" 2>/dev/null) || continue
-    H_MIN=$(cat "$d/cpuinfo_min_freq" 2>/dev/null) || echo 0
-    [ -n "$H_MAX" ] && { echo "$H_MAX" > "$d/scaling_max_freq" 2>/dev/null || true; echo "$H_MIN" > "$d/scaling_min_freq" 2>/dev/null || true; }
-done
-for policy in $CPU_SYS/cpufreq/policy*; do
-    chmod 000 "$policy/scaling_max_freq"
-done
-
 # Universally compatible syntax across all Android versions:
 input keyevent 279 && input swipe 500 1200 500 400 300
 
@@ -171,6 +159,7 @@ done
 fi
 
 #Thermal Override
+find /sys -path "*/thermal/cooling_device*/cur_state" -exec chmod 444 {} + 2>/dev/null || true
 echo disabled | tee /sys/devices/virtual/thermal/thermal_zone*/mode 2>/dev/null || true
 cmd thermalservice override-status 1 2>/dev/null
 
