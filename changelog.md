@@ -1,6 +1,6 @@
 --- version 0.0.1.12 ---
 
-•Renderer selection in advance tab revert to it's simpler setup with only 3 selection Skiagl,Skiavk & OpenGL
+•Renderer selection in advance tab revert to it's simpler setup with only 3 selection Skiagl, Skiavk & OpenGL
 
 ⚠️If you want to run apps in background like music then protect it in Never kill lists in Tools tab Ram hibernator because even if ram cleaner is not enabled the background is also restricted, no data received, or idle state. The purpose of this module is to hibernate all apps including system apps + users apps to consistently save battery & lower temperature in normal use
 
