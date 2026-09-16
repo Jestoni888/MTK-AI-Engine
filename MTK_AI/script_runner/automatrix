@@ -45,41 +45,60 @@ if [ -f "/sdcard/MTK_AI_Engine/freeze/$pkg" ]; then
     pm suspend "$pkg" 2>/dev/null
 fi
 
-B="/sdcard/MTK_AI_Engine"
+devfreq_nodes() {
+    B="/sdcard/MTK_AI_Engine"
 
-# 1. Main Devfreq Node (Governor + Freq)
-if [ -f "$B/devfreq_config.json" ]; then
-    GOV=$(awk -F'"' '/"governor"/{print $4}' "$B/devfreq_config.json")
-    LK=$(awk '/"isLocked"/{print $2}' "$B/devfreq_config.json" | tr -d ',')
-    MN=$(awk '/"minFreq"/{print $2}' "$B/devfreq_config.json" | tr -d ',')
-    MX=$(awk '/"maxFreq"/{print $2}' "$B/devfreq_config.json" | tr -d ',')
-    
-    for d in /sys/class/devfreq/*; do
-        [ -d "$d" ] || continue
-        case "$(basename "$d")" in *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*)
-            [ -n "$GOV" ] && echo "$GOV" > "$d/governor" 2>/dev/null
-            if [ "$LK" = "true" ]; then
-                echo "$((MN*1000))" > "$d/min_freq" 2>/dev/null
-                echo "$((MX*1000))" > "$d/max_freq" 2>/dev/null
-            else
-                awk '{print $1}' "$d/available_frequencies" > "$d/min_freq" 2>/dev/null
-                awk '{print $NF}' "$d/available_frequencies" > "$d/max_freq" 2>/dev/null
-            fi
-            break ;;
-        esac
-    done
-fi
-
-# 2. Other Devfreq Nodes (Freq only)
-if [ -f "$B/devfreq_other_config.json" ]; then
-    awk '/"[^"]+": \{/{gsub(/["{]/,"",$1);n=$1} /"minFreq"/{m=$2+0} /"maxFreq"/{x=$2+0;print n,m,x}' "$B/devfreq_other_config.json" | while read n m x; do
+    # 1. Main Devfreq Node (Governor + Freq)
+    if [ -f "$B/devfreq_config.json" ]; then
+        # Robust JSON extraction
+        GOV=$(grep -o '"governor": *"[^"]*"' "$B/devfreq_config.json" | cut -d'"' -f4)
+        LK=$(grep -o '"isLocked": *[a-z]*' "$B/devfreq_config.json" | awk '{print $2}')
+        MN=$(grep -o '"minFreq": *[0-9]*' "$B/devfreq_config.json" | awk '{print $2}')
+        MX=$(grep -o '"maxFreq": *[0-9]*' "$B/devfreq_config.json" | awk '{print $2}')
+        
         for d in /sys/class/devfreq/*; do
             [ -d "$d" ] || continue
-            if [ "$(basename "$d")" = "$n" ]; then
-                echo "$((m*1000))" > "$d/min_freq" 2>/dev/null
-                echo "$((x*1000))" > "$d/max_freq" 2>/dev/null
-                break
-            fi
+            case "$(basename "$d")" in *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*)
+                [ -n "$GOV" ] && echo "$GOV" > "$d/governor" 2>/dev/null
+                if [ "$LK" = "true" ]; then
+                    [ -n "$MN" ] && echo "$((MN*1000))" > "$d/min_freq" 2>/dev/null
+                    [ -n "$MX" ] && echo "$((MX*1000))" > "$d/max_freq" 2>/dev/null
+                else
+                    awk '{print $1}' "$d/available_frequencies" > "$d/min_freq" 2>/dev/null
+                    awk '{print $NF}' "$d/available_frequencies" > "$d/max_freq" 2>/dev/null
+                fi
+                break ;;
+            esac
         done
-    done
-fi
+    fi
+
+    # 2. Other Devfreq Nodes (Freq only)
+    if [ -f "$B/devfreq_other_config.json" ]; then
+        # Fixed awk to preserve colons in node names (e.g., soc:APUCORE)
+        awk '
+            /": \{/ { 
+                gsub(/"/, "", $1); 
+                gsub(/:$/, "", $1); 
+                n=$1 
+            }
+            /"minFreq"/ { m=$2+0 }
+            /"maxFreq"/ { x=$2+0; print n, m, x }
+        ' "$B/devfreq_other_config.json" | while read n m x; do
+            
+            # Skip if parsing failed
+            [ -z "$n" ] || [ -z "$m" ] || [ -z "$x" ] && continue
+            
+            for d in /sys/class/devfreq/*; do
+                [ -d "$d" ] || continue
+                if [ "$(basename "$d")" = "$n" ]; then
+                    echo "$((m*1000))" > "$d/min_freq" 2>/dev/null
+                    echo "$((x*1000))" > "$d/max_freq" 2>/dev/null
+                    break
+                fi
+            done
+        done
+    fi
+}
+
+# Execute the function
+devfreq_nodes
