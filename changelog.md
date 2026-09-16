@@ -18,10 +18,12 @@ Devfreq acts as the data highway governor. If your CPU or GPU is running at max 
 command to check: 
 
 find /sys -type d -path "*/devfreq/*" 2>/dev/null | while read -r dev; do
-    echo "Node: $(basename "$dev")"
-    echo " Governor: $(cat "$dev/governor" 2>/dev/null)"
-    echo " Min Freq: $(cat "$dev/min_freq" 2>/dev/null)"
-    echo " Max Freq: $(cat "$dev/max_freq" 2>/dev/null)"
+echo "Node: $(basename "$dev")"
+echo " Governor lists: $(cat "$dev/available_governors" 2>/dev/null)"
+echo " Frequency lists: $(cat "$dev/available_frequencies" 2>/dev/null)"
+echo " Governor: $(cat "$dev/governor" 2>/dev/null)"
+echo " Min Freq: $(cat "$dev/min_freq" 2>/dev/null)"
+echo " Max Freq: $(cat "$dev/max_freq" 2>/dev/null)"
 done
 
 --- version 0.0.1.12 ---
