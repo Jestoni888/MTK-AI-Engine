@@ -171,11 +171,19 @@ cmd display set-match-content-frame-rate-pref 0
 for dev in /sys/class/devfreq/*; do
     [ -d "$dev" ] || continue
     name=$(basename "$dev")
-    case "$name" in *mem*|*dvfs*|*dmc*|*gpu*|*mali*|*gpubw*) continue ;; esac
-    max_freq=$(awk '{print $NF}' "$dev/available_frequencies" 2>/dev/null)
-    [ -z "$max_freq" ] && continue
-    echo "$max_freq" > "$dev/min_freq" 2>/dev/null
-    echo "$max_freq" > "$dev/max_freq" 2>/dev/null
+    
+    case "$name" in *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) continue ;; esac
+    [ -r "$dev/available_frequencies" ] || continue
+    
+    # OPTIMIZATION: Robustly find the HIGHEST frequency.
+    # tail -1 grabs the last (highest) value after numerical sorting.
+    target_freq=$(tr -s ' ' '\n' < "$dev/available_frequencies" | sort -n | tail -1)
+    
+    [ -z "$target_freq" ] && continue
+    
+    # Lock the device to this maximum frequency for performance
+    echo "$target_freq" > "$dev/min_freq" 2>/dev/null
+    echo "$target_freq" > "$dev/max_freq" 2>/dev/null
 done
 
 #External Scripts
