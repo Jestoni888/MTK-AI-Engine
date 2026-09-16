@@ -482,16 +482,13 @@ async function applyAllDevfreqSettings(applyBtn, statusEl, modal) {
 
 // Detect devfreq nodes NOT matching the primary filter
 async function detectOtherDevfreqNodes() {
-    const cmd = `for dev in /sys/class/devfreq/*; do
-        [ -d "$dev" ] || continue
-        name=$(basename "$dev")
-        if [[ "$name" == *"mem"* ]] || [[ "$name" == *"dvfs"* ]] || [[ "$name" == *"dmc"* ]] || [[ "$name" == *"gpu"* ]] || [[ "$name" == *"gpubw"* ]]; then
-            continue
-        fi
-        if [ -f "$dev/available_frequencies" ] && [ -f "$dev/min_freq" ] && [ -f "$dev/max_freq" ]; then
-            echo "$dev"
-        fi
-    done`;
+    const cmd = `find /sys -type d -path "*/devfreq/*" 2>/dev/null \\
+        ! -name "*mem*" ! -name "*dvfs*" ! -name "*dmc*" ! -name "*gpu*" ! -name "*gpubw*" \\
+        | while read -r dev; do
+            if [ -f "$dev/available_frequencies" ] && [ -f "$dev/min_freq" ] && [ -f "$dev/max_freq" ]; then
+                echo "$dev"
+            fi
+        done`;
     const result = (await execFn(cmd, 3000)).trim();
     const paths = result.split('\n').filter(p => p.length > 0);
     otherDevfreqNodes = [];
