@@ -153,8 +153,8 @@ for param in \
   "kernel.sched_energy_aware=1" \
   "kernel.sched_child_runs_first=0"
 do
-    # Fixed syntax: removed trailing spaces, fixed redirection, fixed OR operator
-    sysctl -w "$param" > /dev/null 2>&1 || echo "^^^ FAILED: $param"
+    # Added || true at the end to force a successful exit code and prevent script halting
+    sysctl -w "$param" > /dev/null 2>&1 || echo "^^^ FAILED: $param" || true
 done
 fi
 
