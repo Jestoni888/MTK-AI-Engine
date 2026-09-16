@@ -688,7 +688,7 @@ function showOtherDevfreqModal() {
     header.style.cssText = 'text-align:center;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.08);';
     header.innerHTML = `
         <h3 style="color:#f59e0b;margin:0 0 4px;font-size:19px;font-weight:600;">🔧 Other Devfreq Nodes</h3>
-        <p style="color:#7a82b0;font-size:12px;margin:0;">Frequency adjustment only (no governor)</p>
+        <p style="color:#7a82b0;font-size:12px;margin:0;">Frequency adjustment only (‼️Setting to higher frequency will put in maximum performance state with a costs of OVERHEATING🔥)</p>
     `;
     box.appendChild(header);
 
