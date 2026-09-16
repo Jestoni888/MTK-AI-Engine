@@ -63,6 +63,7 @@ webroot/freeze.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/ref
 webroot/front.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/front.js
 webroot/gmsdoze.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/gmsdoze.js
 webroot/gpu.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/gpu.js
+webroot/devfreq.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/devfreq.js
 webroot/iotweaks.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/iotweaks.js
 webroot/mtk_ai_engine.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/mtk_ai_engine.js
 webroot/spoof.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/spoof.js
