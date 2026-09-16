@@ -120,6 +120,7 @@ webroot/freeze.js
 webroot/front.js
 webroot/gmsdoze.js
 webroot/gpu.js
+webroot/devfreq.js
 webroot/iotweaks.js
 webroot/mtk_ai_engine.js
 webroot/spoof.js
