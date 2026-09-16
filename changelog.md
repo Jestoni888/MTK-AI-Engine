@@ -1,3 +1,7 @@
+--- version 0.0.1.15 ---
+
+•Added global devfreq setup in advance tab, this will use as fallback method if no config on per-app
+
 --- version 0.0.1.14 ---
 
 •Remove floating ai button as it causes Webui longer loading times
