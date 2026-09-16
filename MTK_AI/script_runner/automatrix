@@ -41,6 +41,6 @@ else
     log_msg "Fast reboot flag not found, skipping"
 fi
 
-if [ -f "/dev/freeze/frozen/$pkg" ]; then
+if [ -f "/sdcard/MTK_AI_Engine/freeze/$pkg" ]; then
     pm suspend "$pkg" 2>/dev/null
 fi
