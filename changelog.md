@@ -1,5 +1,7 @@
 --- version 0.0.1.15 ---
 
+•Added other nodes on devfreq frequency adjustment in advance section but no governor include because it will cause some issues on other devices or roms (driver specific)
+
 •Added global devfreq setup in advance tab, this will use as fallback method if no config on per-app
 
 ⚠️if no popup UI after you clicked devfreq settings then use manual method by clicking action in module section to update again
