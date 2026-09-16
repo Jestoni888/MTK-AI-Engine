@@ -2,6 +2,8 @@
 
 •Added global devfreq setup in advance tab, this will use as fallback method if no config on per-app
 
+⚠️if no popup UI after you clicked devfreq settings then click action in module section to update again
+
 --- version 0.0.1.14 ---
 
 •Remove floating ai button as it causes Webui longer loading times
