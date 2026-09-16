@@ -2,7 +2,7 @@
 (function() {
 'use strict';
 const CONFIG_FILE = '/sdcard/MTK_AI_Engine/freeze.conf';
-const FROZEN_DIR = '/dev/freeze/frozen';
+const FROZEN_DIR = '/sdcard/MTK_AI_Engine/freeze';
 const THAW_DIR = '/dev/freeze/thaw';
 let frozenPackages = {};
 let detectedApps = [];
