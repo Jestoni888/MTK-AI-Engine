@@ -80,23 +80,19 @@ function showStatus(msg, isError = false) {
 // Target devfreq node based on your specified target name filter
 async function detectDevfreqNode() {
     const findCmd = `
-        for dev in /sys/class/devfreq/*; do
-            [ -d "$dev" ] || continue
-            name=$(basename "$dev")
-            if [[ "$name" == *"mem"* ]] || [[ "$name" == *"dvfs"* ]] || [[ "$name" == *"dmc"* ]] || [[ "$name" == *"gpu"* ]] || [[ "$name" == *"gpubw"* ]]; then
+        find /sys -type d -path "*/devfreq/*" \\
+        \\( -name "*mem*" -o -name "*dvfs*" -o -name "*dmc*" -o -name "*gpu*" -o -name "*gpubw*" \\) \\
+        2>/dev/null | while read -r dev; do
+            if [ -f "$dev/available_frequencies" ] && [ -f "$dev/min_freq" ] && [ -f "$dev/max_freq" ]; then
                 echo "$dev"
-                break
             fi
         done
     `;
 
+    // Execute the find command and trim whitespace/newlines
     let matchedPath = (await execFn(findCmd, 2000)).trim();
 
-    // Fallback: pick the first available node if filter returns empty
-    if (!matchedPath) {
-        matchedPath = (await execFn('ls -d /sys/class/devfreq/* 2>/dev/null | head -n 1', 1000)).trim();
-    }
-
+    // Only assign paths if a valid match was found (no fallback)
     if (matchedPath) {
         DEVFREQ_PATHS.base = matchedPath;
         DEVFREQ_PATHS.governor = `${matchedPath}/governor`;
@@ -482,13 +478,13 @@ async function applyAllDevfreqSettings(applyBtn, statusEl, modal) {
 
 // Detect devfreq nodes NOT matching the primary filter
 async function detectOtherDevfreqNodes() {
-    const cmd = `find /sys -type d -path "*/devfreq/*" 2>/dev/null \\
-        ! -name "*mem*" ! -name "*dvfs*" ! -name "*dmc*" ! -name "*gpu*" ! -name "*gpubw*" \\
-        | while read -r dev; do
-            if [ -f "$dev/available_frequencies" ] && [ -f "$dev/min_freq" ] && [ -f "$dev/max_freq" ]; then
-                echo "$dev"
-            fi
-        done`;
+    const cmd = `find /sys -type d -path "*/devfreq/*" \
+    ! -name "*mem*" ! -name "*dvfs*" ! -name "*dmc*" ! -name "*gpu*" ! -name "*gpubw*" \
+    2>/dev/null | while read -r dev; do
+        if [ -f "$dev/available_frequencies" ] && [ -f "$dev/min_freq" ] && [ -f "$dev/max_freq" ]; then
+            echo "$dev"
+        fi
+    done`;
     const result = (await execFn(cmd, 3000)).trim();
     const paths = result.split('\n').filter(p => p.length > 0);
     otherDevfreqNodes = [];
