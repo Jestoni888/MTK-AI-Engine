@@ -340,10 +340,6 @@ run_cmd() {
         pkill -f "trim_memory" 2>/dev/null
     fi
 
-    if [ -f "$EXTERNAL_CFG/ai_mode" ]; then
-        nohup sh "$AI_MODE" 2>&1 &
-    fi
-
     if [ -f "$EXTERNAL_CFG/enable_bypass" ] && [ -f "/dev/.mtk_ai_active_game" ]; then
         pgrep -f "bypass_on" > /dev/null || nohup sh "$BYPASS_ON" 2>&1 &
     else
