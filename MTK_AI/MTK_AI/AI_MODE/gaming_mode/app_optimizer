@@ -167,23 +167,15 @@ cmd thermalservice override-status 1 2>/dev/null
 # Prevent FPS going down
 cmd display set-match-content-frame-rate-pref 0
 
-# Lock other devfreq nodes frequency to maximum
+# Lock other devfreq nodes to max
 for dev in /sys/class/devfreq/*; do
     [ -d "$dev" ] || continue
     name=$(basename "$dev")
-    
-    # Skip main nodes (mem/gpu/dvfs/dmc/gpubw)
     case "$name" in *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) continue ;; esac
-    
-    # Get max frequency (last value in available_frequencies)
     max_freq=$(awk '{print $NF}' "$dev/available_frequencies" 2>/dev/null)
     [ -z "$max_freq" ] && continue
-    
-    # Lock to max
     echo "$max_freq" > "$dev/min_freq" 2>/dev/null
     echo "$max_freq" > "$dev/max_freq" 2>/dev/null
-    
-    echo "🔒 $name → ${max_freq}Hz"
 done
 
 #External Scripts
