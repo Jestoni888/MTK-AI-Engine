@@ -16,6 +16,7 @@
 Devfreq acts as the data highway governor. If your CPU or GPU is running at max frequency but devfreq is running at low power, the system creates a memory bandwidth bottleneck—causing frame drops, micro-stuttering, or thermal throttling while waiting for RAM operations to catch up.
 
 command to check: 
+
 find /sys -type d -path "*/devfreq/*" 2>/dev/null | while read -r dev; do
     echo "Node: $(basename "$dev")"
     echo " Governor: $(cat "$dev/governor" 2>/dev/null)"
