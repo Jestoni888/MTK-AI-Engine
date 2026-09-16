@@ -171,7 +171,7 @@ cmd display set-match-content-frame-rate-pref 0
 for dev in /sys/class/devfreq/*; do
     [ -d "$dev" ] || continue
     name=$(basename "$dev")
-    case "$name" in *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) continue ;; esac
+    case "$name" in *mem*|*dvfs*|*dmc*|*gpu*|*mali*|*gpubw*) continue ;; esac
     max_freq=$(awk '{print $NF}' "$dev/available_frequencies" 2>/dev/null)
     [ -z "$max_freq" ] && continue
     echo "$max_freq" > "$dev/min_freq" 2>/dev/null
