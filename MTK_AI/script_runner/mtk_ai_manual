@@ -245,12 +245,6 @@ find "$CONFIG_DIR" -type f -size +50k | while read -r file; do
     head -c $LIMIT_BYTES "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
 done
 
-if [ -f "/dev/.mtk_ai_active_game" ]; then
-nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer" >/dev/null 2>&1 &
-else
-nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_prop" >/dev/null 2>&1 &
-fi
-
 OUT="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/stock_tweaks.sh"
 thermal() {
     # 1. Safely ensure the directory and file exist without modifying existing content
