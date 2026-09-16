@@ -15,7 +15,7 @@ fi
 # Save the current script's PID for the next run to find
 echo $$ > "$PID_FILE"
 # ==========================================
-
+. /data/adb/modules/MTK_AI/script_runner/automatrix
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 
 log_msg() {
@@ -29,6 +29,7 @@ SDCARD="/sdcard/MTK_AI_Engine"
 BB="/data/adb/modules/MTK_AI/busybox"
 SAVE_DIR="$SDCARD/cooldown_values"
 
+devfreq_nodes
 # ==============================
 # unsuspend background apps
 # ==============================
