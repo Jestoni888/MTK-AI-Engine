@@ -2,7 +2,7 @@
 
 •Added global devfreq setup in advance tab, this will use as fallback method if no config on per-app
 
-⚠️if no popup UI after you clicked devfreq settings then click action in module section to update again
+⚠️if no popup UI after you clicked devfreq settings then use manual method by clicking action in module section to update again
 
 --- version 0.0.1.14 ---
 
