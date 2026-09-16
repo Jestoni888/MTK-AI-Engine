@@ -1,5 +1,7 @@
 --- version 0.0.1.14 ---
 
+•Remove floating ai button as it causes Webui longer loading times
+
 •Vsync & Voltage offset on per-app replaced by Devfreq Governor & min-max frequencies 
 
 💡What is devfreq?
