@@ -17,7 +17,10 @@ let availableGovernors = [];
 let hardwareMinFreq = null;
 let hardwareMaxFreq = null;
 let isApplying = false;
-
+// === Other Devfreq Nodes (SoC / BW / misc) ===
+const OTHER_CONFIG_FILE = `${BASE_DIR}/devfreq_other_config.json`;
+let otherDevfreqNodes = [];   // [{path, name, availableFrequencies, minFreq, maxFreq}, ...]
+let otherNodesConfig = {};    // { nodeName: { minFreq, maxFreq } }
 // Devfreq node paths
 const DEVFREQ_PATHS = {
     base: null,
@@ -477,6 +480,376 @@ async function applyAllDevfreqSettings(applyBtn, statusEl, modal) {
     }
 }
 
+// Detect devfreq nodes NOT matching the primary filter
+async function detectOtherDevfreqNodes() {
+    const cmd = `for dev in /sys/class/devfreq/*; do
+        [ -d "$dev" ] || continue
+        name=$(basename "$dev")
+        if [[ "$name" == *"mem"* ]] || [[ "$name" == *"dvfs"* ]] || [[ "$name" == *"dmc"* ]] || [[ "$name" == *"gpu"* ]] || [[ "$name" == *"gpubw"* ]]; then
+            continue
+        fi
+        if [ -f "$dev/available_frequencies" ] && [ -f "$dev/min_freq" ] && [ -f "$dev/max_freq" ]; then
+            echo "$dev"
+        fi
+    done`;
+    const result = (await execFn(cmd, 3000)).trim();
+    const paths = result.split('\n').filter(p => p.length > 0);
+    otherDevfreqNodes = [];
+    for (const path of paths) {
+        const name = path.split('/').pop();
+        const raw = await execFn(`cat ${path}/available_frequencies 2>/dev/null`, 1000);
+        const freqs = raw.trim().split(/\s+/)
+            .map(f => Math.round(parseInt(f) / 1000))
+            .filter(f => !isNaN(f) && f > 0);
+        const uniqueFreqs = Array.from(new Set(freqs)).sort((a, b) => a - b);
+        if (uniqueFreqs.length === 0) continue;
+        otherDevfreqNodes.push({
+            path,
+            name,
+            availableFrequencies: uniqueFreqs,
+            minFreq: uniqueFreqs[0],
+            maxFreq: uniqueFreqs[uniqueFreqs.length - 1]
+        });
+    }
+    console.log(`🔧 Found ${otherDevfreqNodes.length} other devfreq node(s)`);
+}
+
+async function loadOtherNodesConfig() {
+    try {
+        const raw = await execFn(`cat ${OTHER_CONFIG_FILE} 2>/dev/null`, 1000);
+        if (raw.trim()) {
+            otherNodesConfig = JSON.parse(raw.trim());
+            for (const node of otherDevfreqNodes) {
+                const saved = otherNodesConfig[node.name];
+                if (!saved) continue;
+                if (node.availableFrequencies.includes(saved.minFreq)) node.minFreq = saved.minFreq;
+                if (node.availableFrequencies.includes(saved.maxFreq)) node.maxFreq = saved.maxFreq;
+            }
+            return true;
+        }
+    } catch (e) {
+        console.log('No saved other-devfreq config found.');
+    }
+    return false;
+}
+
+async function saveOtherNodesConfig() {
+    try {
+        const configToSave = {};
+        for (const node of otherDevfreqNodes) {
+            configToSave[node.name] = { minFreq: node.minFreq, maxFreq: node.maxFreq };
+        }
+        const jsonStr = JSON.stringify(configToSave, null, 2);
+        await execFn(`mkdir -p ${BASE_DIR} && echo '${jsonStr}' > ${OTHER_CONFIG_FILE}`, 2000);
+        return true;
+    } catch (e) {
+        console.error('Failed to save other config', e);
+        return false;
+    }
+}
+
+async function applyOtherNodeSettings(nodeName) {
+    const node = otherDevfreqNodes.find(n => n.name === nodeName);
+    if (!node) return false;
+    try {
+        const minHz = node.minFreq * 1000;
+        const maxHz = node.maxFreq * 1000;
+        await execFn(`su -c "echo ${minHz} > ${node.path}/min_freq"`, 2000);
+        await execFn(`su -c "echo ${maxHz} > ${node.path}/max_freq"`, 2000);
+        return true;
+    } catch (e) {
+        console.error(`Failed to apply ${nodeName}`, e);
+        return false;
+    }
+}
+
+async function applyAllOtherNodes() {
+    let success = 0;
+    for (const node of otherDevfreqNodes) {
+        if (await applyOtherNodeSettings(node.name)) success++;
+    }
+    await saveOtherNodesConfig();
+    return success;
+}
+
+function updateOtherCardDisplay() {
+    const valEl = document.querySelector('#other-devfreq-item .setting-value');
+    if (!valEl) return;
+    if (otherDevfreqNodes.length === 0) {
+        valEl.innerHTML = `No other nodes <i class="fas fa-chevron-right"></i>`;
+    } else {
+        const sample = otherDevfreqNodes.slice(0, 2).map(n => n.name.split(':')[0]).join(', ');
+        valEl.innerHTML = `${otherDevfreqNodes.length} node(s) • ${sample} <i class="fas fa-chevron-right"></i>`;
+    }
+}
+
+function createOtherDevfreqCard() {
+    const existingCard = document.getElementById('devfreq-item');
+    if (!existingCard) return;
+
+    const card = document.createElement('div');
+    card.id = 'other-devfreq-item';
+    card.className = existingCard.className;
+    card.style.cssText = existingCard.style.cssText || '';
+    card.innerHTML = `
+        <div class="setting-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+            <i class="fas fa-microchip"></i>
+        </div>
+        <div class="setting-info" style="flex:1;">
+            <div class="setting-title">Other Devfreq Nodes</div>
+            <div class="setting-desc">SoC, bandwidth & misc frequency control</div>
+        </div>
+        <div class="setting-value" style="color:#f59e0b;font-size:12px;font-weight:500;">
+            Loading... <i class="fas fa-chevron-right"></i>
+        </div>
+    `;
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', showOtherDevfreqModal);
+    existingCard.parentNode.insertBefore(card, existingCard.nextSibling);
+}
+
+function showOtherDevfreqModal() {
+    const existing = document.getElementById('other-devfreq-modal');
+    if (existing) existing.remove();
+
+    if (otherDevfreqNodes.length === 0) {
+        showStatus('⚠️ No other devfreq nodes detected', true);
+        return;
+    }
+    
+    if (!document.getElementById('other-slider-style')) {
+    const style = document.createElement('style');
+    style.id = 'other-slider-style';
+    style.textContent = `
+        .other-slider {
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            width: 100%;
+            height: 30px; /* Larger invisible touch area */
+            background: transparent !important;
+            outline: none;
+            cursor: pointer;
+            margin: 0;
+        }
+        .other-slider::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, #374151, #4b5563);
+            border-radius: 3px;
+        }
+        .other-slider::-webkit-slider-thumb {
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #f59e0b;
+            margin-top: -9px; /* Perfectly centers thumb on track */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+            border: 2px solid #fff;
+        }
+        .other-slider::-moz-range-track {
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, #374151, #4b5563);
+            border-radius: 3px;
+        }
+        .other-slider::-moz-range-thumb {
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #f59e0b;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+    const modal = document.createElement('div');
+    modal.id = 'other-devfreq-modal';
+    modal.style.cssText = `
+        position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000;
+        display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(8px); animation: fadeIn 0.2s ease;
+    `;
+
+    const box = document.createElement('div');
+    box.style.cssText = `
+        background: linear-gradient(145deg, #1e2342, #2a3059);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        border-radius: 18px; padding: 22px;
+        width: 92%; max-width: 480px; max-height: 85vh; overflow-y: auto;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4); color: #fff;
+    `;
+
+    // Header
+    const header = document.createElement('div');
+    header.style.cssText = 'text-align:center;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.08);';
+    header.innerHTML = `
+        <h3 style="color:#f59e0b;margin:0 0 4px;font-size:19px;font-weight:600;">🔧 Other Devfreq Nodes</h3>
+        <p style="color:#7a82b0;font-size:12px;margin:0;">Frequency adjustment only (no governor)</p>
+    `;
+    box.appendChild(header);
+
+    // Nodes list
+    const nodesContainer = document.createElement('div');
+    otherDevfreqNodes.forEach((node, idx) => {
+        const minIdx = Math.max(0, node.availableFrequencies.indexOf(node.minFreq));
+        const maxIdx = node.availableFrequencies.indexOf(node.maxFreq);
+        const safeMax = maxIdx >= 0 ? maxIdx : node.availableFrequencies.length - 1;
+
+        const block = document.createElement('div');
+        block.style.cssText = `
+            margin-bottom:14px;padding:14px;
+            background:rgba(255,255,255,0.04);
+            border:1px solid rgba(245,158,11,0.15);
+            border-radius:12px;
+        `;
+        block.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <span style="color:#f59e0b;font-size:14px;font-weight:600;">📍 ${node.name}</span>
+                <span style="color:#94a3b8;font-size:11px;">${node.availableFrequencies[0]}–${node.availableFrequencies[node.availableFrequencies.length-1]} MHz</span>
+            </div>
+            <div style="margin-bottom:10px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="color:#fff;font-size:12px;">Min</span>
+                    <span id="other-min-val-${idx}" style="color:#6366f1;font-size:13px;font-weight:700;">${node.availableFrequencies[minIdx]} MHz</span>
+                </div>
+                <input type="range" class="other-slider" id="other-min-slider-${idx}" min="0" max="${node.availableFrequencies.length - 1}" step="1" value="${minIdx}">
+            </div>
+            <div style="margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="color:#fff;font-size:12px;">Max</span>
+                    <span id="other-max-val-${idx}" style="color:#ef4444;font-size:13px;font-weight:700;">${node.availableFrequencies[safeMax]} MHz</span>
+                </div>
+                <input type="range" class="other-slider" id="other-max-slider-${idx}" min="0" max="${node.availableFrequencies.length - 1}" step="1" value="${safeMax}">
+            </div>
+            <button class="other-apply-btn" data-idx="${idx}" style="
+                width:100%;padding:9px;
+                background:linear-gradient(135deg,#f59e0b,#d97706);
+                color:#fff;border:none;border-radius:8px;
+                font-size:12px;font-weight:600;cursor:pointer;
+            ">Apply ${node.name}</button>
+        `;
+        nodesContainer.appendChild(block);
+    });
+    box.appendChild(nodesContainer);
+
+    // Status
+    const statusEl = document.createElement('div');
+    statusEl.id = 'other-status-msg';
+    statusEl.style.cssText = 'text-align:center;font-size:12px;color:#9ca3af;margin:12px 0;min-height:18px;';
+    statusEl.textContent = 'Adjust sliders and apply per node';
+    box.appendChild(statusEl);
+
+    // Apply All
+    const applyAllBtn = document.createElement('button');
+    applyAllBtn.textContent = '💾 Apply All & Save';
+    applyAllBtn.style.cssText = `
+        width:100%;padding:12px;margin-bottom:10px;
+        background:linear-gradient(135deg,#f59e0b,#d97706);
+        color:#fff;border:none;border-radius:12px;
+        font-size:14px;font-weight:600;cursor:pointer;
+    `;
+    applyAllBtn.onclick = async () => {
+        otherDevfreqNodes.forEach((node, idx) => {
+            const minI = parseInt(document.getElementById(`other-min-slider-${idx}`).value);
+            const maxI = parseInt(document.getElementById(`other-max-slider-${idx}`).value);
+            node.minFreq = node.availableFrequencies[minI];
+            node.maxFreq = node.availableFrequencies[maxI];
+        });
+        applyAllBtn.disabled = true;
+        applyAllBtn.textContent = '⏳ Applying...';
+        const success = await applyAllOtherNodes();
+        statusEl.textContent = `✅ Applied ${success}/${otherDevfreqNodes.length} nodes & saved`;
+        statusEl.style.color = '#10b981';
+        applyAllBtn.disabled = false;
+        applyAllBtn.textContent = '💾 Apply All & Save';
+        updateOtherCardDisplay();
+        setTimeout(() => {
+            modal.style.opacity = '0';
+            setTimeout(() => modal.remove(), 150);
+        }, 800);
+    };
+    box.appendChild(applyAllBtn);
+
+    // Cancel
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = `
+        width:100%;padding:10px;background:rgba(255,255,255,0.08);color:#fff;
+        border:1px solid rgba(255,255,255,0.12);border-radius:10px;
+        font-size:13px;cursor:pointer;
+    `;
+    cancelBtn.onclick = () => {
+        modal.style.opacity = '0';
+        setTimeout(() => modal.remove(), 150);
+    };
+    box.appendChild(cancelBtn);
+
+    modal.appendChild(box);
+    document.body.appendChild(modal);
+
+    // === FIXED SLIDER EVENT BINDING ===
+otherDevfreqNodes.forEach((node, idx) => {
+    const minSlider = document.getElementById(`other-min-slider-${idx}`);
+    const maxSlider = document.getElementById(`other-max-slider-${idx}`);
+    const minVal = document.getElementById(`other-min-val-${idx}`);
+    const maxVal = document.getElementById(`other-max-val-${idx}`);
+
+    // Clean handlers (NO preventDefault!)
+    const handleMinInput = () => {
+        let minI = parseInt(minSlider.value);
+        let maxI = parseInt(maxSlider.value);
+        if (minI > maxI) {
+            maxSlider.value = minI;
+            maxVal.textContent = `${node.availableFrequencies[minI]} MHz`;
+        }
+        minVal.textContent = `${node.availableFrequencies[minI]} MHz`;
+    };
+
+    const handleMaxInput = () => {
+        let maxI = parseInt(maxSlider.value);
+        let minI = parseInt(minSlider.value);
+        if (maxI < minI) {
+            minSlider.value = maxI;
+            minVal.textContent = `${node.availableFrequencies[maxI]} MHz`;
+        }
+        maxVal.textContent = `${node.availableFrequencies[maxI]} MHz`;
+    };
+
+    // ONLY use 'input' event. It handles both mouse and touch dragging natively.
+    minSlider.addEventListener('input', handleMinInput);
+    maxSlider.addEventListener('input', handleMaxInput);
+
+    // Apply button handler
+    const applyBtn = nodesContainer.querySelectorAll('.other-apply-btn')[idx];
+    if (applyBtn) {
+        applyBtn.onclick = async () => {
+            node.minFreq = node.availableFrequencies[parseInt(minSlider.value)];
+            node.maxFreq = node.availableFrequencies[parseInt(maxSlider.value)];
+            applyBtn.disabled = true;
+            applyBtn.textContent = '⏳ Applying...';
+            const ok = await applyOtherNodeSettings(node.name);
+            await saveOtherNodesConfig();
+            applyBtn.disabled = false;
+            applyBtn.textContent = `Apply ${node.name}`;
+            statusEl.textContent = ok ? `✅ ${node.name} applied & saved` : `❌ ${node.name} failed`;
+            statusEl.style.color = ok ? '#10b981' : '#ef4444';
+            updateOtherCardDisplay();
+        };
+    }
+});
+
+modal.onclick = e => {
+    if (e.target === modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => modal.remove(), 150);
+    }
+};
+}
+
 async function init() {
     console.log('⚡ Initializing Devfreq Global Manager...');
     await detectDevfreqNode();
@@ -485,6 +858,13 @@ async function init() {
     await loadGlobalConfig();
     updateCardDisplay();
     bindClickHandler();
+
+    // === NEW: Other devfreq nodes ===
+    await detectOtherDevfreqNodes();
+    await loadOtherNodesConfig();
+    createOtherDevfreqCard();
+    updateOtherCardDisplay();
+
     console.log('✅ Devfreq Global Manager ready');
 }
 
@@ -494,7 +874,12 @@ window.DevfreqManager = {
     loadGlobalConfig,
     saveGlobalConfig,
     applySysfsSettings,
-    getConfig: () => currentConfig
+    getConfig: () => currentConfig,
+    // NEW
+    getOtherNodes: () => otherDevfreqNodes,
+    showOtherDevfreqModal,
+    applyAllOtherNodes,
+    saveOtherNodesConfig
 };
 
 if (document.readyState === 'loading') {
