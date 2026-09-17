@@ -2,6 +2,8 @@
 
 •Added anti-bootloop via script (post-fs-data.sh) if you're in bootloop just spam power button & it will disables all modules
 
+😌 Of course this module still no need reboot just enable module then open Webui then click services choose any of 3 daemons
+
 --- version 0.0.1.15 ---
 
 •Added other nodes on devfreq frequency adjustment in advance section but no governor include because it will cause some issues on other devices or roms (driver specific)
