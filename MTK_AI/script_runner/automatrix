@@ -90,3 +90,15 @@ devfreq_nodes() {
 }
 
 devfreq_nodes
+
+battery_saver() {
+for f in "enabled true" "vibration_disabled true" "animation_disabled true" \
+  "launch_boost_disabled true" "aod_disabled true" "datasaver true" \
+  "force_all_apps_standby true" "quick_doze_enabled true" \
+  "soundtrigger_disabled true" "optional_sensors_disabled true" \
+  "gps_mode 3" "adjust_brightness_factor 0.5"; do
+  device_config put battery_saver $f
+done
+}
+
+battery_saver
