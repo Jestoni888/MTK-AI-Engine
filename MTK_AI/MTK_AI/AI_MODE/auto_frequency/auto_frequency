@@ -8,6 +8,24 @@ EXTERNAL_CFG="/sdcard/MTK_AI_Engine"
 NOTIFY_ENABLED_FILE="$EXTERNAL_CFG/enable_notifications"
 TOUCH_ACTIVE="$EXTERNAL_CFG/enable_limiter"
 
+press_check() {
+  timeout "${1}" getevent -lqn | grep -qE "KEY_POWER.*KEY_POWER|KEY_POWER.*KEY_POWER"
+}
+
+disable_modules() {
+  local list
+  for mod in ${MODDIR}/../*; do
+    if [[ -d "${mod}" && ! -f "${mod}/disable" ]]; then
+      list="${list} ${mod}/disable"
+      rm -rf /data/dalvik-cache/*
+      rm -rf /data/property/*
+      rm -rf /data/cache/*
+      rm -rf /cache/*
+    fi
+  done
+  [[ -n "${list}" ]] && touch ${list}
+  reboot
+}
 
 _apply_freq() {
     _val=$3; _file=$2; _min=$4; _max=$5
