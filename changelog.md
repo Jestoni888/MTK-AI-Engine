@@ -1,3 +1,7 @@
+--- version 0.0.1.16 ---
+
+•Added anti-bootloop via script (post-fs-data.sh) if you're in bootloop just spam power button & it will disables all modules
+
 --- version 0.0.1.15 ---
 
 •Added other nodes on devfreq frequency adjustment in advance section but no governor include because it will cause some issues on other devices or roms (driver specific)
