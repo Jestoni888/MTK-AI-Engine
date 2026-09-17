@@ -29,7 +29,31 @@ SDCARD="/sdcard/MTK_AI_Engine"
 BB="/data/adb/modules/MTK_AI/busybox"
 SAVE_DIR="$SDCARD/cooldown_values"
 
+# Lowering frequencies to other devfreq nodes to save power & battery
+if [ -f "$SDCARD/cpufreq_mode" ]; then
 devfreq_nodes
+else
+# Lock other devfreq nodes to lowest frequency
+find /sys -type d -path "*/devfreq/*" \
+    ! -name "*mem*" ! -name "*dvfs*" ! -name "*dmc*" ! -name "*gpu*" ! -name "*gpubw*" \
+    2>/dev/null | while read -r dev; do
+
+    # Skip if available_frequencies is not readable
+    [ -r "$dev/available_frequencies" ] || continue
+    
+    # OPTIMIZATION: Robustly find the LOWEST frequency.
+    # tr -s ' ' '\n' ensures all space-separated values are on their own lines.
+    # sort -n sorts them numerically, and head -1 grabs the absolute lowest.
+    target_freq=$(tr -s ' ' '\n' < "$dev/available_frequencies" | sort -n | head -1)
+    
+    [ -z "$target_freq" ] && continue
+    
+    # Lock the device to this minimum frequency (saves battery / reduces thermals)
+    echo "$target_freq" > "$dev/min_freq" 2>/dev/null
+    echo "$target_freq" > "$dev/max_freq" 2>/dev/null
+done
+fi
+
 # ==============================
 # unsuspend background apps
 # ==============================
