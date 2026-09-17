@@ -195,9 +195,14 @@ force_kill_cgroup_safe() {
         cmd activity set-inactive "$pkg" true >/dev/null 2>&1 || true
         # 4. Apply deep background restriction
         cmd activity set-bg-restriction-level "$pkg" background_restricted >/dev/null 2>&1 || true
-        
+        cmd netpolicy set-app-policy "$pkg" restrict_background >/dev/null 2>&1 || true
+        dumpsys deviceidle whitelist -"$pkg" >/dev/null 2>&1 || true
+        cmd appops set "$pkg" WAKE_LOCK ignore
         # 5. Compact process memory & hibernate
         cmd activity compact full "$pid" 2>&1 || true
+        cmd appops set "$pkg" ACCESS_FINE_LOCATION deny 2>&1 || true
+        cmd appops set "$pkg" ACCESS_COARSE_LOCATION deny 2>&1 || true
+        cmd appops set "$pkg" VIBRATE ignore 2>&1 || true
         cmd app_hibernation set-state --user 0 --global $pkg true >/dev/null 2>&1 || true
         cmd appops set $pkg RUN_IN_BACKGROUND ignore 2>/dev/null
         cmd appops set $pkg RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
