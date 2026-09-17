@@ -35,6 +35,15 @@ setprop persist.sys.foreground_boost 1
 # Prevent FPS going down
 cmd display set-match-content-frame-rate-pref 0
 
+# Disable powersave mode (Config from Automatrix)
+for f in "enabled false" "vibration_disabled false" "animation_disabled false" \
+  "launch_boost_disabled false" "aod_disabled false" "datasaver false" \
+  "force_all_apps_standby false" "quick_doze_enabled false" \
+  "soundtrigger_disabled false" "optional_sensors_disabled false" \
+  "gps_mode 0" "adjust_brightness_factor 1.0"; do
+  device_config put battery_saver $f
+done
+
 # Powermode
 cmd power set-mode 0 true
 settings put global low_power 0
