@@ -96,6 +96,10 @@ if [ -f "$SDCARD/enable_dnd_during_game" ]; then
     cmd notification set_dnd off
 fi
 
+# Powersaver
+settings put global low_power 1
+battery_saver
+
 #Powermode
 setprop 'persist.sys.power_mode_perf' '0' || true
 setprop 'persist.sys.perf_boost_enabled' '0' || true
