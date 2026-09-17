@@ -1,32 +1,13 @@
 #!/system/bin/sh
-# MTK AI Engine - Background Update Checker (Exact SHA256 Validation)
-# Replicates original JS logic: checks existence + SHA256 for text files
-# POSIX-compliant, uses temp files to avoid shell variable hashing errors
-### === SINGLE INSTANCE LOCK ===
-LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
-mkdir -p "$LOCK_DIR"
-LOCK_FILE="$LOCK_DIR/update_checker.pid"
 
-# 1️⃣ Global pgrep check FIRST
-if pgrep -f "update_checker.sh" | grep -v "^$$" > /dev/null 2>&1; then
-    exit 0
-else
-    rm -rf "$LOCK_DIR"
-fi
+SCRIPT_PATH="/data/adb/modules/MTK_AI/update_checker.sh"
 
-# 2️⃣ If PID file exists and process is alive → exit silently
-if [ -f "$LOCK_FILE" ]; then
-    OLD_PID=$(cat "$LOCK_FILE" 2>/dev/null)
-    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        exit 0
+for pid in $(pgrep -f "$SCRIPT_PATH"); do
+    # Kill all instances except the current running script ($$)
+    if [ "$pid" != "$$" ]; then
+        kill -9 "$pid" 2>/dev/null
     fi
-fi
-
-# 3️⃣ Register current process as the single instance
-mkdir -p "$LOCK_DIR"
-echo $$ > "$LOCK_FILE"
-trap 'rm -f "$LOCK_FILE"' EXIT
-### ============================
+done
 
 MODDIR="/data/adb/modules/MTK_AI"
 BUSYBOX="${MODDIR}/busybox"
