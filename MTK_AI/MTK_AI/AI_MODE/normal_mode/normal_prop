@@ -87,6 +87,7 @@ setprop 'vendor.performance.gbe' '0' || true
 settings put global 'sustained_performance_mode_enabled' '0'
 settings put system persist.sys.power_mode_perf 0 2>/dev/null || true
 cmd power set-mode 1
+cmd power set-adaptive-power-saver-enabled true
 su -c "cmd power set-fixed-performance-mode-enabled false" || true
 su -c "settings put global power_manager_constants fixed_performance_mode=false" || true
 
