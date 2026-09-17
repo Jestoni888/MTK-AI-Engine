@@ -19,12 +19,12 @@ done
 echo "" >> "$OUT"
 echo "# --- Current CPU Governor Backup ---" >> "$OUT"
 
-for cpu_path in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
-    if [ -f "$cpu_path" ]; then
-        governor=$(cat "$cpu_path" 2>/dev/null | xargs)
-        if [ -n "$governor" ]; then
-            echo "echo '${governor}' > ${cpu_path}" >> "$OUT"
-        fi
+find /sys/ -type f -name "scaling_governor" | while IFS= read -r cpu_path; do
+    # Use tr to safely strip newlines/spaces instead of xargs
+    governor=$(cat "$cpu_path" 2>/dev/null | tr -d '[:space:]')
+    
+    if [ -n "$governor" ]; then
+        echo "echo '${governor}' > ${cpu_path}" >> "$OUT"
     fi
 done
 
