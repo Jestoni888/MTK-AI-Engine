@@ -10,7 +10,6 @@ for pid in $(pgrep -f "$SCRIPT_PATH"); do
     fi
 done
 
-# Fallback to BusyBox sh if available for better POSIX compliance
 CONFIG_DIR="/sdcard/MTK_AI_Engine"
 CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
 LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
