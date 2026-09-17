@@ -31,6 +31,7 @@ SAVE_DIR="$SDCARD/cooldown_values"
 
 # Lowering frequencies to other devfreq nodes to save power & battery
 if [ -f "$SDCARD/cpufreq_mode" ]; then
+# Users config
 devfreq_nodes
 else
 # Lock other devfreq nodes to lowest frequency
