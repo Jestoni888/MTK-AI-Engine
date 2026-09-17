@@ -37,6 +37,7 @@ cmd display set-match-content-frame-rate-pref 0
 
 # Powermode
 cmd power set-mode 0 true
+settings put global low_power 0
 cmd performance_hint override 1
 cmd power set-adaptive-power-saver-enabled false
 cmd power set-fixed-performance-mode-enabled true
