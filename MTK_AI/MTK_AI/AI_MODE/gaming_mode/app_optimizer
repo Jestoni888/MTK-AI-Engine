@@ -200,6 +200,8 @@ cmd device_config put lmkd_native low_ram false
 cmd device_config override lmkd_native low_ram false
 cmd device_config put runtime_native_boot priority_boost_enabled true
 cmd device_config override runtime_native_boot priority_boost_enabled true
+cmd device_config put runtime_native_boot profilebootclasses true
+cmd device_config override runtime_native_boot profilebootclasses true
 
 # ==============================
 # 🗄️ I/O Scheduler & Read-Ahead
