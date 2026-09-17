@@ -189,6 +189,29 @@ find /sys -type d -path "*/devfreq/*" \
     echo "$target_freq" > "$dev/max_freq" 2>/dev/null
 done
 
+# -----------------------------------------------------------------
+# 1. GAME DRIVER, SURFACEFLINGER & APP OPTIMIZATION 
+# Force active Game Driver layer and maximize GPU pipelines
+# -----------------------------------------------------------------
+cmd device_config put game_driver game_driver_all_apps 1
+cmd device_config override game_driver game_driver_all_apps 1
+cmd device_config put game_driver enable_game_driver true
+cmd device_config put game_driver app_driver_opt_in true
+cmd device_config put gpu updatable_driver_production_opt_in_apps 1
+cmd device_config override gpu updatable_driver_production_opt_in_apps 1
+cmd device_config put surface_flinger_native_boot epoll_pwait true
+cmd device_config override surface_flinger_native_boot epoll_pwait true
+
+cmd device_config put surface_flinger_native_boot use_context_priority true
+cmd device_config override surface_flinger_native_boot use_context_priority true
+cmd device_config put mglru_native mglru_enabled true
+cmd device_config override mglru_native mglru_enabled true
+
+cmd device_config put lmkd_native low_ram false
+cmd device_config override lmkd_native low_ram false
+cmd device_config put runtime_native_boot priority_boost_enabled true
+cmd device_config override runtime_native_boot priority_boost_enabled true
+
 #External Scripts
 [ -f /sdcard/MTK_AI_Engine/enable_gaming_prop ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop || true
 [ -f /sdcard/MTK_AI_Engine/enable_gaming_prop2 ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 || true
