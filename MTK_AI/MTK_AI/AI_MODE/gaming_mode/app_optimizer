@@ -53,6 +53,11 @@ setprop persist.sys.thermal.mode 0
 setprop debug.sf.disable_client_composition_cache 1
 settings put global 'sustained_performance_mode_enabled' '1'
 
+# Elevate MediaTek PowerHAL / PerfService to maximum performance
+setprop persist.vendor.dpm.feature 1
+setprop vendor.powermode.state performance
+setprop persist.vendor.power.fps.boost 1
+
 # Disable Vsync
 if [ -f "$CONFIG_DIR/disable_vsync" ]; then
     setprop debug.hwui.disable_vsync true
