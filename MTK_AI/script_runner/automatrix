@@ -82,8 +82,8 @@ devfreq_nodes() {
             # find replaces the for loop + exact name match + break
             find /sys -type d -path "*/devfreq/*" \
                 -name "$n" 2>/dev/null | head -n 1 | while read -r d; do
-                echo "$((m*1000))" > "$d/min_freq" 2>/dev/null
                 echo "$((x*1000))" > "$d/max_freq" 2>/dev/null
+                echo "$((m*1000))" > "$d/min_freq" 2>/dev/null
             done
         done
     fi
