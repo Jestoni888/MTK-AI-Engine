@@ -32,11 +32,11 @@ log "📁 Module dir: $MODDIR"
 
 # === 2. Check internet using YOUR BUSYBOX ===
 has_internet() {
-if [ -x "$MODDIR/busybox" ]; then
-"$MODDIR/busybox" wget -q --timeout=5 -O /dev/null "1.1.1.1" 2>/dev/null
-return $?
-fi
-return 1
+    if [ -x "$MODDIR/busybox" ]; then
+        "$MODDIR/busybox" wget -q --timeout=30 --tries=10 -O /dev/null "1.1.1.1" 2>/dev/null
+        return $?
+    fi
+    return 1
 }
 
 # === 3. Required files list ===
