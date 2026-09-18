@@ -33,6 +33,7 @@ const scriptPaths = {
     cpufreq_mode: { on: null, off: null, isDaemon: false, critical: false },
     disable_vsync: { on: null, off: null, isDaemon: false, critical: false },
     sysctl_tweaks: { on: null, off: null, isDaemon: false, critical: false },
+    game_driver: { on: null, off: null, isDaemon: false, critical: false },
     disable_tap_to_rotate: { on: null, off: null, isDaemon: false, critical: false }
 };
 const toggleConfig = {
@@ -60,6 +61,7 @@ const toggleConfig = {
     enable_highframerate: { title:  "Unlock High FPS ", desc:  "Remove system-level FPS caps ", group:  "Gaming " },
     disable_vsync: { title:  "Disable Vsync ", desc:  "Disables VSync for the UI, allowing higher frame rates (can cause screen tearing, consumes more battery & overheating). Auto remove properties in normal mode ", group:  "Gaming " },
     sysctl_tweaks: { title:  "Sysctl tweaks ", desc:  "Enable custom sysctl tweaks (disable if you feel lag) ", group:  "Gaming " },
+    game_driver: { title:  "Game Driver ", desc:  "Enable Game driver to make game display perfectly sync but a costs of UI glitches sometimes", group:  "Gaming " },
     enable_disable_thermal: { title:  "Disable Thermals ", desc:  "Bypass thermal throttling (⚠️ Risk of overheating) ", group:  "Gaming " },
     enable_gaming_prop: { title:  "Gaming Properties ", desc:  "Apply gaming-specific system properties ", group:  "Gaming " },
     enable_dnd_during_game: { title:  "DND During Game ", desc:  "Auto-enable Do Not Disturb while gaming ", group:  "Gaming " },
