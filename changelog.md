@@ -1,5 +1,7 @@
 --- version 0.0.1.16 ---
 
+•Added Game driver to perfectly sync on display with no delays but a costs of UI glitches sometimes (toggleable in settings tab gaming section)
+
 •Added anti-bootloop via script (post-fs-data.sh) if you're in bootloop just spam power button & it will disables all modules
 
 😌 Of course this module still no need reboot just enable module then open Webui then click services choose any of 3 daemons
