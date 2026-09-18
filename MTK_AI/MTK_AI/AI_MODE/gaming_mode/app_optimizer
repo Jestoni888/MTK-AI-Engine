@@ -166,23 +166,20 @@ cmd thermalservice override-status 1 2>/dev/null
 cmd display set-match-content-frame-rate-pref 0
 
 # Lock other devfreq nodes to max
-find /sys -type d -path "*/devfreq/*" \
-    ! -name "*mem*" ! -name "*dvfs*" ! -name "*dmc*" ! -name "*gpu*" ! -name "*gpubw*" \
-    2>/dev/null | while read -r dev; do
-
-    # Skip if available_frequencies is not readable
+find /sys -type d -path "*/devfreq/*" 2>/dev/null | while read -r dev; do
     [ -r "$dev/available_frequencies" ] || continue
-    
-    # OPTIMIZATION: Robustly find the HIGHEST frequency.
-    # tr -s ' ' '\n' ensures all space-separated values are on their own lines.
-    # sort -n sorts them numerically, and tail -1 grabs the absolute highest.
-    target_freq=$(tr -s ' ' '\n' < "$dev/available_frequencies" | sort -n | tail -1)
+    target_freq=$(tr -s '[:space:]' '\n' < "$dev/available_frequencies" | grep -E '^[0-9]+$' | sort -n | tail -1)
     
     [ -z "$target_freq" ] && continue
     
-    # Lock the device to this maximum frequency for performance
-    echo "$target_freq" > "$dev/min_freq" 2>/dev/null
-    echo "$target_freq" > "$dev/max_freq" 2>/dev/null
+    if [ -w "$dev/max_freq" ]; then
+        echo "$target_freq" > "$dev/max_freq" 2>/dev/null
+    fi
+    
+    if [ -w "$dev/min_freq" ]; then
+        echo "$target_freq" > "$dev/min_freq" 2>/dev/null
+    fi
+    
 done
 
 # -----------------------------------------------------------------
