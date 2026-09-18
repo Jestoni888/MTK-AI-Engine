@@ -64,6 +64,17 @@ if [ -f "/sdcard/MTK_AI_Engine/suspend_bg" ]; then
     done
 fi
 
+# Revert Game Driver settings
+cmd device_config delete game_driver game_driver_all_apps
+cmd device_config delete game_driver enable_game_driver
+cmd device_config delete game_driver app_driver_opt_in
+
+# Revert Updatable GPU Driver settings
+cmd device_config delete gpu updatable_driver_production_opt_in_apps
+
+# Revert SurfaceFlinger Context Priority
+cmd device_config delete surface_flinger_native_boot use_context_priority
+
 # Remove Vsync
 su -c resetprop -d debug.hwui.disable_vsync 2>/dev/null
 cmd display set-match-content-frame-rate-pref 1
