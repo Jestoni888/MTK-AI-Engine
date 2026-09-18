@@ -165,19 +165,27 @@ cmd thermalservice override-status 1 2>/dev/null
 # Prevent FPS going down
 cmd display set-match-content-frame-rate-pref 0
 
-# Lock other devfreq nodes to max
-find /sys -type d -path "*/devfreq/*" 2>/dev/null | while read -r dev; do
-    [ -r "$dev/available_frequencies" ] || continue
-    target_freq=$(tr -s '[:space:]' '\n' < "$dev/available_frequencies" | grep -E '^[0-9]+$' | sort -n | tail -1)
-    
-    [ -z "$target_freq" ] && continue
-    
-    if [ -w "$dev/max_freq" ]; then
-        echo "$target_freq" > "$dev/max_freq" 2>/dev/null
+# Lock devfreq nodes to max
+find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r freq_file; do
+    dev="${freq_file%/*}"  
+    [ -r "$freq_file" ] || continue  
+    target_freq=$(tr -s '[:space:]' '\n' < "$freq_file" | grep -E '^[0-9]+$' | sort -n | tail -1)
+    [ -z "$target_freq" ] && continue   
+    is_userspace=false
+    if [ -r "$dev/governor" ]; then
+        if grep -q '\[userspace\]' "$dev/governor" 2>/dev/null; then
+            is_userspace=true
+        fi
     fi
-    
-    if [ -w "$dev/min_freq" ]; then
-        echo "$target_freq" > "$dev/min_freq" 2>/dev/null
+    if [ "$is_userspace" = true ] && [ -w "$dev/set_freq" ]; then
+        echo "$target_freq" > "$dev/set_freq" 2>/dev/null
+    else
+        if [ -w "$dev/max_freq" ]; then
+            echo "$target_freq" > "$dev/max_freq" 2>/dev/null
+        fi
+        if [ -w "$dev/min_freq" ]; then
+            echo "$target_freq" > "$dev/min_freq" 2>/dev/null
+        fi
     fi
     
 done
