@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MTK AI Engine - Live Manager</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="preload" href="front.js" as="script" fetchpriority="high">
+<link rel="preload" href="application.js" as="script" fetchpriority="high">
+<link rel="preload" href="mtk_ai_engine.js" as="script" fetchpriority="high">
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" fetchpriority="high">
+<script defer src="front.js"></script>
+<script defer src="application.js"></script>
+<script defer src="mtk_ai_engine.js"></script>
     <style>
         * {
             margin: 0;
@@ -2123,44 +2129,127 @@ Matches MTK AI Engine Theme
             <div class="nav-label">Settings</div>
         </div>
     </div>
+<script>
+(function () {
+  "use strict";
 
-    <!-- Your Script -->
-    <script src="mtk_ai_engine.js"></script>
-    <script src="application.js"></script>
-    <script src="front.js"></script>
-    <script src="update.js"></script>
-    <script src="profile.js"></script>
-    <script src="cpu.js"></script>
-    <script src="gpu.js"></script>
-    <script src="devfreq.js"></script>
-    <script src="refreshrate.js"></script>
-    <script src="boostcolor.js"></script>
-    <script src="resolutionscale.js"></script>
-    <script src="zram.js"></script>
-    <script src="ppmpolicy.js"></script>
-    <script src="eemvoltage.js"></script>
-    <script src="animationspeed.js"></script>
-    <script src="iotweaks.js"></script>
-    <script src="thermalzone.js"></script>    <script src="cputoggle.js"></script>
-    <script src="dex2oat.js"></script>
-    <script src="spoof.js"></script>
-    <script src="gmsdoze.js"></script>
-    <script src="freeze.js"></script>
-    <script src="fpsgo.js"></script>
-    <script src="dpiresolution.js"></script>
-    <script src="process.js"></script>
-    <script src="performancetest.js"></script>
-    <script src="maintenance.js"></script>
-    <script src="networktweak.js"></script>
-    <script src="terminalemulator.js"></script>
-    <script src="aicontrol.js"></script>
-    <script src="tweakfinder.js"></script>
-    <script src="modulemanager.js"></script>
-    <script src="renderer.js"></script>
-    <script src="cpuset.js"></script>
-    <script src="setedit.js"></script>
-    <script src="hibernator.js"></script>
-    <script src="wifi.js"></script>
+  const loadedScripts = new Set();
+  const loadingScripts = new Map();
+
+  function normalizeSrc(src) {
+    return String(src || "").trim();
+  }
+
+  function setHighPriority(script) {
+    try {
+      if ("fetchPriority" in script) {
+        script.fetchPriority = "high";
+      } else {
+        script.setAttribute("fetchpriority", "high");
+      }
+    } catch (e) {}
+  }
+
+  function loadScript(src) {
+    src = normalizeSrc(src);
+
+    if (!src) return Promise.resolve();
+    if (loadedScripts.has(src)) return Promise.resolve(src);
+    if (loadingScripts.has(src)) return loadingScripts.get(src);
+
+    const promise = new Promise(function (resolve, reject) {
+      let attempt = 0;
+
+      function tryLoad() {
+        attempt++;
+        const script = document.createElement("script");
+        
+        // Cache-buster on retries to prevent browser from failing on a cached error
+        script.src = attempt > 1 ? src + (src.includes("?") ? "&" : "?") + "retry=" + attempt : src;
+        script.async = false; // Maintain strict execution order (like defer without the wait)
+        setHighPriority(script);
+
+        script.onload = function () {
+          loadedScripts.add(src);
+          loadingScripts.delete(src);
+          resolve(src);
+        };
+
+        script.onerror = function () {
+          if (script.parentNode) script.parentNode.removeChild(script);
+          console.warn(`[MTK Priority Loader] Failed to load ${src}. Retrying... (Attempt ${attempt})`);
+          
+          // Yield to browser briefly before retrying to prevent main-thread freeze if offline
+          requestAnimationFrame(tryLoad);
+        };
+
+        const target = document.head || document.documentElement;
+        target.appendChild(script);
+      }
+
+      tryLoad();
+    });
+
+    loadingScripts.set(src, promise);
+    return promise;
+  }
+
+  async function loadScriptsEagerly(scripts) {
+    if (!scripts || scripts.length === 0) {
+      console.info("[MTK Priority Loader] No priority scripts found.");
+      document.dispatchEvent(new CustomEvent("mtk:priority-scripts-loaded"));
+      return;
+    }
+
+    console.log("[MTK Priority Loader] Loading priority scripts immediately:", scripts);
+
+    for (const src of scripts) {
+      try {
+        await loadScript(src); // Loads sequentially to guarantee dependency order
+      } catch (error) {
+        console.warn("[MTK Priority Loader]", error.message);
+      }
+    }
+
+    console.log("[MTK Priority Loader] All priority scripts loaded.");
+    document.dispatchEvent(new CustomEvent("mtk:priority-scripts-loaded"));
+  }
+
+  function collectPriorityScripts() {
+    // 1. Collect from data-priority-src attributes
+    const fromDataAttributes = Array.from(
+      document.querySelectorAll("script[data-priority-src]")
+    ).map(function (el) {
+      return normalizeSrc(el.getAttribute("data-priority-src"));
+    });
+
+    // 2. Collect from global configuration array
+    const fromGlobal = Array.isArray(window.MTK_PRIORITY_SCRIPTS)
+      ? window.MTK_PRIORITY_SCRIPTS.map(normalizeSrc)
+      : [];
+
+    const combined = [
+      ...fromDataAttributes,
+      ...fromGlobal
+    ];
+
+    // Deduplicate and filter out empty strings
+    return [...new Set(combined)].filter(Boolean);
+  }
+
+  function startPriorityLoading() {
+    const scripts = collectPriorityScripts();
+    // Execute IMMEDIATELY. No idle callbacks, no delays, no DOMContentLoaded wait.
+    loadScriptsEagerly(scripts);
+  }
+
+  // Expose globally for manual high-priority loading if needed elsewhere
+  window.MTKLoadScript = loadScript;
+
+  // Run immediately as soon as this script block is parsed by the browser
+  startPriorityLoading();
+})();
+</script>
     <script>
 // Theme Management
 function changeTheme(themeName) {
@@ -2312,5 +2401,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<script src="update.js"></script>
+<script src="profile.js"></script>
+<script src="cpu.js"></script>
+<script src="gpu.js"></script>
+<script src="devfreq.js"></script>
+<script src="refreshrate.js"></script>
+<script src="boostcolor.js"></script>
+<script src="resolutionscale.js"></script>
+<script src="zram.js"></script>
+<script src="ppmpolicy.js"></script>
+<script src="eemvoltage.js"></script>
+<script src="animationspeed.js"></script>
+<script src="iotweaks.js"></script>
+<script src="thermalzone.js"></script>
+<script src="cputoggle.js"></script>
+<script src="dex2oat.js"></script>
+<script src="spoof.js"></script>
+<script src="gmsdoze.js"></script>
+<script src="freeze.js"></script>
+<script src="fpsgo.js"></script>
+<script src="dpiresolution.js"></script>
+<script src="process.js"></script>
+<script src="performancetest.js"></script>
+<script src="maintenance.js"></script>
+<script src="networktweak.js"></script>
+<script src="terminalemulator.js"></script>
+<script src="aicontrol.js"></script>
+<script src="tweakfinder.js"></script>
+<script src="modulemanager.js"></script>
+<script src="renderer.js"></script>
+<script src="cpuset.js"></script>
+<script src="setedit.js"></script>
+<script src="hibernator.js"></script>
+<script src="wifi.js"></script>
 </body>
 </html>
