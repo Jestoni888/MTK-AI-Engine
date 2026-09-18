@@ -1,3 +1,7 @@
+--- version 0.0.1.17 ---
+
+•Fixed lag on recent update because of the wrong logic in normal mode that set frequencies to lower if no config found from devfreq & other nodes
+
 --- version 0.0.1.16 ---
 
 •Fixed Webui loading times
