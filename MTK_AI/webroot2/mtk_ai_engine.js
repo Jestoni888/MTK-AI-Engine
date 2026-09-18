@@ -54,7 +54,7 @@ const toggleConfig = {
         group: "System",
         warning: "⚠️ May skip some system checks like dex2oat profile - use with caution"
     },
-    enable_performance: { title:  "Performance Mode ", desc:  "Maximize CPU/GPU clocks  & scheduler ", group:  "Gaming " },
+    enable_performance: { title:  "Performance Mode ", desc:  "Maximize CPU, GPU, DVFS & scheduler to maximum output", group:  "Gaming " },
     low_power_mode: { title:  "Deep sleep system ", desc:  "Enable deep sleep power mode during screen-off ", group:  "Battery " },
     enable_notifications: { title:  "Module Notifications ", desc:  "Manage notification behavior of this module ", group:  "System " },
     enable_limiter: { title:  "Enable Touch Control ", desc:  "Master toggle for TOUCH Control  & Smart Refresh rate ", group:  "Touch Control " },
