@@ -166,6 +166,7 @@ cmd thermalservice override-status 1 2>/dev/null
 cmd display set-match-content-frame-rate-pref 0
 
 # Lock devfreq nodes to max
+if [ -f "$CONFIG_DIR/enable_performance" ]; then
 find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r freq_file; do
     dev="${freq_file%/*}"  
     [ -r "$freq_file" ] || continue  
@@ -189,6 +190,7 @@ find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r freq
     fi
     
 done
+fi
 
 # -----------------------------------------------------------------
 # 1. GAME DRIVER, SURFACEFLINGER & APP OPTIMIZATION 
