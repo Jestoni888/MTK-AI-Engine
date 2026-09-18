@@ -32,9 +32,6 @@ done
 # Boost foreground 
 setprop persist.sys.foreground_boost 1
 
-# Prevent FPS going down
-cmd display set-match-content-frame-rate-pref 0
-
 # Disable powersave mode (Config from Automatrix)
 for f in "enabled false" "vibration_disabled false" "animation_disabled false" \
   "launch_boost_disabled false" "aod_disabled false" "datasaver false" \
@@ -204,6 +201,7 @@ cmd device_config put surface_flinger_native_boot epoll_pwait true
 cmd device_config override surface_flinger_native_boot epoll_pwait true
 cmd device_config put surface_flinger_native_boot use_context_priority true
 cmd device_config override surface_flinger_native_boot use_context_priority true
+cmd display set-match-content-frame-rate-pref 0
 fi
 
 cmd device_config put mglru_native mglru_enabled true
