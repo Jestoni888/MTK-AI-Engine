@@ -192,6 +192,8 @@ done
 # 1. GAME DRIVER, SURFACEFLINGER & APP OPTIMIZATION 
 # Force active Game Driver layer and maximize GPU pipelines
 # -----------------------------------------------------------------
+
+if [ -f "$CONFIG_DIR/game_driver" ]; then
 cmd device_config put game_driver game_driver_all_apps 1
 cmd device_config override game_driver game_driver_all_apps 1
 cmd device_config put game_driver enable_game_driver true
@@ -200,12 +202,12 @@ cmd device_config put gpu updatable_driver_production_opt_in_apps 1
 cmd device_config override gpu updatable_driver_production_opt_in_apps 1
 cmd device_config put surface_flinger_native_boot epoll_pwait true
 cmd device_config override surface_flinger_native_boot epoll_pwait true
-
 cmd device_config put surface_flinger_native_boot use_context_priority true
 cmd device_config override surface_flinger_native_boot use_context_priority true
+fi
+
 cmd device_config put mglru_native mglru_enabled true
 cmd device_config override mglru_native mglru_enabled true
-
 cmd device_config put lmkd_native low_ram false
 cmd device_config override lmkd_native low_ram false
 cmd device_config put runtime_native_boot priority_boost_enabled true
