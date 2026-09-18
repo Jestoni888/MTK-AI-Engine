@@ -1,6 +1,6 @@
 --- version 0.0.1.17 ---
 
-•Fixed lag on recent update because of the wrong logic in normal mode that set frequencies to lower if no config found from devfreq & other nodes
+•Fixed lag on recent update because of the wrong logic in normal mode that set frequencies to lower if no config found from devfreq & other nodes, in gaming mode if performance is enabled it will automatically set to max frequencies 
 
 --- version 0.0.1.16 ---
 
