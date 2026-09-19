@@ -15,6 +15,7 @@ const PREDEFINED_COMMANDS = [
     { label: '🔍 getprop | grep [keyword]', cmd: 'getprop | grep ', copyOnly: true, hint: 'Paste keyword after' },
     { label: '📱 List all properties', cmd: 'getprop', copyOnly: false },
     { label: '☮️ CPU governor live', cmd: `cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor 2>/dev/null | tr '\\n' ' '`, copyOnly: false, live: true, interval: 1000 },
+    { label: '⚙️ Devfreq nodes info', cmd: `find /sys -type f -name "available_frequencies" 2>/dev/null | sort | while read -r f; do d="\${f%/*}"; [ -r "\$f" ] || continue; n=\$(basename "\$d"); m=\$(cat "\$d/min_freq" 2>/dev/null); x=\$(cat "\$d/max_freq" 2>/dev/null); s=\$(cat "\$d/set_freq" 2>/dev/null); echo "==================================="; echo "=== \$n ==="; echo "Path: \$d"; echo "Governor lists: \$(tr -s '[:space:]' ' ' < "\$d/available_governors" 2>/dev/null)"; echo "Current Governor: \$(tr -s '[:space:]' ' ' < "\$d/governor" 2>/dev/null)"; echo "Available Frequency: \$(tr -s '[:space:]' ' ' < "\$f" 2>/dev/null)"; echo "Current Frequency Min/Max: \${m:-\$s} / \${x:-\$s}"; done`, copyOnly: false },
     { label: '🔎 Read-ahead & Scheduler', cmd: `find /sys \\( -name "read_ahead_kb" -o -name "scheduler" \\) ! -type d 2>/dev/null | while IFS= read -r file; do [ -r "$file" ] && echo "$file => $(cat "$file" 2>/dev/null)"; done`, copyOnly: false },
     { label: '🔋 Battery stats', cmd: 'dumpsys battery', copyOnly: false },
     { label: '📶 WiFi info', cmd: 'cmd wifi list-networks', copyOnly: false },
