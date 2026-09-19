@@ -35,14 +35,7 @@ Devfreq acts as the data highway governor. If your CPU or GPU is running at max 
 
 command to check: 
 
-find /sys -type d -path "*/devfreq/*" 2>/dev/null | while read -r dev; do
-echo "Node: $(basename "$dev")"
-echo " Governor lists: $(cat "$dev/available_governors" 2>/dev/null)"
-echo " Frequency lists: $(cat "$dev/available_frequencies" 2>/dev/null)"
-echo " Governor: $(cat "$dev/governor" 2>/dev/null)"
-echo " Min Freq: $(cat "$dev/min_freq" 2>/dev/null)"
-echo " Max Freq: $(cat "$dev/max_freq" 2>/dev/null)"
-done
+find /sys -type f -name "available_frequencies" 2>/dev/null | sort | while read -r f; do d="${f%/*}"; [ -r "$f" ] || continue; n=$(basename "$d"); m=$(cat "$d/min_freq" 2>/dev/null); x=$(cat "$d/max_freq" 2>/dev/null); s=$(cat "$d/set_freq" 2>/dev/null); echo "==================================="; echo "=== $n ==="; echo "Path: $d"; echo "Governor lists: $(tr -s '[:space:]' ' ' < "$d/available_governors" 2>/dev/null)"; echo "Current Governor: $(tr -s '[:space:]' ' ' < "$d/governor" 2>/dev/null)"; echo "Available Frequency: $(tr -s '[:space:]' ' ' < "$f" 2>/dev/null)"; echo "Current Frequency Min/Max: ${m:-$s} / ${x:-$s}"; done
 
 --- version 0.0.1.12 ---
 
