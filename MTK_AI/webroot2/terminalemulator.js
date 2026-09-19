@@ -6,7 +6,7 @@ const MAX_HISTORY = 50;
 let config = {
     history: [],
     autoScroll: true,
-    fontSize: 13,
+    fontSize: 16,
     theme: 'dark'
 };
 
