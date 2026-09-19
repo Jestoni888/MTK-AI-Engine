@@ -62,8 +62,8 @@ devfreq_nodes() {
 
             [ -n "$GOV" ] && echo "$GOV" > "$d/governor" 2>/dev/null
             if [ "$LK" = "true" ]; then
-                [ -n "$MN" ] && echo "$((MN*1000))" > "$d/min_freq" 2>/dev/null
                 [ -n "$MX" ] && echo "$((MX*1000))" > "$d/max_freq" 2>/dev/null
+                [ -n "$MN" ] && echo "$((MN*1000))" > "$d/min_freq" 2>/dev/null
             else
                 # Use the validated $f file instead of reconstructing the path
                 awk '{print $1}' "$f" > "$d/min_freq" 2>/dev/null
