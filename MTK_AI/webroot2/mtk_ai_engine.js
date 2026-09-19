@@ -64,7 +64,7 @@ const toggleConfig = {
     game_driver: { title:  "Game Driver ", desc:  "Enable Game driver to make game display perfectly sync but a costs of UI glitches sometimes", group:  "Gaming " },
     enable_disable_thermal: { title:  "Disable Thermals ", desc:  "Bypass thermal throttling (⚠️ Risk of overheating) ", group:  "Gaming " },
     enable_gaming_prop: { title:  "Gaming Properties ", desc:  "Apply gaming-specific system properties ", group:  "Gaming " },
-    enable_dnd_during_game: { title:  "DND During Game ", desc:  "Auto-enable Do Not Disturb while gaming ", group:  "Gaming " },
+    enable_dnd_during_game: { title:  "DND During Game ", desc:  "Turning off everything in notifications & statusbar during game", group:  "Gaming " },
     enable_gaming_prop2: { title:  "Gaming Props v2 ", desc:  "Advanced gaming property tweaks ", group:  "Gaming " },
     enable_module: { title:  "Module automation ", desc:  "No need to reboot when new modules installed except system level modules & also can remove it completely even without rebooting ", group:  "System " },
     fast_mode_switch: { title:  "Fast Mode Switch ", desc:  "Quickly switch between normal, gaming  & screen state profiles ", group:  "System " },
