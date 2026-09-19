@@ -257,8 +257,27 @@
                 
                 // Start cpulimit for each detected GMS package in the background
                 for (const pkg of pkgsToLimit) {
-                    await execFn(`su -c "nohup ${CPULIMIT_PATH} -e ${pkg} -l 1 >/dev/null 2>&1 &"`);
-                }
+    // 1. Limit CPU usage to 1% (your existing cpulimit safeguard)
+    await execFn(`su -c "nohup ${CPULIMIT_PATH} -e ${pkg} -l 1 >/dev/null 2>&1 &"`);
+
+    // 2. Block all background execution, wakeups, and foreground service creation
+    await execFn(`su -c "cmd appops set ${pkg} RUN_IN_BACKGROUND ignore"`);
+    await execFn(`su -c "cmd appops set ${pkg} RUN_ANY_IN_BACKGROUND ignore"`);
+    await execFn(`su -c "cmd appops set ${pkg} WAKEUP ignore"`);
+    await execFn(`su -c "cmd appops set ${pkg} START_FOREGROUND ignore"`);
+
+    // 3. Force App Hibernation (stops background processes, resets permissions, clears cache)
+    await execFn(`su -c "cmd app_hibernation set-state ${pkg} true"`);
+
+    // 4. Force into the most restricted App Standby Bucket (prevents resource allocation)
+    await execFn(`su -c "am set-standby-bucket ${pkg} restricted"`);
+
+    // 5. Remove from battery optimization whitelist (ensures Doze mode applies to it)
+    await execFn(`su -c "cmd deviceidle whitelist -${pkg}"`);
+
+    // 6. Force stop the app to immediately free RAM and apply all the above restrictions
+    await execFn(`su -c "am force-stop ${pkg}"`);
+}
                 
                 btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
                 btn.textContent = '⚡ CPU Limit: 1% (ON)';
