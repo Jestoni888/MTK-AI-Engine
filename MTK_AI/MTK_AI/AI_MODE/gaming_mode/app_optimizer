@@ -91,7 +91,7 @@ fi
 
 #DND
 if [ -f "$CONFIG_DIR/enable_dnd_during_game" ]; then
-    cmd statusbar send-disable-flag notification-peek statusbar-expansion system-icons clock notification-icons quick-settings
+    cmd statusbar send-disable-flag notification-peek statusbar-expansion system-icons notification-icons quick-settings
     cmd notification set_dnd priority
     settings put global heads_up_notifications_enabled 0
 fi
