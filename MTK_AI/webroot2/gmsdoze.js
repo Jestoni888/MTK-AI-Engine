@@ -258,27 +258,47 @@
                 
                 // Start cpulimit for each detected GMS package in the background
                 for (const pkg of pkgsToLimit) {
-    // 1. Limit CPU usage to 1% (your existing cpulimit safeguard)
-    // 6. Force stop the app to immediately free RAM and apply all the above restrictions
-    await execFn(`su -c "am force-stop ${pkg}"`);
-    await execFn(`su -c "nohup ${CPULIMIT_PATH} -e ${pkg} -l 1 >/dev/null 2>&1 &"`);
-    
-    await execFn(`su -c "cmd appops set ${pkg} WAKEUP ignore"`);
+    try {
+        // 1. Get UID (needed for netpolicy)
+        const uidResult = await execFn(`su -c "dumpsys package ${pkg} | grep -m 1 'userId='"`);
+        const uid = uidResult.stdout ? uidResult.stdout.trim().split('=')[1] : null;
 
-    // 2. Block all background execution, wakeups, and foreground service creation
-    await execFn(`su -c "cmd appops set ${pkg} RUN_IN_BACKGROUND ignore"`);
-    await execFn(`su -c "cmd appops set ${pkg} RUN_ANY_IN_BACKGROUND ignore"`);
-    await execFn(`su -c "cmd appops set ${pkg} WAKEUP ignore"`);
-    await execFn(`su -c "cmd appops set ${pkg} START_FOREGROUND ignore"`);
+        // 2. Apply PERSISTENT restrictions FIRST (these survive restarts)
+        await execFn(`su -c "nohup ${CPULIMIT_PATH} -e ${pkg} -l 1 >/dev/null 2>&1 &"`);
+        await execFn(`su -c "cmd appops set ${pkg} RUN_IN_BACKGROUND ignore"`);
+        await execFn(`su -c "cmd appops set ${pkg} RUN_ANY_IN_BACKGROUND ignore"`);
+        await execFn(`su -c "cmd appops set ${pkg} WAKEUP ignore"`);
+        await execFn(`su -c "cmd appops set ${pkg} START_FOREGROUND ignore"`);
+        await execFn(`su -c "cmd appops set ${pkg} WAKE_LOCK ignore"`);
+        await execFn(`su -c "cmd app_hibernation set-state ${pkg} true"`);
+        await execFn(`su -c "am set-standby-bucket ${pkg} restricted"`);
+        await execFn(`su -c "am set-inactive ${pkg} true"`);
+        await execFn(`su -c "cmd deviceidle whitelist -${pkg}"`);
+        
+        if (uid) {
+            await execFn(`su -c "cmd netpolicy add restrict-background-blacklist ${uid}"`);
+        }
 
-    // 3. Force App Hibernation (stops background processes, resets permissions, clears cache)
-    await execFn(`su -c "cmd app_hibernation set-state ${pkg} true"`);
+        // 3. NOW force-stop (app will restart with restrictions already in place)
+        await execFn(`su -c "am force-stop ${pkg}"`);
 
-    // 4. Force into the most restricted App Standby Bucket (prevents resource allocation)
-    await execFn(`su -c "am set-standby-bucket ${pkg} restricted"`);
+        // 4. Optional: Monitor for restart and apply process-level limits to NEW PID
+        // Wait a moment for potential auto-restart
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const newPidResult = await execFn(`su -c "pidof ${pkg}"`);
+        const newPid = newPidResult.stdout ? newPidResult.stdout.trim().split(' ')[0] : null;
+        
+        if (newPid && /^\d+$/.test(newPid)) {
+            // Apply process-level limits to the NEW PID
+            await execFn(`su -c "echo 999 > /proc/${newPid}/oom_score_adj"`);
+            await execFn(`su -c "renice 19 -p ${newPid}"`);
+            await execFn(`su -c "echo ${newPid} > /dev/cpuset/background/cgroup.procs"`);
+        }
 
-    // 5. Remove from battery optimization whitelist (ensures Doze mode applies to it)
-    await execFn(`su -c "cmd deviceidle whitelist -${pkg}"`);
+    } catch (error) {
+        console.error(`Failed to limit ${pkg}:`, error);
+    }
 }
                 
                 btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
