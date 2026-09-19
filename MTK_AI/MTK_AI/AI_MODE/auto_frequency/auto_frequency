@@ -291,126 +291,71 @@ local DIR="/sdcard/MTK_AI_Engine/per_app"
     done
 }
 
-game_mode() {
-force_kill
-nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer" >/dev/null 2>&1 &
-if [ -f "$EXTERNAL_CFG/enable_gaming_prop" ]; then
-    nohup "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/gaming_prop" >/dev/null 2>&1 &
+trimmer() {
+LIMIT_BYTES=51200 # 50 * 1024 bytes
+# Check if directory exists
+if [ ! -d "$EXTERNAL_CFG" ]; then
+    echo "Error: Directory $TARGET_DIR does not exist."
+    exit 1
 fi
-if [ -f "$EXTERNAL_CFG/enable_gaming_prop2" ]; then
-    nohup "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2" >/dev/null 2>&1 &
-fi
-if [ -f "$EXTERNAL_CFG/enable_disable_thermal" ]; then
-    nohup "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/disable_thermal" >/dev/null 2>&1 &
-fi
-if [ -f "$EXTERNAL_CFG/enable_performance" ]; then
-    nohup "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/performance" >/dev/null 2>&1 &
-fi
-if [ -f "$EXTERNAL_CFG/enable_lite_gaming" ]; then
-    nohup "$MOD_DIR/MTK_AI/AI_MODE/gaming_mode/lite_gaming" >/dev/null 2>&1 &
-fi
+
+# Find files larger than 50KB and truncate them
+find "$EXTERNAL_CFG" -type f -size +50k | while read -r file; do
+    echo "Limiting: $file"
+    # Extract the first 51200 bytes to a temp file, then replace the original
+    head -c $LIMIT_BYTES "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+done
+}
+OUT="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/stock_tweaks.sh"
+thermal() {
+    # 1. Safely ensure the directory and file exist without modifying existing content
+    mkdir -p "$(dirname "$OUT")"
+    [ -f "$OUT" ] || touch "$OUT"
+
+    # 2. Optimized pipeline: replaces multiple greps with a single awk command for better performance
+    getprop | awk -F'[][]' '/init\.svc\..*thermal.*\[running\]/ {print $2}' | sed 's/^init\.svc\.//' | while read -r svc; do
+        if [ -n "$svc" ]; then
+            # 3. Duplicate check: only append if the exact command is NOT already in the file
+            if ! grep -qxF "start $svc" "$OUT"; then
+                echo "start $svc" >> "$OUT"
+            fi
+        fi
+    done
 }
 
-normal_mode() {
-APP=$(head -n 1 /dev/.mtk_ai_active_game 2>/dev/null | tr -d '[:space:]') && [ -n "$APP" ] && { grep -Fvx "$APP" /sdcard/MTK_AI_Engine/config/never_kill.list > /sdcard/MTK_AI_Engine/config/never_kill.tmp || true; mv /sdcard/MTK_AI_Engine/config/never_kill.tmp /sdcard/MTK_AI_Engine/config/never_kill.list; }
-force_kill
-nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_prop" >/dev/null 2>&1 &
-if [ -f "$EXTERNAL_CFG/use_tweaks" ]; then
-nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_cpuset" >/dev/null 2>&1 &
-fi
-}
+hibernation() {
+# --- APP HIBERNATION ---
+NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
+echo "Applying app hibernation rules..."
 
-is_game_background() {
-    local pkg="$1"
+for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); do
+    # Clean package name
+    app=$(echo "$app" | tr -d '[:space:]')
 
-    local pids
-    pids=$(pidof "$pkg" 2>/dev/null)
+    # Skip empty package names
+    [ -z "$app" ] && continue
 
-    [ -z "$pids" ] && return 0
+    # Skip Magisk / KernelSU
+    [ "$app" = "com.topjohnwu.magisk" ] && continue
+    [ "$app" = "me.weishu.kernelsu" ] && continue
 
-    return 1
-}
-
-is_temporary_overlay() {
-    case "$1" in
-        com.android.systemui|com.android.systemui.*)
-            return 0
-            ;;
-        *)
-            return 1
-            ;;
-    esac
-}
-
-current_app() {
-    # 1. Run dumpsys ONLY ONCE per cycle and cache it. 
-    # This is the heaviest command, so we never want to run it twice.
-    local DUMP
-    DUMP=$(dumpsys activity activities 2>/dev/null)
-
-    if [ -f /dev/.mtk_ai_active_game ]; then
-        ACTIVE_GAME=$(cat /dev/.mtk_ai_active_game 2>/dev/null)
-
-        if is_game_background "$ACTIVE_GAME"; then
-            rm -f /dev/.mtk_ai_active_game /dev/.mtk_ai_bg_count
-            log_msg "🎮 $ACTIVE_GAME process ended, exiting gaming mode"
-            normal_mode
-            notify_status "Normal mode"
-            return 0
-        fi
-
-        # Extract top app from the cached DUMP (no extra dumpsys calls)
-        CURRENT_TOP_APP=$(echo "$DUMP" | grep -m1 -E 'mResumedActivity|mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
-
-        if is_temporary_overlay "$CURRENT_TOP_APP"; then
-            log_msg "🎮 Temporary SystemUI overlay detected, keeping gaming mode"
-            return 0
-        fi
-
-        if [ "$CURRENT_TOP_APP" = "$ACTIVE_GAME" ]; then
-            rm -f /dev/.mtk_ai_bg_count
-            return 0
-        fi
-
-        # Something else is temporarily in front
-        bg_count=$(cat /dev/.mtk_ai_bg_count 2>/dev/null)
-        bg_count=${bg_count:-0} # Shell built-in default, avoids forking 'echo 0'
-        bg_count=$((bg_count + 1))
-        echo "$bg_count" > /dev/.mtk_ai_bg_count 2>/dev/null
-
-        if [ "$bg_count" -lt 5 ]; then
-            log_msg "⏳ $ACTIVE_GAME temporarily covered ($bg_count/5), keeping gaming mode"
-            return 0
-        fi
-
-        # Other app has really replaced the game
-        log_msg "📉 $ACTIVE_GAME left foreground (${bg_count}x), exiting gaming mode"
-        rm -f /dev/.mtk_ai_active_game /dev/.mtk_ai_bg_count
-        notify_status "Normal mode"
-        normal_mode
-        return 0
+    # Skip apps found in Never Kill list
+    if [ -f "$NEVER_KILL_FILE" ] && grep -Fqx -- "$app" "$NEVER_KILL_FILE"; then
+        echo "🛡️ $app is protected by Never Kill list, skipping"
+        echo ""
+        continue
     fi
 
-    # NO ACTIVE GAME
-    CURRENT_TOP_APP=$(echo "$DUMP" | grep -m1 -E 'mResumedActivity|mFocusedApp' | grep -oE '[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+' | head -n 1)
+    echo "$app has been hibernated"
 
-    if [ -z "$CURRENT_TOP_APP" ]; then
-        return 0
-    fi
+    cmd app_hibernation set-state --user 0 --global "$app" true >/dev/null 2>&1 || true
+    cmd appops set "$app" RUN_IN_BACKGROUND ignore 2>/dev/null
+    cmd appops set "$app" RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
+    am set-standby-bucket "$app" restricted 2>/dev/null
+    # CRITICAL FIX: Moved outside the loop for massive efficiency and guaranteed execution
+    device_config put app_hibernation app_hibernation_enabled true >/dev/null 2>&1 || true
+    device_config put permissions auto_revoke_unused_threshold_millis2 99 >/dev/null 2>&1 || true
 
-    notify_status "$CURRENT_TOP_APP"
-    refresh_rate
-
-    # GAME DETECTION
-    # Use grep -qFx instead of awk. It's much faster and uses almost zero CPU.
-    # IMPORTANT: Move game_list.txt out of /sdcard/ to avoid FUSE overhead!
-    local GAME_LIST="/sdcard/MTK_AI_Engine/game_list.txt" # <-- UPDATE THIS PATH
-    
-    if grep -qFx "$CURRENT_TOP_APP" "$GAME_LIST" 2>/dev/null; then
-        echo "$CURRENT_TOP_APP" > /dev/.mtk_ai_active_game
-        rm -f /dev/.mtk_ai_bg_count
-        game_mode
-        notify_status "Gaming🎮: $CURRENT_TOP_APP"
-        refresh_rate
-    fi
+    echo ""
+done
 }
