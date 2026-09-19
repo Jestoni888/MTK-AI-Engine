@@ -104,15 +104,6 @@ async function init() {
             await execFn(`su -c '${BUSYBOX} echo "100" > "${TOUCH_FREQ_CONFIG}"'`, 100);
         }
 
-        try {
-            const existing = await safeRead(GOV_CONFIG);
-            if (!existing) {
-                await execFn(`su -c '${BUSYBOX} echo "performance" > "${GOV_CONFIG}"'`, 100);
-            }
-        } catch (e) {
-            console.log('[CPU.js] Creating fresh config files');
-        }
-        
         await loadSystemData();
         await loadSavedSettings();
         setupToggleHandler();
