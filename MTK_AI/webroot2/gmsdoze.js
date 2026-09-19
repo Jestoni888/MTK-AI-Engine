@@ -9,6 +9,7 @@
         'com.google.android.gsf',
         'com.google.android.gsf.login',
         'com.google.android.gms.persistent',
+        'com.google.android.gms.unstable',
         'com.google.android.backuptransport',
         'com.google.android.partnersetup',
         'com.google.android.setupwizard'
