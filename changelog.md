@@ -1,6 +1,6 @@
 --- version 0.0.1.17 ---
 
-•DND (Do not Disturb) now turning off everything in notifications & status bar
+•DND (Do not Disturb) now turning off everything in notifications & status bar except system icons/clock/battery/signal
 
 •Added default values backup for ppm policy (MTK dimensity series specific) to post-fs-data.sh that can be executed in normal mode. To save current values it needs reboot
 
