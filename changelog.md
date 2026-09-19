@@ -1,5 +1,7 @@
 --- version 0.0.1.17 ---
 
+•DND now turning off everything in notifications & status bar
+
 •Added default values backup for ppm policy (MTK dimensity series specific) to post-fs-data.sh that can be executed in normal mode. To save current values it needs reboot
 
 •Fixed lag on recent update because of the wrong logic in normal mode that set frequencies to lower if no config found from devfreq & other nodes, in gaming mode if performance is enabled it will automatically set to max frequencies 
