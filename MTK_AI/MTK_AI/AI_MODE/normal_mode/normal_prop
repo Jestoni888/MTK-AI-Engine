@@ -80,7 +80,9 @@ fi
 
 #DND
 if [ -f "$SDCARD/enable_dnd_during_game" ]; then
+    cmd statusbar send-disable-flag none
     cmd notification set_dnd off
+    settings put global heads_up_notifications_enabled 1
 fi
 
 # Powersaver
