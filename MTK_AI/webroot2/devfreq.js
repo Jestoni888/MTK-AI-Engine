@@ -80,15 +80,19 @@ function showStatus(msg, isError = false) {
 // Target devfreq node based on your specified target name filter
 async function detectDevfreqNode() {
     const findCmd = `
-        find /sys -type d -path "*/devfreq/*" \\
-        \\( -name "*mem*" -o -name "*dvfs*" -o -name "*dmc*" -o -name "*gpu*" -o -name "*gpubw*" \\) \\
-        2>/dev/null | while read -r dev; do
-            if [ -f "$dev/available_frequencies" ] && [ -f "$dev/min_freq" ] && [ -f "$dev/max_freq" ]; then
-                echo "$dev"
-            fi
-        done
-    `;
-
+        find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r freq_file; do
+        dev="\${freq_file%/*}"
+        case "\$dev" in
+            *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) ;;
+            *) continue ;;
+        esac
+        [ -r "\$freq_file" ] || continue
+        valid_freq=\$(tr -s '[:space:]' '\\n' < "\$freq_file" | grep -E '^[0-9]+\$' | sort -n | tail -1)
+        [ -z "\$valid_freq" ] && continue
+        if { [ -f "\$dev/min_freq" ] && [ -f "\$dev/max_freq" ]; } || [ -f "\$dev/set_freq" ]; then
+            echo "\$dev"
+        fi
+    done`;
     // Execute the find command and trim whitespace/newlines
     let matchedPath = (await execFn(findCmd, 2000)).trim();
 
@@ -478,11 +482,16 @@ async function applyAllDevfreqSettings(applyBtn, statusEl, modal) {
 
 // Detect devfreq nodes NOT matching the primary filter
 async function detectOtherDevfreqNodes() {
-    const cmd = `find /sys -type d -path "*/devfreq/*" \
-    ! -name "*mem*" ! -name "*dvfs*" ! -name "*dmc*" ! -name "*gpu*" ! -name "*gpubw*" \
-    2>/dev/null | while read -r dev; do
-        if [ -f "$dev/available_frequencies" ] && [ -f "$dev/min_freq" ] && [ -f "$dev/max_freq" ]; then
-            echo "$dev"
+    const cmd = `find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r freq_file; do
+        dev="\${freq_file%/*}"
+        case "\$dev" in
+            *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) continue ;;
+        esac
+        [ -r "\$freq_file" ] || continue
+        valid_freq=\$(tr -s '[:space:]' '\\n' < "\$freq_file" | grep -E '^[0-9]+\$' | sort -n | tail -1)
+        [ -z "\$valid_freq" ] && continue
+        if { [ -f "\$dev/min_freq" ] && [ -f "\$dev/max_freq" ]; } || [ -f "\$dev/set_freq" ]; then
+            echo "\$dev"
         fi
     done`;
     const result = (await execFn(cmd, 3000)).trim();
