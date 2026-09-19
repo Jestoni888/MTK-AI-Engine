@@ -27,9 +27,14 @@ SAVE_DIR="$SDCARD/cooldown_values"
 
 devfreq_nodes
 
-# ==============================
+# DND
+if [ -f "$SDCARD/enable_dnd_during_game" ]; then
+    cmd statusbar send-disable-flag none
+    cmd notification set_dnd off
+    settings put global heads_up_notifications_enabled 1
+fi
+
 # unsuspend background apps
-# ==============================
 
 if [ -f "/sdcard/MTK_AI_Engine/suspend_bg" ]; then
     pm list packages | cut -d: -f2 | while read -r pkg; do
@@ -76,13 +81,6 @@ cmd thermalservice reset 2>/dev/null
 if [ -f "$SDCARD/cpufreq_mode" ]; then
 echo "0" > /proc/cpufreq/cpufreq_power_mode || true
 echo "0" > /proc/cpufreq/cpufreq_cci_mode || true
-fi
-
-#DND
-if [ -f "$SDCARD/enable_dnd_during_game" ]; then
-    cmd statusbar send-disable-flag none
-    cmd notification set_dnd off
-    settings put global heads_up_notifications_enabled 1
 fi
 
 # Powersaver
