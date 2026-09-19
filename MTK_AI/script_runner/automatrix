@@ -50,18 +50,27 @@ devfreq_nodes() {
         MN=$(grep -o '"minFreq": *[0-9]*' "$B/devfreq_config.json" | awk '{print $2}')
         MX=$(grep -o '"maxFreq": *[0-9]*' "$B/devfreq_config.json" | awk '{print $2}')
 
-        # find replaces the for loop + case + break
-        find /sys -type d -path "*/devfreq/*" \
-            \( -name "*mem*" -o -name "*dvfs*" -o -name "*dmc*" -o -name "*gpu*" -o -name "*gpubw*" \) \
-            2>/dev/null | head -n 1 | while read -r d; do
+        # Robust file-first search for the first matching non-target node
+        find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r f; do
+            d="${f%/*}"
+            
+            # Filter for non-target nodes (mem, gpu, dmc, etc.)
+            case "$d" in
+                *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) ;;
+                *) continue ;;
+            esac
+            [ -r "$f" ] || continue
+
             [ -n "$GOV" ] && echo "$GOV" > "$d/governor" 2>/dev/null
             if [ "$LK" = "true" ]; then
                 [ -n "$MN" ] && echo "$((MN*1000))" > "$d/min_freq" 2>/dev/null
                 [ -n "$MX" ] && echo "$((MX*1000))" > "$d/max_freq" 2>/dev/null
             else
-                awk '{print $1}' "$d/available_frequencies" > "$d/min_freq" 2>/dev/null
-                awk '{print $NF}' "$d/available_frequencies" > "$d/max_freq" 2>/dev/null
+                # Use the validated $f file instead of reconstructing the path
+                awk '{print $1}' "$f" > "$d/min_freq" 2>/dev/null
+                awk '{print $NF}' "$f" > "$d/max_freq" 2>/dev/null
             fi
+            break # Stop after processing the first valid node (replaces head -n 1)
         done
     fi
 
@@ -79,11 +88,22 @@ devfreq_nodes() {
 
             [ -z "$n" ] || [ -z "$m" ] || [ -z "$x" ] && continue
 
-            # find replaces the for loop + exact name match + break
-            find /sys -type d -path "*/devfreq/*" \
-                -name "$n" 2>/dev/null | head -n 1 | while read -r d; do
-                echo "$((x*1000))" > "$d/max_freq" 2>/dev/null
-                echo "$((m*1000))" > "$d/min_freq" 2>/dev/null
+            # Robust file-first search for exact node name match
+            find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r f; do
+                d="${f%/*}"
+                
+                # Fast exact name match using parameter expansion (replaces basename)
+                [ "${d##*/}" = "$n" ] || continue
+                [ -r "$f" ] || continue
+
+                # Apply frequencies, with fallback to set_freq if min/max don't exist
+                if [ -w "$d/min_freq" ] && [ -w "$d/max_freq" ]; then
+                    echo "$((x*1000))" > "$d/max_freq" 2>/dev/null
+                    echo "$((m*1000))" > "$d/min_freq" 2>/dev/null
+                elif [ -w "$d/set_freq" ]; then
+                    echo "$((x*1000))" > "$d/set_freq" 2>/dev/null
+                fi
+                break # Stop after processing the first valid node
             done
         done
     fi
