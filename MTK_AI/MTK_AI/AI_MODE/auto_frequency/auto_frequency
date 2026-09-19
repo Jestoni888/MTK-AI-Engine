@@ -253,7 +253,7 @@ exclude_killing() {
         
         # Exclude if cmdline contains action.sh, powersavex, or is inside the lib/lib64 folders
         # The trailing '/' ensures we match the folder path, not just a filename starting with 'lib'
-        if ! echo "$cmdline" | grep -qE "action\.sh|powersavex|/data/adb/modules/MTK_AI/lib(64)?/"; then
+        if ! echo "$cmdline" | grep -qE "action\.sh|update_checker\.sh|powersavex|/data/adb/modules/MTK_AI/lib(64)?/"; then
             kill -9 $pid 2>/dev/null
         fi
     done
