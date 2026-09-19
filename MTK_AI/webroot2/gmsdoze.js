@@ -258,7 +258,11 @@
                 // Start cpulimit for each detected GMS package in the background
                 for (const pkg of pkgsToLimit) {
     // 1. Limit CPU usage to 1% (your existing cpulimit safeguard)
+    // 6. Force stop the app to immediately free RAM and apply all the above restrictions
+    await execFn(`su -c "am force-stop ${pkg}"`);
     await execFn(`su -c "nohup ${CPULIMIT_PATH} -e ${pkg} -l 1 >/dev/null 2>&1 &"`);
+    
+    await execFn(`su -c "cmd appops set ${pkg} WAKEUP ignore"`);
 
     // 2. Block all background execution, wakeups, and foreground service creation
     await execFn(`su -c "cmd appops set ${pkg} RUN_IN_BACKGROUND ignore"`);
@@ -274,9 +278,6 @@
 
     // 5. Remove from battery optimization whitelist (ensures Doze mode applies to it)
     await execFn(`su -c "cmd deviceidle whitelist -${pkg}"`);
-
-    // 6. Force stop the app to immediately free RAM and apply all the above restrictions
-    await execFn(`su -c "am force-stop ${pkg}"`);
 }
                 
                 btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
