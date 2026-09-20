@@ -12,19 +12,62 @@ press_check() {
   timeout "${1}" getevent -lqn | grep -qE "KEY_POWER.*KEY_POWER|KEY_POWER.*KEY_POWER"
 }
 
-disable_modules() {
-  local list
-  for mod in ${MODDIR}/../*; do
-    if [[ -d "${mod}" && ! -f "${mod}/disable" ]]; then
-      list="${list} ${mod}/disable"
-      rm -rf /data/dalvik-cache/*
-      rm -rf /data/property/*
-      rm -rf /data/cache/*
-      rm -rf /cache/*
+ultimate_rescue() {
+  local log_file="/data/local/tmp/rescue_$(date +%Y%m%d_%H%M%S).log"
+  {
+    echo "=== Ultimate Rescue Script Started at $(date) ==="
+    echo "[*] Disabling all modules..."
+    local list=""
+    for mod in /data/adb/modules/*; do
+      if [[ -d "${mod}" && ! -f "${mod}/disable" ]]; then
+        list="${list} ${mod}/disable"
+      fi
+    done
+    [[ -n "${list}" ]] && touch ${list}
+    echo "[*] Clearing pending module updates..."
+    rm -rf /data/adb/modules_update/* 2>/dev/null
+    rm -rf /data/adb/ksu/modules_update/* 2>/dev/null 
+    rm -rf /data/adb/ap/modules_update/* 2>/dev/null   
+    echo "[*] Wiping all system, dalvik, and runtime caches..."
+    rm -rf /data/dalvik-cache/* /data/vendor/dalvik-cache/* /data/system/dalvik-cache/* 2>/dev/null
+    rm -rf /data/misc/profiles/* 2>/dev/null
+    rm -rf /data/system/package_cache/* /data/system/users/*/package_cache/* 2>/dev/null
+    rm -rf /data/cache/* /cache/* 2>/dev/null
+    rm -rf /data/property/* 2>/dev/null
+    echo "[*] Clearing Theme, Font, and UI caches..."
+    rm -rf /data/system/theme/* /data/misc/theme/* 2>/dev/null      
+    rm -rf /data/fonts/* /data/misc/fonts/* 2>/dev/null         
+    rm -rf /data/system/inputmethod/* 2>/dev/null            
+    echo "[*] Clearing Audio and Display caches..."
+    rm -rf /data/misc/audioserver/* 2>/dev/null
+    rm -rf /data/misc/display/* 2>/dev/null
+    echo "[*] Fixing /data/adb and module overlay permissions..."
+    chmod -R 755 /data/adb/ 2>/dev/null
+    find /data/adb/modules -type d -name "system" -exec chmod -R 755 {} + 2>/dev/null
+    find /data/adb/modules -type d -name "vendor" -exec chmod -R 755 {} + 2>/dev/null
+    echo "[*] Backing up and disabling custom boot scripts..."
+    for script_dir in post-fs-data.d service.d; do
+      if [[ -d "/data/adb/${script_dir}" ]]; then
+        mkdir -p "/data/adb/${script_dir}.bak"
+        mv /data/adb/${script_dir}/* "/data/adb/${script_dir}.bak/" 2>/dev/null
+      fi
+    done
+    echo "[*] Restoring SELinux contexts..."
+    if command -v restorecon >/dev/null 2>&1; then
+      restorecon -RF /data/adb/ 2>/dev/null
     fi
-  done
-  [[ -n "${list}" ]] && touch ${list}
-  reboot
+    echo "[*] Checking for corrupted root manager databases..."
+    if [[ -f /data/adb/magisk/magisk.db ]] && command -v sqlite3 >/dev/null 2>&1; then
+      sqlite3 /data/adb/magisk/magisk.db "VACUUM;" 2>/dev/null
+      if [[ $? -ne 0 ]]; then
+        echo "[!] Magisk DB corrupted. Renaming to force recreation..."
+        mv /data/adb/magisk/magisk.db /data/adb/magisk/magisk.db.corrupt 2>/dev/null
+      fi
+    fi
+    echo "=== Rescue Actions Complete. Rebooting in 3 seconds... ==="
+    sleep 3
+    reboot
+  } | tee "$log_file" 2>&1
 }
 
 _apply_freq() {
