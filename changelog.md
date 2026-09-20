@@ -2,6 +2,8 @@
 
 •Added more robust anti bootloop script that can support to all root managers ⚠️spam power button in bootloop state to work
 
+•All powersaving, auto update, update checker script moved to off screen trigger that causes small lags during turning on screen, so you noticeable experience no lags when turning it on even toggling button from module settings
+
 --- version 0.0.1.17 ---
 
 •DND (Do not Disturb) now turning off everything in notifications & status bar except system icons/clock/battery/signal
