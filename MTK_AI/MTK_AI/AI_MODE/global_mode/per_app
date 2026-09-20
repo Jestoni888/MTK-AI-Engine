@@ -349,7 +349,6 @@ apply_cpu_settings() {
                 local new_max=$((abs_max * limit_pct / 100))
                 chmod 777 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
                 echo "$new_max" > "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
-                chmod 000 "$cpu/cpufreq/scaling_max_freq" 2>/dev/null
             fi
         done
     fi
