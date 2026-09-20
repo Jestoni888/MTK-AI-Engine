@@ -703,20 +703,66 @@ function showBoostModal() {
 // 🚀 Apply Boost
 async function applyBoost() {
     try {
-        await execFn(`su -c "service call SurfaceFlinger 1022 f ${currentSaturation}" 2>/dev/null`);
-        if(currentWarmth!==0){const tv=6500+(currentWarmth*200);await execFn(`su -c "settings put system screen_color_temperature ${tv}"`);await execFn(`su -c "settings put system screen_color_temperature_native ${tv}"`);}
-        if(currentSharpness!==1.0)await execFn(`su -c "setprop sys.display.sharpness ${currentSharpness}"`);
-        const ae=document.getElementById('amoled-toggle')?.checked;
-        if(ae){await execFn(`su -c "settings put system screen_brightness_mode 0"`);await execFn(`su -c "setprop sys.led.color.matrix 1"`);await execFn(`su -c "setprop persist.sys.led.color.matrix 1"`);}
-        else{await execFn(`su -c "setprop sys.led.color.matrix 0"`);await execFn(`su -c "setprop persist.sys.led.color.matrix 0"`);}
-        if(currentMatrix&&Array.isArray(currentMatrix)&&currentMatrix.length>=16){const m16=currentMatrix.slice(0,16);let mc='su -c "service call SurfaceFlinger 1015 i32 1';m16.forEach(v=>{mc+=` f ${v}`;});mc+='"';await execFn(mc);}
-        const r=parseInt(currentColor.substr(1,2),16)/255,g=parseInt(currentColor.substr(3,2),16)/255,b=parseInt(currentColor.substr(5,2),16)/255;
-        await execFn(`su -c "service call SurfaceFlinger 1037 f ${r} f ${g} f ${b} f 1.0" 2>/dev/null`);
+        // 1. Dynamically get correct SurfaceFlinger Transaction IDs based on Android SDK
+        let TINT = 1037, SATU = 1022, MAT = 1015;
+        try {
+            const sdkStr = await execFn('getprop ro.build.version.sdk');
+            const sdk = parseInt(sdkStr.trim());
+            if (sdk >= 35) TINT = 1038;       // Android 15+
+            else if (sdk >= 33) TINT = 1037;  // Android 13-14
+            else if (sdk >= 31) TINT = 1035;  // Android 12
+        } catch(e) {}
+
+        // 2. Apply Saturation
+        await execFn(`su -c "service call SurfaceFlinger ${SATU} f ${currentSaturation}" 2>/dev/null`);
+        
+        // 3. Apply Temperature
+        if(currentWarmth !== 0) {
+            const tv = 6500 + (currentWarmth * 200);
+            await execFn(`su -c "settings put system screen_color_temperature ${tv}"`);
+            await execFn(`su -c "settings put system screen_color_temperature_native ${tv}"`);
+        }
+        
+        // 4. Apply Sharpness
+        if(currentSharpness !== 1.0) {
+            await execFn(`su -c "setprop sys.display.sharpness ${currentSharpness}"`);
+        }
+        
+        // 5. AMOLED Toggle
+        const ae = document.getElementById('amoled-toggle')?.checked;
+        if(ae) {
+            await execFn(`su -c "settings put system screen_brightness_mode 0"`);
+            await execFn(`su -c "setprop sys.led.color.matrix 1"`);
+            await execFn(`su -c "setprop persist.sys.led.color.matrix 1"`);
+        } else {
+            await execFn(`su -c "setprop sys.led.color.matrix 0"`);
+            await execFn(`su -c "setprop persist.sys.led.color.matrix 0"`);
+        }
+        
+        // 6. Apply Matrix (Force strict float formatting to prevent native crashes)
+        if(currentMatrix && Array.isArray(currentMatrix) && currentMatrix.length >= 16) {
+            const m16 = currentMatrix.slice(0, 16);
+            let mc = `su -c "service call SurfaceFlinger ${MAT} i32 1`;
+            m16.forEach(v => { mc += ` f ${parseFloat(v).toFixed(2)}`; });
+            mc += '"';
+            await execFn(mc);
+        }
+        
+        // 7. Apply Color Tint (Force strict float formatting)
+        const r = parseInt(currentColor.substr(1,2),16)/255;
+        const g = parseInt(currentColor.substr(3,2),16)/255;
+        const b = parseInt(currentColor.substr(5,2),16)/255;
+        await execFn(`su -c "service call SurfaceFlinger ${TINT} f ${r.toFixed(2)} f ${g.toFixed(2)} f ${b.toFixed(2)} f 1.0" 2>/dev/null`);
+        
         await saveConfig();
-        const ms=(currentMatrix&&Array.isArray(currentMatrix))?' | Matrix:SF1015':'';
-        if(window.showStatus)window.showStatus(`✅ Color Boost Applied! Sat:${currentSaturation}x Sharp:${currentSharpness}x${ms}`,currentColor);
+        const ms = (currentMatrix && Array.isArray(currentMatrix)) ? ' | Matrix:SF1015' : '';
+        if(window.showStatus) window.showStatus(`✅ Color Boost Applied! Sat:${currentSaturation}x Sharp:${currentSharpness}x${ms}`, currentColor);
         updateDisplay();
-    } catch(e){console.error('Boost apply failed:',e);if(window.showStatus)window.showStatus(' Color Boost Failed','#FF453A');alert('Failed to apply color boost. Ensure root access.');}
+    } catch(e) {
+        console.error('Boost apply failed:', e);
+        if(window.showStatus) window.showStatus('❌ Color Boost Failed', '#FF453A');
+        alert('Failed to apply color boost. Ensure root access.');
+    }
 }
 
 async function debugColorProps(){const r=await execFn(`su -c "getprop | grep -iE 'color|saturation|gamma|vivid|hdr|display|sf|surfaceflinger|mtk|matrix'"`);console.log('[MTK Color Debug]',r);return r;}
