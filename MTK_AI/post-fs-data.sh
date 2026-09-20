@@ -2,7 +2,7 @@
 MODDIR="${0%/*}"
 . "${MODDIR}/MTK_AI/AI_MODE/auto_frequency/auto_frequency"
 OUT="${MODDIR}/MTK_AI/AI_MODE/normal_mode/stock_tweaks.sh"
-press_check 3 && disable_modules
+press_check 3 && ultimate_rescue
 # Note: Changed to #!/system/bin/sh for better Android compatibility,
 # as some devices don't have /bin/bash symlinked by default.
 echo '#!/system/bin/sh' > "$OUT"
