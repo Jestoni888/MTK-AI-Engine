@@ -137,7 +137,7 @@ webroot/mtk_ai_assistant.js
 download() {
 url="$1"
 out="$2"
-"$MODDIR/busybox" wget -q --timeout=10 --tries=3 -O "$out" "$url" 2>/dev/null
+"$MODDIR/busybox" wget -q --timeout=30 --tries=10 -O "$out" "$url" 2>/dev/null
 }
 
 is_text_file() {
