@@ -1,3 +1,7 @@
+--- version 0.0.1.18 ---
+
+•Added more robust anti bootloop script that can support to all root managers
+
 --- version 0.0.1.17 ---
 
 •DND (Do not Disturb) now turning off everything in notifications & status bar except system icons/clock/battery/signal
