@@ -118,13 +118,9 @@ apply_devfreq() {
 
     # 1. Read per-app raw text files first
     if [ -n "$CURRENT_TOP_APP" ]; then
-        DEVFREQ_GOV_FILE="${PERAPP_DIR}/${CURRENT_TOP_APP}.devfreq_governor"
-        DEVFREQ_MIN_FILE="${PERAPP_DIR}/${CURRENT_TOP_APP}.devfreq_min_freq"
-        DEVFREQ_MAX_FILE="${PERAPP_DIR}/${CURRENT_TOP_APP}.devfreq_max_freq"
-
-        TARGET_GOV=$(cat "$DEVFREQ_GOV_FILE" 2>/dev/null | tr -d '\r\n')
-        TARGET_MIN_FREQ=$(cat "$DEVFREQ_MIN_FILE" 2>/dev/null | tr -d '\r\n')
-        TARGET_MAX_FREQ=$(cat "$DEVFREQ_MAX_FILE" 2>/dev/null | tr -d '\r\n')
+        TARGET_GOV=$(cat "${PERAPP_DIR}/${CURRENT_TOP_APP}.devfreq_governor" 2>/dev/null | tr -d '\r\n')
+        TARGET_MIN_FREQ=$(cat "${PERAPP_DIR}/${CURRENT_TOP_APP}.devfreq_min_freq" 2>/dev/null | tr -d '\r\n')
+        TARGET_MAX_FREQ=$(cat "${PERAPP_DIR}/${CURRENT_TOP_APP}.devfreq_max_freq" 2>/dev/null | tr -d '\r\n')
     fi
 
     # 2. Fallback to global JSON config if per-app values are missing
@@ -132,24 +128,20 @@ apply_devfreq() {
         if command -v jq >/dev/null 2>&1; then
             # Parse via jq
             [ -z "$TARGET_GOV" ] && TARGET_GOV=$(jq -r '.governor // empty' "$GLOBAL_CFG_FILE" 2>/dev/null)
-
             IS_LOCKED=$(jq -r '.isLocked // false' "$GLOBAL_CFG_FILE" 2>/dev/null)
             if [ "$IS_LOCKED" = "true" ]; then
                 MIN_MHZ=$(jq -r '.minFreq // empty' "$GLOBAL_CFG_FILE" 2>/dev/null)
                 MAX_MHZ=$(jq -r '.maxFreq // empty' "$GLOBAL_CFG_FILE" 2>/dev/null)
-
                 [ -z "$TARGET_MIN_FREQ" ] && [ -n "$MIN_MHZ" ] && [ "$MIN_MHZ" != "null" ] && TARGET_MIN_FREQ=$((MIN_MHZ * 1000))
                 [ -z "$TARGET_MAX_FREQ" ] && [ -n "$MAX_MHZ" ] && [ "$MAX_MHZ" != "null" ] && TARGET_MAX_FREQ=$((MAX_MHZ * 1000))
             fi
         else
             # Fallback parsing via grep/sed
-            [ -z "$TARGET_GOV" ] && TARGET_GOV=$(grep -o '"governor": *"[^"]*"' "$GLOBAL_CFG_FILE" | sed 's/.*: *"\([^"]*\)"/\1/')
-
-            IS_LOCKED=$(grep -o '"isLocked": *[^,}]*' "$GLOBAL_CFG_FILE" | sed 's/.*: *\([^,}]*\)/\1/' | tr -d ' ')
+            [ -z "$TARGET_GOV" ] && TARGET_GOV=$(grep -o '"governor": *"[^"]*"' "$GLOBAL_CFG_FILE" 2>/dev/null | sed 's/.*: *"\([^"]*\)"/\1/')
+            IS_LOCKED=$(grep -o '"isLocked": *[^,}]*' "$GLOBAL_CFG_FILE" 2>/dev/null | sed 's/.*: *\([^,}]*\)/\1/' | tr -d ' ')
             if [ "$IS_LOCKED" = "true" ]; then
-                MIN_MHZ=$(grep -o '"minFreq": *[0-9]*' "$GLOBAL_CFG_FILE" | sed 's/.*: *\([0-9]*\)/\1/')
-                MAX_MHZ=$(grep -o '"maxFreq": *[0-9]*' "$GLOBAL_CFG_FILE" | sed 's/.*: *\([0-9]*\)/\1/')
-
+                MIN_MHZ=$(grep -o '"minFreq": *[0-9]*' "$GLOBAL_CFG_FILE" 2>/dev/null | sed 's/.*: *\([0-9]*\)/\1/')
+                MAX_MHZ=$(grep -o '"maxFreq": *[0-9]*' "$GLOBAL_CFG_FILE" 2>/dev/null | sed 's/.*: *\([0-9]*\)/\1/')
                 [ -z "$TARGET_MIN_FREQ" ] && [ -n "$MIN_MHZ" ] && TARGET_MIN_FREQ=$((MIN_MHZ * 1000))
                 [ -z "$TARGET_MAX_FREQ" ] && [ -n "$MAX_MHZ" ] && TARGET_MAX_FREQ=$((MAX_MHZ * 1000))
             fi
@@ -159,29 +151,27 @@ apply_devfreq() {
     # 3. Default Governor fallback
     TARGET_GOV=${TARGET_GOV:-"simple_ondemand"}
 
-    # 4. Apply settings across target devfreq sysfs nodes
-    for dev in /sys/class/devfreq/*; do
-        [ -d "$dev" ] || continue
-        name=$(basename "$dev")
+    # 4. Apply settings across target devfreq sysfs nodes using robust file-first search
+    # This explicitly TARGETS (includes) only mem, dvfs, dmc, gpu, gpubw paths
+    find /sys -type f -name "available_frequencies" \
+        \( -path "*mem*" -o -path "*dvfs*" -o -path "*dmc*" -o -path "*gpu*" -o -path "*gpubw*" \) \
+        2>/dev/null | while read -r f; do
         
-        # Target memory controllers, DVFS, DMC, GPU, and GPU bandwidth
-        if [[ "$name" == *"mem"* ]] || [[ "$name" == *"dvfs"* ]] || [[ "$name" == *"dmc"* ]] || [[ "$name" == *"gpu"* ]] || [[ "$name" == *"gpubw"* ]]; then
-            
-            # Apply Governor
-            if [ -f "$dev/governor" ]; then
-                echo "$TARGET_GOV" > "$dev/governor" 2>/dev/null
-            fi
+        d="${f%/*}"
+        [ -r "$f" ] || continue
 
-            # Apply Min Frequency
-            if [ -n "$TARGET_MIN_FREQ" ] && [ -f "$dev/min_freq" ]; then
-                echo "$TARGET_MIN_FREQ" > "$dev/min_freq" 2>/dev/null
-            fi
+        # Apply Governor (only if writable)
+        [ -n "$TARGET_GOV" ] && [ -w "$d/governor" ] && echo "$TARGET_GOV" > "$d/governor" 2>/dev/null
 
-            # Apply Max Frequency
-            if [ -n "$TARGET_MAX_FREQ" ] && [ -f "$dev/max_freq" ]; then
-                echo "$TARGET_MAX_FREQ" > "$dev/max_freq" 2>/dev/null
+        # Apply Min/Max Frequency (with set_freq fallback for kernels that use it)
+        if [ -n "$TARGET_MIN_FREQ" ] && [ -n "$TARGET_MAX_FREQ" ]; then
+            if [ -w "$d/min_freq" ] && [ -w "$d/max_freq" ]; then
+                echo "$TARGET_MAX_FREQ" > "$d/max_freq" 2>/dev/null
+                echo "$TARGET_MIN_FREQ" > "$d/min_freq" 2>/dev/null
+            elif [ -w "$d/set_freq" ]; then
+                # If only set_freq exists, apply the max frequency target to it
+                echo "$TARGET_MAX_FREQ" > "$d/set_freq" 2>/dev/null
             fi
-
         fi
     done
 }
