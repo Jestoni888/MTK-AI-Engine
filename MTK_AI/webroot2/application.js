@@ -856,14 +856,11 @@ try {
 
 async function fetchDevfreqGovernors() {
   try {
-    const raw = await execFn(`
-      for dev in /sys/class/devfreq/*; do
-        name=$(basename $dev)
-        if [[ "$name" == *"mem"* ]] || [[ "$name" == *"dvfs"* ]] || [[ "$name" == *"dmc"* ]] || [[ "$name" == *"gpu"* ]] || [[ "$name" == *"gpubw"* ]]; then
-          [ -f "$dev/available_governors" ] && cat "$dev/available_governors"
-        fi
-      done
-    `, 2000);
+    // Robust file-first search targeting ONLY mem, dvfs, dmc, gpu, gpubw
+    const raw = await execFn(
+      `find /sys -type f -name "available_governors" \\( -path "*mem*" -o -path "*dvfs*" -o -path "*dmc*" -o -path "*gpu*" -o -path "*gpubw*" \\) -exec cat {} + 2>/dev/null`, 
+      2000
+    );
 
     const govs = raw.trim().split(/\s+/).filter(Boolean);
     return [...new Set(govs)]; // Remove duplicates across nodes
@@ -876,16 +873,13 @@ window.fetchDevfreqGovernors = fetchDevfreqGovernors;
 
 async function fetchDevfreqFrequencies() {
   try {
-    const raw = await execFn(`
-      for dev in /sys/class/devfreq/*; do
-        name=$(basename $dev)
-        if [[ "$name" == *"mem"* ]] || [[ "$name" == *"dvfs"* ]] || [[ "$name" == *"dmc"* ]] || [[ "$name" == *"gpu"* ]] || [[ "$name" == *"gpubw"* ]]; then
-          [ -f "$dev/available_frequencies" ] && cat "$dev/available_frequencies"
-        fi
-      done
-    `, 2000);
+    // Robust file-first search targeting ONLY mem, dvfs, dmc, gpu, gpubw
+    const raw = await execFn(
+      `find /sys -type f -name "available_frequencies" \\( -path "*mem*" -o -path "*dvfs*" -o -path "*dmc*" -o -path "*gpu*" -o -path "*gpubw*" \\) -exec cat {} + 2>/dev/null`, 
+      2000
+    );
 
-    // Split, clean, and sort frequencies numerically (ascending)
+    // Split, clean, deduplicate, and sort frequencies numerically (ascending)
     const freqs = raw.trim().split(/\s+/)
       .filter(Boolean)
       .map(Number)
