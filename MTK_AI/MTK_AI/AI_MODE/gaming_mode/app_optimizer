@@ -98,124 +98,64 @@ fi
 
 #VM Memory & Scheduler optimize
 if [ -f "$CONFIG_DIR/sysctl_tweaks" ]; then
-apply() {
-[ ! -f "$2" ] && return 1
-chmod 644 "$2" >/dev/null 2>&1
-echo "$1" >"$2" 2>/dev/null
-chmod 444 "$2" >/dev/null 2>&1
-}
-
-write() {
-[ ! -f "$2" ] && return 1
-chmod 644 "$2" >/dev/null 2>&1
-echo "$1" >"$2" 2>/dev/null
-}
-
-cpufreq_ppm_max_perf() {
-cluster=-1
-for path in /sys/devices/system/cpu/cpufreq/policy*; do
-((cluster++))
-cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
-write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+for param in \
+  "vm.admin_reserve_kbytes=8192" \
+  "vm.block_dump=0" \
+  "vm.compact_unevictable_allowed=1" \
+  "vm.compaction_proactiveness=20" \
+  "vm.dirty_background_bytes=0" \
+  "vm.dirty_background_ratio=5" \
+  "vm.dirty_bytes=0" \
+  "vm.dirty_expire_centisecs=500" \
+  "vm.dirty_ratio=20" \
+  "vm.dirty_writeback_centisecs=500" \
+  "vm.dirtytime_expire_seconds=43200" \
+  "vm.extfrag_threshold=500" \
+  "vm.extra_free_kbytes=0" \
+  "vm.laptop_mode=0" \
+  "vm.legacy_va_layout=0" \
+  "vm.lowmem_reserve_ratio=256 32 0" \
+  "vm.max_map_count=65530" \
+  "vm.min_free_kbytes=65536" \
+  "vm.mmap_min_addr=32768" \
+  "vm.mmap_rnd_bits=24" \
+  "vm.mmap_rnd_compat_bits=11" \
+  "vm.oom_dump_tasks=1" \
+  "vm.oom_kill_allocating_task=0" \
+  "vm.overcommit_kbytes=0" \
+  "vm.overcommit_memory=0" \
+  "vm.overcommit_ratio=50" \
+  "vm.page-cluster=3" \
+  "vm.page_lock_unfairness=5" \
+  "vm.panic_on_oom=0" \
+  "vm.percpu_pagelist_fraction=0" \
+  "vm.stat_interval=60" \
+  "vm.swappiness=10" \
+  "vm.unprivileged_userfaultfd=0" \
+  "vm.user_reserve_kbytes=131072" \
+  "vm.vfs_cache_pressure=50" \
+  "vm.watermark_boost_factor=0" \
+  "vm.watermark_scale_factor=10" \
+  "kernel.sched_schedstats=0" \
+  "kernel.sched_util_clamp_min=0" \
+  "kernel.sched_pelt_multiplier=1" \
+  "kernel.sched_latency_ns=2000000" \
+  "kernel.sched_min_granularity_ns=500000" \
+  "kernel.sched_wakeup_granularity_ns=500000" \
+  "kernel.sched_migration_cost_ns=500000" \
+  "kernel.sched_tunable_scaling=0" \
+  "kernel.sched_nr_migrate=32" \
+  "kernel.sched_rr_timeslice_ms=100" \
+  "kernel.sched_rt_period_us=1000000" \
+  "kernel.sched_rt_runtime_us=950000" \
+  "kernel.sched_util_clamp_max=1024" \
+  "kernel.sched_util_clamp_min_rt_default=0" \
+  "kernel.sched_energy_aware=1" \
+  "kernel.sched_child_runs_first=0"
+do
+    # Added || true at the end to force a successful exit code and prevent script halting
+    sysctl -w "$param" > /dev/null 2>&1 || echo "^^^ FAILED: $param" || true
 done
-}
-
-cpufreq_max_perf() {
-for path in /sys/devices/system/cpu/*/cpufreq; do
-cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
-apply "$cpu_maxfreq" "$path/scaling_max_freq"
-apply "$cpu_maxfreq" "$path/scaling_min_freq"
-done
-chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq 2>/dev/null
-}
-
-# --- Common System Tweaks ---
-apply 0 /proc/sys/kernel/panic
-apply 0 /proc/sys/kernel/panic_on_oops
-apply 0 /proc/sys/kernel/panic_on_warn
-apply 0 /proc/sys/kernel/softlockup_panic
-sync
-
-find /sys/block -maxdepth 1 -mindepth 1 -exec sh -c 'for d; do echo 0 > $d/queue/iostats; echo 0 > $d/queue/add_random; done' _ {} + &
-
-for algo in bbr3 bbr2 bbrplus bbr westwood cubic; do
-if grep -q "$algo" /proc/sys/net/ipv4/tcp_available_congestion_control 2>/dev/null; then
-apply "$algo" /proc/sys/net/ipv4/tcp_congestion_control
-break
-fi
-done
-
-apply 1 /proc/sys/net/ipv4/tcp_low_latency
-apply 1 /proc/sys/net/ipv4/tcp_ecn
-apply 3 /proc/sys/net/ipv4/tcp_fastopen
-apply 1 /proc/sys/net/ipv4/tcp_sack
-apply 0 /proc/sys/net/ipv4/tcp_timestamps
-apply 3 /proc/sys/kernel/perf_cpu_time_max_percent
-apply 0 /proc/sys/kernel/sched_schedstats
-apply 0 /proc/sys/kernel/task_cpustats_enable
-apply 0 /proc/sys/kernel/sched_autogroup_enabled
-apply 1 /proc/sys/kernel/sched_child_runs_first
-apply 32 /proc/sys/kernel/sched_nr_migrate
-apply 50000 /proc/sys/kernel/sched_migration_cost_ns
-apply 1000000 /proc/sys/kernel/sched_min_granularity_ns
-apply 1500000 /proc/sys/kernel/sched_wakeup_granularity_ns
-apply 0 /proc/sys/vm/page-cluster
-apply 15 /proc/sys/vm/stat_interval
-apply 0 /proc/sys/vm/compaction_proactiveness
-apply 0 /sys/module/mmc_core/parameters/use_spi_crc
-apply 0 /sys/module/opchain/parameters/chain_on
-apply 0 /sys/module/cpufreq_bouncing/parameters/enable
-apply 0 /proc/task_info/task_sched_info/task_sched_info_enable
-apply 0 /proc/oplus_scheduler/sched_assist/sched_assist_enabled
-apply "libunity.so, libil2cpp.so, libmain.so, libUE4.so, libgodot_android.so, libgdx.so, libgdx-box2d.so, libminecraftpe.so, libLive2DCubismCore.so, libyuzu-android.so, libryujinx.so, libcitra-android.so, libhdr_pro_engine.so, libandroidx.graphics.path.so, libeffect.so" /proc/sys/kernel/sched_lib_name
-apply 255 /proc/sys/kernel/sched_lib_mask_force
-
-find /sys/class/thermal -maxdepth 1 -name "thermal_zone*" -exec sh -c 'for d; do echo step_wise > $d/policy; done' _ {} +
-
-# --- Performance Profile ---
-[ -f /sys/module/battery_saver/parameters/enabled ] && {
-if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
-apply 0 /sys/module/battery_saver/parameters/enabled
-else
-apply N /sys/module/battery_saver/parameters/enabled
-fi
-}
-
-apply 0 /proc/sys/kernel/split_lock_mitigate
-
-if [ -f "/sys/kernel/debug/sched_features" ]; then
-apply NEXT_BUDDY /sys/kernel/debug/sched_features
-apply NO_TTWU_QUEUE /sys/kernel/debug/sched_features
-fi
-
-if [ -d "/dev/stune/" ]; then
-apply 1 /dev/stune/top-app/schedtune.prefer_idle
-apply 1 /dev/stune/top-app/schedtune.boost
-fi
-
-tp_path="/proc/touchpanel"
-if [ -d "$tp_path" ]; then
-apply 1 $tp_path/game_switch_enable
-apply 0 $tp_path/oplus_tp_limit_enable
-apply 0 $tp_path/oppo_tp_limit_enable
-apply 1 $tp_path/oplus_tp_direction
-apply 1 $tp_path/oppo_tp_direction
-fi
-
-apply 80 /proc/sys/vm/vfs_cache_pressure
-
-# Force CPU to highest possible frequency (Frequency locking, not governor)
-if [ -d /proc/ppm ]; then
-cpufreq_ppm_max_perf
-else
-cpufreq_max_perf
-fi
-
-find /sys/block -maxdepth 1 \( -name "mmcblk0" -o -name "mmcblk1" -o -name "sd*" \) -exec sh -c 'for d; do echo 32 > "$d/queue/read_ahead_kb"; echo 32 > "$d/queue/nr_requests"; done' _ {} + &
-
-echo 3 >/proc/sys/vm/drop_caches
-wait
 fi
 
 #Thermal Override
@@ -258,6 +198,17 @@ find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( \
     \) 2>/dev/null | while read -r target; do
         apply "$max" "$target"
     done
+done
+fi
+# ==============================
+# 🗄️ I/O Scheduler & Read-Ahead
+# ==============================
+find /sys \( -name "read_ahead_kb" -o -name "scheduler" \) ! -type d 2>/dev/null | while IFS= read -r file; do
+    chmod 777 "$file" 2>/dev/null || true
+    case "$file" in
+        *read_ahead_kb) echo 8192 | tee "$file" 2>/dev/null || true ;;
+        *scheduler)     echo none  | tee "$file" 2>/dev/null || true ;;
+    esac
 done
 fi
 
