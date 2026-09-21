@@ -1,18 +1,9 @@
-# MTK AI Engine - Required Files List
-# One relative path per line (relative to /data/adb/modules/MTK_AI/)
-# Lines starting with # are comments
-
-# Performance
 Xperformance/etc/auto_frequency/auto_frequency.sh
 Xperformance/etc/disable_thermal/disable_thermal.sh
 Xperformance/etc/cooler/cooler.sh
-
-# AI Mode - Auto Frequency
 MTK_AI/AI_MODE/auto_frequency/auto_frequency
 MTK_AI/AI_MODE/auto_frequency/cpu6
 MTK_AI/AI_MODE/auto_frequency/cpu7
-
-# AI Mode - Gaming Mode
 MTK_AI/AI_MODE/gaming_mode/app_optimizer
 MTK_AI/AI_MODE/gaming_mode/bypass_on
 MTK_AI/AI_MODE/gaming_mode/bypass_active
@@ -25,15 +16,11 @@ MTK_AI/AI_MODE/gaming_mode/lite_gaming
 MTK_AI/AI_MODE/gaming_mode/performance
 MTK_AI/AI_MODE/gaming_mode/unlock
 MTK_AI/AI_MODE/gaming_mode/unlockfps
-
-# AI Mode - Normal Mode
 MTK_AI/AI_MODE/normal_mode/bypass_off
 MTK_AI/AI_MODE/normal_mode/normal_cpuset
 MTK_AI/AI_MODE/normal_mode/normal_prop
 MTK_AI/AI_MODE/normal_mode/powersave
 MTK_AI/AI_MODE/normal_mode/powersavex
-
-# AI Mode - Global Mode
 MTK_AI/AI_MODE/global_mode/ram_cleaner
 MTK_AI/AI_MODE/global_mode/resources_tweaks
 MTK_AI/AI_MODE/global_mode/trim_memory
@@ -41,17 +28,11 @@ MTK_AI/AI_MODE/global_mode/webview_tweaks
 MTK_AI/AI_MODE/global_mode/module_executer
 MTK_AI/AI_MODE/global_mode/heartbeat
 MTK_AI/AI_MODE/global_mode/per_app
-
-# Script Runner
 script_runner/display_mode
 script_runner/mtk_ai_manual
 script_runner/refresh_rate_locker
 script_runner/sf_controller
-
-# Main Control
 main_control/mtk_ai_engine.sh
-
-# Module Scripts
 action.sh
 service.sh
 post-fs-data.sh
@@ -59,8 +40,6 @@ module.prop
 update_checker.sh
 .required_files
 system.prop
-
-# WebUI Files
 webroot/index.html
 webroot/application.js
 webroot/animationspeed.js
