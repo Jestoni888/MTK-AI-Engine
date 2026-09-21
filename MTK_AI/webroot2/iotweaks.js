@@ -415,17 +415,46 @@ function renderHistory() {
             <div style="color: #fff; margin-bottom: 4px;">
                 This profile achieved the lowest storage latency (<b>${winner.lat}</b>) and <b>${winner.iops} IOPS</b> based on your benchmark tests.
             </div>
-            <div style="color: #32D74B; font-weight: 600;">
+            <div style="color: #32D74B; font-weight: 600; margin-bottom: 8px;">
                 ✔ Recommended for smooth system responsiveness and minimal micro-stutters.
             </div>
+            <button id="apply-winner-btn" style="width: 100%; padding: 8px; background: linear-gradient(135deg, #FFD700, #FFA500); color: #1a1f3a; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">⚡ Apply Winning Profile (${winner.ra})</button>
         `;
+
+        setTimeout(() => {
+            const applyWinBtn = document.getElementById('apply-winner-btn');
+            if (applyWinBtn) {
+                applyWinBtn.onclick = async () => {
+                    currentReadAhead = winner.raVal;
+                    const slider = document.getElementById('io-ra-slider');
+                    const raVal = document.getElementById('io-ra-val');
+                    if (slider) slider.value = currentReadAhead;
+                    if (raVal) raVal.textContent = `${currentReadAhead} KB`;
+
+                    // Switch back to the Apply tab
+                    const btnApply = document.getElementById('tab-apply');
+                    const vApply = document.getElementById('view-apply');
+                    const btnHist = document.getElementById('tab-history');
+                    const vHistory = document.getElementById('view-history');
+                    if (btnApply && vApply && btnHist && vHistory) {
+                        btnHist.classList.remove('active');
+                        vHistory.style.display = 'none';
+                        btnApply.classList.add('active');
+                        vApply.style.display = 'block';
+                    }
+
+                    // Trigger configuration application
+                    await applyTweaks();
+                };
+            }
+        }, 50);
     }
 
     container.innerHTML = benchmarkHistory.slice().reverse().map(item => {
         const itemLat = parseLatency(item);
         const isWinner = winner && (item.id === winner.id || (item.ra === winner.ra && Math.abs(itemLat - lowestLat) < 0.01));
         const bgStyle = isWinner ? 'background: rgba(255, 215, 0, 0.1); border: 1px solid #FFD700;' : 'background: rgba(0,0,0,0.3);';
-        
+
         return `
             <div style="padding: 8px 12px; ${bgStyle} border-radius: 8px; font-size: 11px; border-left: 3px solid ${isWinner ? '#FFD700' : item.color};">
                 <div style="display: flex; justify-content: space-between; color: #fff; font-weight: 600;">
