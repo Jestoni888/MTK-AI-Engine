@@ -55,3 +55,34 @@ fi
 
 chmod +x "$OUT"
 echo "Created $OUT"
+
+# 4. Backup current DVFS frequencies (MAX first, MIN last)
+DVFS_OUT="${MODDIR}/MTK_AI/AI_MODE/normal_mode/default_dvfs.sh"
+echo '#!/system/bin/sh' > "$DVFS_OUT"
+echo "" >> "$DVFS_OUT"
+echo "# --- DVFS Frequency Backup (MAX first, MIN last) ---" >> "$DVFS_OUT"
+find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r f; do
+dir=$(dirname "$f")
+# Backup current max frequency
+for t in max_freq; do
+if [ -f "$dir/$t" ]; then
+cur_max=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
+if [ -n "$cur_max" ]; then
+echo "echo '${cur_max}' > ${dir}/${t}" >> "$DVFS_OUT"
+break
+fi
+fi
+done
+# Backup current min frequency
+for t in min_freq; do
+if [ -f "$dir/$t" ]; then
+cur_min=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
+if [ -n "$cur_min" ]; then
+echo "echo '${cur_min}' > ${dir}/${t}" >> "$DVFS_OUT"
+break
+fi
+fi
+done
+done
+chmod +x "$DVFS_OUT"
+echo "Created $DVFS_OUT"
