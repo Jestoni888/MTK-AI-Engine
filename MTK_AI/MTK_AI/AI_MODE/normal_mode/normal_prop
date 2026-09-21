@@ -1,5 +1,5 @@
 #!/system/bin/sh
-
+[ -f "/dev/.mtk_ai_normal_mode" ] && return 0
 pkill -f app_optimizer >/dev/null 2>&1 || true
 
 # --- LOCKFILE TO PREVENT SPAM ---
