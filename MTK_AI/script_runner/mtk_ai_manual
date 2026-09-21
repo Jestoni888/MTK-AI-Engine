@@ -1,5 +1,5 @@
 #!/system/bin/sh
-pkill -x powersave 2>/dev/null
+pkill -x powersave action.sh update_checker.sh 2>/dev/null
 S="/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual"
 for p in $(pgrep -f "$S"); do [ "$p" != "$$" ] && kill -9 "$p" 2>/dev/null; done
 C="/sdcard/MTK_AI_Engine"; M="/data/adb/modules/MTK_AI"
