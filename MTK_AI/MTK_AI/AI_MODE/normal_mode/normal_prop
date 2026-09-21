@@ -1,17 +1,17 @@
 #!/system/bin/sh
 
 pkill -f app_optimizer >/dev/null 2>&1 || true
-SCRIPT_PATH="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/normal_prop"
 
-for pid in $(pgrep -f "$SCRIPT_PATH"); do
-    # Kill all instances except the current running script ($$)
-    if [ "$pid" != "$$" ]; then
-        kill -9 "$pid" 2>/dev/null
-    fi
-done
-
+# --- LOCKFILE TO PREVENT SPAM ---
+LOCKFILE="/dev/.mtk_ai_normal.lock"
+if [ -f "$LOCKFILE" ]; then
+    kill -0 $(cat "$LOCKFILE") 2>/dev/null && exit 0
+fi
+echo $$ > "$LOCKFILE"
+trap 'rm -f "$LOCKFILE"' EXIT
+# --------------------------------
 # ==========================================
-. /data/adb/modules/MTK_AI/script_runner/automatrix
+. /data/adb/modules/MTK_AI/script_runner/mtk_ai_manual
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 
 log_msg() {
@@ -25,7 +25,7 @@ SDCARD="/sdcard/MTK_AI_Engine"
 BB="/data/adb/modules/MTK_AI/busybox"
 SAVE_DIR="$SDCARD/cooldown_values"
 
-devfreq_nodes
+devfreq
 
 # DND
 if [ -f "$SDCARD/enable_dnd_during_game" ]; then
