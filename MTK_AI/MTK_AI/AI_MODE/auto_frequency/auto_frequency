@@ -372,7 +372,7 @@ screen_on() { [ -n "$BRIGHTNESS_FILES" ] && grep -q -v '^0$' $BRIGHTNESS_FILES 2
 
 # Exit immediately if screen is already on
 screen_on && { echo "Screen on, skipping."; return 0; }
-
+for f in "enabled true" "vibration_disabled true" "animation_disabled true" "launch_boost_disabled true" "aod_disabled true" "datasaver true" "force_all_apps_standby true" "quick_doze_enabled true" "soundtrigger_disabled true" "optional_sensors_disabled true" "gps_mode 3" "adjust_brightness_factor 0.5"; do device_config put battery_saver $f; done
 NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
 for app in $(cmd package list packages 2>/dev/null | cut -d: -f2); do
     # Break loop if screen turns on during execution
