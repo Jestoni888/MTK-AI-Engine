@@ -44,21 +44,12 @@ MTK_AI/AI_MODE/global_mode/per_app
 
 # Script Runner
 script_runner/display_mode
-script_runner/automatrix
 script_runner/mtk_ai_manual
 script_runner/refresh_rate_locker
 script_runner/sf_controller
-script_runner/mtk_ai_eem_boot
-script_runner/monitor_app_stats
-
-# Service Scripts
-service.d/backup.sh
 
 # Main Control
-main_control/mtk_ai_engine
 main_control/mtk_ai_engine.sh
-main_control/mode
-main_control/performance.sh
 
 # Module Scripts
 action.sh
