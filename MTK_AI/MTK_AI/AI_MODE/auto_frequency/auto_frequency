@@ -379,7 +379,7 @@ for app in $(cmd package list packages 2>/dev/null | cut -d: -f2); do
     screen_on && break
 
     # Skip empty, root apps, and protected apps
-    case "$app" in ""|com.topjohnwu.magisk|me.weishu.kernelsu) continue;; esac
+    case "$app" in ""|com.topjohnwu.magisk|*media*|*audio*||me.weishu.kernelsu) continue;; esac
     [ -f "$NEVER_KILL_FILE" ] && grep -Fqx "$app" "$NEVER_KILL_FILE" && continue
 
     cmd app_hibernation set-state --user 0 --global "$app" true >/dev/null 2>&1 || true
