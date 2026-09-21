@@ -19,7 +19,7 @@ BB="$MODDIR/busybox"
 
 # Wait for boot
 while [ "$(getprop sys.boot_completed)" != "1" ]; do
-    sleep 3
+    sleep 10
 done
 
 # ✅ SAFE: Only make scripts executable (not 777!)
