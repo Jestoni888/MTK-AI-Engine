@@ -80,30 +80,58 @@ function showStatus(msg, isError = false) {
 // Target devfreq node based on your specified target name filter
 async function detectDevfreqNode() {
     const findCmd = `
-        find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r freq_file; do
-        dev="\${freq_file%/*}"
-        case "\$dev" in
-            *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) ;;
-            *) continue ;;
-        esac
-        [ -r "\$freq_file" ] || continue
-        valid_freq=\$(tr -s '[:space:]' '\\n' < "\$freq_file" | grep -E '^[0-9]+\$' | sort -n | tail -1)
-        [ -z "\$valid_freq" ] && continue
-        if { [ -f "\$dev/min_freq" ] && [ -f "\$dev/max_freq" ]; } || [ -f "\$dev/set_freq" ]; then
-            echo "\$dev"
-        fi
-    done`;
-    // Execute the find command and trim whitespace/newlines
-    let matchedPath = (await execFn(findCmd, 2000)).trim();
-
-    // Only assign paths if a valid match was found (no fallback)
+        find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \\( -iname "available_frequencies" -o -iname "*_freq_table" -o -iname "*_opp_dump" -o -iname "*_opp_table" \\) -print 2>/dev/null | grep -vE '/(cpufreq|policy[0-9]+|ppm)/' | while read -r freq_file; do
+            dev="\${freq_file%/*}"
+            [ -r "\$freq_file" ] || continue
+            
+            # Filter to ensure we only target main GPU/DDR/BW nodes for the primary UI card
+            case "\$dev" in
+                *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) ;;
+                *) continue ;;
+            esac
+            
+            # Check for any universal target file across all SoCs
+            for target in min_freq max_freq set_freq hw_min_freq hw_max_freq scaling_min_freq scaling_max_freq gpu_min_clock gpu_max_clock gpu_floor_rate gpu_cap_rate gpufreq_opp_freq; do
+                if [ -f "\$dev/\$target" ]; then
+                    echo "\$dev"
+                    break
+                fi
+            done
+        done | awk '!seen[\$0]++'
+    `;
+    
+    let result = (await execFn(findCmd, 3000)).trim();
+    let paths = result.split('\n').filter(p => p.length > 0);
+    
+    // Prioritize main GPU/DDR nodes for the primary UI card, fallback to first found
+    let matchedPath = paths.find(p => /gpu|mem|dvfs|dmc|gpubw|kgsl|mali/i.test(p)) || paths[0];
+    
     if (matchedPath) {
         DEVFREQ_PATHS.base = matchedPath;
         DEVFREQ_PATHS.governor = `${matchedPath}/governor`;
         DEVFREQ_PATHS.availableGovernors = `${matchedPath}/available_governors`;
-        DEVFREQ_PATHS.availableFrequencies = `${matchedPath}/available_frequencies`;
-        DEVFREQ_PATHS.minFreq = `${matchedPath}/min_freq`;
-        DEVFREQ_PATHS.maxFreq = `${matchedPath}/max_freq`;
+        
+        // Dynamically find the exact frequency list file
+        const listFileCmd = `find ${matchedPath} -maxdepth 1 -type f \\( -iname "available_frequencies" -o -iname "*_freq_table" -o -iname "*_opp_dump" -o -iname "*_opp_table" \\) 2>/dev/null | head -n 1`;
+        DEVFREQ_PATHS.availableFrequencies = (await execFn(listFileCmd, 1000)).trim();
+        
+        // Dynamically find the exact min and max target files based on what exists
+        const minTargetCmd = `find ${matchedPath} -maxdepth 1 -type f \\( -name "min_freq" -o -name "hw_min_freq" -o -name "scaling_min_freq" -o -name "gpu_min_clock" -o -name "gpu_floor_rate" \\) 2>/dev/null | head -n 1`;
+        const maxTargetCmd = `find ${matchedPath} -maxdepth 1 -type f \\( -name "max_freq" -o -name "hw_max_freq" -o -name "scaling_max_freq" -o -name "gpu_max_clock" -o -name "gpu_cap_rate" -o -name "gpufreq_opp_freq" \\) 2>/dev/null | head -n 1`;
+        
+        DEVFREQ_PATHS.minFreq = (await execFn(minTargetCmd, 1000)).trim() || null;
+        DEVFREQ_PATHS.maxFreq = (await execFn(maxTargetCmd, 1000)).trim() || null;
+        
+        // Fallback to set_freq if min/max are not found (used by some specific SoCs)
+        if (!DEVFREQ_PATHS.minFreq && !DEVFREQ_PATHS.maxFreq) {
+            const setTargetCmd = `find ${matchedPath} -maxdepth 1 -type f -name "set_freq" 2>/dev/null | head -n 1`;
+            const setPath = (await execFn(setTargetCmd, 1000)).trim();
+            if (setPath) {
+                DEVFREQ_PATHS.minFreq = setPath; 
+                DEVFREQ_PATHS.maxFreq = setPath;
+            }
+        }
+        
         DEVFREQ_PATHS.curFreq = `${matchedPath}/cur_freq`;
     }
 }
@@ -480,37 +508,58 @@ async function applyAllDevfreqSettings(applyBtn, statusEl, modal) {
     }
 }
 
-// Detect devfreq nodes NOT matching the primary filter
+// Detect devfreq nodes NOT matching the primary filter (Batched for zero UI freeze)
 async function detectOtherDevfreqNodes() {
-    const cmd = `find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r freq_file; do
+    const cmd = `find /sys/class/devfreq /sys/devices -type f -name "available_frequencies" 2>/dev/null | while read -r freq_file; do
         dev="\${freq_file%/*}"
+        # Exclude primary GPU/DDR nodes to prevent overlap with the main UI card
         case "\$dev" in
-            *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) continue ;;
+            *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*|*cpufreq*|*policy*) continue ;;
         esac
         [ -r "\$freq_file" ] || continue
-        valid_freq=\$(tr -s '[:space:]' '\\n' < "\$freq_file" | grep -E '^[0-9]+\$' | sort -n | tail -1)
-        [ -z "\$valid_freq" ] && continue
-        if { [ -f "\$dev/min_freq" ] && [ -f "\$dev/max_freq" ]; } || [ -f "\$dev/set_freq" ]; then
-            echo "\$dev"
+        
+        # Check which targets exist in this directory
+        targets=""
+        if [ -f "\$dev/min_freq" ] && [ -f "\$dev/max_freq" ]; then
+            targets="min_max"
+        elif [ -f "\$dev/set_freq" ]; then
+            targets="set"
+        else
+            continue
         fi
+        
+        # Read frequencies directly in shell to avoid multiple JS execFn calls
+        freqs=\$(tr -s '[:space:]' '\\n' < "\$freq_file" 2>/dev/null | grep -E '^[0-9]+\$' | sort -n | tr '\\n' ' ')
+        [ -n "\$freqs" ] && echo "\${dev}|\${targets}|\${freqs}"
     done`;
+
     const result = (await execFn(cmd, 3000)).trim();
-    const paths = result.split('\n').filter(p => p.length > 0);
+    const lines = result.split('\n').filter(p => p.includes('|'));
+    
     otherDevfreqNodes = [];
-    for (const path of paths) {
+    for (const line of lines) {
+        const parts = line.split('|');
+        if (parts.length < 3) continue;
+        
+        const path = parts[0];
+        const targets = parts[1];
+        const rawFreqs = parts[2];
+        
         const name = path.split('/').pop();
-        const raw = await execFn(`cat ${path}/available_frequencies 2>/dev/null`, 1000);
-        const freqs = raw.trim().split(/\s+/)
+        const freqs = rawFreqs.trim().split(/\s+/)
             .map(f => Math.round(parseInt(f) / 1000))
             .filter(f => !isNaN(f) && f > 0);
+            
         const uniqueFreqs = Array.from(new Set(freqs)).sort((a, b) => a - b);
         if (uniqueFreqs.length === 0) continue;
+        
         otherDevfreqNodes.push({
             path,
             name,
             availableFrequencies: uniqueFreqs,
             minFreq: uniqueFreqs[0],
-            maxFreq: uniqueFreqs[uniqueFreqs.length - 1]
+            maxFreq: uniqueFreqs[uniqueFreqs.length - 1],
+            targets // Store whether it uses "min_max" or "set"
         });
     }
     console.log(`🔧 Found ${otherDevfreqNodes.length} other devfreq node(s)`);
@@ -550,14 +599,28 @@ async function saveOtherNodesConfig() {
     }
 }
 
+// Apply settings to a single node with strict chmod sequence
 async function applyOtherNodeSettings(nodeName) {
     const node = otherDevfreqNodes.find(n => n.name === nodeName);
     if (!node) return false;
     try {
         const minHz = node.minFreq * 1000;
         const maxHz = node.maxFreq * 1000;
-        await execFn(`su -c "echo ${minHz} > ${node.path}/min_freq"`, 2000);
-        await execFn(`su -c "echo ${maxHz} > ${node.path}/max_freq"`, 2000);
+        let cmd = '';
+        
+        if (node.targets === 'min_max') {
+            const minPath = `${node.path}/min_freq`;
+            const maxPath = `${node.path}/max_freq`;
+            cmd += `chmod 644 '${minPath}' 2>/dev/null; echo ${minHz} > '${minPath}' 2>/dev/null; chmod 444 '${minPath}' 2>/dev/null; `;
+            cmd += `chmod 644 '${maxPath}' 2>/dev/null; echo ${maxHz} > '${maxPath}' 2>/dev/null; chmod 444 '${maxPath}' 2>/dev/null; `;
+        } else if (node.targets === 'set') {
+            const setPath = `${node.path}/set_freq`;
+            cmd += `chmod 644 '${setPath}' 2>/dev/null; echo ${maxHz} > '${setPath}' 2>/dev/null; chmod 444 '${setPath}' 2>/dev/null; `;
+        }
+        
+        if (cmd) {
+            await execFn(`su -c "${cmd}"`, 3000);
+        }
         return true;
     } catch (e) {
         console.error(`Failed to apply ${nodeName}`, e);
@@ -565,13 +628,37 @@ async function applyOtherNodeSettings(nodeName) {
     }
 }
 
+// Apply settings to ALL other nodes in ONE batched execution (Prevents UI freeze)
 async function applyAllOtherNodes() {
-    let success = 0;
+    if (otherDevfreqNodes.length === 0) return 0;
+    
+    let cmd = '';
     for (const node of otherDevfreqNodes) {
-        if (await applyOtherNodeSettings(node.name)) success++;
+        const minHz = node.minFreq * 1000;
+        const maxHz = node.maxFreq * 1000;
+        
+        if (node.targets === 'min_max') {
+            const minPath = `${node.path}/min_freq`;
+            const maxPath = `${node.path}/max_freq`;
+            cmd += `chmod 644 '${minPath}' 2>/dev/null; echo ${minHz} > '${minPath}' 2>/dev/null; chmod 444 '${minPath}' 2>/dev/null; `;
+            cmd += `chmod 644 '${maxPath}' 2>/dev/null; echo ${maxHz} > '${maxPath}' 2>/dev/null; chmod 444 '${maxPath}' 2>/dev/null; `;
+        } else if (node.targets === 'set') {
+            const setPath = `${node.path}/set_freq`;
+            cmd += `chmod 644 '${setPath}' 2>/dev/null; echo ${maxHz} > '${setPath}' 2>/dev/null; chmod 444 '${setPath}' 2>/dev/null; `;
+        }
     }
-    await saveOtherNodesConfig();
-    return success;
+    
+    try {
+        if (cmd) {
+            // Executes everything in ONE root shell instantly
+            await execFn(`su -c "${cmd}"`, 3000); 
+        }
+        await saveOtherNodesConfig();
+        return otherDevfreqNodes.length;
+    } catch (e) {
+        console.error('Failed to apply all nodes', e);
+        return 0;
+    }
 }
 
 function updateOtherCardDisplay() {
