@@ -16,40 +16,11 @@ echo $$ > /dev/cpuset/top-app/tasks 2>/dev/null
 
 MODDIR="/data/adb/modules/MTK_AI"
 BB="$MODDIR/busybox"
-LOG="$MODDIR/service.log"
 
 # Wait for boot
 while [ "$(getprop sys.boot_completed)" != "1" ]; do
-    sleep 5
+    sleep 3
 done
-
-# Log function
-log_msg() {
-if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
-  echo "log disabled"
-else
-    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $1"
-    echo "$msg" >> "$LOG"
-    
-    # Log rotation
-    if [ -f "$LOG" ]; then
-        local lines=$(wc -l < "$LOG")
-        if [ "$lines" -gt 200 ]; then
-            tail -n 200 "$LOG" > "$LOG.tmp"
-            mv "$LOG.tmp" "$LOG"
-        fi
-    fi
-fi
-}
-
-# Cleanup lock
-su -c "rm -f $MODDIR/.running.lock" 2>/dev/null
-log_msg "MTK_AI daemon started"
-
-if [ ! -d "$MODDIR" ]; then
-    echo "❌ Error: $MODDIR not found!"
-    exit 1
-fi
 
 # ✅ SAFE: Only make scripts executable (not 777!)
 find "$MODDIR" -mindepth 1 \
@@ -64,60 +35,7 @@ find "$MODDIR" -mindepth 1 \
 # Start HTTP server
 if [ -x "$BB" ]; then
     "$BB" httpd -p 8080 -h "$MODDIR/webroot/" -f 2>/dev/null &
-    log_msg "HTTP server started on port 8080"
-else
-    log_msg "⚠ Busybox not found, HTTP server disabled"
 fi
-
-rm -rf "$LOCK_DIR"
-
-# Run restore values script if exists
-if [ -f "/data/adb/service.d/99_mtk_ai_restore_values.sh" ]; then
-    sh /data/adb/service.d/99_mtk_ai_restore_values.sh &
-    log_msg "Restore values script started"
-fi
-
-# Start global script runner
-GLOBAL="$MODDIR/script_runner/automatrix"
-if [ -x "$GLOBAL" ]; then
-    setsid "$GLOBAL" > /dev/null 2>&1 &
-    log_msg "Global script runner started"
-else
-    log_msg "⚠ Global script not found: $GLOBAL"
-fi
-
-# Start main engine
-export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:$LD_LIBRARY_PATH
-export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin:$PATH"
 ENGINE="$MODDIR/main_control/mtk_ai_engine.sh"
-LITE="$MODDIR/main_control/lite_mode.sh"
-STANDARD="$MODDIR/main_control/dumpsys_mode.sh"
-# Start main engine
-if [ -x "$ENGINE" ]; then
     setsid "$ENGINE" > /dev/null 2>&1 &
-    log_msg "MTK_AI Engine started"
-fi
 
-# Start lite mode
-if [ -x "$LITE" ]; then
-    setsid "$LITE" > /dev/null 2>&1 &
-    log_msg "Lite mode started"
-fi
-
-# Start standard mode
-if [ -x "$STANDARD" ]; then
-    setsid "$STANDARD" > /dev/null 2>&1 &
-    log_msg "Standard mode started"
-fi
-
-# ✅ FIXED: Performance mode with proper export order
-if grep -qx "performance" /sdcard/MTK_AI_Engine/current_profile 2>/dev/null; then
-    log_msg "Performance profile detected, starting performance mode..."  
-    
-    cd /data/adb/modules/MTK_AI && setsid ./main_control/mode "performance mode" </dev/null >/dev/null 2>&1 &
-    log_msg "Performance mode binary started"
-else
-    log_msg "Performance profile not active"
-fi
-
-log_msg "MTK_AI service initialization complete"
