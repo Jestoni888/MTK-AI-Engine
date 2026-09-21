@@ -1,162 +1,79 @@
 #!/system/bin/sh
+pkill -x powersave 2>/dev/null
+S="/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual"
+for p in $(pgrep -f "$S"); do [ "$p" != "$$" ] && kill -9 "$p" 2>/dev/null; done
+C="/sdcard/MTK_AI_Engine"; M="/data/adb/modules/MTK_AI"
+mkdir -p "$M/.guard" 2>/dev/null
+log() { log -t MTK_AI "$@" 2>/dev/null || echo "[MTK_AI] $*"; }
+settings put global low_power 0 >/dev/null 2>&1; settings put global low_power_sticky 0 >/dev/null 2>&1
+echo 0 > /proc/sys/kernel/panic 2>/dev/null
 
-pkill -x powersave
-SCRIPT_PATH="/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual"
-
-for pid in $(pgrep -f "$SCRIPT_PATH"); do
-    # Kill all instances except the current running script ($$)
-    if [ "$pid" != "$$" ]; then
-        kill -9 "$pid" 2>/dev/null
-    fi
+# CPU Governor
+G=$(tr -d '\r\n\t ' < "$C/manual_governor.txt" 2>/dev/null); G=${G:-schedutil}
+for c in /sys/devices/system/cpu/cpu[0-9]*; do
+  [ -f "$c/cpufreq/scaling_available_governors" ] && grep -q "$G" "$c/cpufreq/scaling_available_governors" 2>/dev/null && \
+  su -c "chmod 644 '$c/cpufreq/scaling_governor' && echo '$G' > '$c/cpufreq/scaling_governor'" 2>/dev/null
 done
 
-CONFIG_DIR="/sdcard/MTK_AI_Engine"
-CONFIG_FILE="$CONFIG_DIR/devfreq_config.conf"
-LOG_FILE="$CONFIG_DIR/MTK_AI_Engine.log"
-PPM_CONFIG="$CONFIG_DIR/ppm_config.conf"
-PPM_PATH="/proc/ppm/policy_status"
-CPULIMIT="/data/adb/modules/MTK_AI/lib/cpulimit"
+# Resolution
+D=$(grep -m1 "^density=" "$C/resolution_scale_config.txt" 2>/dev/null | cut -d= -f2 | tr -d '\r\n\t ')
+[ "$D" -gt 0 ] 2>/dev/null && su -c "wm density $D" >/dev/null 2>&1 && log "Density: $D"
 
-### === SINGLE INSTANCE LOCK ===
-LOCK_DIR="/data/adb/modules/MTK_AI/.guard"
-mkdir -p "$LOCK_DIR" 2>/dev/null || true
-LOCK_FILE="$LOCK_DIR/mtk_ai_manual.pid"
+# Renderer
+R=$(tr -d '\r\n\t ' < "$C/manual_renderer.txt" 2>/dev/null); su -c "setprop debug.hwui.renderer '${R:-}'" 2>/dev/null
 
-# Helper: safe logging (works on all Android versions)
-log_msg() { log -t MTK_AI "$@" 2>/dev/null || echo "[MTK_AI] $*"; }
+# Refresh Rate
+F=$(tr -d '\r\n\t ' < "$C/manual_refresh_lock.txt" 2>/dev/null); F=${F:--1}
+su -c "service call SurfaceFlinger 1035 i32 $F" 2>/dev/null
 
-echo "=== MTK AI MANUAL OVERRIDES STARTING ==="
-settings put global low_power 0 >/dev/null 2>&1 || true
-settings put global low_power_sticky 0 >/dev/null 2>&1 || true
-echo "0" > /proc/sys/kernel/panic 2>/dev/null || true
-
-# CPU GOVERNOR ---
-GOV_CONFIG="$CONFIG_DIR/manual_governor.txt"
-GOVERNOR="schedutil" # Set default fallback
-
-cpu_governor() {
-# 1. Determine which governor to use
-if [ -f "$GOV_CONFIG" ]; then
-    GOVERNOR=$(cat "$GOV_CONFIG" 2>/dev/null | tr -d '\r\n\t ') || true
-    if [ -z "$GOVERNOR" ]; then
-        echo "Empty governor config, falling back to default: schedutil"
-        GOVERNOR="schedutil"
-    else
-        echo "Applying governor from config: $GOVERNOR"
-    fi
-else
-    echo "No governor config found, falling back to default: schedutil"
+# SurfaceFlinger CPU Limit
+pkill -f cpulimit 2>/dev/null
+if [ -f "$C/limit_surfaceflinger" ]; then
+  P=$(pidof surfaceflinger 2>/dev/null)
+  [ -n "$P" ] && nohup "$M/lib/cpulimit" -p "$P" -l 80 -z >/dev/null 2>&1 &
 fi
-
-# 2. Apply the selected governor to ALL CPUs
-for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
-    if [ -f "$cpu/cpufreq/scaling_available_governors" ]; then
-        if grep -q "$GOVERNOR" "$cpu/cpufreq/scaling_available_governors" 2>/dev/null; then
-            
-            # Note: If you run this script as root, you don't need 'su' or 'chmod 777'.
-            # If you must use su, ensure it's configured for passwordless root access.
-            su -c "chmod 644 '$cpu/cpufreq/scaling_governor'" >/dev/null 2>&1 || true
-            
-            if su -c "echo '$GOVERNOR' > '$cpu/cpufreq/scaling_governor'" 2>/dev/null; then
-                echo "✓ Governor applied to $cpu"
-            else
-                echo "✗ Failed to apply governor to $cpu (skipping)"
-            fi
-        else
-            echo "Governor '$GOVERNOR' not available for $cpu (skipping)"
-        fi
+M="/data/adb/modules/MTK_AI"; E="/sdcard/MTK_AI_Engine"
+[ -f "$E/enable_fastcharge" ] && export LD_LIBRARY_PATH="$M/lib64:$LD_LIBRARY_PATH" && nohup "$M/MTK_AI/AI_MODE/global_mode/heartbeat" >/dev/null 2>&1 &
+nohup sh "$M/script_runner/boost_color_apply.sh" >/dev/null 2>&1 &
+nohup "$M/MTK_AI/AI_MODE/normal_mode/powersavex" >/dev/null 2>&1 &
+if [ -f "$E/fast_reboot_enabled" ]; then
+    log -t MTK_AI "Fast reboot enabled" 2>/dev/null || echo "[MTK_AI] Fast reboot enabled"
+    setprop debug.sf.nobootanimation 1; setprop persist.sys.mtk.fast_boot 1 2>/dev/null
+    setprop ro.config.fastboot 1 2>/dev/null; setprop ro.zygote.disable_gl_preload 1 2>/dev/null
+    setprop pm.dexopt.bg-dexopt verify
+fi
+[ -f "$E/freeze/$pkg" ] && pm suspend "$pkg" 2>/dev/null
+devfreq() {
+    B="$E"
+    if [ -f "$B/devfreq_config.json" ]; then
+        GOV=$(grep -o '"governor": *"[^"]*"' "$B/devfreq_config.json"|cut -d'"' -f4)
+        LK=$(grep -o '"isLocked": *[a-z]*' "$B/devfreq_config.json"|awk '{print $2}')
+        MN=$(grep -o '"minFreq": *[0-9]*' "$B/devfreq_config.json"|awk '{print $2}')
+        MX=$(grep -o '"maxFreq": *[0-9]*' "$B/devfreq_config.json"|awk '{print $2}')
+        find /sys -type f -name "available_frequencies" 2>/dev/null|while read -r f; do
+            d="${f%/*}"; case "$d" in *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) ;; *) continue;; esac
+            [ -r "$f" ] || continue; [ -n "$GOV" ] && echo "$GOV" > "$d/governor" 2>/dev/null
+            if [ "$LK" = "true" ]; then
+                [ -n "$MX" ] && echo "$((MX*1000))" > "$d/max_freq" 2>/dev/null
+                [ -n "$MN" ] && echo "$((MN*1000))" > "$d/min_freq" 2>/dev/null
+            else awk '{print $1}' "$f" > "$d/min_freq" 2>/dev/null; awk '{print $NF}' "$f" > "$d/max_freq" 2>/dev/null; fi
+            break
+        done
     fi
-done
+    if [ -f "$B/devfreq_other_config.json" ]; then
+        awk '/": \{/{gsub(/"/,"",$1);gsub(/:$/,"",$1);n=$1}/"minFreq"/{m=$2+0}/"maxFreq"/{x=$2+0;print n,m,x}' "$B/devfreq_other_config.json"|while read -r n m x; do
+            [ -z "$n" ]||[ -z "$m" ]||[ -z "$x" ]&&continue
+            find /sys -type f -name "available_frequencies" 2>/dev/null|while read -r f; do
+                d="${f%/*}"; [ "${d##*/}" = "$n" ]||continue; [ -r "$f" ]||continue
+                if [ -w "$d/min_freq" ]&&[ -w "$d/max_freq" ]; then
+                    echo "$((x*1000))" > "$d/max_freq" 2>/dev/null; echo "$((m*1000))" > "$d/min_freq" 2>/dev/null
+                elif [ -w "$d/set_freq" ]; then echo "$((x*1000))" > "$d/set_freq" 2>/dev/null; fi
+                break
+            done
+        done
+    fi
 }
-cpu_governor
-
-# --- 1. RESOLUTION SCALING ---
-RES_CONFIG="$CONFIG_DIR/resolution_scale_config.txt"
-if [ -f "$RES_CONFIG" ]; then
-    SCALE=$(grep -m1 "^scale=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ') || true
-    TEXTURE=$(grep -m1 "^texture=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ') || true
-    TARGET_DENSITY=$(grep -m1 "^density=" "$RES_CONFIG" 2>/dev/null | cut -d'=' -f2 | tr -d '\r\n\t ') || true
-
-    if [ -n "$TARGET_DENSITY" ] && [ "$TARGET_DENSITY" -gt 0 ] 2>/dev/null; then
-        echo "Applying resolution config: scale=${SCALE}%, texture=${TEXTURE}, density=${TARGET_DENSITY}"
-        
-        if su -c "wm density $TARGET_DENSITY" >/dev/null 2>&1; then
-            echo "✓ Resolution/Density applied successfully"
-            log_msg "Resolution config applied: scale=$SCALE, texture=$TEXTURE, density=$TARGET_DENSITY"
-        else
-            echo "✗ Failed to apply density $TARGET_DENSITY (skipping)"
-            log_msg "Failed to apply density: $TARGET_DENSITY"
-        fi
-    else
-        echo "Invalid or missing density value in config (skipping)"
-        log_msg "Invalid density value in resolution_scale_config.txt"
-    fi
-else
-    echo "No resolution config found at $RES_CONFIG (skipping)"
-fi
-
-# --- 3. RENDERER ---
-RENDERER_CONFIG="$CONFIG_DIR/manual_renderer.txt"
-RENDERER=""
-
-# 1. Try to read from the config file if it exists
-if [ -f "$RENDERER_CONFIG" ]; then
-    RENDERER=$(cat "$RENDERER_CONFIG" 2>/dev/null | tr -d '\r\n\t ') || true
-fi
-
-# 2. Apply the renderer or reset to default
-if [ -n "$RENDERER" ]; then
-    # If a valid config was found, apply it
-    echo "Applying custom renderer: $RENDERER"
-    if su -c "setprop debug.hwui.renderer '$RENDERER'" 2>/dev/null; then
-        echo "✓ Custom renderer applied"
-    else
-        echo "✗ Failed to apply renderer"
-    fi
-else
-    # Fallback: Clear the property so Android uses its native default (skiagl)
-    echo "No renderer config found. Resetting to system default."
-    su -c "setprop debug.hwui.renderer ''" 2>/dev/null || true
-    echo "✓ Renderer reset to default"
-fi
-
-# --- 4. REFRESH RATE ---
-REFRESH_CONFIG="$CONFIG_DIR/manual_refresh_lock.txt"
-MODE_ID=""
-
-# 1. Read config if it exists
-if [ -f "$REFRESH_CONFIG" ]; then
-    MODE_ID=$(cat "$REFRESH_CONFIG" 2>/dev/null | tr -d '\r\n\t ') || true
-fi
-
-# 2. Fallback to -1 if no config found or if the file is empty
-if [ -z "$MODE_ID" ]; then
-    MODE_ID="-1"
-    echo "No refresh rate config found or empty, falling back to default mode: -1"
-fi
-
-# 3. Apply the refresh rate
-echo "Applying refresh rate mode: $MODE_ID"
-if su -c "service call SurfaceFlinger 1035 i32 $MODE_ID" 2>/dev/null; then
-    echo "✓ Refresh rate applied"
-else
-    echo "✗ Failed to apply refresh rate"
-fi
-
-# --- 8. SURFACEFLINGER CPU LIMIT ---
-pkill -f cpulimit >/dev/null 2>&1 || true
-
-if [ -f "/sdcard/MTK_AI_Engine/limit_surfaceflinger" ]; then
-    SF_PID=$(pidof surfaceflinger 2>/dev/null || true)
-    if [ -n "$SF_PID" ]; then
-        echo "Limiting SurfaceFlinger PID: $SF_PID"
-        nohup "$CPULIMIT" -p "$SF_PID" -l 80 -z >/dev/null 2>&1 &
-    else
-        echo "⚠️ SurfaceFlinger PID not found (skipping limit)"
-    fi
-fi
-
-echo "✅ Devfreq settings loaded successfully!"
-echo "=== MTK AI MANUAL OVERRIDES COMPLETED ==="
-
-exit 0
+devfreq
+for f in "enabled true" "vibration_disabled true" "animation_disabled true" "launch_boost_disabled true" "aod_disabled true" "datasaver true" "force_all_apps_standby true" "quick_doze_enabled true" "soundtrigger_disabled true" "optional_sensors_disabled true" "gps_mode 3" "adjust_brightness_factor 0.5"; do device_config put battery_saver $f; done
+M=/data/adb/modules/MTK_AI/MTK_AI/AI_MODE
+[ -f /dev/.mtk_ai_active_game ] && $M/gaming_mode/app_optimizer || $M/normal_mode/normal_prop
