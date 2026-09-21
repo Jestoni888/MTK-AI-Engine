@@ -1,9 +1,10 @@
-// zram.js - ZRAM Manager & Benchmark Suite
+// zram.js - ZRAM Manager, Boot Persistence & Benchmark Suite
 (function() {
     'use strict';
     
     const CONFIG_DIR = '/data/adb/zram_config';
     const CONFIG_FILE = `${CONFIG_DIR}/settings.conf`;
+    const SERVICE_SCRIPT = '/data/adb/service.d/99-zram.sh';
     const HISTORY_FILE = '/sdcard/MTK_AI_Engine/zram_fio_history.json';
     const FIO_BIN = '/data/adb/modules/MTK_AI/bin/fio';
 
@@ -76,8 +77,7 @@
 
             const algo = await execFn(`cat /sys/block/${zramDev}/comp_algorithm 2>/dev/null`, 5000);
             if (algo.trim()) {
-                // Extract supported system algorithms [zstd] lz4 lzo ...
-                const rawAlgos = algo.trim().replace(/\[\vert{}\]/g, ' ').split(/\s+/).filter(Boolean);
+                const rawAlgos = algo.trim().replace(/[\[\]]/g, ' ').split(/\s+/).filter(Boolean);
                 if (rawAlgos.length > 0) availableSystemAlgos = Array.from(new Set([...rawAlgos, ...AVAILABLE_ALGOS]));
 
                 const match = algo.match(/\[([^\]]+)\]/);
@@ -100,7 +100,7 @@
 
     async function saveHistory() {
         try {
-            const json = JSON.stringify(benchmarkHistory.slice(-20)); // Keep last 20 tests
+            const json = JSON.stringify(benchmarkHistory.slice(-20));
             await execFn(`mkdir -p /sdcard/MTK_AI_Engine && echo '${json}' > "${HISTORY_FILE}" 2>/dev/null`, 5000);
         } catch (e) {
             console.warn('Failed to save ZRAM benchmark history', e);
@@ -168,7 +168,6 @@
 
             <!-- CONFIG / APPLY TAB -->
             <div id="zram-view-apply">
-                <!-- ZRAM Size Slider -->
                 <div style="margin-bottom: 14px;">
                     <div style="display: flex; justify-content: space-between; color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
                         <span>💾 ZRAM Size</span>
@@ -178,7 +177,6 @@
                     <div id="zram-warning" style="font-size: 11px; color: #FFCC00; margin-top: 4px; min-height: 16px;"></div>
                 </div>
 
-                <!-- Compression Algorithm Slider & Quick Select -->
                 <div style="margin-bottom: 16px;">
                     <div style="display: flex; justify-content: space-between; color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
                         <span>⚙️ Compression Algorithm</span>
@@ -195,7 +193,6 @@
                     </div>
                 </div>
 
-                <!-- Swappiness Slider -->
                 <div style="margin-bottom: 16px;">
                     <div style="display: flex; justify-content: space-between; color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
                         <span>🔄 Swappiness Value</span>
@@ -250,7 +247,7 @@
                     <span style="color: #fff; font-size: 13px; font-weight: 600;">ZRAM Testing Portfolio</span>
                     <button id="zram-clear-history" style="background: rgba(255,69,58,0.2); color: #ff453a; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer;">Clear History</button>
                 </div>
-                <div id="zram-history-container" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;"></div>
+                <div id="zram-history-container" style="max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
                 <div id="zram-recommendation-box" style="padding: 12px; background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.3); border-radius: 10px; font-size: 11px; color: #8b92b4; margin-bottom: 15px;"></div>
             </div>
 
@@ -262,7 +259,6 @@
         modal.appendChild(box);
         document.body.appendChild(modal);
 
-        // Tab Navigation
         const vApply = document.getElementById('zram-view-apply');
         const vTest = document.getElementById('zram-view-test');
         const vHistory = document.getElementById('zram-view-history');
@@ -281,7 +277,6 @@
             activeView.style.display = 'block';
         }
 
-        // Size Slider binding
         const sizeSlider = document.getElementById('zram-size-slider');
         const sizeVal = document.getElementById('zram-size-val');
         sizeSlider.oninput = (e) => {
@@ -292,7 +287,6 @@
         };
         checkSizeWarning(currentZramMB);
 
-        // Algorithm Slider & Pill binding
         const algoSlider = document.getElementById('zram-algo-slider');
         const algoVal = document.getElementById('zram-algo-val');
         const pills = document.querySelectorAll('.algo-pill');
@@ -310,7 +304,6 @@
         algoSlider.oninput = (e) => setAlgo(parseInt(e.target.value));
         pills.forEach(p => p.onclick = () => setAlgo(parseInt(p.dataset.index)));
 
-        // Swappiness Slider binding
         const swapSlider = document.getElementById('zram-swap-slider');
         const swapVal = document.getElementById('zram-swap-val');
         swapSlider.oninput = (e) => {
@@ -318,7 +311,6 @@
             swapVal.textContent = currentSwappiness;
         };
 
-        // Test Sliders binding
         const tSizeSlider = document.getElementById('zram-test-size-slider');
         const tSizeVal = document.getElementById('zram-test-size-val');
         tSizeSlider.oninput = (e) => { testZramMB = parseInt(e.target.value); tSizeVal.textContent = `${testZramMB} MB`; };
@@ -331,7 +323,6 @@
         const tTimeVal = document.getElementById('zram-test-time-val');
         tTimeSlider.oninput = (e) => { testRuntimeSec = parseInt(e.target.value); tTimeVal.textContent = `${testRuntimeSec}s`; };
 
-        // Action Buttons
         document.getElementById('zram-apply-btn').onclick = () => applyZram(currentAlgo);
         document.getElementById('zram-disable-btn').onclick = () => disableZram();
         document.getElementById('zram-run-fio').onclick = () => runFioBenchmark();
@@ -370,7 +361,7 @@
         return 999999;
     }
 
-                async function runFioBenchmark() {
+    async function runFioBenchmark() {
         const statusEl = document.getElementById('zram-action-status');
         const logBox = document.getElementById('zram-log-box');
         const resultCard = document.getElementById('zram-fio-result-card');
@@ -385,7 +376,6 @@
         const swapCheck = await execFn("grep '/zram' /proc/swaps | awk '{print $1}'", 3000);
         const zramDev = swapCheck.trim() || "/dev/block/zram0";
 
-        // Removed --direct=1 to fix O_DIRECT errors on ZRAM virtual block devices
         const fioCmd = `${FIO_BIN} --name=zram_test --filename=${zramDev} --rw=randread --bs=4k --ioengine=psync --iodepth=1 --size=${testZramMB}M --runtime=${testRuntimeSec} --time_based=1 --zero_buffers=0`;
 
         if (logBox) {
@@ -396,19 +386,16 @@
         try {
             const output = await execFn(fioCmd, (testRuntimeSec + 10) * 1000);
 
-            // Log raw output to logBox for full diagnostic transparency
             if (!output || output.trim().length === 0) {
                 throw new Error('FIO produced empty output');
             }
 
-            // Parse IOPS, Bandwidth, and Latency
             const iopsMatch = output.match(/IOPS=([0-9kK\.]+)/) || output.match(/iops\s*:\s*min=\s*([0-9\.]+)/);
             const bwMatch = output.match(/BW=([0-9\.]+[MiBGKiB\/s]+)/);
             const latSectionMatch = output.match(/(?:clat|lat|slat)\s*\((nsec\vert{}usec\vert{}msec)\)\s*:[^\n]*avg=([0-9\.]+)/i) 
                                  || output.match(/lat\s*\((\w+)\)\s*:[^\n]*avg=([0-9\.]+)/i);
 
             if (!iopsMatch && !bwMatch) {
-                // If FIO returned text but failed execution, output the raw error log
                 const cleanErr = output.replace(/\n/g, ' ').substring(0, 150);
                 throw new Error(cleanErr);
             }
@@ -508,6 +495,7 @@
         });
 
         if (recBox && winner) {
+            const numericSize = parseInt(winner.size) || currentZramMB;
             recBox.innerHTML = `
                 <div style="color: #FFD700; font-weight: 700; font-size: 12px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
                     <span>💡 Recommended Profile (Winner):</span>
@@ -516,10 +504,55 @@
                 <div style="color: #fff; margin-bottom: 4px;">
                     Achieved lowest swap latency (<b>${winner.lat}</b>) and <b>${winner.bw}</b> throughput.
                 </div>
-                <div style="color: #32D74B; font-weight: 600;">
+                <div style="color: #32D74B; font-weight: 600; margin-bottom: 8px;">
                     ✔ Optimal settings for minimal memory paging lag under high multitasking load.
                 </div>
+                <button id="zram-apply-winner-btn" style="width: 100%; padding: 8px; background: linear-gradient(135deg, #FFD700, #ffa500); color: #000; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 11px;">⚡ Apply Winner Config (${winner.algo} - ${winner.size})</button>
             `;
+
+            setTimeout(() => {
+                const applyWinnerBtn = document.getElementById('zram-apply-winner-btn');
+                if (applyWinnerBtn) {
+                    applyWinnerBtn.onclick = async () => {
+                        currentZramMB = numericSize;
+                        currentAlgo = winner.algo.toLowerCase();
+
+                        // Switch to Config tab view
+                        const btnApplyTab = document.getElementById('zram-tab-apply');
+                        const vApply = document.getElementById('zram-view-apply');
+                        const vHistory = document.getElementById('zram-view-history');
+                        const btnHist = document.getElementById('zram-tab-history');
+
+                        if (btnApplyTab && vApply) {
+                            [btnApplyTab, btnHist].forEach(b => b?.classList.remove('active'));
+                            [vApply, document.getElementById('zram-view-test'), vHistory].forEach(v => { if(v) v.style.display = 'none'; });
+                            btnApplyTab.classList.add('active');
+                            vApply.style.display = 'block';
+                        }
+
+                        // Update form controls in UI
+                        const sizeSlider = document.getElementById('zram-size-slider');
+                        const sizeVal = document.getElementById('zram-size-val');
+                        if (sizeSlider) sizeSlider.value = currentZramMB;
+                        if (sizeVal) sizeVal.textContent = currentZramMB >= 1024 ? `${(currentZramMB/1024).toFixed(1)} GB` : `${currentZramMB} MB`;
+
+                        const algoIdx = availableSystemAlgos.indexOf(currentAlgo);
+                        if (algoIdx !== -1) {
+                            const algoSlider = document.getElementById('zram-algo-slider');
+                            const algoVal = document.getElementById('zram-algo-val');
+                            if (algoSlider) algoSlider.value = algoIdx;
+                            if (algoVal) algoVal.textContent = currentAlgo.toUpperCase();
+                            document.querySelectorAll('.algo-pill').forEach((p, idx) => {
+                                if (idx === algoIdx) p.classList.add('active');
+                                else p.classList.remove('active');
+                            });
+                        }
+
+                        // Execute deployment and save
+                        await applyZram(currentAlgo);
+                    };
+                }
+            }, 50);
         }
 
         container.innerHTML = benchmarkHistory.slice().reverse().map(item => {
@@ -541,19 +574,73 @@
         }).join('');
     }
 
-        async function applyZram(algo) {
+    async function installPersistentService(sizeMB, algo, swappiness) {
+        const scriptContent = `#!/system/bin/sh
+CONFIG_DIR="/data/adb/zram_config"
+LOG="/sdcard/MTK_AI_Engine/zram_boot.log"
+log() { echo "[$(date '+%H:%M:%S')] $*" >> "$LOG" 2>/dev/null; }
+log "=== ZRAM Boot Service Starting ==="
+
+COUNT=0
+while [ $COUNT -lt 30 ]; do [ -d "$CONFIG_DIR" ] && break; sleep 2; COUNT=$((COUNT + 1)); done
+
+SIZE="${sizeMB}M"
+ALGO="${algo}"
+SWAP="${swappiness}"
+
+if [ -f "$CONFIG_DIR/settings.conf" ]; then
+    while IFS='=' read -r key val; do
+        case "$key" in
+            SIZE) SIZE="$val" ;;
+            ALGO) ALGO="$val" ;;
+            SWAP) SWAP="$val" ;;
+        esac
+    done < "$CONFIG_DIR/settings.conf"
+fi
+
+log "Config loaded: SIZE=$SIZE, ALGO=$ALGO, SWAP=$SWAP"
+
+ZRAM_DEV=$(grep '/zram' /proc/swaps | awk '{print $1}' | head -1)
+[ -z "$ZRAM_DEV" ] && ZRAM_DEV="/dev/block/zram0"
+ZRAM_NAME=$(basename "$ZRAM_DEV")
+
+if [ "$SIZE" = "0M" ]; then
+    /system/bin/swapoff "$ZRAM_DEV" 2>/dev/null
+    /system/bin/echo 1 > "/sys/block/$ZRAM_NAME/reset"
+    /system/bin/echo 0 > "/sys/block/$ZRAM_NAME/disksize" 2>/dev/null
+    log "ZRAM disabled via boot config."
+else
+    NUM_MB=$(echo "$SIZE" | sed 's/M//')
+    if [ "$NUM_MB" -gt 0 ] 2>/dev/null; then
+        BYTES=$((NUM_MB * 1024 * 1024))
+        /system/bin/swapoff "$ZRAM_DEV" 2>/dev/null
+        /system/bin/echo 1 > "/sys/block/$ZRAM_NAME/reset"
+        /system/bin/echo "$ALGO" > "/sys/block/$ZRAM_NAME/comp_algorithm" 2>/dev/null
+        /system/bin/echo "$BYTES" > "/sys/block/$ZRAM_NAME/disksize"
+        /system/bin/mkswap "$ZRAM_DEV" >/dev/null 2>&1
+        /system/bin/swapon -p 100 "$ZRAM_DEV" 2>/dev/null || /system/bin/swapon "$ZRAM_DEV"
+        /system/bin/echo "$SWAP" > /proc/sys/vm/swappiness
+        log "ZRAM successfully initialized on boot."
+    fi
+fi
+log "=== ZRAM Boot Service Complete ==="
+exit 0`;
+
+        const b64 = btoa(scriptContent);
+        await execFn(`su -c "mkdir -p /data/adb/service.d && echo '${b64}' | base64 -d > '${SERVICE_SCRIPT}' && chmod 755 '${SERVICE_SCRIPT}'"`);
+    }
+
+    async function applyZram(algo) {
         const sizeMB = currentZramMB;
         if (sizeMB === 0) { disableZram(); return; }
 
         const sizeBytes = sizeMB * 1024 * 1024;
         const swappiness = currentSwappiness;
 
-        if (sizeMB > 16384 && !confirm(`⚠️ Creating ${sizeMB/1024}GB zRAM may cause instability.\nPhysical RAM: ${physicalRamMB/1024}GB\nContinue?`)) return;
-
         const applyBtn = document.getElementById('zram-apply-btn');
         const statsBox = document.getElementById('zram-stats-box');
-        if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = '⏳ Applying...'; }
-        if (statsBox) statsBox.textContent = 'Resetting zRAM...';
+        if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = '⏳ Applying & Installing Bootscript...'; }
+        if (statsBox) statsBox.textContent = 'Configuring zRAM & service.d...';
 
         try {
             let zramDev = await execFn("grep '/zram' /proc/swaps | awk '{print $1}' | head -1");
@@ -579,14 +666,15 @@
             await execFn(`echo "ALGO=${algo}" >> ${CONFIG_FILE}`);
             await execFn(`echo "SWAP=${swappiness}" >> ${CONFIG_FILE}`);
 
+            await installPersistentService(sizeMB, algo, swappiness);
+
             currentZramMB = sizeMB;
             currentSwappiness = swappiness;
             currentAlgo = algo;
             updateCardDisplay();
             
-            if (statsBox) statsBox.innerHTML = '<span style="color:#32D74B">✅ Applied & Saved Successfully!</span>';
+            if (statsBox) statsBox.innerHTML = '<span style="color:#32D74B">✅ Applied & Boot Script Installed!</span>';
 
-            // Re-enable button and keep UI open
             if (applyBtn) { 
                 applyBtn.disabled = false; 
                 applyBtn.textContent = '💾 Apply & Save Config'; 
@@ -598,7 +686,7 @@
         }
     }
 
-        async function disableZram() {
+    async function disableZram() {
         if (!confirm('Are you sure you want to disable ZRAM?')) return;
 
         const statsBox = document.getElementById('zram-stats-box');
@@ -621,11 +709,12 @@
             await execFn(`echo "ALGO=${currentAlgo}" >> ${CONFIG_FILE}`);
             await execFn(`echo "SWAP=${currentSwappiness}" >> ${CONFIG_FILE}`);
 
+            await installPersistentService(0, currentAlgo, currentSwappiness);
+
             currentZramMB = 0;
             updateCardDisplay();
 
-            if (statsBox) statsBox.innerHTML = '<span style="color:#FF453A">🚫 ZRAM Disabled</span>';
-            // UI remains open, live stats timer will update as INACTIVE
+            if (statsBox) statsBox.innerHTML = '<span style="color:#FF453A">🚫 ZRAM Disabled & Bootscript Updated</span>';
         } catch (e) {
             console.error('ZRAM disable failed:', e);
             if (statsBox) statsBox.innerHTML = '<span style="color:#FF453A">❌ Failed to disable.</span>';
