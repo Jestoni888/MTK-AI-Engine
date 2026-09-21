@@ -65,7 +65,6 @@ MTK_AI/AI_MODE/gaming_mode/unlockfps
 MTK_AI/AI_MODE/normal_mode/bypass_off
 MTK_AI/AI_MODE/normal_mode/normal_cpuset
 MTK_AI/AI_MODE/normal_mode/normal_prop
-MTK_AI/AI_MODE/normal_mode/powersave
 MTK_AI/AI_MODE/normal_mode/powersavex
 MTK_AI/AI_MODE/global_mode/ram_cleaner
 MTK_AI/AI_MODE/global_mode/resources_tweaks
