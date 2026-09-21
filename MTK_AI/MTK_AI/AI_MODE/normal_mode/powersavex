@@ -27,7 +27,6 @@ export LD_LIBRARY_PATH=/data/adb/modules/MTK_AI/lib64:/data/adb/modules/MTK_AI/l
 . /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/auto_frequency
 INOTIFY="/data/adb/modules/MTK_AI/lib/inotifywait"
 POWERSAVE="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/powersave"
-MANUAL="/data/adb/modules/MTK_AI/script_runner/mtk_ai_manual"
 
 # Dynamically find all 'brightness' files in /sys/
 BRIGHTNESS_FILES=$(find /sys -name "brightness" -type f 2>/dev/null)
@@ -77,11 +76,10 @@ apply_mode() {
         else
             nohup sh "/data/adb/modules/MTK_AI/update_checker.sh" >/dev/null 2>&1 &
         fi
-        exclude_killing
+        exclude_killing 2>&1 &
     else
         # Screen is ON (at least one value > 0) -> Apply manual/performance mode
-        "$MANUAL" &
-        nohup sh "/data/adb/modules/MTK_AI/service.sh" >/dev/null 2>&1 &
+        setsid "/data/adb/modules/MTK_AI/main_control/mtk_ai_engine.sh" >/dev/null 2>&1 &
     fi
 }
 
