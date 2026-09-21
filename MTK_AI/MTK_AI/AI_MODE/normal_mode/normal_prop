@@ -133,25 +133,23 @@ chmod 644 "$2" >/dev/null 2>&1
 echo "$1" >"$2" 2>/dev/null
 }
 
-cpufreq_ppm_unlock() {
-cluster=0
+cpufreq_ppm_max_perf() {
+cluster=-1
 for path in /sys/devices/system/cpu/cpufreq/policy*; do
-cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
-cpu_minfreq=$(<"$path/cpuinfo_min_freq")
-write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-write "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
 ((cluster++))
+cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
+write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
 done
 }
 
-cpufreq_unlock() {
+cpufreq_max_perf() {
 for path in /sys/devices/system/cpu/*/cpufreq; do
 cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
-cpu_minfreq=$(<"$path/cpuinfo_min_freq")
-write "$cpu_maxfreq" "$path/scaling_max_freq"
-write "$cpu_minfreq" "$path/scaling_min_freq"
+apply "$cpu_maxfreq" "$path/scaling_max_freq"
+apply "$cpu_maxfreq" "$path/scaling_min_freq"
 done
-chmod -f 644 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq 2>/dev/null
+chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq 2>/dev/null
 }
 
 # --- Common System Tweaks ---
@@ -197,7 +195,7 @@ apply 255 /proc/sys/kernel/sched_lib_mask_force
 
 find /sys/class/thermal -maxdepth 1 -name "thermal_zone*" -exec sh -c 'for d; do echo step_wise > $d/policy; done' _ {} +
 
-# --- Balance Profile ---
+# --- Performance Profile ---
 [ -f /sys/module/battery_saver/parameters/enabled ] && {
 if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
 apply 0 /sys/module/battery_saver/parameters/enabled
@@ -206,38 +204,39 @@ apply N /sys/module/battery_saver/parameters/enabled
 fi
 }
 
-apply 1 /proc/sys/kernel/split_lock_mitigate
+apply 0 /proc/sys/kernel/split_lock_mitigate
 
 if [ -f "/sys/kernel/debug/sched_features" ]; then
 apply NEXT_BUDDY /sys/kernel/debug/sched_features
-apply TTWU_QUEUE /sys/kernel/debug/sched_features
+apply NO_TTWU_QUEUE /sys/kernel/debug/sched_features
 fi
 
 if [ -d "/dev/stune/" ]; then
-apply 0 /dev/stune/top-app/schedtune.prefer_idle
-apply 0 /dev/stune/top-app/schedtune.boost
+apply 1 /dev/stune/top-app/schedtune.prefer_idle
+apply 1 /dev/stune/top-app/schedtune.boost
 fi
 
 tp_path="/proc/touchpanel"
 if [ -d "$tp_path" ]; then
-apply 0 $tp_path/game_switch_enable
-apply 1 $tp_path/oplus_tp_limit_enable
-apply 1 $tp_path/oppo_tp_limit_enable
-apply 0 $tp_path/oplus_tp_direction
-apply 0 $tp_path/oppo_tp_direction
+apply 1 $tp_path/game_switch_enable
+apply 0 $tp_path/oplus_tp_limit_enable
+apply 0 $tp_path/oppo_tp_limit_enable
+apply 1 $tp_path/oplus_tp_direction
+apply 1 $tp_path/oppo_tp_direction
 fi
 
-apply 120 /proc/sys/vm/vfs_cache_pressure
+apply 80 /proc/sys/vm/vfs_cache_pressure
 
-# Restore min/max CPU frequency limits (Frequency unlocking, not governor)
+# Force CPU to highest possible frequency (Frequency locking, not governor)
 if [ -d /proc/ppm ]; then
-cpufreq_ppm_unlock
+cpufreq_ppm_max_perf
 else
-cpufreq_unlock
+cpufreq_max_perf
 fi
 
-find /sys/block -maxdepth 1 \( -name "mmcblk0" -o -name "mmcblk1" -o -name "sd*" \) -exec sh -c 'for d; do echo 128 > "$d/queue/read_ahead_kb"; echo 64 > "$d/queue/nr_requests"; done' _ {} + &
+find /sys/block -maxdepth 1 \( -name "mmcblk0" -o -name "mmcblk1" -o -name "sd*" \) -exec sh -c 'for d; do echo 32 > "$d/queue/read_ahead_kb"; echo 32 > "$d/queue/nr_requests"; done' _ {} + &
 
+echo 3 >/proc/sys/vm/drop_caches
 wait
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
 exit 0
