@@ -18,43 +18,14 @@ done
 
 echo "[+] Applying MAXIMUM PERFORMANCE CONFIG..."
 
-# --- CPU & Governor Tweaks ---
-echo performance > /sys/class/devfreq/13000000.mali/governor 2>/dev/null || true
-echo performance > /sys/class/devfreq/mtk-dvfsrc-devfreq/governor 2>/dev/null || true
-
-for c in /sys/devices/system/cpu/cpu*/core_ctl/enable; do
-  echo 0 > "$c" 2>/dev/null || true
-done
-
 su -c "cmd power set-fixed-performance-mode-enabled true" || true
 su -c "settings put global power_manager_constants fixed_performance_mode=true" || true
 
 echo 1 > /sys/devices/system/cpu/sched/sched_boost 2>/dev/null || true
 echo 1 > /sys/devices/system/cpu/eas/enable 2>/dev/null || true
-echo 536870911 > /sys/kernel/fpsgo/common/systrace_mask 2>/dev/null || true
-
-chmod 777 /sys/devices/system/cpu/cpufreq/policy* 2>/dev/null || true
-for policy in /sys/devices/system/cpu/cpufreq/policy*; do 
-  chmod 777 "$policy/scaling_governor" 2>/dev/null || true
-  echo performance > "$policy/scaling_governor" 2>/dev/null || true
-done
-
-chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_max_freq 2>/dev/null || true
-chmod 777 /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_min_freq 2>/dev/null || true
-
-for d in /sys/devices/system/cpu/cpu[0-9]*/cpufreq; do
-  [ -d "$d" ] || continue
-  H_MAX=$(cat "$d/cpuinfo_max_freq" 2>/dev/null) || continue
-  H_MIN=$(cat "$d/cpuinfo_min_freq" 2>/dev/null) || echo 0
-  [ -n "$H_MAX" ] && { echo "$H_MAX" > "$d/scaling_max_freq" 2>/dev/null || true; echo "$H_MIN" > "$d/scaling_min_freq" 2>/dev/null || true; }
-done
 
 echo 0 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null || true
 echo 0 > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null || true
-
-for cpu in /sys/devices/system/cpu/cpu[0-9]*; do 
-  [ -f "$cpu/cpufreq/scaling_max_freq" ] && cat "$cpu/cpufreq/scaling_max_freq" > "$cpu/cpufreq/scaling_min_freq" 2>/dev/null || true
-done
 
 echo 0 > /proc/driver/thermal/sspm_thermal_throttle 2>/dev/null || true
 
@@ -199,27 +170,3 @@ fi
 
 [ -f "$PPM_PATH" ] && { echo "--- New PPM Status ---"; cat "$PPM_PATH" 2>/dev/null; }
 
-# --- I/O Tweaks ---
-for q in /sys/block/*/queue; do 
-  echo 8192 | tee "$q/read_ahead_kb" 2>/dev/null || true
-  echo none | tee "$q/scheduler" 2>/dev/null || true
-done
-
-for d in /sys/class/devfreq/*/; do
-  f=$(awk '{print $NF}' "$d/available_frequencies" 2>/dev/null) || true
-  [ -n "$f" ] && echo "$f" | tee "$d/min_freq" 2>/dev/null || true
-done
-
-# ==============================
-# ✅ Done
-# ==============================
-
-echo ""
-echo "✅ MAXIMUM PERFORMANCE ACTIVE!"
-echo "   - PerfMgr / FPSGO / FBT: enabled"
-echo "   - GPU: locked to max frequency"
-echo "   - DDR: min freq = max"
-echo "   - DCS: disabled"
-echo "   - All failures safely skipped"
-echo ""
-echo "⚠️  Monitor temperature! Reboot to restore defaults."
