@@ -181,7 +181,7 @@ force_kill_cgroup_safe() {
         fi
 
         case "$pkg" in
-            android.hardware.*|android.system.*|vendor.*|com.android.systemui|com.google.android.gms|com.google.android.gsf|com.android.phone|com.android.settings|*launcher*|com.google.android.inputmethod.latin|android|bluetooth|com.google.android.webview)
+            android.hardware.*|android.system.*|*audio*|*media*|vendor.*|com.android.systemui|com.google.android.gms|com.google.android.gsf|com.android.phone|com.android.settings|*launcher*|com.google.android.inputmethod.latin|android|bluetooth|com.google.android.webview)
                 log_msg "   🛡️ Protected System: $pkg (PID: $pid)"
                 protected_count=$((protected_count + 1))
                 continue
