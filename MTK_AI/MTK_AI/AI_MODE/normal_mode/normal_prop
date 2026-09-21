@@ -119,4 +119,125 @@ settings put global background_dex_opt_job true || true
 setprop debug.egl.force_msaa false || true
 service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1 || true
 
+# --- Helper Functions ---
+apply() {
+[ ! -f "$2" ] && return 1
+chmod 644 "$2" >/dev/null 2>&1
+echo "$1" >"$2" 2>/dev/null
+chmod 444 "$2" >/dev/null 2>&1
+}
+
+write() {
+[ ! -f "$2" ] && return 1
+chmod 644 "$2" >/dev/null 2>&1
+echo "$1" >"$2" 2>/dev/null
+}
+
+cpufreq_ppm_unlock() {
+cluster=0
+for path in /sys/devices/system/cpu/cpufreq/policy*; do
+cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
+cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+write "$cluster $cpu_minfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+((cluster++))
+done
+}
+
+cpufreq_unlock() {
+for path in /sys/devices/system/cpu/*/cpufreq; do
+cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
+cpu_minfreq=$(<"$path/cpuinfo_min_freq")
+write "$cpu_maxfreq" "$path/scaling_max_freq"
+write "$cpu_minfreq" "$path/scaling_min_freq"
+done
+chmod -f 644 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq 2>/dev/null
+}
+
+# --- Common System Tweaks ---
+apply 0 /proc/sys/kernel/panic
+apply 0 /proc/sys/kernel/panic_on_oops
+apply 0 /proc/sys/kernel/panic_on_warn
+apply 0 /proc/sys/kernel/softlockup_panic
+sync
+
+find /sys/block -maxdepth 1 -mindepth 1 -exec sh -c 'for d; do echo 0 > $d/queue/iostats; echo 0 > $d/queue/add_random; done' _ {} + &
+
+for algo in bbr3 bbr2 bbrplus bbr westwood cubic; do
+if grep -q "$algo" /proc/sys/net/ipv4/tcp_available_congestion_control 2>/dev/null; then
+apply "$algo" /proc/sys/net/ipv4/tcp_congestion_control
+break
+fi
+done
+
+apply 1 /proc/sys/net/ipv4/tcp_low_latency
+apply 1 /proc/sys/net/ipv4/tcp_ecn
+apply 3 /proc/sys/net/ipv4/tcp_fastopen
+apply 1 /proc/sys/net/ipv4/tcp_sack
+apply 0 /proc/sys/net/ipv4/tcp_timestamps
+apply 3 /proc/sys/kernel/perf_cpu_time_max_percent
+apply 0 /proc/sys/kernel/sched_schedstats
+apply 0 /proc/sys/kernel/task_cpustats_enable
+apply 0 /proc/sys/kernel/sched_autogroup_enabled
+apply 1 /proc/sys/kernel/sched_child_runs_first
+apply 32 /proc/sys/kernel/sched_nr_migrate
+apply 50000 /proc/sys/kernel/sched_migration_cost_ns
+apply 1000000 /proc/sys/kernel/sched_min_granularity_ns
+apply 1500000 /proc/sys/kernel/sched_wakeup_granularity_ns
+apply 0 /proc/sys/vm/page-cluster
+apply 15 /proc/sys/vm/stat_interval
+apply 0 /proc/sys/vm/compaction_proactiveness
+apply 0 /sys/module/mmc_core/parameters/use_spi_crc
+apply 0 /sys/module/opchain/parameters/chain_on
+apply 0 /sys/module/cpufreq_bouncing/parameters/enable
+apply 0 /proc/task_info/task_sched_info/task_sched_info_enable
+apply 0 /proc/oplus_scheduler/sched_assist/sched_assist_enabled
+apply "libunity.so, libil2cpp.so, libmain.so, libUE4.so, libgodot_android.so, libgdx.so, libgdx-box2d.so, libminecraftpe.so, libLive2DCubismCore.so, libyuzu-android.so, libryujinx.so, libcitra-android.so, libhdr_pro_engine.so, libandroidx.graphics.path.so, libeffect.so" /proc/sys/kernel/sched_lib_name
+apply 255 /proc/sys/kernel/sched_lib_mask_force
+
+find /sys/class/thermal -maxdepth 1 -name "thermal_zone*" -exec sh -c 'for d; do echo step_wise > $d/policy; done' _ {} +
+
+# --- Balance Profile ---
+[ -f /sys/module/battery_saver/parameters/enabled ] && {
+if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
+apply 0 /sys/module/battery_saver/parameters/enabled
+else
+apply N /sys/module/battery_saver/parameters/enabled
+fi
+}
+
+apply 1 /proc/sys/kernel/split_lock_mitigate
+
+if [ -f "/sys/kernel/debug/sched_features" ]; then
+apply NEXT_BUDDY /sys/kernel/debug/sched_features
+apply TTWU_QUEUE /sys/kernel/debug/sched_features
+fi
+
+if [ -d "/dev/stune/" ]; then
+apply 0 /dev/stune/top-app/schedtune.prefer_idle
+apply 0 /dev/stune/top-app/schedtune.boost
+fi
+
+tp_path="/proc/touchpanel"
+if [ -d "$tp_path" ]; then
+apply 0 $tp_path/game_switch_enable
+apply 1 $tp_path/oplus_tp_limit_enable
+apply 1 $tp_path/oppo_tp_limit_enable
+apply 0 $tp_path/oplus_tp_direction
+apply 0 $tp_path/oppo_tp_direction
+fi
+
+apply 120 /proc/sys/vm/vfs_cache_pressure
+
+# Restore min/max CPU frequency limits (Frequency unlocking, not governor)
+if [ -d /proc/ppm ]; then
+cpufreq_ppm_unlock
+else
+cpufreq_unlock
+fi
+
+find /sys/block -maxdepth 1 \( -name "mmcblk0" -o -name "mmcblk1" -o -name "sd*" \) -exec sh -c 'for d; do echo 128 > "$d/queue/read_ahead_kb"; echo 64 > "$d/queue/nr_requests"; done' _ {} + &
+
+wait
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
+exit 0
