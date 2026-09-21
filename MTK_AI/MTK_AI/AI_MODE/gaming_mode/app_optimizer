@@ -200,17 +200,6 @@ find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( \
     done
 done
 fi
-# ==============================
-# 🗄️ I/O Scheduler & Read-Ahead
-# ==============================
-find /sys \( -name "read_ahead_kb" -o -name "scheduler" \) ! -type d 2>/dev/null | while IFS= read -r file; do
-    chmod 777 "$file" 2>/dev/null || true
-    case "$file" in
-        *read_ahead_kb) echo 8192 | tee "$file" 2>/dev/null || true ;;
-        *scheduler)     echo none  | tee "$file" 2>/dev/null || true ;;
-    esac
-done
-fi
 
 # -----------------------------------------------------------------
 # 1. GAME DRIVER, SURFACEFLINGER & APP OPTIMIZATION 
