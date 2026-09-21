@@ -367,38 +367,28 @@ thermal() {
 }
 
 hibernation() {
-# --- APP HIBERNATION ---
+BRIGHTNESS_FILES=$(find /sys -name "brightness" -type f 2>/dev/null)
+screen_on() { [ -n "$BRIGHTNESS_FILES" ] && grep -q -v '^0$' $BRIGHTNESS_FILES 2>/dev/null; }
+
+# Exit immediately if screen is already on
+screen_on && { echo "Screen on, skipping."; return 0; }
+
 NEVER_KILL_FILE="${CONFIG_DIR}/never_kill.list"
-echo "Applying app hibernation rules..."
+for app in $(cmd package list packages 2>/dev/null | cut -d: -f2); do
+    # Break loop if screen turns on during execution
+    screen_on && break
 
-for app in $(cmd package list packages 2>/dev/null | cut -f 2 -d ":" || true); do
-    # Clean package name
-    app=$(echo "$app" | tr -d '[:space:]')
-
-    # Skip empty package names
-    [ -z "$app" ] && continue
-
-    # Skip Magisk / KernelSU
-    [ "$app" = "com.topjohnwu.magisk" ] && continue
-    [ "$app" = "me.weishu.kernelsu" ] && continue
-
-    # Skip apps found in Never Kill list
-    if [ -f "$NEVER_KILL_FILE" ] && grep -Fqx -- "$app" "$NEVER_KILL_FILE"; then
-        echo "🛡️ $app is protected by Never Kill list, skipping"
-        echo ""
-        continue
-    fi
-
-    echo "$app has been hibernated"
+    # Skip empty, root apps, and protected apps
+    case "$app" in ""|com.topjohnwu.magisk|me.weishu.kernelsu) continue;; esac
+    [ -f "$NEVER_KILL_FILE" ] && grep -Fqx "$app" "$NEVER_KILL_FILE" && continue
 
     cmd app_hibernation set-state --user 0 --global "$app" true >/dev/null 2>&1 || true
-    cmd appops set "$app" RUN_IN_BACKGROUND ignore 2>/dev/null
-    cmd appops set "$app" RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
-    am set-standby-bucket "$app" restricted 2>/dev/null
-    # CRITICAL FIX: Moved outside the loop for massive efficiency and guaranteed execution
-    device_config put app_hibernation app_hibernation_enabled true >/dev/null 2>&1 || true
-    device_config put permissions auto_revoke_unused_threshold_millis2 99 >/dev/null 2>&1 || true
-
-    echo ""
+    cmd appops set "$app" RUN_IN_BACKGROUND ignore >/dev/null 2>&1 || true
+    cmd appops set "$app" RUN_ANY_IN_BACKGROUND ignore >/dev/null 2>&1 || true
+    am set-standby-bucket "$app" restricted >/dev/null 2>&1 || true
 done
+
+# Global configs (kept outside loop for efficiency)
+device_config put app_hibernation app_hibernation_enabled true >/dev/null 2>&1 || true
+device_config put permissions auto_revoke_unused_threshold_millis2 99 >/dev/null 2>&1 || true
 }
