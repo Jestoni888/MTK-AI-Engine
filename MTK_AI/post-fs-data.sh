@@ -56,33 +56,59 @@ fi
 chmod +x "$OUT"
 echo "Created $OUT"
 
-# 4. Backup current DVFS frequencies (MAX first, MIN last)
+# 4. Backup current DVFS frequencies (Universal for all SoCs)
 DVFS_OUT="${MODDIR}/MTK_AI/AI_MODE/normal_mode/default_dvfs.sh"
 echo '#!/system/bin/sh' > "$DVFS_OUT"
 echo "" >> "$DVFS_OUT"
-echo "# --- DVFS Frequency Backup (MAX first, MIN last) ---" >> "$DVFS_OUT"
-find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r f; do
-dir=$(dirname "$f")
-# Backup current max frequency
-for t in max_freq; do
-if [ -f "$dir/$t" ]; then
-cur_max=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
-if [ -n "$cur_max" ]; then
-echo "echo '${cur_max}' > ${dir}/${t}" >> "$DVFS_OUT"
-break
-fi
-fi
+echo "# --- Universal DVFS Frequency Backup ---" >> "$DVFS_OUT"
+
+# Universal find: Excludes PIDs and CPU paths, checks all list file formats
+find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( -iname "available_frequencies" -o -iname "*_freq_table" -o -iname "*_opp_dump" -o -iname "*_opp_table" \) -print 2>/dev/null | grep -vE '/(cpufreq|policy[0-9]+|ppm)/' | while read -r f; do
+    dir=$(dirname "$f")
+    
+    # Define target patterns for max, min, and set across all SoCs
+    max_targets="max_freq hw_max_freq scaling_max_freq gpu_max_clock gpu_cap_rate gpufreq_opp_freq"
+    min_targets="min_freq hw_min_freq scaling_min_freq gpu_min_clock gpu_floor_rate"
+    set_targets="set_freq"
+    
+    found_max=0
+    for t in $max_targets; do
+        if [ -f "$dir/$t" ]; then
+            cur=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
+            if [ -n "$cur" ]; then
+                # Generate restore command with strict chmod sequence
+                echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
+                found_max=1
+                break
+            fi
+        fi
+    done
+    
+    found_min=0
+    for t in $min_targets; do
+        if [ -f "$dir/$t" ]; then
+            cur=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
+            if [ -n "$cur" ]; then
+                echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
+                found_min=1
+                break
+            fi
+        fi
+    done
+    
+    # If neither max nor min were found, fallback to set_freq
+    if [ "$found_max" -eq 0 ] && [ "$found_min" -eq 0 ]; then
+        for t in $set_targets; do
+            if [ -f "$dir/$t" ]; then
+                cur=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
+                if [ -n "$cur" ]; then
+                    echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
+                    break
+                fi
+            fi
+        done
+    fi
 done
-# Backup current min frequency
-for t in min_freq; do
-if [ -f "$dir/$t" ]; then
-cur_min=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
-if [ -n "$cur_min" ]; then
-echo "echo '${cur_min}' > ${dir}/${t}" >> "$DVFS_OUT"
-break
-fi
-fi
-done
-done
+
 chmod +x "$DVFS_OUT"
 echo "Created $DVFS_OUT"
