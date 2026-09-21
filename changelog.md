@@ -1,6 +1,6 @@
 --- version 0.0.1.20 ---
 
-✨ This is clean version, all redundant scripts has been removed
+✨ This is clean version, all redundant scripts that causes lags has been removed
 
 --- version 0.0.1.18 ---
 
