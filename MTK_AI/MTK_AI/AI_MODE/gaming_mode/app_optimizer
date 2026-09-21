@@ -192,6 +192,16 @@ find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r freq
     fi
     
 done
+# ==============================
+# 🗄️ I/O Scheduler & Read-Ahead
+# ==============================
+find /sys \( -name "read_ahead_kb" -o -name "scheduler" \) ! -type d 2>/dev/null | while IFS= read -r file; do
+    chmod 777 "$file" 2>/dev/null || true
+    case "$file" in
+        *read_ahead_kb) echo 8192 | tee "$file" 2>/dev/null || true ;;
+        *scheduler)     echo none  | tee "$file" 2>/dev/null || true ;;
+    esac
+done
 fi
 
 # -----------------------------------------------------------------
@@ -221,17 +231,6 @@ cmd device_config put runtime_native_boot priority_boost_enabled true
 cmd device_config override runtime_native_boot priority_boost_enabled true
 cmd device_config put runtime_native_boot profilebootclasses true
 cmd device_config override runtime_native_boot profilebootclasses true
-
-# ==============================
-# 🗄️ I/O Scheduler & Read-Ahead
-# ==============================
-find /sys \( -name "read_ahead_kb" -o -name "scheduler" \) ! -type d 2>/dev/null | while IFS= read -r file; do
-    chmod 777 "$file" 2>/dev/null || true
-    case "$file" in
-        *read_ahead_kb) echo 8192 | tee "$file" 2>/dev/null || true ;;
-        *scheduler)     echo none  | tee "$file" 2>/dev/null || true ;;
-    esac
-done
 
 #External Scripts
 [ -f /sdcard/MTK_AI_Engine/enable_gaming_prop ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop || true
