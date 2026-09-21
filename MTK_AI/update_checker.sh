@@ -10,6 +10,7 @@ for pid in $(pgrep -f "$SCRIPT_PATH"); do
 done
 
 MODDIR="/data/adb/modules/MTK_AI"
+. ${MODDIR}/MTK_AI/AI_MODE/auto_frequency/auto_frequency
 BUSYBOX="${MODDIR}/busybox"
 # 🔥 Aligned with update.js path (was MTK_AI_Engine, changed to MTK_AI for consistency)
 STATUS_FILE="/sdcard/MTK_AI_Engine/.update_status"
@@ -25,7 +26,9 @@ if [ -f "/sdcard/MTK_AI_Engine/auto_update" ]; then
   echo "auto updating"
   rm -f "/sdcard/MTK_AI_Engine/.update_status"
 else
-
+thermal
+trimmer
+hibernation
 # ===== HELPERS =====
 has_internet() {
     # Quick check using a reliable IP (no DNS resolution needed, much faster)

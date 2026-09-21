@@ -8,7 +8,7 @@ for pid in $(pgrep -f "$SCRIPT_PATH"); do
         kill -9 "$pid" 2>/dev/null
     fi
 done
-
+. /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/auto_frequency
 LOG_TAG="[MTK_AI UPDATE]"
 MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"
 TMP="/data/local/tmp/mtk_update"
@@ -17,7 +17,9 @@ PROGRESS_FILE="/sdcard/MTK_AI_Engine/.update_progress"
 log() {
 echo "$LOG_TAG $*"
 }
-
+thermal
+trimmer
+hibernation
 # === 1. Detect module dir ===
 detect_moddir() {
 [ -d "/data/adb/modules/MTK_AI" ] && { echo "/data/adb/modules/MTK_AI"; return; }
@@ -70,20 +72,12 @@ MTK_AI/AI_MODE/global_mode/resources_tweaks
 MTK_AI/AI_MODE/global_mode/trim_memory
 MTK_AI/AI_MODE/global_mode/webview_tweaks
 MTK_AI/AI_MODE/global_mode/module_executer
-MTK_AI/AI_MODE/global_mode/heartbeat
 MTK_AI/AI_MODE/global_mode/per_app
 script_runner/display_mode
-script_runner/automatrix
 script_runner/mtk_ai_manual
 script_runner/refresh_rate_locker
 script_runner/sf_controller
-script_runner/mtk_ai_eem_boot
-script_runner/monitor_app_stats
-service.d/backup.sh
-main_control/mtk_ai_engine
 main_control/mtk_ai_engine.sh
-main_control/mode
-main_control/performance.sh
 action.sh
 service.sh
 post-fs-data.sh
