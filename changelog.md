@@ -1,3 +1,7 @@
+--- version 0.0.1.20 ---
+
+✨ This is clean version, all redundant scripts has been removed
+
 --- version 0.0.1.18 ---
 
 •Added more robust anti bootloop script that can support to all root managers ⚠️spam power button in bootloop state to work
