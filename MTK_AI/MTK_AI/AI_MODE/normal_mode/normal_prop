@@ -25,7 +25,7 @@ SDCARD="/sdcard/MTK_AI_Engine"
 BB="/data/adb/modules/MTK_AI/busybox"
 SAVE_DIR="$SDCARD/cooldown_values"
 
-if [ -f "$SDCARD/devfreq_config.json" ] && [ "$SDCARD/devfreq_other_config.json" ]; then
+if [ -f "$SDCARD/devfreq_config.json" ] && [ -f "$SDCARD/devfreq_other_config.json" ]; then
 devfreq
 else
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/stock_tweaks.sh" >/dev/null 2>&1 &
