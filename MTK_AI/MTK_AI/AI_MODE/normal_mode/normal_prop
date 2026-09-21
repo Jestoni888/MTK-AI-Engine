@@ -234,8 +234,6 @@ else
 cpufreq_max_perf
 fi
 
-find /sys/block -maxdepth 1 \( -name "mmcblk0" -o -name "mmcblk1" -o -name "sd*" \) -exec sh -c 'for d; do echo 32 > "$d/queue/read_ahead_kb"; echo 32 > "$d/queue/nr_requests"; done' _ {} + &
-
 echo 3 >/proc/sys/vm/drop_caches
 wait
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
