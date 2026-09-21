@@ -1,3 +1,7 @@
+--- version 0.0.1.22 ---
+
+•Added benchmark test for ZRAM & IO Tweaks (download zip version to import compiled binaries needed for benchmark test)
+
 --- version 0.0.1.21 ---
 
 •Added default backup DVFS frequency values if no config save in Devfreq nodes & other devfreq nodes (Script via post-fs-data.sh to get default values after reboot)
