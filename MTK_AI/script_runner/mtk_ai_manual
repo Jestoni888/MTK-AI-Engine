@@ -44,30 +44,62 @@ if [ -f "$E/fast_reboot_enabled" ]; then
 fi
 [ -f "$E/freeze/$pkg" ] && pm suspend "$pkg" 2>/dev/null
 devfreq() {
-    B="$E"
+    B="$E"    
     if [ -f "$B/devfreq_config.json" ]; then
-        GOV=$(grep -o '"governor": *"[^"]*"' "$B/devfreq_config.json"|cut -d'"' -f4)
-        LK=$(grep -o '"isLocked": *[a-z]*' "$B/devfreq_config.json"|awk '{print $2}')
-        MN=$(grep -o '"minFreq": *[0-9]*' "$B/devfreq_config.json"|awk '{print $2}')
-        MX=$(grep -o '"maxFreq": *[0-9]*' "$B/devfreq_config.json"|awk '{print $2}')
-        find /sys -type f -name "available_frequencies" 2>/dev/null|while read -r f; do
-            d="${f%/*}"; case "$d" in *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) ;; *) continue;; esac
-            [ -r "$f" ] || continue; [ -n "$GOV" ] && echo "$GOV" > "$d/governor" 2>/dev/null
-            if [ "$LK" = "true" ]; then
-                [ -n "$MX" ] && echo "$((MX*1000))" > "$d/max_freq" 2>/dev/null
-                [ -n "$MN" ] && echo "$((MN*1000))" > "$d/min_freq" 2>/dev/null
-            else awk '{print $1}' "$f" > "$d/min_freq" 2>/dev/null; awk '{print $NF}' "$f" > "$d/max_freq" 2>/dev/null; fi
+        GOV=$(grep -o '"governor": *"[^"]*"' "$B/devfreq_config.json" | cut -d'"' -f4)
+        LK=$(grep -o '"isLocked": *[a-z]*' "$B/devfreq_config.json" | awk '{print $2}')
+        MN=$(grep -o '"minFreq": *[0-9]*' "$B/devfreq_config.json" | awk '{print $2}')
+        MX=$(grep -o '"maxFreq": *[0-9]*' "$B/devfreq_config.json" | awk '{print $2}')
+        find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( -iname "available_frequencies" -o -iname "*_freq_table" -o -iname "*_opp_dump" -o -iname "*_opp_table" \) -print 2>/dev/null | grep -vE '/(cpufreq|policy[0-9]+|ppm)/' | while read -r f; do
+            d="${f%/*}"
+            case "$d" in *mem*|*dvfs*|*dmc*|*gpu*|*gpubw*) ;; *) continue ;; esac
+            [ -r "$f" ] || continue
+            if [ -n "$GOV" ] && [ -f "$d/governor" ]; then
+                chmod 644 "$d/governor" 2>/dev/null
+                echo "$GOV" > "$d/governor" 2>/dev/null
+                chmod 444 "$d/governor" 2>/dev/null
+            fi
+            target_max=$(find "$d" -maxdepth 1 -type f \( -name "max_freq" -o -name "hw_max_freq" -o -name "scaling_max_freq" -o -name "gpu_max_clock" -o -name "gpu_cap_rate" -o -name "gpufreq_opp_freq" \) 2>/dev/null | head -n 1)
+            target_min=$(find "$d" -maxdepth 1 -type f \( -name "min_freq" -o -name "hw_min_freq" -o -name "scaling_min_freq" -o -name "gpu_min_clock" -o -name "gpu_floor_rate" \) 2>/dev/null | head -n 1)
+            target_set=$(find "$d" -maxdepth 1 -type f -name "set_freq" 2>/dev/null | head -n 1)
+            [ -z "$target_max" ] && target_max="$target_set"
+            [ -z "$target_min" ] && target_min="$target_set"
+            
+            if [ "$LK" = "true" ] && [ -n "$MX" ] && [ -n "$MN" ]; then
+                [ -n "$target_max" ] && { chmod 644 "$target_max" 2>/dev/null; echo "$((MX*1000))" > "$target_max" 2>/dev/null; chmod 444 "$target_max" 2>/dev/null; }
+                [ -n "$target_min" ] && { chmod 644 "$target_min" 2>/dev/null; echo "$((MN*1000))" > "$target_min" 2>/dev/null; chmod 444 "$target_min" 2>/dev/null; }
+            else
+                case "$f" in
+                    *opp_dump) 
+                        max_v=$(sed -n 's/.*freq = \([0-9]*\).*/\1/p' "$f" | sort -nr | head -1)
+                        min_v=$(sed -n 's/.*freq = \([0-9]*\).*/\1/p' "$f" | sort -n | head -1) ;;
+                    *opp_table) 
+                        max_v=$(awk -F'[][]' '{print $2}' "$f" | sort -nr | head -1)
+                        min_v=$(awk -F'[][]' '{print $2}' "$f" | sort -n | head -1) ;;
+                    *) 
+                        max_v=$(tr ' ' '\n' <"$f" | grep -E '^[0-9]+$' | sort -nr | head -1)
+                        min_v=$(tr ' ' '\n' <"$f" | grep -E '^[0-9]+$' | sort -n | head -1) ;;
+                esac
+                [ -n "$target_max" ] && [ -n "$max_v" ] && { chmod 644 "$target_max" 2>/dev/null; echo "$max_v" > "$target_max" 2>/dev/null; chmod 444 "$target_max" 2>/dev/null; }
+                [ -n "$target_min" ] && [ -n "$min_v" ] && { chmod 644 "$target_min" 2>/dev/null; echo "$min_v" > "$target_min" 2>/dev/null; chmod 444 "$target_min" 2>/dev/null; }
+            fi
             break
         done
-    fi
+    fi   
     if [ -f "$B/devfreq_other_config.json" ]; then
-        awk '/": \{/{gsub(/"/,"",$1);gsub(/:$/,"",$1);n=$1}/"minFreq"/{m=$2+0}/"maxFreq"/{x=$2+0;print n,m,x}' "$B/devfreq_other_config.json"|while read -r n m x; do
-            [ -z "$n" ]||[ -z "$m" ]||[ -z "$x" ]&&continue
-            find /sys -type f -name "available_frequencies" 2>/dev/null|while read -r f; do
-                d="${f%/*}"; [ "${d##*/}" = "$n" ]||continue; [ -r "$f" ]||continue
-                if [ -w "$d/min_freq" ]&&[ -w "$d/max_freq" ]; then
-                    echo "$((x*1000))" > "$d/max_freq" 2>/dev/null; echo "$((m*1000))" > "$d/min_freq" 2>/dev/null
-                elif [ -w "$d/set_freq" ]; then echo "$((x*1000))" > "$d/set_freq" 2>/dev/null; fi
+        awk '/": \{/{gsub(/"/,"",$1);gsub(/:$/,"",$1);n=$1}/"minFreq"/{m=$2+0}/"maxFreq"/{x=$2+0;print n,m,x}' "$B/devfreq_other_config.json" | while read -r n m x; do
+            [ -z "$n" ] || [ -z "$m" ] || [ -z "$x" ] && continue
+            find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( -iname "available_frequencies" -o -iname "*_freq_table" -o -iname "*_opp_dump" -o -iname "*_opp_table" \) -print 2>/dev/null | grep -vE '/(cpufreq|policy[0-9]+|ppm)/' | while read -r f; do
+                d="${f%/*}"
+                [ "${d##*/}" = "$n" ] || continue
+                [ -r "$f" ] || continue
+                target_max=$(find "$d" -maxdepth 1 -type f \( -name "max_freq" -o -name "hw_max_freq" -o -name "scaling_max_freq" -o -name "gpu_max_clock" -o -name "gpu_cap_rate" -o -name "gpufreq_opp_freq" \) 2>/dev/null | head -n 1)
+                target_min=$(find "$d" -maxdepth 1 -type f \( -name "min_freq" -o -name "hw_min_freq" -o -name "scaling_min_freq" -o -name "gpu_min_clock" -o -name "gpu_floor_rate" \) 2>/dev/null | head -n 1)
+                target_set=$(find "$d" -maxdepth 1 -type f -name "set_freq" 2>/dev/null | head -n 1)             
+                [ -z "$target_max" ] && target_max="$target_set"
+                [ -z "$target_min" ] && target_min="$target_set"
+                [ -n "$target_max" ] && { chmod 644 "$target_max" 2>/dev/null; echo "$((x*1000))" > "$target_max" 2>/dev/null; chmod 444 "$target_max" 2>/dev/null; }
+                [ -n "$target_min" ] && { chmod 644 "$target_min" 2>/dev/null; echo "$((m*1000))" > "$target_min" 2>/dev/null; chmod 444 "$target_min" 2>/dev/null; }
                 break
             done
         done
