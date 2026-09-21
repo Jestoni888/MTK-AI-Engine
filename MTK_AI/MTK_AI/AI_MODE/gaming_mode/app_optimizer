@@ -229,29 +229,37 @@ cmd display set-match-content-frame-rate-pref 0
 
 # Lock devfreq nodes to max
 if [ -f "$CONFIG_DIR/enable_performance" ]; then
-find /sys -type f -name "available_frequencies" 2>/dev/null | while read -r freq_file; do
-    dev="${freq_file%/*}"  
-    [ -r "$freq_file" ] || continue  
-    target_freq=$(tr -s '[:space:]' '\n' < "$freq_file" | grep -E '^[0-9]+$' | sort -n | tail -1)
-    [ -z "$target_freq" ] && continue   
-    is_userspace=false
-    if [ -r "$dev/governor" ]; then
-        if grep -q '\[userspace\]' "$dev/governor" 2>/dev/null; then
-            is_userspace=true
-        fi
-    fi
-    if [ "$is_userspace" = true ] && [ -w "$dev/set_freq" ]; then
-        echo "$target_freq" > "$dev/set_freq" 2>/dev/null
-    else
-        if [ -w "$dev/max_freq" ]; then
-            echo "$target_freq" > "$dev/max_freq" 2>/dev/null
-        fi
-        if [ -w "$dev/min_freq" ]; then
-            echo "$target_freq" > "$dev/min_freq" 2>/dev/null
-        fi
-    fi
-    
+apply() {
+    [ ! -f "$2" ] && return 1
+    chmod 644 "$2" >/dev/null 2>&1
+    echo "$1" >"$2" 2>/dev/null
+    chmod 444 "$2" >/dev/null 2>&1
+}
+find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( \
+    -iname "available_frequencies" -o \
+    -iname "*_freq_table" -o \
+    -iname "*_opp_dump" -o \
+    -iname "*_opp_table" \
+\) -print 2>/dev/null | grep -vE '/(cpufreq|policy[0-9]+|ppm)/' | while read -r list_file; do    
+    dir=$(dirname "$list_file")   
+    case "$list_file" in
+        *opp_dump) max=$(sed -n 's/.*freq = \([0-9]*\).*/\1/p' "$list_file" | sort -nr | head -1) ;;
+        *opp_table) max=$(awk -F'[][]' '{print $2}' "$list_file" | sort -nr | head -1) ;;
+        *) max=$(tr ' ' '\n' <"$list_file" | grep -E '^[0-9]+$' | sort -nr | head -1) ;;
+    esac    
+    [ -z "$max" ] && continue    
+    find "$dir" -maxdepth 1 -type f \( \
+        -name "max_freq" -o -name "min_freq" -o \
+        -name "hw_max_freq" -o -name "hw_min_freq" -o \
+        -name "scaling_max_freq" -o -name "scaling_min_freq" -o \
+        -name "gpu_max_clock" -o -name "gpu_min_clock" -o \
+        -name "gpu_cap_rate" -o -name "gpu_floor_rate" -o \
+        -name "gpufreq_opp_freq" \
+    \) 2>/dev/null | while read -r target; do
+        apply "$max" "$target"
+    done
 done
+fi
 
 # -----------------------------------------------------------------
 # 1. GAME DRIVER, SURFACEFLINGER & APP OPTIMIZATION 
