@@ -1,4 +1,4 @@
---- version 0.0.1.20 ---
+--- version 0.0.1.21 ---
 
 •Added default backup DVFS frequency values if no config save in Devfreq nodes & other devfreq nodes (Script via post-fs-data.sh to get default values after reboot)
 
