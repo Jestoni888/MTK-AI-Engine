@@ -279,5 +279,5 @@ cp -f "$MODDIR/icon.png" /data/local/tmp/icon.png
 chmod 777 /data/local/tmp/icon.png
 log "✅ Synced icon.png to /data/local/tmp/"
 fi
-
+rm -f "/sdcard/MTK_AI_Engine/.update_status"
 log "🏁 action.sh finished."
