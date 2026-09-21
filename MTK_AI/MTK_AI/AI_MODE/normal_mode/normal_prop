@@ -237,4 +237,5 @@ fi
 echo 3 >/proc/sys/vm/drop_caches
 wait
 sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
+touch /dev/.mtk_ai_normal_mode
 exit 0
