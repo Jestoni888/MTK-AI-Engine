@@ -1,5 +1,7 @@
 --- version 0.0.1.22 ---
 
+•Dex2oat simple version
+
 •Added benchmark test for ZRAM & IO Tweaks (download zip version to import compiled binaries needed for benchmark test)
 
 --- version 0.0.1.21 ---
