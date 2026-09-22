@@ -39,15 +39,15 @@ if [ -f "$SDCARD/enable_dnd_during_game" ]; then
 fi
 
 # unsuspend background apps
-
-if [ -f "/sdcard/MTK_AI_Engine/suspend_bg" ]; then
-    pm list packages | cut -d: -f2 | while read -r pkg; do
-        # Check if the package file exists in the frozen directory
-        if [ ! -f "/sdcard/MTK_AI_Engine/freeze/$pkg" ]; then
-            pm unsuspend "$pkg" 2>/dev/null
-        fi
-    done
-fi
+D="/sdcard/MTK_AI_Engine"
+[ -f "$D/suspend_bg" ] && [ -s "$D/suspended_apps" ] && {
+    while IFS= read -r p || [ -n "$p" ]; do
+        p="${p//$'\r'/}"
+        # Added "< /dev/null" to stop pm from eating the rest of the file
+        [ -n "$p" ] && [ ! -f "$D/freeze/$p" ] && pm unsuspend "$p" < /dev/null 2>/dev/null
+    done < "$D/suspended_apps"
+    > "$D/suspended_apps"
+}
 
 # Revert Game Driver settings
 cmd device_config delete game_driver game_driver_all_apps
