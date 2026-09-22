@@ -334,7 +334,7 @@ showStatus('🔄 Restarting MTK AI Service...', '#FF9F0A');
 try {
 await execFn('su -c "pkill -9 -f \'/data/adb/modules/MTK_AI\' 2>/dev/null"', 3000);
 await new Promise(r => setTimeout(r, 400));
-const cmd = `su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/service.sh >/dev/null 2>&1 & disown'`;
+const cmd = `su -c 'export PATH="/system/bin:/system/xbin:/sbin:/vendor/bin"; cd /data/adb/modules/MTK_AI; nohup sh /data/adb/modules/MTK_AI/main_control/mtk_ai_engine.sh >/dev/null 2>&1 & disown'`;
 await execFn(cmd, 5000);
 console.log('✅ MTK_AI service restarted');
 } catch (e) {
