@@ -1,787 +1,394 @@
-// dex2oat.js - ART Compiler & JIT Manager (FULL + Accurate Dexopt Info + Manual Cleanup)
+// dex2oat.js - Clean, Professional ART Compiler (Shell-Driven Engine + Per-App Support)
 (function() {
 'use strict';
 const CONFIG_FILE = '/sdcard/MTK_AI_Engine/dex2oat.conf';
-const APP_OVERRIDES_FILE = '/sdcard/MTK_AI_Engine/dex2oat-apps.json';
-const LOG_FILE = '/sdcard/MTK_AI_Engine/dex2oat.log';
-const FILTERS = ['speed', 'speed-profile', 'quicken', 'verify', 'interpret-only', 'space', 'space-profile', 'time', 'everything'];
-const ADVANCED_FLAGS = {
-    '--compile-pic': 'Generate position-independent code',
-    '--inline-depth=4': 'Maximum inlining depth',
-    '--max-inline-inline-depth=4': 'Deep inlining for hot methods',
-    '--resolve-startup-strings=true': 'Pre-resolve strings in startup methods',
-    '--generate-mini-debug-info=true': 'Minimal debug info for backtraces'
-};
-const PROFILES = {
-    'balanced': { name: '⚖️ Balanced (Default)', filter: 'speed-profile', jit: true, bgDexopt: true, threads: 4, heapXms: '256m', heapXmx: '512m', flags: [] },
-    'performance': { name: '🚀 Performance Mode', filter: 'speed', jit: true, bgDexopt: true, threads: 8, heapXms: '512m', heapXmx: '1024m', flags: ['--resolve-startup-strings=true'] },
-    'full': { name: '🔥 FULL COMPILER', filter: 'everything', jit: false, bgDexopt: false, threads: 16, heapXms: '1024m', heapXmx: '2048m', flags: ['--resolve-startup-strings=true', '--generate-mini-debug-info=true'] },
-    'battery': { name: '🔋 Battery Saver', filter: 'space-profile', jit: true, bgDexopt: false, threads: 2, heapXms: '128m', heapXmx: '256m', flags: [] }
-};
-// State
-let currentFilter = 'speed-profile';
-let jitEnabled = true;
-let bgDexoptEnabled = true;
-let currentProfile = 'balanced';
-let customThreads = 4;
-let customHeapXms = '256m';
-let customHeapXmx = '512m';
-let selectedFlags = [];
-let androidVersion = 13;
-let appOverrides = {};
-let installedApps = [];
-let appsLoaded = false;
-let forceCleanEnabled = false;
-let selectedAppForInfo = null;
+const SCRIPT_PATH = '/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/webui_workload.sh';
 
-// 🔧 Robust exec wrapper
+const FILTERS = [
+    { id: 'speed-profile', name: '⚖️ Balanced (Speed-Profile)', desc: 'Profile-guided AOT. Best balance for daily usage.' },
+    { id: 'speed', name: '🔥 Performance (Speed AOT)', desc: 'Full AOT compilation for maximum app responsiveness.' },
+    { id: 'quicken', name: '⚡ Fast Optimization (Quicken)', desc: 'Quick verification and optimization without heavy storage overhead.' },
+    { id: 'everything', name: '🚀 Extreme (Everything)', desc: 'Aggressive full compilation. Maximum performance, higher storage usage.' },
+    { id: 'verify', name: '🛡️ Verify Only (Verify)', desc: 'Only verify dex files without compilation. Saves maximum space.' },
+    { id: 'space', name: '💾 Space Optimized (Space)', desc: 'Optimized for minimal disk space usage.' },
+    { id: 'space-profile', name: '📉 Space Profile-Guided', desc: 'Profile-guided compilation optimized for space savings.' }
+];
+
+let currentFilter = 'speed-profile';
+let forceCleanEnabled = false;
+let detectedApps = [];
+
+// Robust shell execution wrapper
 const execFn = window.exec || async function(cmd, timeout = 30000) {
     return new Promise(resolve => {
         const cb = 'dex_exec_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
-        const t = setTimeout(function() { delete window[cb]; log('⚠️ Timeout: ' + cmd.substring(0, 100) + '...'); resolve(''); }, timeout);
+        const t = setTimeout(function() { delete window[cb]; resolve(''); }, timeout);
         window[cb] = function(_, res) { clearTimeout(t); delete window[cb]; resolve(res || ''); };
         if (window.ksu && typeof ksu.exec === 'function') { try { ksu.exec(cmd, 'window.' + cb); } catch(e) { clearTimeout(t); delete window[cb]; resolve(''); } }
         else { clearTimeout(t); resolve(''); }
     });
 };
 
-// 📝 Logging helper    
 function log(msg) {
     console.log('[DEX2OAT] ' + msg);
-    execFn('echo "' + msg.replace(/"/g, '') + '" >> ' + LOG_FILE + ' 2>/dev/null');
 }
 
-// 🔍 Detect Android version
-async function detectAndroidVersion() {
+// === Package helpers (borrowed from freeze architecture) ===
+function normalizePkgList(raw) {
+    let arr = [];
+    if (Array.isArray(raw)) arr = raw;
+    else if (raw && typeof raw === 'object' && Array.isArray(raw.packages)) arr = raw.packages;
+    else if (typeof raw === 'string') {
+        const s = raw.trim();
+        if (s.startsWith('[')) { try { arr = JSON.parse(s); } catch (_) { arr = s.split('\n'); } }
+        else arr = s.split('\n');
+    }
+    return arr.map(p => (typeof p === 'string' ? p : (p && (p.packageName || p.package)) || ''))
+              .map(s => s.replace(/^package:/, '').trim()).filter(Boolean);
+}
+
+async function getAllPackages() {
+    let pkgs = [];
     try {
-        const ver = await execFn('getprop ro.build.version.release', 5000);
-        androidVersion = parseInt(ver.trim().split('.')[0]) || 13;
-        log('📱 Android ' + androidVersion + ' detected');
-        return androidVersion;
-    } catch { return 13; }
+        if (typeof ksu !== 'undefined' && typeof ksu.listPackages === 'function') {
+            let raw = await Promise.resolve(ksu.listPackages('all'));
+            pkgs = normalizePkgList(raw);
+        }
+    } catch (e) {}
+    if (!pkgs.length) {
+        try {
+            const raw = await execFn('pm list packages 2>/dev/null', 5000);
+            pkgs = normalizePkgList(raw);
+        } catch (e) {}
+    }
+    return pkgs;
 }
 
-// 🛡️ Safe setprop
-function shellQuote(str) {
-    str = String(str);
-    if (!str) return "''";
-    if (/^[a-zA-Z0-9._\-:@%/+=,]+$/.test(str)) return str;
-    return "'" + str.split("'").join("'\"'\"'") + "'";
-}
-
-async function safeSetprop(prop, value, fallback) {
+async function enrichApps(pkgs) {
+    const labels = {}, system = new Set();
+    let sawSystemFlag = false;
     try {
-        const cmd = 'setprop ' + shellQuote(prop) + ' ' + shellQuote(value);
-        const res = await execFn('su -c "' + cmd + '" 2>&1', 5000);
-        if (res && (res.toLowerCase().includes('error') || res.toLowerCase().includes('failed'))) {
-            log('⚠️ setprop failed: ' + prop + '=' + value);
-            if (fallback !== undefined && fallback !== null) {
-                await execFn('su -c "setprop ' + shellQuote(prop) + ' ' + shellQuote(fallback) + '" 2>/dev/null');
+        if (typeof ksu !== 'undefined' && typeof ksu.getPackagesInfo === 'function') {
+            let raw = await Promise.resolve(ksu.getPackagesInfo(JSON.stringify(pkgs)));
+            if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (_) { raw = []; } }
+            if (Array.isArray(raw)) {
+                raw.forEach((info, i) => {
+                    if (!info) return;
+                    const pkg = info.packageName || info.package || pkgs[i];
+                    if (pkg && (info.appLabel || info.label)) labels[pkg] = info.appLabel || info.label;
+                    let sys = null;
+                    if (typeof info.isSystem === 'boolean') sys = info.isSystem;
+                    else if (info.applicationInfo?.flags != null) sys = (info.applicationInfo.flags & 0x00000001) !== 0 || (info.applicationInfo.flags & 0x00000080) !== 0;
+                    else if (info.flags != null) sys = (info.flags & 0x00000001) !== 0 || (info.flags & 0x00000080) !== 0;
+                    if (sys !== null) { sawSystemFlag = true; if (sys && pkg) system.add(pkg); }
+                });
             }
+        }
+    } catch (e) {}
+    if (!sawSystemFlag) {
+        try {
+            const raw = await execFn('pm list packages -s 2>/dev/null', 5000);
+            if (raw) normalizePkgList(raw).forEach(p => system.add(p));
+        } catch (_) {}
+    }
+    return { labels, system };
+}
+
+function formatPackageName(pkg) {
+    let name = pkg.replace(/^(com|io|org|net|app|me|jp|kr|cn|in|br|ru|de|fr|es|it)\./, '');
+    const parts = name.split('.');
+    if (parts.length >= 2) name = parts.slice(-2).join(' ');
+    return name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || pkg;
+}
+
+function getLocalAppName(pkg) {
+    const localMappings = {
+        'com.mobile.legends': 'Mobile Legends: Bang Bang',
+        'com.pubg.imobile': 'PUBG MOBILE',
+        'com.activision.callofduty.shooter': 'Call of Duty®: Mobile',
+        'com.miHoYo.GenshinImpact': 'Genshin Impact',
+        'com.roblox.client': 'Roblox',
+        'com.supercell.clashofclans': 'Clash of Clans',
+        'com.discord': 'Discord',
+        'com.spotify.music': 'Spotify',
+        'com.google.android.youtube': 'YouTube',
+        'com.android.chrome': 'Chrome',
+        'com.zhiliaoapp.musically': 'TikTok',
+        'org.telegram.messenger': 'Telegram',
+        'com.miHoYo.hkrpg': 'Honkai: Star Rail'
+    };
+    return localMappings[pkg] || null;
+}
+
+// 📂 Write config & package list directly to SD card, then delegate to shell script
+async function executeShellTask(mode, targetPkg = null) {
+    const cleanFlag = forceCleanEnabled ? "1" : "0";
+    let appsText = "";
+
+    if (mode === 'per_app' && targetPkg) {
+        appsText = targetPkg;
+        log(`🎯 Targeting single app compilation: ${targetPkg}`);
+    } else {
+        let appsCmd = "pm list packages -3"; // User apps
+        if (mode === 'bulk_system') appsCmd = "pm list packages -s"; // System apps
+        if (mode === 'bulk') appsCmd = "pm list packages"; // Both
+
+        log(`📦 Fetching package list for mode: ${mode}...`);
+        const raw = await execFn(`${appsCmd} 2>/dev/null`, 15000);
+        if (!raw || !raw.trim()) {
+            log('❌ Failed to retrieve package list.');
             return false;
         }
-        log('✅ setprop ' + prop + '=' + value);
-        return true;
-    } catch (e) {
-        log('❌ setprop exception: ' + prop);
-        if (fallback !== undefined && fallback !== null) {
-            await execFn('su -c "setprop ' + shellQuote(prop) + ' ' + shellQuote(fallback) + '" 2>/dev/null');
+
+        const pkgs = raw.trim().split('\n')
+            .map(l => l.replace('package:', '').trim())
+            .filter(p => p.length > 0);
+
+        if (pkgs.length === 0) {
+            log('⚠️ No packages found.');
+            return false;
         }
-        return false;
+        appsText = pkgs.join('\n');
     }
-}
 
-const FILTER_FALLBACK = ['speed', 'speed-profile', 'quicken', 'verify'];
-function getEffectiveFilter(pkg, globalFilter) {
-    return (appOverrides[pkg] && FILTERS.includes(appOverrides[pkg])) ? appOverrides[pkg] : globalFilter;
-}
+    // Write config and package list to SD card via root shell
+    const writeCmd = `su -c "mkdir -p /sdcard/MTK_AI_Engine && echo '${currentFilter}' > /sdcard/MTK_AI_Engine/dex2oat_filter.conf && echo '${appsText.replace(/'/g, "'\\''")}' > /sdcard/MTK_AI_Engine/compile_apps.txt"`;
+    await execFn(writeCmd, 5000);
+    log(`💾 Config & package list written to SD card.`);
 
-// ✅ Accurate parser for actual dumpsys package dexopt output
-async function getDexoptInfo(pkg) {
-    try {
-        const escapedPkg = pkg.replace(/\./g, '\\.');
-        const output = await execFn('dumpsys package dexopt 2>/dev/null | grep -A 6 "^  \\[' + escapedPkg + '\\]"', 10000);
-        if (!output || !output.trim()) return { pkg: pkg, error: 'No dexopt info found in dumpsys' };
-        const lines = output.trim().split('\n');
-        const info = { pkg: pkg, status: 'unknown', reason: 'unknown', abi: 'unknown', oatPath: null, apkPath: null };
-        for (let i = 0; i < lines.length; i++) {
-            let line = lines[i].trim();
-            if (line.startsWith('path:')) { info.apkPath = line.replace('path:', '').trim(); }
-            if (/^(arm|arm64|x86|x86_64):/.test(line)) {
-                info.abi = line.split(':')[0].trim();
-                const statusMatch = line.match(/\[status=([^\]]+)\]/);
-                if (statusMatch) info.status = statusMatch[1];
-                const reasonMatch = line.match(/\[reason=([^\]]+)\]/);
-                if (reasonMatch) info.reason = reasonMatch[1];
-            }
-            if (line.includes('[location is')) {
-                const locMatch = line.match(/\[location is (.+?)\]/);
-                if (locMatch) info.oatPath = locMatch[1].trim();
-            }
-        }
-        return info;
-    } catch (e) { 
-        log('⚠️ getDexoptInfo failed for ' + pkg + ': ' + e.message); 
-        return { pkg: pkg, error: e.message }; 
-    }
-}
-
-// 🔧 Shell Caller: Delegates heavy compilation to the robust shell script
-async function executeShellCompile(mode, pkg, filter, forceClean) {
-    const cleanFlag = forceClean ? "1" : "0";
-    const scriptPath = "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/webui_workload.sh";
-    const cmd = `nohup sh ${scriptPath} compile_apps ${mode} "${pkg}" ${filter} ${cleanFlag} >/dev/null 2>&1 &`;
-    log(`🚀 Delegating compilation to background shell: ${mode} | ${pkg || 'ALL'} | ${filter}`);
-    await execFn(cmd, 5000); 
+    // Trigger independent background shell execution via root daemon
+    const cmd = `su -c "nohup sh ${SCRIPT_PATH} file_bulk ${currentFilter} ${cleanFlag} >/sdcard/MTK_AI_Engine/debug.log 2>&1 &"`;
+    log(`🚀 Delegating compilation task to independent background daemon...`);
+    await execFn(cmd, 5000);
     return true;
 }
 
-// 🛑 Stop Compilation
+// Stop Compilation
 async function stopCompilation() {
-    const statusEl = document.getElementById('dex-status');
-    if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;">🛑 Stopping compilation processes...</span>';
-    log('🛑 Requesting shell to stop compilation...');
-    
-    const scriptPath = "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/webui_workload.sh";
-    const cmd = `sh ${scriptPath} stop_compile`;
-    
-    await execFn(cmd, 5000);
-    
-    if (statusEl) statusEl.innerHTML = '<span style="color:#ef4444;font-weight:600;">✅ Compilation stopped.</span>';
+    log('🛑 Requesting compilation stop...');
+    await execFn(`sh ${SCRIPT_PATH} stop_compile`, 5000);
     if (window.showStatus) window.showStatus('🛑 Compilation stopped', '#ef4444');
-}
-
-// 🔁 Enhanced compileWithFallback (Now acts purely as a shell caller)
-async function compileWithFallback(pkg, preferredFilter, forceClean = false) {
-    const targetFilter = getEffectiveFilter(pkg, preferredFilter);
-    log(`🎯 Requesting shell compile for [${pkg}] with filter [${targetFilter}]`);
-    return await executeShellCompile('single', pkg, targetFilter, forceClean);
-}
-
-// 🧹 Delete previous dex2oat artifacts
-async function deleteDexArtifacts(pkg) {
-    log('🧹 Cleaning dex artifacts for ' + pkg + ' via shell reset');
-    const res = await execFn('su -c "cmd package compile --reset ' + pkg + '" 2>&1', 15000);
-    return !res || !res.toLowerCase().includes('failure');
-}
-
-async function isSystemApp(pkg) {
-    try {
-        const path = await execFn('pm path ' + pkg + ' 2>/dev/null | head -1', 5000);
-        return path && (path.includes('/system/') || path.includes('/vendor/') || path.includes('/product/') || path.includes('/oem/'));
-    } catch { return true; }
-}
-
-async function loadAppOverrides() {
-    try {
-        const raw = await execFn('cat ' + APP_OVERRIDES_FILE + ' 2>/dev/null', 5000);
-        if (raw && raw.trim()) {
-            const parsed = JSON.parse(raw.trim());
-            if (typeof parsed === 'object') appOverrides = parsed;
-            log('📥 Loaded ' + Object.keys(appOverrides).length + ' per-app overrides');
-        }
-    } catch (e) { log('⚠️ App overrides load failed'); appOverrides = {}; }
-}
-
-async function saveAppOverrides() {
-    try {
-        await execFn('mkdir -p /sdcard/MTK_AI_Engine 2>/dev/null');
-        const json = JSON.stringify(appOverrides);
-        await execFn('echo -n "' + json + '" > ' + APP_OVERRIDES_FILE + ' 2>/dev/null');
-        log('💾 Saved ' + Object.keys(appOverrides).length + ' per-app overrides');
-    } catch (e) { log('❌ App overrides save failed'); }
-}
-
-async function saveConfig() {
-    const lines = [
-        'filter=' + currentFilter, 'jit=' + (jitEnabled ? 1 : 0), 'bg_dexopt=' + (bgDexoptEnabled ? 1 : 0),
-        'profile=' + currentProfile, 'threads=' + customThreads, 'heap_xms=' + customHeapXms,
-        'heap_xmx=' + customHeapXmx, 'flags=' + selectedFlags.join(','), 'force_clean=' + (forceCleanEnabled ? 1 : 0)
-    ];
-    const content = lines.join('\n');
-    await execFn('mkdir -p /sdcard/MTK_AI_Engine 2>/dev/null');
-    await execFn('echo -n "' + content + '" > ' + CONFIG_FILE + ' 2>/dev/null');
-    await execFn('chmod 644 ' + CONFIG_FILE + ' 2>/dev/null');
-    log('💾 Config saved to ' + CONFIG_FILE);
-}
-
-async function init() {
-    await detectAndroidVersion();
-    await loadConfig();
-    await loadAppOverrides();
-    bindClickHandler();
-    log('🚀 DEX2OAT Manager initialized');
-}
-
-async function loadConfig() {
-    try {
-        const raw = await execFn('cat ' + CONFIG_FILE + ' 2>/dev/null', 5000);
-        if (raw && raw.trim()) {
-            raw.trim().split('\n').forEach(function(line) {
-                const parts = line.split('=');
-                const key = parts[0];
-                const val = parts.slice(1).join('=');
-                const v = val ? val.trim() : '';
-                if (key === 'filter' && FILTERS.indexOf(v) !== -1) currentFilter = v;
-                if (key === 'jit') jitEnabled = v === '1';
-                if (key === 'bg_dexopt') bgDexoptEnabled = v === '1';
-                if (key === 'profile' && PROFILES[v]) currentProfile = v;
-                if (key === 'threads') customThreads = parseInt(v) || 4;
-                if (key === 'heap_xms') customHeapXms = v;
-                if (key === 'heap_xmx') customHeapXmx = v;
-                if (key === 'flags' && v) selectedFlags = v.split(',').filter(function(f) { return f; });
-                if (key === 'force_clean') forceCleanEnabled = v === '1';
-            });
-            log('📥 Config loaded: ' + currentFilter + ' | JIT:' + jitEnabled);
-        }
-    } catch (e) { log('⚠️ Config load failed'); }
-}
-
-async function loadInstalledApps() {
-    if (appsLoaded) return installedApps;
-    try {
-        log('📦 Loading installed apps...');
-        const raw = await execFn('pm list packages -3 2>/dev/null', 15000);
-        if (raw) {
-            const pkgs = raw.trim().split('\n').map(function(l) { return l.replace('package:', '').trim(); }).filter(function(p) { return p; });
-            installedApps = pkgs.map(function(pkg) { return { pkg: pkg, label: pkg }; });
-            appsLoaded = true;
-            log('📦 Loaded ' + installedApps.length + ' user apps');
-        }
-    } catch (e) { log('⚠️ Failed to load apps: ' + e.message); }
-    return installedApps;
-}
-
-function populateAppDropdown(selectEl, apps) {
-    if (!selectEl) return;
-    let html = '<option value="">-- Select App --</option>';
-    apps.forEach(function(app) {
-        const label = app.label || app.pkg;
-        html += '<option value="' + app.pkg + '">' + label + '</option>';
-    });
-    selectEl.innerHTML = html;
-}
-
-function renderOverrideListHtml() {
-    const entries = Object.entries(appOverrides);
-    return entries.length > 0 ? entries.map(function(item) {
-        const pkg = item[0];
-        const filter = item[1];
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(0,0,0,0.25);border-radius:8px;margin:4px 0;font-size:11px;">' +
-            '<span style="color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45%;">' + pkg + '</span>' +
-            '<span style="color:#67e8f9;font-weight:600;">' + filter + '</span>' +
-            '<button data-pkg="' + pkg + '" class="app-info-btn" style="padding:4px 8px;background:#06b6d4;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;margin-left:4px;">📋 Info</button>' +
-            '<button data-pkg="' + pkg + '" class="app-compile-now" style="padding:4px 10px;background:#fbbf24;color:#000;border:none;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;margin-left:4px;">⚡ Compile</button>' +
-            '<button data-pkg="' + pkg + '" class="app-clean-now" style="padding:4px 8px;background:#8b5cf6;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;margin-left:4px;">🗑️ Clean</button>' +
-            '<button data-pkg="' + pkg + '" class="app-override-remove" style="padding:4px 8px;background:#FF453A;color:#fff;border:none;border-radius:6px;font-size:10px;cursor:pointer;margin-left:4px;">✕</button>' +
-            '</div>';
-    }).join('') : '<div style="color:#666;font-size:11px;text-align:center;padding:12px;">No per-app overrides set</div>';
-}
-
-function renderDexoptInfoHtml(info) {
-    if (!info || info.error) {
-        return '<div style="color:#FF453A;font-size:11px;padding:8px;">⚠️ ' + (info ? info.error : 'Could not fetch info') + '</div>';
-    }
-    const statusColor = info.status === 'speed' || info.status === 'everything' ? '#fbbf24' :
-                       info.status === 'speed-profile' ? '#67e8f9' :
-                       info.status === 'quicken' ? '#a3e635' :
-                       info.status === 'verify' ? '#666' : '#8b92b4';
-    return '<div style="font-size:11px;line-height:1.6;">' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">' +
-            '<div><span style="color:#8b92b4;">Status:</span> <span style="color:' + statusColor + ';font-weight:600;">' + info.status + '</span></div>' +
-            '<div><span style="color:#8b92b4;">Reason:</span> <span style="color:#fff;">' + info.reason + '</span></div>' +
-            '<div><span style="color:#8b92b4;">ABI:</span> <span style="color:#fff;">' + info.abi + '</span></div>' +
-            '<div><span style="color:#8b92b4;">OAT File:</span> <span style="color:' + (info.oatPath ? '#32D74B' : '#FF453A') + ';">' + (info.oatPath ? '✅ Exists' : '❌ Missing') + '</span></div>' +
-        '</div>' +
-        (info.oatPath ? '<div style="margin-top:4px;"><span style="color:#8b92b4;">ODex Path:</span><br><span style="color:#666;font-size:10px;word-break:break-all;">' + info.oatPath + '</span></div>' : '') +
-        (info.apkPath ? '<div style="margin-top:4px;"><span style="color:#8b92b4;">APK Path:</span><br><span style="color:#666;font-size:10px;word-break:break-all;">' + info.apkPath + '</span></div>' : '') +
-        '</div>';
 }
 
 function bindClickHandler() {
     const btn = document.getElementById('dex2oat-btn');
-    if (!btn) { log('⚠️ #dex2oat-btn not found'); return; }
-    btn.addEventListener('click', function() { showDexModal(); });
+    if (btn) btn.addEventListener('click', showDexModal);
 }
 
 function showDexModal() {
     const existing = document.getElementById('dex-modal');
     if (existing) existing.remove();
+
     const modal = document.createElement('div');
     modal.id = 'dex-modal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);overflow-y:auto;padding:20px;';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);padding:20px;';
+    
     const box = document.createElement('div');
-    box.style.cssText = 'background:linear-gradient(135deg,#1a1f3a,#2d3561,#1a1f3a);border:2px solid #06b6d4;border-radius:24px;padding:28px;width:100%;max-width:620px;box-shadow:0 0 60px rgba(6,182,212,0.3);max-height:95vh;overflow-y:auto;';
-    let html = '';
-    html += '<h3 style="color:#06b6d4;margin:0 0 8px;font-size:22px;text-align:center;font-weight:700;">⚡ ART Compiler Pro</h3>';
-    html += '<p style="color:#8b92b4;font-size:13px;text-align:center;margin-bottom:24px;">Accurate dexopt parsing • Per-app control • Manual cleanup</p>';
-    
-    html += '<div style="margin-bottom:20px;">';
-    html += '<div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:10px;">🎯 Performance Profile</div>';
-    html += '<select id="profile-select" style="width:100%;padding:12px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid #06b6d4;border-radius:12px;font-size:14px;">';
-    Object.entries(PROFILES).forEach(function(item) {
-        const k = item[0]; const p = item[1];
-        html += '<option value="' + k + '"' + (k === currentProfile ? ' selected' : '') + '>' + p.name + '</option>';
+    box.style.cssText = 'background:linear-gradient(145deg,#121826,#1e293b);border:1px solid rgba(6,182,212,0.3);border-radius:20px;padding:24px;width:100%;max-width:480px;box-shadow:0 10px 30px rgba(0,0,0,0.5);font-family:sans-serif;color:#f8fafc;';
+
+    let html = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin:0;font-size:18px;font-weight:700;color:#38bdf8;">⚡ ART Compiler Engine</h3>
+            <button id="dex-close-x" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>
+        </div>
+        <p style="margin:0 0 20px;font-size:12px;color:#94a3b8;line-height:1.4;">Select a compilation profile and target. Tasks run independently in the background via shell daemon.</p>
+
+        <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:12px;font-weight:600;color:#cbd5e1;margin-bottom:8px;">Compilation Profile / Filter</label>
+            <select id="dex-filter-select" style="width:100%;padding:12px;background:#0f172a;color:#fff;border:1px solid #334155;border-radius:10px;font-size:13px;outline:none;">
+    `;
+
+    FILTERS.forEach(f => {
+        html += `<option value="${f.id}" ${f.id === currentFilter ? 'selected' : ''}>${f.name}</option>`;
     });
-    html += '</select>';
-    html += '<div id="profile-desc" style="font-size:11px;color:#67e8f9;margin-top:6px;padding:8px;background:rgba(6,182,212,0.15);border-radius:8px;">' + PROFILES[currentProfile].name + '</div>';
-    html += '</div>';
-    
-    html += '<div style="margin-bottom:18px;">';
-    html += '<div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:8px;">🔧 Compiler Filter</div>';
-    html += '<select id="dex-filter-select" style="width:100%;padding:10px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:10px;">';
-    FILTERS.forEach(function(f) { html += '<option value="' + f + '"' + (f === currentFilter ? ' selected' : '') + '>' + f.toUpperCase() + '</option>'; });
-    html += '</select>';
-    html += '<div id="filter-desc" style="font-size:11px;color:#666;margin-top:4px;">' + getFilterDesc(currentFilter) + '</div>';
-    html += '</div>';
-    
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;">';
-    html += '<div style="background:rgba(0,0,0,0.3);border-radius:12px;padding:14px;text-align:center;">';
-    html += '<div style="color:#fff;font-size:12px;font-weight:600;margin-bottom:8px;">JIT Compiler</div>';
-    html += '<button id="dex-jit-btn" style="width:100%;padding:10px;border-radius:10px;border:none;font-weight:600;cursor:pointer;background:' + (jitEnabled ? '#32D74B' : '#FF453A') + ';color:#fff;">' + (jitEnabled ? '✅ Enabled' : '❌ Disabled') + '</button>';
-    html += '</div>';
-    html += '<div style="background:rgba(0,0,0,0.3);border-radius:12px;padding:14px;text-align:center;">';
-    html += '<div style="color:#fff;font-size:12px;font-weight:600;margin-bottom:8px;">Background Dexopt</div>';
-    html += '<button id="dex-bg-btn" style="width:100%;padding:10px;border-radius:10px;border:none;font-weight:600;cursor:pointer;background:' + (bgDexoptEnabled ? '#32D74B' : '#FF453A') + ';color:#fff;">' + (bgDexoptEnabled ? '✅ Enabled' : '❌ Disabled') + '</button>';
-    html += '</div>';
-    html += '</div>';
-    
-    html += '<details style="margin-bottom:18px;background:rgba(0,0,0,0.25);border-radius:12px;padding:14px;" open>';
-    html += '<summary style="color:#06b6d4;font-weight:600;cursor:pointer;font-size:13px;">⚙️ Advanced Options</summary>';
-    html += '<div style="margin-top:12px;display:grid;gap:10px;">';
-    html += '<div><label style="color:#fff;font-size:12px;display:block;margin-bottom:4px;">Threads: <span id="threads-val">' + customThreads + '</span></label><input type="range" id="threads-slider" min="1" max="16" value="' + customThreads + '" style="width:100%;accent-color:#06b6d4;"></div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
-    html += '<div><label style="color:#fff;font-size:12px;display:block;margin-bottom:4px;">Heap Xms</label><select id="heap-xms" style="width:100%;padding:8px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;">';
-    ['128m','256m','512m','1024m','2048m'].forEach(function(s) { html += '<option value="' + s + '"' + (s === customHeapXms ? ' selected' : '') + '>' + s + '</option>'; });
-    html += '</select></div>';
-    html += '<div><label style="color:#fff;font-size:12px;display:block;margin-bottom:4px;">Heap Xmx</label><select id="heap-xmx" style="width:100%;padding:8px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;">';
-    ['256m','512m','1024m','2048m','4096m'].forEach(function(s) { html += '<option value="' + s + '"' + (s === customHeapXmx ? ' selected' : '') + '>' + s + '</option>'; });
-    html += '</select></div>';
-    html += '</div>';
-    html += '<div><label style="color:#fff;font-size:12px;display:block;margin-bottom:4px;">Advanced Flags</label><div style="max-height:120px;overflow-y:auto;background:rgba(0,0,0,0.3);border-radius:8px;padding:8px;">';
-    Object.entries(ADVANCED_FLAGS).forEach(function(item) {
-        const flag = item[0]; const desc = item[1];
-        const checked = selectedFlags.indexOf(flag) !== -1 ? ' checked' : '';
-        html += '<label style="display:flex;align-items:center;gap:8px;color:#ccc;font-size:11px;margin:4px 0;">';
-        html += '<input type="checkbox" data-flag="' + flag + '"' + checked + ' style="accent-color:#06b6d4;">';
-        html += '<span>' + flag + '</span><span style="color:#666;margin-left:auto;">' + desc + '</span>';
-        html += '</label>';
-    });
-    html += '</div></div>';
-    html += '<div style="margin-top:8px;"><label style="display:flex;align-items:center;gap:8px;color:#fff;font-size:12px;cursor:pointer;">';
-    html += '<input type="checkbox" id="force-clean-checkbox"' + (forceCleanEnabled ? ' checked' : '') + ' style="accent-color:#fbbf24;">';
-    html += '<span>🧹 Force clean old dex2oat files before compile</span>';
-    html += '<span style="color:#666;margin-left:auto;font-size:10px;">(Slower but ensures fresh AOT)</span>';
-    html += '</label></div>';
-    html += '</div></details>';
-    
-    html += '<div style="background:rgba(6,182,212,0.12);color:#67e8f9;padding:12px;border-radius:10px;font-size:11px;margin-bottom:20px;border-left:3px solid #06b6d4;"><strong>💡 Tips:</strong> Info panel now parses actual dumpsys output. 📋 Click "Info" to see real dexopt status. 🗑️ "Clean" removes stale .odex/.vdex files.</div>';
-    
-    html += '<details style="margin-bottom:18px;background:rgba(0,0,0,0.2);border-radius:12px;padding:14px;" open>';
-    html += '<summary style="color:#fbbf24;font-weight:600;cursor:pointer;font-size:13px;">🎮 Per-App Compiler Override</summary>';
-    html += '<div style="margin-top:12px;display:flex;flex-direction:column;gap:10px;">';
-    html += '<div style="display:flex;gap:8px;">';
-    html += '<select id="app-select-pkg" style="flex:1;padding:8px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;font-size:12px;"><option value="">⏳ Loading apps...</option></select>';
-    html += '<select id="app-select-filter" style="flex:1;padding:8px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid #06b6d4;border-radius:8px;font-size:12px;">';
-    FILTERS.forEach(function(f) { html += '<option value="' + f + '">' + f + '</option>'; });
-    html += '</select></div>';
-    html += '<div style="display:flex;gap:8px;">';
-    html += '<button id="app-override-add" style="flex:1;padding:10px;background:#32D74B;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;">➕ Add Override</button>';
-    html += '<button id="app-fetch-info" style="padding:10px 14px;background:#06b6d4;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;" disabled>📋 Fetch Info</button>';
-    html += '</div>';
-    html += '<div id="app-dexopt-info-panel" style="display:none;margin-top:8px;padding:10px;background:rgba(6,182,212,0.1);border:1px solid #06b6d4;border-radius:8px;">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
-    html += '<span style="color:#67e8f9;font-weight:600;font-size:12px;">📊 Compilation Info</span>';
-    html += '<button id="app-clean-manual" style="padding:4px 10px;background:#8b5cf6;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer;">🗑️ Clean Artifacts</button>';
-    html += '</div>';
-    html += '<div id="app-dexopt-content">Select an app and click "Fetch Info" to view compilation details</div>';
-    html += '</div>';
-    html += '<div style="margin-top:8px;padding:8px;background:rgba(0,0,0,0.15);border-radius:8px;">';
-    html += '<div style="font-size:11px;color:#8b92b4;margin-bottom:6px;">📋 Overrides:</div>';
-    html += '<div id="app-override-list" style="max-height:180px;overflow-y:auto;">' + renderOverrideListHtml() + '</div>';
-    html += '</div></div></details>';
-    
-    html += '<button id="dex-apply-btn" style="width:100%;padding:16px;background:linear-gradient(135deg,#06b6d4,#0891b2);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 20px rgba(6,182,212,0.4);">💾 Apply Configuration</button>';
-    html += '<button id="dex-compile-user" style="width:100%;padding:12px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;">🚀 Compile User Apps Only</button>';
-html += '<button id="dex-compile-system" style="width:100%;padding:12px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;">📱 Compile System Apps Only</button>';
-html += '<button id="dex-force-recompile" style="width:100%;padding:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;">⚡ Force ALL Apps + Clean</button>';
-    
-    // 🛑 NEW STOP BUTTON
-    html += '<button id="dex-stop-compile" style="width:100%;padding:12px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;">🛑 Stop Compilation</button>';
-    
-    html += '<button id="dex-cancel-btn" style="width:100%;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;">Cancel</button>';
-    html += '<div id="dex-status" style="text-align:center;font-size:12px;color:#666;margin-top:15px;min-height:40px;"></div>';
-    
+
+    html += `
+            </select>
+            <div id="filter-desc" style="font-size:11px;color:#38bdf8;margin-top:6px;background:rgba(56,189,248,0.1);padding:8px;border-radius:6px;">${FILTERS.find(f => f.id === currentFilter).desc}</div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#cbd5e1;cursor:pointer;">
+                <input type="checkbox" id="force-clean-cb" ${forceCleanEnabled ? 'checked' : ''} style="accent-color:#38bdf8;width:16px;height:16px;">
+                <span>Force clean old ART artifacts before compilation</span>
+            </label>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+            <button id="btn-user" style="padding:12px;background:#0284c7;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;">🚀 Compile User Apps</button>
+            <button id="btn-system" style="padding:12px;background:#4f46e5;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;">📱 Compile System Apps</button>
+            <button id="btn-all" style="padding:12px;background:#0d9488;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;">⚡ Compile All Apps (User + System)</button>
+            <button id="btn-per-app" style="padding:12px;background:#7c3aed;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;">🎯 Compile Specific App (Per-App)</button>
+            <button id="btn-stop" style="padding:10px;background:#dc2626;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:12px;cursor:pointer;">🛑 Stop Active Compilation</button>
+        </div>
+
+        <div id="dex-status" style="text-align:center;font-size:12px;color:#94a3b8;min-height:24px;"></div>
+    `;
+
     box.innerHTML = html;
     modal.appendChild(box);
     document.body.appendChild(modal);
-    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
-    
-    // ===== EVENT HANDLERS =====
-    const profileSelect = document.getElementById('profile-select');
-    const profileDesc = document.getElementById('profile-desc');
-    if (profileSelect) {
-        profileSelect.onchange = function() {
-            const p = PROFILES[profileSelect.value];
-            if (p) {
-                currentProfile = profileSelect.value; currentFilter = p.filter; jitEnabled = p.jit; bgDexoptEnabled = p.bgDexopt;
-                customThreads = p.threads; customHeapXms = p.heapXms; customHeapXmx = p.heapXmx; selectedFlags = p.flags.slice();
-                document.getElementById('dex-filter-select').value = currentFilter;
-                document.getElementById('filter-desc').textContent = getFilterDesc(currentFilter);
-                document.getElementById('dex-jit-btn').textContent = jitEnabled ? '✅ Enabled' : '❌ Disabled';
-                document.getElementById('dex-jit-btn').style.background = jitEnabled ? '#32D74B' : '#FF453A';
-                document.getElementById('dex-bg-btn').textContent = bgDexoptEnabled ? '✅ Enabled' : '❌ Disabled';
-                document.getElementById('dex-bg-btn').style.background = bgDexoptEnabled ? '#32D74B' : '#FF453A';
-                document.getElementById('threads-slider').value = customThreads;
-                document.getElementById('threads-val').textContent = customThreads;
-                document.getElementById('heap-xms').value = customHeapXms;
-                document.getElementById('heap-xmx').value = customHeapXmx;
-                const cbs = document.querySelectorAll('#dex-modal input[type="checkbox"][data-flag]');
-                for (let i = 0; i < cbs.length; i++) { cbs[i].checked = selectedFlags.indexOf(cbs[i].dataset.flag) !== -1; }
-                profileDesc.textContent = p.name;
-                profileDesc.style.color = p.filter === 'everything' ? '#fbbf24' : '#67e8f9';
-            }
-        };
-    }
-    
-    const filterSelect = document.getElementById('dex-filter-select');
-    const filterDesc = document.getElementById('filter-desc');
-    if (filterSelect && filterDesc) filterSelect.onchange = function() { currentFilter = filterSelect.value; filterDesc.textContent = getFilterDesc(currentFilter); };
-    
-    const jitBtn = document.getElementById('dex-jit-btn');
-    if (jitBtn) jitBtn.onclick = function() { jitEnabled = !jitEnabled; jitBtn.textContent = jitEnabled ? '✅ Enabled' : '❌ Disabled'; jitBtn.style.background = jitEnabled ? '#32D74B' : '#FF453A'; };
-    
-    const bgBtn = document.getElementById('dex-bg-btn');
-    if (bgBtn) bgBtn.onclick = function() { bgDexoptEnabled = !bgDexoptEnabled; bgBtn.textContent = bgDexoptEnabled ? '✅ Enabled' : '❌ Disabled'; bgBtn.style.background = bgDexoptEnabled ? '#32D74B' : '#FF453A'; };
-    
-    const threadsSlider = document.getElementById('threads-slider');
-    const threadsVal = document.getElementById('threads-val');
-    if (threadsSlider && threadsVal) threadsSlider.oninput = function() { threadsVal.textContent = threadsSlider.value; customThreads = parseInt(threadsSlider.value); };
-    
-    const heapXms = document.getElementById('heap-xms');
-    const heapXmx = document.getElementById('heap-xmx');
-    if (heapXms) heapXms.onchange = function() { customHeapXms = heapXms.value; };
-    if (heapXmx) heapXmx.onchange = function() { customHeapXmx = heapXmx.value; };
-    
-    const flagCbs = document.querySelectorAll('#dex-modal input[type="checkbox"][data-flag]');
-    for (let i = 0; i < flagCbs.length; i++) {
-        flagCbs[i].onchange = function() {
-            const flag = this.dataset.flag;
-            if (this.checked) { if (selectedFlags.indexOf(flag) === -1) selectedFlags.push(flag); }
-            else { const idx = selectedFlags.indexOf(flag); if (idx !== -1) selectedFlags.splice(idx, 1); }
-        };
-    }
-    
-    const cleanCb = document.getElementById('force-clean-checkbox');
-    if (cleanCb) cleanCb.onchange = function() { forceCleanEnabled = this.checked; log('🧹 Force clean: ' + (this.checked ? 'ON' : 'OFF')); };
-    
-    const applyBtn = document.getElementById('dex-apply-btn');
-    if (applyBtn) applyBtn.onclick = async function() { 
-        currentFilter = document.getElementById('dex-filter-select').value; 
-        customHeapXms = document.getElementById('heap-xms').value; 
-        customHeapXmx = document.getElementById('heap-xmx').value; 
-        await applyDexTweaks(); 
+
+    modal.querySelector('#dex-close-x').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+    const filterSelect = modal.querySelector('#dex-filter-select');
+    const filterDesc = modal.querySelector('#filter-desc');
+    filterSelect.onchange = () => {
+        currentFilter = filterSelect.value;
+        const match = FILTERS.find(f => f.id === currentFilter);
+        if (match) filterDesc.textContent = match.desc;
     };
-    
-    // 🚀 Compile User Apps Only
-const compileUserBtn = document.getElementById('dex-compile-user');
-if (compileUserBtn) compileUserBtn.onclick = async function() { 
-    const statusEl = document.getElementById('dex-status'); 
-    if (statusEl) statusEl.innerHTML = '<span style="color:#22c55e;">🔄 Compiling user apps...</span>'; 
-    await executeShellCompile('bulk_user', '', currentFilter, forceCleanEnabled); 
-    if (statusEl) statusEl.innerHTML = '<span style="color:#32D74B;font-weight:600;">✅ User compilation running in background. Check notifications.</span>';
-    if (window.showStatus) window.showStatus('✅ User compilation running in background', '#32D74B');
-};
 
-// 📱 Compile System Apps Only (NEW)
-const compileSystemBtn = document.getElementById('dex-compile-system');
-if (compileSystemBtn) compileSystemBtn.onclick = async function() { 
-    const statusEl = document.getElementById('dex-status'); 
-    if (statusEl) statusEl.innerHTML = '<span style="color:#8b5cf6;">🔄 Compiling system apps...</span>'; 
-    await executeShellCompile('bulk_system', '', currentFilter, forceCleanEnabled); 
-    if (statusEl) statusEl.innerHTML = '<span style="color:#32D74B;font-weight:600;">✅ System compilation running in background. Check notifications.</span>';
-    if (window.showStatus) window.showStatus('✅ System compilation running in background', '#32D74B');
-};
+    modal.querySelector('#force-clean-cb').onchange = (e) => {
+        forceCleanEnabled = e.target.checked;
+    };
 
-// ⚡ Force ALL Apps + Clean
-const forceBtn = document.getElementById('dex-force-recompile');
-if (forceBtn) forceBtn.onclick = async function() { 
-    const statusEl = document.getElementById('dex-status'); 
-    if (statusEl) statusEl.innerHTML = '<span style="color:#f59e0b;">⚠️ Force compiling ALL apps + cleaning...</span>'; 
-    await executeShellCompile('bulk', '', currentFilter, true); 
-    if (statusEl) statusEl.innerHTML = '<span style="color:#32D74B;font-weight:600;">✅ ALL compilation running in background. Check notifications.</span>';
-    if (window.showStatus) window.showStatus('✅ ALL compilation running in background', '#32D74B');
-};
+    const statusEl = modal.querySelector('#dex-status');
 
-    // 🛑 STOP BUTTON EVENT LISTENER
-    const stopBtn = document.getElementById('dex-stop-compile');
-    if (stopBtn) stopBtn.onclick = async function() { await stopCompilation(); };
-    
-    const cancelBtn = document.getElementById('dex-cancel-btn');
-    if (cancelBtn) cancelBtn.onclick = function() { modal.remove(); };
-    
-    const appSelectPkg = document.getElementById('app-select-pkg');
-    const appSelectFilter = document.getElementById('app-select-filter');
-    const appFetchInfoBtn = document.getElementById('app-fetch-info');
-    const appCleanManualBtn = document.getElementById('app-clean-manual');
-    const appDexoptInfoPanel = document.getElementById('app-dexopt-info-panel');
-    const appDexoptContent = document.getElementById('app-dexopt-content');
-    
-    if (appSelectPkg && appFetchInfoBtn) {
-        appSelectPkg.onchange = function() {
-            const pkg = appSelectPkg.value;
-            appFetchInfoBtn.disabled = !pkg;
-            if (pkg) { selectedAppForInfo = pkg; } else { selectedAppForInfo = null; appDexoptInfoPanel.style.display = 'none'; }
-        };
-    }
-    
-    if (appFetchInfoBtn) {
-        appFetchInfoBtn.onclick = async function() {
-            const pkg = appSelectPkg.value;
-            if (!pkg) { alert('Select an app first'); return; }
-            appFetchInfoBtn.disabled = true;
-            appFetchInfoBtn.textContent = '⏳ Loading...';
-            appDexoptInfoPanel.style.display = 'block';
-            appDexoptContent.innerHTML = '<div style="color:#67e8f9;font-size:11px;">🔄 Fetching compilation info for ' + pkg + '...</div>';
-            try {
-                const info = await getDexoptInfo(pkg);
-                appDexoptContent.innerHTML = renderDexoptInfoHtml(info);
-                selectedAppForInfo = pkg;
-                log('📊 Fetched info for ' + pkg);
-            } catch (e) {
-                appDexoptContent.innerHTML = '<div style="color:#FF453A;font-size:11px;">❌ Error: ' + e.message + '</div>';
-            } finally {
-                appFetchInfoBtn.disabled = false;
-                appFetchInfoBtn.textContent = '📋 Fetch Info';
-            }
-        };
-    }
-    
-    if (appCleanManualBtn) {
-        appCleanManualBtn.onclick = async function() {
-            const pkg = selectedAppForInfo || appSelectPkg.value;
-            if (!pkg) { alert('Select an app first'); return; }
-            if (!confirm('🗑️ Delete dex2oat artifacts for\n\n' + pkg + '\n\nThis will force recompilation on next launch.\nContinue?')) return;
-            appCleanManualBtn.disabled = true;
-            appCleanManualBtn.textContent = '⏳ Cleaning...';
-            try {
-                const result = await deleteDexArtifacts(pkg);
-                if (result) {
-                    appDexoptContent.innerHTML = '<div style="color:#32D74B;font-weight:600;font-size:11px;">✅ Artifacts cleaned for ' + pkg + '</div><div style="color:#666;font-size:10px;margin-top:4px;">Next app launch will trigger fresh compilation</div>';
-                    log('🧹 Manual clean completed for ' + pkg);
-                    if (window.showStatus) window.showStatus('✅ Cleaned: ' + pkg, '#32D74B');
-                } else {
-                    appDexoptContent.innerHTML = '<div style="color:#fbbf24;font-size:11px;">⚠️ Cleanup had issues - check logs</div>';
-                }
-            } catch (e) {
-                appDexoptContent.innerHTML = '<div style="color:#FF453A;font-size:11px;">❌ Error: ' + e.message + '</div>';
-            } finally {
-                appCleanManualBtn.disabled = false;
-                appCleanManualBtn.textContent = '🗑️ Clean Artifacts';
-            }
-        };
-    }
-    
-    const appOverrideAdd = document.getElementById('app-override-add');
-    if (appOverrideAdd) {
-        appOverrideAdd.onclick = async function() {
-            const pkg = appSelectPkg.value;
-            const filter = appSelectFilter.value;
-            if (!pkg || FILTERS.indexOf(filter) === -1) { alert('Select an app and filter'); return; }
-            appOverrides[pkg] = filter;
-            await saveAppOverrides();
-            const list = document.getElementById('app-override-list');
-            if (list) list.innerHTML = renderOverrideListHtml();
-            appSelectPkg.value = '';
-            appFetchInfoBtn.disabled = true;
-            log('✅ Added override: ' + pkg + ' → ' + filter);
-            if (window.showStatus) window.showStatus('✅ ' + pkg + ' → ' + filter, '#32D74B');
-        };
-    }
-    
-    box.addEventListener('click', async function(e) {
-        if (e.target.classList && e.target.classList.contains('app-info-btn')) {
-            const pkg = e.target.dataset.pkg;
-            e.target.textContent = '⏳'; e.target.disabled = true;
-            appDexoptInfoPanel.style.display = 'block';
-            appDexoptContent.innerHTML = '<div style="color:#67e8f9;font-size:11px;">🔄 Fetching info for ' + pkg + '...</div>';
-            selectedAppForInfo = pkg;
-            try {
-                const info = await getDexoptInfo(pkg);
-                appDexoptContent.innerHTML = renderDexoptInfoHtml(info);
-            } catch (err) {
-                appDexoptContent.innerHTML = '<div style="color:#FF453A;font-size:11px;">❌ ' + err.message + '</div>';
-            } finally {
-                e.target.textContent = '📋 Info'; e.target.disabled = false;
-            }
-            return;
-        }
-        if (e.target.classList && e.target.classList.contains('app-compile-now')) {
-            const pkg = e.target.dataset.pkg;
-            const filter = appOverrides[pkg] || currentFilter;
-            const statusEl = document.getElementById('dex-status');
-            const originalText = e.target.textContent;
-            if (statusEl) statusEl.innerHTML = '<span style="color:#fbbf24;">⚡ Compiling ' + pkg + ' with ' + filter + '...</span>';
-            e.target.textContent = '⏳'; e.target.disabled = true; e.target.style.opacity = '0.7';
-            try {
-                const result = await compileWithFallback(pkg, filter, forceCleanEnabled);
-                if (result) {
-                    log('✅ Compiled ' + pkg + ' with ' + filter);
-                    if (window.showStatus) window.showStatus('✅ ' + pkg + ' compiled!', '#32D74B');
-                } else {
-                    log('❌ Failed to compile ' + pkg);
-                    if (window.showStatus) window.showStatus('❌ ' + pkg + ' failed', '#FF453A');
-                }
-            } catch (err) { 
-                log('❌ Error: ' + err.message);
-                if (window.showStatus) window.showStatus('❌ Error: ' + err.message, '#FF453A');
-            } finally {
-                e.target.textContent = originalText; e.target.disabled = false; e.target.style.opacity = '1';
-            }
-            return;
-        }
-        if (e.target.classList && e.target.classList.contains('app-clean-now')) {
-            const pkg = e.target.dataset.pkg;
-            if (!confirm('🗑️ Delete dex2oat artifacts for\n\n' + pkg + '\n\nContinue?')) return;
-            e.target.textContent = '⏳'; e.target.disabled = true;
-            try {
-                const result = await deleteDexArtifacts(pkg);
-                if (result) {
-                    log('🧹 Cleaned ' + pkg);
-                    if (window.showStatus) window.showStatus('✅ Cleaned: ' + pkg, '#8b5cf6');
-                    if (selectedAppForInfo === pkg && appDexoptInfoPanel.style.display !== 'none') {
-                        appDexoptContent.innerHTML = '<div style="color:#32D74B;font-size:11px;">✅ Cleaned! Fetch info again to see updated status</div>';
-                    }
-                }
-            } catch (err) {
-                log('❌ Clean error: ' + err.message);
-                if (window.showStatus) window.showStatus('❌ Clean failed', '#FF453A');
-            } finally {
-                e.target.textContent = '🗑️ Clean'; e.target.disabled = false;
-            }
-            return;
-        }
-        if (e.target.classList && e.target.classList.contains('app-override-remove')) {
-            const pkg = e.target.dataset.pkg;
-            delete appOverrides[pkg];
-            await saveAppOverrides();
-            const list = document.getElementById('app-override-list');
-            if (list) list.innerHTML = renderOverrideListHtml();
-            if (selectedAppForInfo === pkg) { appDexoptInfoPanel.style.display = 'none'; selectedAppForInfo = null; }
-            log('✅ Removed override: ' + pkg);
-        }
-    });
-    
-    (async function initAppList() {
-        if (appSelectPkg) {
-            appSelectPkg.innerHTML = '<option value="">⏳ Loading apps...</option>';
-            appSelectPkg.disabled = true;
-        }
-        if (!appsLoaded) { await loadInstalledApps(); }
-        if (appSelectPkg && installedApps.length > 0) {
-            populateAppDropdown(appSelectPkg, installedApps);
-            appSelectPkg.disabled = false;
-        } else if (appSelectPkg) {
-            appSelectPkg.innerHTML = '<option value="">⚠️ No apps found</option>';
-            appSelectPkg.disabled = true;
-        }
-    })();
+    modal.querySelector('#btn-user').onclick = async () => {
+        statusEl.innerHTML = '<span style="color:#38bdf8;">Preparing user apps list...</span>';
+        await executeShellTask('bulk_user');
+        statusEl.innerHTML = '<span style="color:#22c55e;font-weight:600;">✅ User compilation running in background! Safe to close.</span>';
+    };
+
+    modal.querySelector('#btn-system').onclick = async () => {
+        statusEl.innerHTML = '<span style="color:#38bdf8;">Preparing system apps list...</span>';
+        await executeShellTask('bulk_system');
+        statusEl.innerHTML = '<span style="color:#22c55e;font-weight:600;">✅ System compilation running in background! Safe to close.</span>';
+    };
+
+    modal.querySelector('#btn-all').onclick = async () => {
+        statusEl.innerHTML = '<span style="color:#38bdf8;">Preparing all apps list...</span>';
+        await executeShellTask('bulk');
+        statusEl.innerHTML = '<span style="color:#22c55e;font-weight:600;">✅ All apps compilation running in background! Safe to close.</span>';
+    };
+
+    modal.querySelector('#btn-per-app').onclick = () => {
+        modal.remove();
+        showPerAppModal();
+    };
+
+    modal.querySelector('#btn-stop').onclick = async () => {
+        statusEl.innerHTML = '<span style="color:#ef4444;">Stopping compiler tasks...</span>';
+        await stopCompilation();
+        statusEl.innerHTML = '<span style="color:#ef4444;font-weight:600;">🛑 Compilation halted.</span>';
+    };
 }
 
-function getFilterDesc(filter) {
-    const desc = {
-        'speed': '🔥 AOT ALL methods. Max perf, ~2-3x storage.',
-        'speed-profile': '⚖️ Profile-guided AOT. Balanced perf/storage.',
-        'quicken': '⚡ Interpreter optimizations only. Fast compile.',
-        'verify': '✅ Verify only, no compilation. Minimal storage.',
-        'interpret-only': '🐌 Pure interpretation. Slowest, smallest.',
-        'space': '💾 Optimize for storage over speed.',
-        'space-profile': '💾+📊 Space + profile guidance.',
-        'time': '⏱️ Minimize compile time (legacy).',
-        'everything': '🚀 AGGRESSIVE: Full AOT + inlining + resolution.'
-    };
-    return desc[filter] || '';
-}
+// === Per-App Selector Modal with Real Icons & Names ===
+async function showPerAppModal() {
+    const existing = document.getElementById('dex-perapp-modal');
+    if (existing) existing.remove();
 
-async function applyDexTweaks() {
-    const applyBtn = document.getElementById('dex-apply-btn');
-    let statusEl = document.getElementById('dex-status');
-    if (!statusEl) {
-        statusEl = document.createElement('div');
-        statusEl.id = 'dex-status';
-        statusEl.style.cssText = 'text-align:center;font-size:12px;color:#666;margin-bottom:15px;min-height:50px;padding:10px;background:rgba(0,0,0,0.25);border-radius:10px;';
-        const box = document.querySelector('#dex-modal > div');
-        if (box) box.insertBefore(statusEl, applyBtn);
-    }
-    applyBtn.disabled = true;
-    applyBtn.textContent = '⏳ Applying...';
-    statusEl.innerHTML = '<span style="color:#FF9F0A;">🔧 Updating ART properties...</span>';
+    const modal = document.createElement('div');
+    modal.id = 'dex-perapp-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);padding:20px;';
+    
+    const box = document.createElement('div');
+    box.style.cssText = 'background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #7c3aed;border-radius:20px;padding:24px;width:100%;max-width:480px;box-shadow:0 0 40px rgba(124,58,237,0.3);color:#fff;font-family:sans-serif;';
+    
+    box.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 style="color:#a78bfa;margin:0;font-size:18px;">🎯 Select App to Compile</h3>
+            <button id="perapp-close" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>
+        </div>
+        <p style="color:#94a3b8;font-size:12px;margin-bottom:16px;">Choose a single application to compile with profile: <b style="color:#38bdf8;">${currentFilter}</b></p>
+        
+        <div style="margin-bottom:12px;">
+            <input type="text" id="perapp-search" placeholder="🔍 Search installed apps..." style="width:100%;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid #7c3aed;border-radius:8px;color:#fff;font-size:12px;outline:none;">
+        </div>
+        
+        <div id="perapp-status" style="text-align:center;font-size:12px;color:#a78bfa;padding:20px;">⚡ Scanning installed packages...</div>
+        
+        <div id="perapp-list" style="display:none;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding-right:4px;"></div>
+    `;
+
+    modal.appendChild(box);
+    document.body.appendChild(modal);
+
+    modal.querySelector('#perapp-close').onclick = () => modal.remove();
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+    const searchInput = document.getElementById('perapp-search');
+    const listEl = document.getElementById('perapp-list');
+    const statusEl = document.getElementById('perapp-status');
+
+    searchInput.oninput = (e) => {
+        const q = e.target.value.toLowerCase().trim();
+        listEl.querySelectorAll('.app-item').forEach(item => {
+            const name = item.dataset.name.toLowerCase();
+            const pkg = item.dataset.pkg.toLowerCase();
+            item.style.display = (name.includes(q) || pkg.includes(q)) ? 'flex' : 'none';
+        });
+    };
+
     try {
-        await safeSetprop('dalvik.vm.dex2oat-filter', currentFilter);
-        await safeSetprop('dalvik.vm.image-dex2oat-filter', currentFilter);
-        const reasons = ['install', 'bg-dexopt', 'boot', 'first-boot', 'inactive', 'cmdline', 'ab-ota'];
-        for (let i = 0; i < reasons.length; i++) {
-            const reason = reasons[i];
-            const f = (reason === 'bg-dexopt' && !bgDexoptEnabled) ? 'quicken' : currentFilter;
-            await safeSetprop('pm.dexopt.' + reason, f);
+        const allPkgs = await getAllPackages();
+        if (!allPkgs.length) {
+            statusEl.textContent = '❌ No packages found.';
+            return;
         }
-        await safeSetprop('dalvik.vm.usejit', jitEnabled ? 1 : 0);
-        if (androidVersion < 14) await safeSetprop('dalvik.vm.usejitprofiles', jitEnabled ? 1 : 0, null);
-        if (jitEnabled) {
-            await safeSetprop('dalvik.vm.jitinitialsize', '8m');
-            await safeSetprop('dalvik.vm.jitmaxsize', '128m');
-            await safeSetprop('dalvik.vm.jitthreshold', '5000');
-            await safeSetprop('dalvik.vm.jitprithreadweight', '250');
-            await safeSetprop('dalvik.vm.jittransitionweight', '500');
-        } else {
-            await safeSetprop('dalvik.vm.jitinitialsize', '0');
-            await safeSetprop('dalvik.vm.jitmaxsize', '0');
-        }
-        await safeSetprop('dalvik.vm.dex2oat-threads', customThreads);
-        await safeSetprop('dalvik.vm.boot-dex2oat-threads', customThreads);
-        await safeSetprop('dalvik.vm.background-dex2oat-threads', Math.max(2, customThreads - 2));
-        await safeSetprop('dalvik.vm.dex2oat-Xms', customHeapXms);
-        await safeSetprop('dalvik.vm.dex2oat-Xmx', customHeapXmx);
-        await safeSetprop('dalvik.vm.image-dex2oat-Xms', customHeapXms);
-        await safeSetprop('dalvik.vm.image-dex2oat-Xmx', customHeapXmx);
-        const flagString = selectedFlags.join(' ');
-        await safeSetprop('dalvik.vm.dex2oat-flags', flagString || '', '');
-        await safeSetprop('dalvik.vm.ps-min-first-save-ms', '30000');
-        await safeSetprop('dalvik.vm.ps-min-save-period-ms', '60000');
-        await safeSetprop('dalvik.vm.bgdexopt.new-classes-percent', '10');
-        await safeSetprop('dalvik.vm.bgdexopt.new-methods-percent', '10');
-        await safeSetprop('dalvik.vm.dex2oat-swap', 'true');
-        await safeSetprop('dalvik.vm.dex2oat-resolve-startup-strings', 'true');
-        await saveConfig();
-        await saveAppOverrides();
-        const storageNote = (currentFilter === 'speed' || currentFilter === 'everything') ? '<br><small style="color:#fbbf24;">⚠️ Full AOT may use 2-3x app storage</small>' : '';
-        const cleanNote = forceCleanEnabled ? '<br><small style="color:#67e8f9;">🧹 Force clean enabled for next compile</small>' : '';
-        statusEl.innerHTML = '<span style="color:#32D74B;font-weight:600;">✅ ART Updated</span><br><small style="color:#8b92b4;">Filter:<strong>' + currentFilter + '</strong> | JIT:' + (jitEnabled?'ON':'OFF') + ' | Threads:' + customThreads + '</small>' + storageNote + cleanNote;
-        if (window.showStatus) window.showStatus('🚀 ART: ' + currentFilter + ' • JIT:' + (jitEnabled?'ON':'OFF') + ' • ' + customThreads + ' threads', currentFilter === 'everything' ? '#fbbf24' : '#06b6d4');
-        setTimeout(function() { const m = document.getElementById('dex-modal'); if (m) m.remove(); }, 2500);
-    } catch (e) {
-        log('❌ Apply failed: ' + e.message);
-        statusEl.innerHTML = '<span style="color:#FF453A;font-weight:600;">❌ Error</span><br><small style="color:#8b92b4;">' + (e.message || 'Check root access') + '</small>';
-        applyBtn.disabled = false;
-        applyBtn.textContent = '💾 Apply Configuration';
+
+        const { labels, system } = await enrichApps(allPkgs);
+        detectedApps = allPkgs.map(pkg => ({
+            pkg,
+            label: labels[pkg] || getLocalAppName(pkg) || formatPackageName(pkg),
+            isSystem: system.has(pkg)
+        }));
+
+        detectedApps.sort((a, b) => {
+            if (a.isSystem !== b.isSystem) return a.isSystem ? 1 : -1;
+            return a.label.localeCompare(b.label);
+        });
+
+        statusEl.style.display = 'none';
+        listEl.style.display = 'flex';
+        listEl.innerHTML = '';
+
+        const colors = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
+
+        detectedApps.forEach(app => {
+            const colorIdx = app.pkg.charCodeAt(0) % colors.length;
+            const color = colors[colorIdx];
+            const firstLetter = app.label.charAt(0).toUpperCase();
+
+            const item = document.createElement('div');
+            item.className = 'app-item';
+            item.dataset.pkg = app.pkg;
+            item.dataset.name = app.label;
+            item.style.cssText = 'background:rgba(0,0,0,0.3);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background 0.2s;';
+            item.onmouseover = () => item.style.background = 'rgba(124,58,237,0.2)';
+            item.onmouseout = () => item.style.background = 'rgba(0,0,0,0.3)';
+
+            item.innerHTML = `
+                <div style="position:relative;width:40px;height:40px;flex-shrink:0;">
+                    <img src="ksu://icon/${app.pkg}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:40px;height:40px;border-radius:10px;object-fit:cover;background:#2c2c2e;">
+                    <div style="display:none;width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,${color},${color}aa);align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:bold;">${firstLetter}</div>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${app.label}</div>
+                    <div style="color:#94a3b8;font-size:10px;font-family:monospace;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${app.pkg}${app.isSystem ? ' (System)' : ''}</div>
+                </div>
+                <button style="background:#7c3aed;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">Compile</button>
+            `;
+
+            item.onclick = async () => {
+                modal.remove();
+                if (window.showStatus) window.showStatus(`🎯 Compiling ${app.label}...`, '#7c3aed');
+                await executeShellTask('per_app', app.pkg);
+                if (window.showStatus) window.showStatus(`✅ ${app.label} compilation task started in background!`, '#22c55e');
+            };
+
+            listEl.appendChild(item);
+        });
+
+    } catch (err) {
+        statusEl.textContent = `❌ Error loading apps: ${err.message}`;
     }
 }
 
-// 🚀 Smart Compile (Bulk)
-async function smartCompile(includeSystem, forceClean = false) {
-    const statusEl = document.getElementById('dex-status');
-    if (statusEl) statusEl.innerHTML = '<span style="color:#fbbf24;">🚀 Delegating bulk compilation to background shell engine...</span>';
-    const filter = currentFilter;
-    log('🚀 Triggering bulk shell compilation...');
-    await executeShellCompile('bulk', '', filter, forceClean);
-    if (statusEl) statusEl.innerHTML = '<span style="color:#32D74B;font-weight:600;">✅ Bulk compilation running in background. Check notifications for real-time progress.</span>';
-    if (window.showStatus) window.showStatus('✅ Compilation running in background', '#32D74B');
-}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindClickHandler); else bindClickHandler();
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
-
-window.DEX2OATManager = { 
-    init, showDexModal, applyDexTweaks, smartCompile, compileWithFallback, stopCompilation,
-    getEffectiveFilter, getDexoptInfo, deleteDexArtifacts, PROFILES, FILTERS, ADVANCED_FLAGS 
-};
+window.DEX2OATManager = { showDexModal, executeShellTask, stopCompilation };
 })();
