@@ -1,3 +1,7 @@
+--- version 0.0.1.23 ---
+
+•🔥Old disable thermal beast revives (⚠️Must have phone cooler)
+
 --- version 0.0.1.22 ---
 
 •Dex2oat simple version
