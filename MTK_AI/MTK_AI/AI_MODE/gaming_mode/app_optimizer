@@ -1,6 +1,7 @@
 #!/system/bin/sh
 
 pkill -f normal_prop >/dev/null 2>&1 || true
+rm -f /dev/.mtk_ai_normal_mode
 SCRIPT_PATH="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer"
 
 for pid in $(pgrep -f "$SCRIPT_PATH"); do
