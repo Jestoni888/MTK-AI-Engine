@@ -375,6 +375,7 @@ ultra_limit_set() {
     sleep 5
     echo '🔥 DISABLING THERMAL LIMITS 🔥' 1>&2
     t_limit="125"
+    t_limit_ui="145°C"
     no_cooler="0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler"
     lock_val "1 ${t_limit}000 0 mtktscpu-sysrst $no_cooler 200" /proc/driver/thermal/tzcpu
     lock_val "1 ${t_limit}000 0 mtktspmic-sysrst $no_cooler 1000" /proc/driver/thermal/tzpmic
@@ -385,10 +386,17 @@ ultra_limit_set() {
     lock_val "1 ${t_limit}000 0 mtktsAP-sysrst $no_cooler 1000" /proc/driver/thermal/tzbts
     lock_val "1 ${t_limit}000 0 mtk-cl-kshutdown01 $no_cooler 1000" /proc/driver/thermal/tzbtsnrpa
     lock_val "1 ${t_limit}000 0 mtk-cl-kshutdown02 $no_cooler 1000" /proc/driver/thermal/tzbtspa
+    echo "Thermal Throttle up to ${t_limit_ui}"
     sspm_thermal_throttle
   else
-    # Restore defaults (not used here)
-    :
+    ulock_val '3 117000 0 mtktscpu-sysrst 57000 0 cpu_adaptive_0 56000 0 cpu_adaptive_1 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 200' /proc/driver/thermal/tzcpu
+    ulock_val '1 136000 0 mtktspmic-sysrst 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzpmic
+    ulock_val '1 120000 0 mtk-cl-kshutdown00 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 2000' /proc/driver/thermal/tzpa
+    ulock_val '1 120000 0 mtktscharger-sysrst 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 2000' /proc/driver/thermal/tzcharger
+    ulock_val '1 120000 0 mtktswmt-sysrst 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzwmt
+    ulock_val '5 100000 0 mtktsAP-sysrst 90000 0 mtk-cl-kshutdown03 58000 0 mtk-cl-cam00 52000 0 abcct_lcmoff 50000 0 abcct 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzbts
+    ulock_val '4 120000 0 mtk-cl-kshutdown01 110000 0 no-cooler 100000 0 no-cooler 68000 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzbtsnrpa
+    ulock_val '4 120000 0 mtk-cl-kshutdown02 110000 0 no-cooler 100000 0 no-cooler 90000 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzbtspa
   fi
   echo $state > /proc/driver/thermal/sspm_thermal_throttle
 }
