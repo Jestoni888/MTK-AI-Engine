@@ -13,10 +13,212 @@ LOG_TAG="[MTK_AI UPDATE]"
 MANIFEST_URL="https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt"
 TMP="/data/local/tmp/mtk_update"
 PROGRESS_FILE="/sdcard/MTK_AI_Engine/.update_progress"
-
+# Ensure MODPATH is set (fallback for standalone testing)
+MODPATH="/data/adb/modules/MTK_AI"
+cfgpath="${MODPATH}/common/cfg.sh"
+volupkey='KEY_VOLUMEUP'
+voldownkey='KEY_VOLUMEDOWN'
+keylist="${volupkey} ${voldownkey}"
 log() {
 echo "$LOG_TAG $*"
 }
+# ==========================================
+# NEW: Timeout Key Detection (10 Seconds)
+# ==========================================
+detect_keys_timeout() {
+  local event
+  # Wait max 10 seconds for a single key event
+  event="$(timeout 10 getevent -lqn -c1 2>/dev/null)"
+  
+  if [ -z "$event" ]; then
+    echo "timeout"
+  elif echo "$event" | grep -q "${volupkey}.*DOWN"; then
+    echo "yes"
+  elif echo "$event" | grep -q "${voldownkey}.*DOWN"; then
+    echo "no"
+  else
+    echo "other"
+  fi
+}
+
+# ==========================================
+# NEW: Prompt and Generate Script
+# ==========================================
+prompt_maximize() {
+echo "****************************************"
+echo " Do you want to fully maximize full"
+echo " capabilities of your android? EXPERIMENTAL"
+echo " installed in /data/adb/service.d/max.sh"
+echo " delete it via MT manager if you have issues"
+echo " or via cmd: rm -f /data/adb/service.d/max.sh"
+echo " reboot after applied & update"
+echo "****************************************"
+echo
+echo "  [VOL+] = YES   [VOL-] = NO"
+echo "  (Auto-proceed in 10 seconds)"
+echo
+local choice
+choice=$(detect_keys_timeout)
+case "$choice" in
+yes)
+echo ">> YES selected! Generating max.sh..."
+generate_max_script
+return 0 # Signal YES
+;;
+no)
+echo ">> NO selected. Proceeding to next commands..."
+return 1 # Signal NO
+;;
+timeout|other)
+echo ">> Timeout or invalid key. Proceeding to next commands..."
+return 1 # Signal TIMEOUT
+;;
+esac
+}
+
+generate_max_script() {
+  local target_dir="/data/adb/service.d"
+  local target_file="${target_dir}/max.sh"
+  
+  mkdir -p "$target_dir"
+  
+  # Using 'EOF' in quotes prevents variable expansion inside the script
+  cat << 'EOF' > "$target_file"
+#!/system/bin/sh
+
+# Find *min* files to use as the directory anchor
+find /sys -type f -name "*min*" 2>/dev/null | while read -r min_f; do
+    max_f=$(find "$(dirname "$min_f")" -maxdepth 1 -name "*max*" -type f 2>/dev/null | head -1)
+    
+    if [ -n "$max_f" ] && val=$(cat "$max_f" 2>/dev/null); then
+        dir=$(dirname "$min_f")
+        echo "Path: $dir | Target: $val"
+        
+        # 1. Temporarily make writable (attempt)
+        chmod 644 "$min_f" 2>/dev/null
+        chmod 644 "$max_f" 2>/dev/null
+        
+        # 2. Write to min first (raising the floor), then max
+        echo "$val" > "$min_f" 2>/dev/null
+        echo "$val" > "$max_f" 2>/dev/null
+        
+        # 3. Lock them as read-only after applying
+        chmod 444 "$min_f" 2>/dev/null
+        chmod 444 "$max_f" 2>/dev/null
+        
+        # 4. Verify if the values were really applied
+        r_max=$(cat "$max_f" 2>/dev/null)
+        r_min=$(cat "$min_f" 2>/dev/null)
+        
+        [ "$r_max" = "$val" ] && echo "  [OK] max applied" || echo "  [FAIL] max (read: $r_max)"
+        [ "$r_min" = "$val" ] && echo "  [OK] min applied" || echo "  [FAIL] min (read: $r_min)"
+        echo "---"
+    fi
+done
+EOF
+
+  chmod 755 "$target_file"
+  echo ">> Script successfully generated at:"
+  echo "   ${target_file}"
+  echo ">> It will execute on every boot."
+}
+
+# ==========================================
+# ORIGINAL FUNCTIONS (Key Configuration)
+# ==========================================
+detect_keys() {
+  local event
+  while true; do
+    event="$(getevent -lqn -c1)"
+    if echo "${event}" | grep -q "${volupkey}.*DOWN"; then
+      echo 'volup' && break
+    elif echo "${event}" | grep -q "${voldownkey}.*DOWN"; then
+      echo 'voldown' && break
+    fi
+  done
+}
+
+mkcfg() {
+  local count
+  local key
+  count="${1}"
+  key="${2}"
+
+  echo "key${count}=${key}" >> "${cfgpath}"
+  echo ">> ${key} is selected!"
+  echo
+}
+
+upd_complete_var() {
+  echo "Complete the installation with ${1} keys selected"
+}
+
+interactive() {
+  local pressed_key
+  local complete
+  local choice
+  local count
+
+  echo '**** Customizing ****'
+  echo
+  echo '- Use VOL+ to confirm your choice'
+  echo '  and VOL- to select next option!'
+  echo
+  sleep 1
+
+  count=0
+  complete="$(upd_complete_var ${count})"
+  
+  while true; do
+    for choice in ${keylist} "${complete}"; do
+      echo "> ${choice}"
+      pressed_key="$(detect_keys)"
+      case "${pressed_key}" in
+        volup) break;;
+        voldown) continue;;
+      esac
+    done
+
+    if [[ "${pressed_key}" == 'volup' ]]; then
+      if [[ "${choice%_*}" == 'KEY' ]]; then
+        count="$((count + 1))" 
+        mkcfg "${count}" "${choice}"
+        [[ "${count}" == 2 ]] && break
+        complete="$(upd_complete_var ${count})"
+      else
+        break
+      fi
+    fi
+  done
+}
+
+fallback() {
+  echo '- It looks like your device does'
+  echo '  not have volume buttons'
+  mkcfg 1 "${voldownkey}"
+}
+
+# ==========================================
+# MAIN EXECUTION
+# ==========================================
+main() {
+command -v getevent > /dev/null || abort '! `getevent` command missing'
+if getevent -il | grep -q 'KEY_VOLUME.'; then
+# 1. Run the new Yes/No prompt first
+prompt_maximize
+local prompt_result=$?
+
+# 2. Only proceed to key configuration if they explicitly said YES (0)
+if [ "$prompt_result" -eq 0 ]; then
+echo
+interactive
+fi
+# If NO or Timeout (1), it skips 'interactive' and proceeds to the rest of the script below
+else
+fallback
+fi
+}
+main
 thermal
 trimmer
 hibernation
