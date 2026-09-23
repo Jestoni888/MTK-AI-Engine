@@ -77,6 +77,7 @@ apply_mode() {
             nohup sh "/data/adb/modules/MTK_AI/update_checker.sh" >/dev/null 2>&1 &
         fi
         exclude_killing 2>&1 &
+        off_screen_profile
     else
         # Screen is ON (at least one value > 0) -> Apply manual/performance mode
         setsid "/data/adb/modules/MTK_AI/main_control/mtk_ai_engine.sh" >/dev/null 2>&1 &
