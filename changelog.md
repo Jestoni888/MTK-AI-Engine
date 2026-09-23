@@ -1,5 +1,7 @@
 --- version 0.0.1.23 ---
 
+•Added off-screen profile in CPU (Advance tab in Webui). I made this because Disable thermal was too aggressive that locks in CPU frequency to max even in off screen still hot 🔥 so here's solution
+
 •🔥Old disable thermal beast revives (⚠️Must have phone cooler)
 
 --- version 0.0.1.22 ---
