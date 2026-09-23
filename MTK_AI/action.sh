@@ -1,12 +1,10 @@
 #!/system/bin/sh
-
 SCRIPT_PATH="/data/adb/modules/MTK_AI/action.sh"
-
 for pid in $(pgrep -f "$SCRIPT_PATH"); do
-    # Kill all instances except the current running script ($$)
-    if [ "$pid" != "$$" ]; then
-        kill -9 "$pid" 2>/dev/null
-    fi
+# Kill all instances except the current running script ($$)
+if [ "$pid" != "$$" ]; then
+kill -9 "$pid" 2>/dev/null
+fi
 done
 . /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/auto_frequency/auto_frequency
 LOG_TAG="[MTK_AI UPDATE]"
@@ -15,43 +13,40 @@ TMP="/data/local/tmp/mtk_update"
 PROGRESS_FILE="/sdcard/MTK_AI_Engine/.update_progress"
 # Ensure MODPATH is set (fallback for standalone testing)
 MODPATH="/data/adb/modules/MTK_AI"
-cfgpath="${MODPATH}/common/cfg.sh"
+
+# Keys used only for the prompt
 volupkey='KEY_VOLUMEUP'
 voldownkey='KEY_VOLUMEDOWN'
-keylist="${volupkey} ${voldownkey}"
+
 log() {
 echo "$LOG_TAG $*"
 }
+
 # ==========================================
-# NEW: Timeout Key Detection (10 Seconds)
+# Timeout Key Detection (10 Seconds)
 # ==========================================
 detect_keys_timeout() {
-  local event
-  # Wait max 10 seconds for a single key event
-  event="$(timeout 10 getevent -lqn -c1 2>/dev/null)"
-  
-  if [ -z "$event" ]; then
-    echo "timeout"
-  elif echo "$event" | grep -q "${volupkey}.*DOWN"; then
-    echo "yes"
-  elif echo "$event" | grep -q "${voldownkey}.*DOWN"; then
-    echo "no"
-  else
-    echo "other"
-  fi
+local event
+# Wait max 10 seconds for a single key event
+event="$(timeout 15 getevent -lqn -c1 2>/dev/null)"
+if [ -z "$event" ]; then
+echo "timeout"
+elif echo "$event" | grep -q "${volupkey}.*DOWN"; then
+echo "yes"
+elif echo "$event" | grep -q "${voldownkey}.*DOWN"; then
+echo "no"
+else
+echo "other"
+fi
 }
 
 # ==========================================
-# NEW: Prompt and Generate Script
+# Prompt and Generate Script
 # ==========================================
 prompt_maximize() {
 echo "****************************************"
 echo " Do you want to fully maximize full"
-echo " capabilities of your android? EXPERIMENTAL"
-echo " installed in /data/adb/service.d/max.sh"
-echo " delete it via MT manager if you have issues"
-echo " or via cmd: rm -f /data/adb/service.d/max.sh"
-echo " reboot after applied & update"
+echo " capabilities of your android? Under Experiment"
 echo "****************************************"
 echo
 echo "  [VOL+] = YES   [VOL-] = NO"
@@ -63,139 +58,51 @@ case "$choice" in
 yes)
 echo ">> YES selected! Generating max.sh..."
 generate_max_script
-return 0 # Signal YES
 ;;
 no)
 echo ">> NO selected. Proceeding to next commands..."
-return 1 # Signal NO
 ;;
 timeout|other)
 echo ">> Timeout or invalid key. Proceeding to next commands..."
-return 1 # Signal TIMEOUT
 ;;
 esac
 }
 
 generate_max_script() {
-  local target_dir="/data/adb/service.d"
-  local target_file="${target_dir}/max.sh"
-  
-  mkdir -p "$target_dir"
-  
-  # Using 'EOF' in quotes prevents variable expansion inside the script
-  cat << 'EOF' > "$target_file"
+local target_dir="/data/adb/service.d"
+local target_file="${target_dir}/max.sh"
+mkdir -p "$target_dir"
+# Using 'EOF' in quotes prevents variable expansion inside the script
+cat << 'EOF' > "$target_file"
 #!/system/bin/sh
-
 # Find *min* files to use as the directory anchor
 find /sys -type f -name "*min*" 2>/dev/null | while read -r min_f; do
-    max_f=$(find "$(dirname "$min_f")" -maxdepth 1 -name "*max*" -type f 2>/dev/null | head -1)
-    
-    if [ -n "$max_f" ] && val=$(cat "$max_f" 2>/dev/null); then
-        dir=$(dirname "$min_f")
-        echo "Path: $dir | Target: $val"
-        
-        # 1. Temporarily make writable (attempt)
-        chmod 644 "$min_f" 2>/dev/null
-        chmod 644 "$max_f" 2>/dev/null
-        
-        # 2. Write to min first (raising the floor), then max
-        echo "$val" > "$min_f" 2>/dev/null
-        echo "$val" > "$max_f" 2>/dev/null
-        
-        # 3. Lock them as read-only after applying
-        chmod 444 "$min_f" 2>/dev/null
-        chmod 444 "$max_f" 2>/dev/null
-        
-        # 4. Verify if the values were really applied
-        r_max=$(cat "$max_f" 2>/dev/null)
-        r_min=$(cat "$min_f" 2>/dev/null)
-        
-        [ "$r_max" = "$val" ] && echo "  [OK] max applied" || echo "  [FAIL] max (read: $r_max)"
-        [ "$r_min" = "$val" ] && echo "  [OK] min applied" || echo "  [FAIL] min (read: $r_min)"
-        echo "---"
-    fi
+max_f=$(find "$(dirname "$min_f")" -maxdepth 1 -name "*max*" -type f 2>/dev/null | head -1)
+if [ -n "$max_f" ] && val=$(cat "$max_f" 2>/dev/null); then
+dir=$(dirname "$min_f")
+echo "Path: $dir | Target: $val"
+# 1. Temporarily make writable (attempt)
+chmod 644 "$min_f" 2>/dev/null
+chmod 644 "$max_f" 2>/dev/null
+# 2. Write to min first (raising the floor), then max
+echo "$val" > "$min_f" 2>/dev/null
+echo "$val" > "$max_f" 2>/dev/null
+# 3. Lock them as read-only after applying
+chmod 444 "$min_f" 2>/dev/null
+chmod 444 "$max_f" 2>/dev/null
+# 4. Verify if the values were really applied
+r_max=$(cat "$max_f" 2>/dev/null)
+r_min=$(cat "$min_f" 2>/dev/null)
+[ "$r_max" = "$val" ] && echo "  [OK] max applied" || echo "  [FAIL] max (read: $r_max)"
+[ "$r_min" = "$val" ] && echo "  [OK] min applied" || echo "  [FAIL] min (read: $r_min)"
+echo "---"
+fi
 done
 EOF
-
-  chmod 755 "$target_file"
-  echo ">> Script successfully generated at:"
-  echo "   ${target_file}"
-  echo ">> It will execute on every boot."
-}
-
-# ==========================================
-# ORIGINAL FUNCTIONS (Key Configuration)
-# ==========================================
-detect_keys() {
-  local event
-  while true; do
-    event="$(getevent -lqn -c1)"
-    if echo "${event}" | grep -q "${volupkey}.*DOWN"; then
-      echo 'volup' && break
-    elif echo "${event}" | grep -q "${voldownkey}.*DOWN"; then
-      echo 'voldown' && break
-    fi
-  done
-}
-
-mkcfg() {
-  local count
-  local key
-  count="${1}"
-  key="${2}"
-
-  echo "key${count}=${key}" >> "${cfgpath}"
-  echo ">> ${key} is selected!"
-  echo
-}
-
-upd_complete_var() {
-  echo "Complete the installation with ${1} keys selected"
-}
-
-interactive() {
-  local pressed_key
-  local complete
-  local choice
-  local count
-
-  echo '**** Customizing ****'
-  echo
-  echo '- Use VOL+ to confirm your choice'
-  echo '  and VOL- to select next option!'
-  echo
-  sleep 1
-
-  count=0
-  complete="$(upd_complete_var ${count})"
-  
-  while true; do
-    for choice in ${keylist} "${complete}"; do
-      echo "> ${choice}"
-      pressed_key="$(detect_keys)"
-      case "${pressed_key}" in
-        volup) break;;
-        voldown) continue;;
-      esac
-    done
-
-    if [[ "${pressed_key}" == 'volup' ]]; then
-      if [[ "${choice%_*}" == 'KEY' ]]; then
-        count="$((count + 1))" 
-        mkcfg "${count}" "${choice}"
-        [[ "${count}" == 2 ]] && break
-        complete="$(upd_complete_var ${count})"
-      else
-        break
-      fi
-    fi
-  done
-}
-
-fallback() {
-  echo '- It looks like your device does'
-  echo '  not have volume buttons'
-  mkcfg 1 "${voldownkey}"
+chmod 755 "$target_file"
+echo ">> Script successfully generated at:"
+echo "   ${target_file}"
+echo ">> It will execute on every boot."
 }
 
 # ==========================================
@@ -204,24 +111,18 @@ fallback() {
 main() {
 command -v getevent > /dev/null || abort '! `getevent` command missing'
 if getevent -il | grep -q 'KEY_VOLUME.'; then
-# 1. Run the new Yes/No prompt first
 prompt_maximize
-local prompt_result=$?
-
-# 2. Only proceed to key configuration if they explicitly said YES (0)
-if [ "$prompt_result" -eq 0 ]; then
-echo
-interactive
-fi
-# If NO or Timeout (1), it skips 'interactive' and proceeds to the rest of the script below
 else
-fallback
+echo '- It looks like your device does'
+echo '  not have volume buttons. Proceeding...'
 fi
 }
+
 main
 thermal
 trimmer
 hibernation
+
 # === 1. Detect module dir ===
 detect_moddir() {
 [ -d "/data/adb/modules/MTK_AI" ] && { echo "/data/adb/modules/MTK_AI"; return; }
@@ -236,11 +137,11 @@ log "📁 Module dir: $MODDIR"
 
 # === 2. Check internet using YOUR BUSYBOX ===
 has_internet() {
-    if [ -x "$MODDIR/busybox" ]; then
-        "$MODDIR/busybox" wget -q --timeout=30 --tries=10 -O /dev/null "1.1.1.1" 2>/dev/null
-        return $?
-    fi
-    return 1
+if [ -x "$MODDIR/busybox" ]; then
+"$MODDIR/busybox" wget -q --timeout=30 --tries=10 -O /dev/null "1.1.1.1" 2>/dev/null
+return $?
+fi
+return 1
 }
 
 # === 3. Required files list ===
@@ -333,7 +234,6 @@ url="$1"
 out="$2"
 "$MODDIR/busybox" wget -q --timeout=30 --tries=10 -O "$out" "$url" 2>/dev/null
 }
-
 is_text_file() {
 case "$1" in
 # 🔥 Added *required_files to the text file extensions list
@@ -343,11 +243,9 @@ _sh=$("$MODDIR/busybox" head -c 2 "$1" 2>/dev/null)
 [ "$_sh" = "#!" ] && return 0
 return 1
 }
-
 get_sha256() {
 "$MODDIR/busybox" sha256sum "$1" 2>/dev/null | "$MODDIR/busybox" cut -d' ' -f1 | tr -d '[:space:]' | tr 'A-F' 'a-f'
 }
-
 is_required() {
 target="$1"
 for f in $required_files; do
@@ -360,7 +258,6 @@ return 1
 # Ensure progress directory exists and reset to 0%
 mkdir -p "/sdcard/MTK_AI"
 echo "0" > "$PROGRESS_FILE"
-
 if has_internet; then
 log "🌐 Internet detected. Checking for updates..."
 mkdir -p "$TMP"
@@ -379,26 +276,20 @@ if is_required "$rel_path"; then
 total_files=$((total_files + 1))
 fi
 done < "$TMP/manifest.txt"
-
 # Prevent division by zero
 [ "$total_files" -eq 0 ] && total_files=1
-
 updated=0
 checked=0
-
 while IFS= read -r line; do
 [ -z "$line" ] && continue
 case "$line" in \#*) continue ;; esac
 rel_path=$(echo "$line" | cut -d' ' -f1)
 url=$(echo "$line" | cut -d' ' -f2- | xargs)
-
 if is_required "$rel_path"; then
 checked=$((checked + 1))
 target="$MODDIR/$rel_path"
 mkdir -p "$(dirname "$target")" 2>/dev/null
-
 needs_update=0
-
 if [ ! -f "$target" ]; then
 needs_update=1
 log "📥 Missing: $rel_path"
@@ -422,7 +313,6 @@ else
 log "✅ Up-to-date (binary): $rel_path"
 fi
 fi
-
 if [ "$needs_update" -eq 1 ]; then
 if [ -f "$TMP/file_online" ] && is_text_file "$target"; then
 # We already downloaded it for the hash check, just copy it over
@@ -434,27 +324,22 @@ else
 log "⚠️ FAILED to download: $rel_path"
 fi
 fi
-
 if [ -f "$target" ] && [ -s "$target" ]; then
 chmod 755 "$target" 2>/dev/null
 updated=$((updated + 1))
 log "✅ Updated: $rel_path"
 fi
 fi
-
 # Clean up temp files for next iteration
 rm -f "$TMP/file_online" "$TMP/file" 2>/dev/null
-
 # 🔥 Calculate and write progress (0-100) based on checked files
 progress=$((checked * 100 / total_files))
 echo "$progress" > "$PROGRESS_FILE"
 fi
 done < "$TMP/manifest.txt"
-
 rm -rf "$TMP"
 # 🔥 Ensure it hits 100% at the end of the loop
 echo "100" > "$PROGRESS_FILE"
-
 if [ "$updated" -gt 0 ]; then
 log "✅ Update complete! ($updated files updated)"
 else
@@ -481,5 +366,6 @@ cp -f "$MODDIR/icon.png" /data/local/tmp/icon.png
 chmod 777 /data/local/tmp/icon.png
 log "✅ Synced icon.png to /data/local/tmp/"
 fi
+
 rm -f "/sdcard/MTK_AI_Engine/.update_status"
 log "🏁 action.sh finished."
