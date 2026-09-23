@@ -618,7 +618,7 @@ function createOffscreenCard() {
 
     const infoText = document.createElement('div');
     infoText.style.cssText = 'text-align:center; color:#8b92b4; font-size:11px; margin-top:8px; padding:8px; background:#1a1f3a; border-radius:6px;';
-    infoText.innerHTML = `Config saved to <span style="color:#FF9F0A; font-weight:600;">/sdcard/MTK_AI_Engine/</span><br>Requires background service to apply on screen off.`;
+    infoText.innerHTML = `Config saved to <span style="color:#FF9F0A; font-weight:600;">/sdcard/MTK_AI_Engine/</span><br>Offscreen profile can save battery & less overheating.`;
     content.appendChild(infoText);
 
     card.appendChild(content);
