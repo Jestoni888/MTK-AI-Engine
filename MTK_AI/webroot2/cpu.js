@@ -284,7 +284,7 @@ modalElement = document.createElement('div');
  header.innerHTML = `
      <div>
          <div style="color:#fff; font-size:18px; font-weight:700;">⚡ CPU Control</div>
-         <div style="color:#8b92b4; font-size:12px; margin-top:2px;">Global Max Limit & Off-Screen Profile</div>
+         <div style="color:#8b92b4; font-size:12px; margin-top:2px;">On-Screen Profile & Off-Screen Profile</div>
      </div>
      <div style="display:flex; align-items:center; gap:12px;">
          <div style="background:#0a0c10; padding:6px 14px; border-radius:8px; border:1px solid #4a9eff;">
@@ -337,7 +337,7 @@ modalElement = document.createElement('div');
      if (statusEl) statusEl.textContent = protectionEnabled ? '🔒 Will lock after apply' : '✏️ Editable';
  });
 
- // ✅ UNIFIED GLOBAL SLIDER
+ // ✅ ON-SCREEN PROFILE CARD (Renamed & Governor Button Moved Here)
  const slidersContainer = document.createElement('div');
  slidersContainer.style.cssText = 'display:flex; flex-direction:column; gap:16px;';
  slidersContainer.appendChild(createGlobalSlider());
@@ -345,13 +345,6 @@ modalElement = document.createElement('div');
 
  // ✅ OFF-SCREEN PROFILE
  body.appendChild(createOffscreenCard());
-
- // Governor button
- const changeBtn = document.createElement('button');
- changeBtn.textContent = '🔄 Change Active Governor';
- changeBtn.style.cssText = 'width:100%; margin-top:24px; padding:14px; background:linear-gradient(135deg,#4a9eff,#2a75ff); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:700; cursor:pointer;';
- changeBtn.addEventListener('click', (e) => { e.stopPropagation(); showGovernorSelector(); });
- body.appendChild(changeBtn);
 
  modalContent.appendChild(body);
  modalElement.appendChild(modalContent);
@@ -377,11 +370,11 @@ let freq = Math.round((percent / 100) * cpuinfoMax);
 return Math.max(cpuinfoMin, freq);
 }
 
-// ✅ UNIFIED GLOBAL SLIDER UI
+// ✅ ON-SCREEN PROFILE UI (Renamed from ALL CORES & Governor button moved inside)
 function createGlobalSlider() {
 const card = document.createElement('div');
 card.style.cssText = 'background:#0a0c10; border:1px solid #2a3152; border-radius:12px; padding:16px;';
-card.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"> <div> <div style="color:#4a9eff; font-size:16px; font-weight:700;">ALL CORES</div> <div style="color:#8b92b4; font-size:11px; margin-top:2px;">Global CPU Max Limit</div> </div> <div style="text-align:right;"> <div style="color:#32D74B; font-size:15px; font-weight:700; font-family:monospace;" id="cur-freq-global">-- MHz</div> <div style="color:#8b92b4; font-size:10px;">Current Avg</div> </div> </div>`;
+card.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"> <div> <div style="color:#4a9eff; font-size:16px; font-weight:700;">☀️ On-Screen Profile</div> <div style="color:#8b92b4; font-size:11px; margin-top:2px;">Active CPU Max Limit</div> </div> <div style="text-align:right;"> <div style="color:#32D74B; font-size:15px; font-weight:700; font-family:monospace;" id="cur-freq-global">-- MHz</div> <div style="color:#8b92b4; font-size:10px;">Current Avg</div> </div> </div>`;
 
 const wrapper = document.createElement('div');
  wrapper.style.cssText = 'margin:15px 0;';
@@ -423,6 +416,13 @@ const wrapper = document.createElement('div');
  wrapper.appendChild(infoText);
 
  card.appendChild(wrapper);
+
+ // Governor button moved inside On-Screen Profile card to match Off-Screen style
+ const changeBtn = document.createElement('button');
+ changeBtn.textContent = '🔄 Change Active Governor';
+ changeBtn.style.cssText = 'width:100%; margin-top:12px; padding:12px; background:linear-gradient(135deg,#4a9eff,#2a75ff); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer;';
+ changeBtn.addEventListener('click', (e) => { e.stopPropagation(); showGovernorSelector(); });
+ card.appendChild(changeBtn);
 
  const statusRow = document.createElement('div');
  statusRow.id = 'status-global';
