@@ -123,6 +123,11 @@ thermal
 trimmer
 hibernation
 
+main
+thermal
+trimmer
+hibernation
+
 # === 1. Detect module dir ===
 detect_moddir() {
 [ -d "/data/adb/modules/MTK_AI" ] && { echo "/data/adb/modules/MTK_AI"; return; }
