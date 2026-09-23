@@ -105,6 +105,24 @@ touch_inactive() {
     _apply_freq 30 "/sdcard/MTK_AI_Engine/manual_inactive_freq.txt" 30 25 50
 }
 
+off_screen_profile() {
+BB="/data/adb/modules/MTK_AI/busybox"
+DIR="/sdcard/MTK_AI_Engine"
+[ "$($BB cat $DIR/offscreen_enabled.txt 2>/dev/null | $BB tr -d '[:space:]')" != "1" ] && exit 0
+GOV=$($BB cat $DIR/manual_offscreen_gov.txt 2>/dev/null | $BB tr -d '[:space:]')
+PCT=$($BB cat $DIR/manual_offscreen_freq.txt 2>/dev/null | $BB tr -d '[:space:]')
+GOV=${GOV:-powersave}
+PCT=${PCT:-50}
+for f in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+    [ -f "$f" ] && chmod 777 "$f" && echo "$GOV" > "$f"
+done
+MAX=$($BB cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq | $BB tr -d '[:space:]')
+FREQ=$((MAX * PCT / 100))
+for f in /sys/devices/system/cpu/cpufreq/policy*/scaling_max_freq /sys/devices/system/cpu/cpu*/cpufreq/scaling_max_freq; do
+    [ -f "$f" ] && chmod 777 "$f" && echo "$FREQ" > "$f"
+done
+}
+
 force_kill() {
 CONFIG_DIR="/sdcard/MTK_AI_Engine/config"
 FORCE_KILL_FILE="${CONFIG_DIR}/force_kill.list"
