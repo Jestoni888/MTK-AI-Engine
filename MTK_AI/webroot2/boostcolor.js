@@ -1,6 +1,6 @@
 // boostcolor.js - Advanced Color Boost Manager with SurfaceFlinger Matrix (Transaction 1015)
-// ✅ Professional UI + Pop-up Preset Selector + Custom Presets & Base Color on TOP + Sliders grouped tightly + ALL presets
-// ✅ FIXED: Preset button now shows selected preset name
+// ✅ Professional Enterprise UI + Pop-up Preset Selector + Custom Presets & Base Color on TOP + Sliders grouped tightly + ALL presets
+// ✅ Matrix slider section moved right below Fine Parameters
 (function() {
 'use strict';
 const CONFIG_FILE = '/sdcard/MTK_AI_Engine/boost_color_config.txt';
@@ -174,8 +174,8 @@ function updateMatrixStatus() {
     if (currentMatrix && Array.isArray(currentMatrix)) {
         const id = [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
         const chg = currentMatrix.some((v,i)=>v!==(id[i]||0));
-        el.textContent = `Active: ${currentMatrix.length}-float matrix${chg?' (modified)':''}`; el.style.color = chg?'#00D4FF':'#8b92b4';
-    } else { el.textContent='Using default identity matrix'; el.style.color='#8b92b4'; }
+        el.textContent = `Active: ${currentMatrix.length}-float matrix${chg?' (modified)':''}`; el.style.color = chg?'#38bdf8':'#64748b';
+    } else { el.textContent='Using default identity matrix'; el.style.color='#64748b'; }
 }
 
 function refreshMatrixUI() {
@@ -198,7 +198,7 @@ function updatePresetButtonText() {
     const presetBtn = modal.querySelector('#preset-select-btn');
     if (presetBtn) {
         const displayName = currentPresetName || 'Select Preset';
-        presetBtn.innerHTML = `${displayName} <span style="float:right;opacity:0.5;">›</span>`;
+        presetBtn.innerHTML = `<span style="font-weight:500;">${displayName}</span> <span style="opacity:0.4;font-size:12px;">›</span>`;
     }
 }
 
@@ -220,14 +220,14 @@ function syncAllUI() {
     if (box) {
         const applyBtn = box.querySelector('button[style*="linear-gradient"]');
         if (applyBtn) {
-            applyBtn.style.background = `linear-gradient(135deg,${currentColor},${currentColor}cc)`;
-            applyBtn.style.boxShadow = `0 4px 15px ${currentColor}40`;
+            applyBtn.style.background = `linear-gradient(135deg,${currentColor},${currentColor}bb)`;
+            applyBtn.style.boxShadow = `0 4px 16px ${currentColor}33`;
         }
     }
     updateDisplay();
 }
 
-//  Load Custom Presets from JSON file
+// 💾 Load Custom Presets from JSON file
 async function loadCustomPresets() {
     try {
         const content = await execFn(`cat ${CUSTOM_PRESETS_FILE} 2>/dev/null`);
@@ -257,22 +257,22 @@ function showSavePresetDialog() {
     const existing = document.getElementById('save-preset-dialog');
     if (existing) existing.remove();
     const overlay = document.createElement('div'); overlay.id = 'save-preset-dialog';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(5,7,11,0.8);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
     const dialog = document.createElement('div');
-    dialog.style.cssText = 'background:linear-gradient(160deg,#12141d,#1a1d2e);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:24px;width:90%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
+    dialog.style.cssText = 'background:#121620;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;width:90%;max-width:360px;box-shadow:0 24px 48px rgba(0,0,0,0.6);';
     dialog.innerHTML = `
-        <div style="text-align:center;margin-bottom:20px;">
-            <h4 style="color:#fff;margin:0;font-size:18px;font-weight:600;">💾 Save Preset</h4>
-            <p style="color:#8b92b4;font-size:12px;margin:6px 0 0;">Save your current color settings</p>
+        <div style="margin-bottom:18px;">
+            <h4 style="color:#f8fafc;margin:0 0 4px;font-size:16px;font-weight:600;letter-spacing:-0.2px;">Save Custom Preset</h4>
+            <p style="color:#64748b;font-size:12px;margin:0;">Store current configuration parameters</p>
         </div>
         <div style="margin-bottom:20px;">
-            <label style="color:#e0e0e0;font-size:13px;display:block;margin-bottom:8px;font-weight:500;">Preset Name:</label>
-            <input type="text" id="preset-name-input" placeholder="My Custom Preset" maxlength="20"
-                style="width:100%;padding:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:14px;outline:none;box-sizing:border-box;transition:border 0.2s;">
+            <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:6px;font-weight:500;">Preset Identifier</label>
+            <input type="text" id="preset-name-input" placeholder="e.g., Cinematic Dark" maxlength="20"
+                style="width:100%;padding:10px 14px;background:#0a0d14;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:13px;outline:none;box-sizing:border-box;transition:border-color 0.2s;">
         </div>
-        <div style="display:flex;gap:12px;">
-            <button id="cancel-save-btn" style="flex:1;padding:12px;background:rgba(255,255,255,0.05);color:#fff;border:1px solid rgba(255,255,255,0.1);border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;">Cancel</button>
-            <button id="confirm-save-btn" style="flex:1;padding:12px;background:linear-gradient(135deg,#00D4FF,#00D4FFaa);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 15px rgba(0,212,255,0.3);">Save</button>
+        <div style="display:flex;gap:10px;">
+            <button id="cancel-save-btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.04);color:#94a3b8;border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;">Cancel</button>
+            <button id="confirm-save-btn" style="flex:1;padding:10px;background:#38bdf8;color:#0a0d14;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(56,189,248,0.3);">Save Preset</button>
         </div>
     `;
     overlay.appendChild(dialog);
@@ -280,13 +280,13 @@ function showSavePresetDialog() {
     overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
     const input = dialog.querySelector('#preset-name-input');
     input.focus();
-    input.onfocus = () => input.style.borderColor = '#00D4FF';
+    input.onfocus = () => input.style.borderColor = '#38bdf8';
     input.onblur = () => input.style.borderColor = 'rgba(255,255,255,0.1)';
     
     dialog.querySelector('#cancel-save-btn').onclick = () => overlay.remove();
     dialog.querySelector('#confirm-save-btn').onclick = () => {
         const name = input.value.trim();
-        if (!name) { input.style.borderColor = '#FF453A'; input.placeholder = 'Name required!'; return; }
+        if (!name) { input.style.borderColor = '#ef4444'; input.placeholder = 'Name required!'; return; }
         const exists = customPresets.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
         if (exists !== -1) {
             if (!confirm(`"${name}" already exists. Overwrite?`)) return;
@@ -308,21 +308,24 @@ function renderCustomPresetsPopup() {
     if (!container) return;
     container.innerHTML = '';
     if (customPresets.length === 0) {
-        container.innerHTML = '<div style="color:#666;font-size:12px;padding:12px;text-align:center;background:rgba(255,255,255,0.02);border-radius:10px;">No custom presets yet. Tap "Save Current" to create one.</div>';
+        container.innerHTML = '<div style="color:#64748b;font-size:12px;padding:14px;text-align:center;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.06);border-radius:10px;">No custom profiles configured.</div>';
         return;
     }
     const grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px;';
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:8px;';
     customPresets.forEach((p, idx) => {
         const btn = document.createElement('div');
-        btn.style.cssText = `position:relative;padding:12px 8px;background:${p.color}15;border:1px solid ${p.color}40;color:${p.color};border-radius:10px;font-size:11px;cursor:pointer;transition:all 0.2s;text-align:center;`;
+        btn.style.cssText = `position:relative;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;cursor:pointer;transition:all 0.15s;`;
         btn.innerHTML = `
-            <div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</div>
-            <div style="font-size:9px;opacity:0.7;margin-top:2px;">S:${p.sat} T:${p.warm}${p.matrix?' 🔷':''}</div>
-            <button class="delete-preset-btn" data-idx="${idx}" style="position:absolute;top:4px;right:4px;background:rgba(255,69,58,0.8);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0.8;transition:all 0.2s;">×</button>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+                <div style="width:8px;height:8px;border-radius:50%;background:${p.color};box-shadow:0 0 6px ${p.color};"></div>
+                <div style="font-size:12px;font-weight:600;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${p.name}</div>
+            </div>
+            <div style="font-size:10px;color:#64748b;">S:${p.sat} • T:${p.warm}${p.matrix?' • Matrix':''}</div>
+            <button class="delete-preset-btn" data-idx="${idx}" style="position:absolute;top:8px;right:8px;background:transparent;color:#64748b;border:none;width:18px;height:18px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color 0.2s;">×</button>
         `;
-        btn.onmouseenter = () => { btn.style.background = p.color; btn.style.color = '#fff'; btn.style.transform = 'scale(1.03)'; btn.style.boxShadow=`0 4px 12px ${p.color}40`; };
-        btn.onmouseleave = () => { btn.style.background = `${p.color}15`; btn.style.color = p.color; btn.style.transform = 'scale(1)'; btn.style.boxShadow='none'; };
+        btn.onmouseenter = () => { btn.style.background = 'rgba(255,255,255,0.06)'; btn.style.borderColor = 'rgba(255,255,255,0.15)'; };
+        btn.onmouseleave = () => { btn.style.background = 'rgba(255,255,255,0.03)'; btn.style.borderColor = 'rgba(255,255,255,0.08)'; };
         btn.onclick = (e) => {
             if (e.target.classList.contains('delete-preset-btn')) return;
             currentColor = p.color; currentSaturation = p.sat; currentSharpness = p.sharp;
@@ -337,8 +340,8 @@ function renderCustomPresetsPopup() {
     container.appendChild(grid);
     
     container.querySelectorAll('.delete-preset-btn').forEach(btn => {
-        btn.onmouseenter = () => btn.style.opacity = '1';
-        btn.onmouseleave = () => btn.style.opacity = '0.8';
+        btn.onmouseenter = () => btn.style.color = '#ef4444';
+        btn.onmouseleave = () => btn.style.color = '#64748b';
         btn.onclick = (e) => {
             e.stopPropagation();
             const idx = parseInt(btn.dataset.idx);
@@ -347,7 +350,7 @@ function renderCustomPresetsPopup() {
                 customPresets.splice(idx, 1);
                 saveCustomPresets();
                 renderCustomPresetsPopup();
-                if (window.showStatus) window.showStatus(`️ Deleted "${name}"`, '#FF453A');
+                if (window.showStatus) window.showStatus(`Deleted "${name}"`, '#ef4444');
             }
         };
     });
@@ -360,14 +363,14 @@ function showPresetPopup() {
     
     const overlay = document.createElement('div');
     overlay.id = 'preset-popup';
-    overlay.style.cssText = 'position:absolute;inset:0;background:rgba(18,20,29,0.98);z-index:20;display:flex;flex-direction:column;border-radius:24px;overflow:hidden;backdrop-filter:blur(10px);animation:slideIn 0.3s ease-out;';
+    overlay.style.cssText = 'position:absolute;inset:0;background:#0d111a;z-index:20;display:flex;flex-direction:column;border-radius:20px;overflow:hidden;animation:slideIn 0.2s cubic-bezier(0.16,1,0.3,1);';
     
     if (!document.getElementById('preset-popup-style')) {
         const style = document.createElement('style');
         style.id = 'preset-popup-style';
         style.textContent = `
             @keyframes slideIn {
-                from { transform: translateY(20px); opacity: 0; }
+                from { transform: translateY(12px); opacity: 0; }
                 to { transform: translateY(0); opacity: 1; }
             }
         `;
@@ -375,38 +378,57 @@ function showPresetPopup() {
     }
     
     const header = document.createElement('div');
-    header.style.cssText = 'padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.08);';
+    header.style.cssText = 'padding:18px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.06);background:#121620;';
     header.innerHTML = `
-        <h3 style="color:#fff;margin:0;font-size:18px;font-weight:600;">Color Presets</h3>
-        <button id="close-preset-popup" style="background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s;">✕</button>
+        <div>
+            <h3 style="color:#f8fafc;margin:0;font-size:15px;font-weight:600;letter-spacing:-0.2px;">Display Profiles</h3>
+            <p style="color:#64748b;font-size:11px;margin:2px 0 0;">Select a calibrated matrix preset</p>
+        </div>
+        <button id="close-preset-popup" style="background:rgba(255,255,255,0.06);border:none;color:#94a3b8;width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;">✕</button>
     `;
     overlay.appendChild(header);
     
     const content = document.createElement('div');
-    content.style.cssText = 'flex:1;overflow-y:auto;padding:20px;';
+    content.style.cssText = 'flex:1;overflow-y:auto;padding:16px 20px;';
     
     const saveBtn = document.createElement('button');
-    saveBtn.textContent = ' Save Current Settings as Preset';
-    saveBtn.style.cssText = 'width:100%;padding:14px;background:linear-gradient(135deg,#00D4FF,#00D4FFaa);color:#000;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:20px;transition:all 0.2s;box-shadow:0 4px 15px rgba(0,212,255,0.3);';
-    saveBtn.onmouseenter = () => saveBtn.style.transform = 'translateY(-2px)';
-    saveBtn.onmouseleave = () => saveBtn.style.transform = 'translateY(0)';
+    saveBtn.textContent = '+ Save Current as Profile';
+    saveBtn.style.cssText = 'width:100%;padding:11px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);color:#38bdf8;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;transition:all 0.2s;';
+    saveBtn.onmouseenter = () => saveBtn.style.background = 'rgba(56,189,248,0.18)';
+    saveBtn.onmouseleave = () => saveBtn.style.background = 'rgba(56,189,248,0.1)';
     saveBtn.onclick = showSavePresetDialog;
     content.appendChild(saveBtn);
     
+    const customLabel = document.createElement('div');
+    customLabel.style.cssText = 'color:#64748b;font-size:11px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;';
+    customLabel.textContent = 'User Presets';
+    content.appendChild(customLabel);
+    
+    const customContainer = document.createElement('div');
+    customContainer.id = 'custom-presets-container-popup';
+    customContainer.style.cssText = 'margin-bottom:20px;';
+    content.appendChild(customContainer);
+    
     const builtinLabel = document.createElement('div');
-    builtinLabel.style.cssText = 'color:#8b92b4;font-size:12px;margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;';
-    builtinLabel.textContent = 'Built-in Presets';
+    builtinLabel.style.cssText = 'color:#64748b;font-size:11px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;';
+    builtinLabel.textContent = 'System Presets Library';
     content.appendChild(builtinLabel);
     
     const presetGrid = document.createElement('div');
-    presetGrid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;';
+    presetGrid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px;';
     
     ALL_PRESETS.forEach(p=>{
         const btn = document.createElement('button');
-        btn.innerHTML = `<div style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</div><div style="font-size:9px;opacity:0.7;margin-top:2px;">S:${p.sat} T:${p.warm}${p.matrix?' 🔷':''}</div>`;
-        btn.style.cssText = `padding:12px 8px;background:${p.color}15;border:1px solid ${p.color}40;color:${p.color};border-radius:10px;font-size:11px;cursor:pointer;transition:all 0.2s;text-align:center;`;
-        btn.onmouseenter = ()=>{btn.style.background=p.color;btn.style.color='#fff';btn.style.transform='scale(1.03)';btn.style.boxShadow=`0 4px 12px ${p.color}40`;};
-        btn.onmouseleave = ()=>{btn.style.background=`${p.color}15`;btn.style.color=p.color;btn.style.transform='scale(1)';btn.style.boxShadow='none';};
+        btn.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+                <div style="width:8px;height:8px;border-radius:50%;background:${p.color};box-shadow:0 0 6px ${p.color};"></div>
+                <div style="font-size:12px;font-weight:600;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:left;">${p.name}</div>
+            </div>
+            <div style="font-size:10px;color:#64748b;text-align:left;">S:${p.sat} • T:${p.warm}${p.matrix?' • Matrix':''}</div>
+        `;
+        btn.style.cssText = `padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;cursor:pointer;transition:all 0.15s;`;
+        btn.onmouseenter = ()=>{btn.style.background='rgba(255,255,255,0.05)';btn.style.borderColor='rgba(255,255,255,0.12)';};
+        btn.onmouseleave = ()=>{btn.style.background='rgba(255,255,255,0.02)';btn.style.borderColor='rgba(255,255,255,0.06)';};
         btn.onclick = ()=>{
             currentColor=p.color; currentSaturation=p.sat; currentSharpness=p.sharp; currentWarmth=p.warm; currentMatrix=p.matrix?[...p.matrix]:null;
             currentPresetName = p.name; // ✅ Track selected preset name
@@ -417,17 +439,6 @@ function showPresetPopup() {
         presetGrid.appendChild(btn);
     });
     content.appendChild(presetGrid);
-    
-    const customLabel = document.createElement('div');
-    customLabel.style.cssText = 'color:#00D4FF;font-size:12px;margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;';
-    customLabel.textContent = 'My Custom Presets';
-    content.appendChild(customLabel);
-    
-    const customContainer = document.createElement('div');
-    customContainer.id = 'custom-presets-container-popup';
-    customContainer.style.cssText = 'min-height:40px;';
-    content.appendChild(customContainer);
-    
     overlay.appendChild(content);
     
     const box = document.getElementById('boost-modal-box');
@@ -435,8 +446,8 @@ function showPresetPopup() {
     
     const closeBtn = header.querySelector('#close-preset-popup');
     closeBtn.onclick = () => overlay.remove();
-    closeBtn.onmouseenter = () => closeBtn.style.background = 'rgba(255,255,255,0.2)';
-    closeBtn.onmouseleave = () => closeBtn.style.background = 'rgba(255,255,255,0.1)';
+    closeBtn.onmouseenter = () => closeBtn.style.background = 'rgba(255,255,255,0.1)';
+    closeBtn.onmouseleave = () => closeBtn.style.background = 'rgba(255,255,255,0.06)';
     
     setTimeout(() => renderCustomPresetsPopup(), 50);
 }
@@ -444,14 +455,14 @@ function showPresetPopup() {
 // 🎨 Professional UI Helpers
 function createSectionCard(title) {
     const el = document.createElement('div');
-    el.style.cssText = 'margin-bottom:16px;';
+    el.style.cssText = 'margin-bottom:14px;';
     const header = document.createElement('div');
-    header.style.cssText = 'color:#fff;font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px;';
+    header.style.cssText = 'color:#94a3b8;font-size:11px;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;';
     header.textContent = title;
     el.appendChild(header);
     
     const content = document.createElement('div');
-    content.style.cssText = 'background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:16px;';
+    content.style.cssText = 'background:#121620;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:14px;';
     el.appendChild(content);
     
     return { el, content };
@@ -459,12 +470,12 @@ function createSectionCard(title) {
 
 function createSliderRow(label, sliderId, valId, initialVal, min, max, step, onChange) {
     const row = document.createElement('div');
-    row.style.cssText = 'margin-bottom:16px;';
+    row.style.cssText = 'margin-bottom:12px;';
     if (label.includes('Temperature')) row.style.marginBottom = '0';
     
     const header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
-    header.innerHTML = `<span style="color:#e0e0e0;font-size:13px;font-weight:500;">${label}</span><span id="${valId}" style="color:#8b92b4;font-size:12px;font-weight:500;background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:6px;">${onChange(initialVal)}</span>`;
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;';
+    header.innerHTML = `<span style="color:#e2e8f0;font-size:12px;font-weight:500;">${label}</span><span id="${valId}" style="color:#64748b;font-size:11px;font-weight:600;background:rgba(255,255,255,0.04);padding:2px 6px;border-radius:4px;">${onChange(initialVal)}</span>`;
     row.appendChild(header);
     
     const slider = document.createElement('input');
@@ -475,7 +486,7 @@ function createSliderRow(label, sliderId, valId, initialVal, min, max, step, onC
     slider.max = max;
     slider.step = step;
     slider.value = initialVal;
-    slider.style.cssText = 'width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
+    slider.style.cssText = 'width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
     slider.style.setProperty('--thumb-color', currentColor);
     
     slider.oninput = (e) => {
@@ -497,51 +508,51 @@ function createMatrixSection() {
     section.id = 'matrix-section-container';
     
     const header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;';
-    header.innerHTML = `<span style="color:#e0e0e0;font-size:13px;font-weight:500;">RGB Gain & Offset</span>
-                        <button id="matrix-reset-btn" style="padding:6px 12px;font-size:11px;background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.15);border-radius:8px;cursor:pointer;transition:all 0.2s;">Reset</button>`;
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;';
+    header.innerHTML = `<span style="color:#e2e8f0;font-size:12px;font-weight:500;">Transformation Matrix</span>
+                        <button id="matrix-reset-btn" style="padding:4px 8px;font-size:10px;background:rgba(255,255,255,0.04);color:#94a3b8;border:1px solid rgba(255,255,255,0.08);border-radius:6px;cursor:pointer;transition:all 0.2s;">Reset</button>`;
     section.appendChild(header);
     
-    const statusDiv = document.createElement('div'); statusDiv.id='matrix-status'; statusDiv.style.cssText='font-size:11px;color:#8b92b4;margin-bottom:12px;padding:8px 12px;background:rgba(0,0,0,0.2);border-radius:8px;';
+    const statusDiv = document.createElement('div'); statusDiv.id='matrix-status'; statusDiv.style.cssText='font-size:11px;color:#64748b;margin-bottom:12px;padding:8px 10px;background:#0a0d14;border-radius:8px;border:1px solid rgba(255,255,255,0.04);';
     section.appendChild(statusDiv);
     
-    const rgbSection = document.createElement('div'); rgbSection.style.cssText='margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.05);';
-    rgbSection.innerHTML = '<div style="color:#8b92b4;font-size:11px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">RGB Gain (Diagonal)</div>';
-    [{label:'Red Gain (m00)',idx:0,color:'#FF5555',sid:'gain-slider-0',vid:'gain-val-0'},{label:'Green Gain (m11)',idx:5,color:'#55FF55',sid:'gain-slider-5',vid:'gain-val-5'},{label:'Blue Gain (m22)',idx:10,color:'#5555FF',sid:'gain-slider-10',vid:'gain-val-10'}].forEach(g=>{
+    const rgbSection = document.createElement('div'); rgbSection.style.cssText='margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.04);';
+    rgbSection.innerHTML = '<div style="color:#64748b;font-size:10px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">RGB Diagonal Scaling</div>';
+    [{label:'Red Gain (m00)',idx:0,color:'#f87171',sid:'gain-slider-0',vid:'gain-val-0'},{label:'Green Gain (m11)',idx:5,color:'#4ade80',sid:'gain-slider-5',vid:'gain-val-5'},{label:'Blue Gain (m22)',idx:10,color:'#60a5fa',sid:'gain-slider-10',vid:'gain-val-10'}].forEach(g=>{
         const row=document.createElement('div'); row.style.cssText='margin-bottom:10px;';
         const hr=document.createElement('div'); hr.style.cssText='display:flex;justify-content:space-between;margin-bottom:4px;';
         const iv=(currentMatrix&&currentMatrix[g.idx]!==undefined)?currentMatrix[g.idx]:1.0;
-        hr.innerHTML=`<span style="color:#e0e0e0;font-size:12px;">${g.label}</span><span id="${g.vid}" style="color:${g.color};font-size:12px;font-weight:600;">${iv.toFixed(2)}</span>`;
+        hr.innerHTML=`<span style="color:#cbd5e1;font-size:11px;">${g.label}</span><span id="${g.vid}" style="color:${g.color};font-size:11px;font-weight:600;">${iv.toFixed(2)}</span>`;
         row.appendChild(hr);
         const sl=document.createElement('input'); sl.type='range';sl.min=0.5;sl.max=2.0;sl.step=0.05;sl.id=g.sid;sl.value=iv;
         sl.className = 'boost-slider';
-        sl.style.cssText='width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:3px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
+        sl.style.cssText='width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
         sl.style.setProperty('--thumb-color', g.color);
         sl.oninput=(e)=>{if(!currentMatrix||!Array.isArray(currentMatrix))currentMatrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];currentMatrix[g.idx]=parseFloat(e.target.value);document.getElementById(g.vid).textContent=currentMatrix[g.idx].toFixed(2);updateMatrixStatus();currentPresetName=null;updatePresetButtonText();debouncedApply(120);};
         row.appendChild(sl); rgbSection.appendChild(row);
     }); section.appendChild(rgbSection);
     
     const alphaSection = document.createElement('div');
-    alphaSection.innerHTML = '<div style="color:#8b92b4;font-size:11px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Alpha Offset (Last Row)</div>';
-    [{label:'Red Offset (m30)',idx:12,color:'#FF8888',sid:'offset-slider-12',vid:'offset-val-12'},{label:'Green Offset (m31)',idx:13,color:'#88FF88',sid:'offset-slider-13',vid:'offset-val-13'},{label:'Blue Offset (m32)',idx:14,color:'#8888FF',sid:'offset-slider-14',vid:'offset-val-14'}].forEach(g=>{
+    alphaSection.innerHTML = '<div style="color:#64748b;font-size:10px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Color Offsets</div>';
+    [{label:'Red Offset (m30)',idx:12,color:'#f87171',sid:'offset-slider-12',vid:'offset-val-12'},{label:'Green Offset (m31)',idx:13,color:'#4ade80',sid:'offset-slider-13',vid:'offset-val-13'},{label:'Blue Offset (m32)',idx:14,color:'#60a5fa',sid:'offset-slider-14',vid:'offset-val-14'}].forEach(g=>{
         const row=document.createElement('div'); row.style.cssText='margin-bottom:10px;';
         if (g.label.includes('Blue')) row.style.marginBottom = '0';
         const hr=document.createElement('div'); hr.style.cssText='display:flex;justify-content:space-between;margin-bottom:4px;';
         const iv=(currentMatrix&&currentMatrix[g.idx]!==undefined)?currentMatrix[g.idx]:0.0;
-        hr.innerHTML=`<span style="color:#e0e0e0;font-size:12px;">${g.label}</span><span id="${g.vid}" style="color:${g.color};font-size:12px;font-weight:600;">${iv.toFixed(2)}</span>`;
+        hr.innerHTML=`<span style="color:#cbd5e1;font-size:11px;">${g.label}</span><span id="${g.vid}" style="color:${g.color};font-size:11px;font-weight:600;">${iv.toFixed(2)}</span>`;
         row.appendChild(hr);
         const sl=document.createElement('input'); sl.type='range';sl.min=-0.5;sl.max=0.5;sl.step=0.02;sl.id=g.sid;sl.value=iv;
         sl.className = 'boost-slider';
-        sl.style.cssText='width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:3px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
+        sl.style.cssText='width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
         sl.style.setProperty('--thumb-color', g.color);
         sl.oninput=(e)=>{if(!currentMatrix||!Array.isArray(currentMatrix))currentMatrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];currentMatrix[g.idx]=parseFloat(e.target.value);document.getElementById(g.vid).textContent=currentMatrix[g.idx].toFixed(2);updateMatrixStatus();currentPresetName=null;updatePresetButtonText();debouncedApply(120);};
         row.appendChild(sl); alphaSection.appendChild(row);
     }); section.appendChild(alphaSection);
     
     const resetBtn = header.querySelector('#matrix-reset-btn');
-    resetBtn.onclick=()=>{currentMatrix=null;refreshMatrixUI();currentPresetName=null;updatePresetButtonText();if(window.showStatus)window.showStatus('Matrix reset to default','#8b92b4');debouncedApply(50);};
-    resetBtn.onmouseenter=()=>{resetBtn.style.background='rgba(255,255,255,0.15)';};
-    resetBtn.onmouseleave=()=>{resetBtn.style.background='rgba(255,255,255,0.08)';};
+    resetBtn.onclick=()=>{currentMatrix=null;refreshMatrixUI();currentPresetName=null;updatePresetButtonText();if(window.showStatus)window.showStatus('Matrix reset to default','#64748b');debouncedApply(50);};
+    resetBtn.onmouseenter=()=>{resetBtn.style.background='rgba(255,255,255,0.08)'; resetBtn.style.color='#f8fafc';};
+    resetBtn.onmouseleave=()=>{resetBtn.style.background='rgba(255,255,255,0.04)'; resetBtn.style.color='#94a3b8';};
     
     setTimeout(()=>refreshMatrixUI(),0); 
     return section;
@@ -556,25 +567,25 @@ async function init() {
             .boost-slider::-webkit-slider-thumb {
                 -webkit-appearance: none;
                 appearance: none;
-                width: 18px;
-                height: 18px;
-                background: var(--thumb-color, #FF9F0A);
+                width: 14px;
+                height: 14px;
+                background: var(--thumb-color, #38bdf8);
                 border-radius: 50%;
                 cursor: pointer;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                transition: transform 0.1s;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+                transition: transform 0.1s ease;
             }
             .boost-slider::-webkit-slider-thumb:active {
-                transform: scale(1.2);
+                transform: scale(1.25);
             }
             .boost-slider::-moz-range-thumb {
-                width: 18px;
-                height: 18px;
-                background: var(--thumb-color, #FF9F0A);
+                width: 14px;
+                height: 14px;
+                background: var(--thumb-color, #38bdf8);
                 border-radius: 50%;
                 cursor: pointer;
                 border: none;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                box-shadow: 0 1px 4px rgba(0,0,0,0.4);
             }
         `;
         document.head.appendChild(style);
@@ -606,7 +617,7 @@ async function saveConfig() {
 
 function updateDisplay() {
     const el = document.querySelector('#boost-color-item .setting-value');
-    if (el) { const mb=(currentMatrix&&Array.isArray(currentMatrix))?` <span style="font-size:9px;background:#00D4FF;color:#000;padding:2px 6px;border-radius:4px;margin-left:5px;font-weight:600;">MATRIX</span>`:'';
+    if (el) { const mb=(currentMatrix&&Array.isArray(currentMatrix))?` <span style="font-size:9px;background:#38bdf8;color:#0a0d14;padding:1px 5px;border-radius:3px;margin-left:4px;font-weight:600;">MATRIX</span>`:'';
         el.innerHTML=`${currentColor}${mb} <i class="fas fa-chevron-right"></i>`; el.style.color=currentColor; }
 }
 
@@ -616,79 +627,79 @@ function bindClickHandler() { const it=document.getElementById('boost-color-item
 function showBoostModal() {
     const ex = document.getElementById('boost-modal'); if(ex)ex.remove();
     const modal = document.createElement('div'); modal.id='boost-modal';
-    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(5,7,11,0.8);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;';
     
     const box = document.createElement('div'); box.id='boost-modal-box';
-    box.style.cssText=`background:linear-gradient(160deg,#12141d,#1a1d2e);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:0;width:92%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;position:relative;`;
+    box.style.cssText=`background:#0d111a;border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:0;width:92%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,0.7);max-height:88vh;overflow:hidden;display:flex;flex-direction:column;position:relative;`;
     
     // Header
     const hdr = document.createElement('div');
-    hdr.style.cssText='padding:20px 24px 16px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.05);';
-    hdr.innerHTML=`<h3 style="color:#fff;margin:0;font-size:20px;font-weight:700;letter-spacing:-0.5px;">Advanced Color Boost</h3><p style="color:#8b92b4;font-size:12px;margin:4px 0 0;font-weight:400;">System-wide display enhancement</p>`;
+    hdr.style.cssText='padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.06);background:#121620;';
+    hdr.innerHTML=`<h3 style="color:#f8fafc;margin:0;font-size:16px;font-weight:600;letter-spacing:-0.2px;">Color & Display Enhancement</h3><p style="color:#64748b;font-size:11px;margin:2px 0 0;">SurfaceFlinger Pipeline Engine</p>`;
     box.appendChild(hdr);
     
     // Scrollable Content
     const content = document.createElement('div');
-    content.style.cssText='flex:1;overflow-y:auto;padding:20px 24px;';
+    content.style.cssText='flex:1;overflow-y:auto;padding:16px 20px;';
     
     // 1. Base Color
-    const cs = createSectionCard('🎨 Base Color');
+    const cs = createSectionCard('Base Tint Color');
     const ci = document.createElement('input'); ci.type='color';ci.value=currentColor;
-    ci.style.cssText='width:100%;height:48px;border:none;border-radius:12px;background:transparent;cursor:pointer;padding:0;';
+    ci.style.cssText='width:100%;height:38px;border:none;border-radius:8px;background:transparent;cursor:pointer;padding:0;';
     ci.oninput=(e)=>{currentColor=e.target.value;currentPresetName=null;syncAllUI();debouncedApply(80);};
     cs.content.appendChild(ci);
     content.appendChild(cs.el);
 
     // 2. Presets Button (Pop-up) - ✅ Now shows selected preset name
-    const presetCard = createSectionCard('✨ Color Presets');
+    const presetCard = createSectionCard('Profile Presets');
     const presetBtn = document.createElement('button');
     presetBtn.id = 'preset-select-btn';
     const displayName = currentPresetName || 'Select Preset';
-    presetBtn.innerHTML = `${displayName} <span style="float:right;opacity:0.5;">›</span>`;
-    presetBtn.style.cssText = 'width:100%;padding:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:12px;font-size:14px;font-weight:500;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;';
-    presetBtn.onmouseenter = () => presetBtn.style.background = 'rgba(255,255,255,0.1)';
-    presetBtn.onmouseleave = () => presetBtn.style.background = 'rgba(255,255,255,0.05)';
+    presetBtn.innerHTML = `<span style="font-weight:500;">${displayName}</span> <span style="opacity:0.4;font-size:12px;">›</span>`;
+    presetBtn.style.cssText = 'width:100%;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);color:#f8fafc;border-radius:8px;font-size:13px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;';
+    presetBtn.onmouseenter = () => presetBtn.style.background = 'rgba(255,255,255,0.06)';
+    presetBtn.onmouseleave = () => presetBtn.style.background = 'rgba(255,255,255,0.03)';
     presetBtn.onclick = showPresetPopup;
     presetCard.content.appendChild(presetBtn);
     content.appendChild(presetCard.el);
 
     // 3. Fine Tuning
-    const tuneCard = createSectionCard('⚙️ Fine Tuning');
-    tuneCard.content.appendChild(createSliderRow('💧 Saturation', 'sat-slider', 'sat-val', currentSaturation, 0.5, 2.5, 0.1, (v) => { currentSaturation = v; return v.toFixed(1)+'x'; }));
-    tuneCard.content.appendChild(createSliderRow('🔍 Sharpness', 'sharp-slider', 'sharp-val', currentSharpness, 0.5, 2.0, 0.1, (v) => { currentSharpness = v; return v.toFixed(1)+'x'; }));
-    tuneCard.content.appendChild(createSliderRow('🌡️ Temperature', 'warm-slider', 'warm-val', currentWarmth, -10, 10, 1, (v) => { currentWarmth = v; const lb = v<0?'Cool':v>0?'Warm':'Neutral'; return `${lb} (${v})`; }));
+    const tuneCard = createSectionCard('Fine Parameters');
+    tuneCard.content.appendChild(createSliderRow('Saturation Multiplier', 'sat-slider', 'sat-val', currentSaturation, 0.5, 2.5, 0.1, (v) => { currentSaturation = v; return v.toFixed(1)+'x'; }));
+    tuneCard.content.appendChild(createSliderRow('Sharpness Enhancement', 'sharp-slider', 'sharp-val', currentSharpness, 0.5, 2.0, 0.1, (v) => { currentSharpness = v; return v.toFixed(1)+'x'; }));
+    tuneCard.content.appendChild(createSliderRow('Color Temperature (Warmth)', 'warm-slider', 'warm-val', currentWarmth, -10, 10, 1, (v) => { currentWarmth = v; const lb = v<0?'Cool':v>0?'Warm':'Neutral'; return `${lb} (${v})`; }));
     content.appendChild(tuneCard.el);
 
-    // 4. Display Modes
-    const modeCard = createSectionCard('📱 Display Modes');
+    // 4. Advanced Matrix (Moved directly next to/after Fine Parameters)
+    const matrixCard = createSectionCard('SurfaceFlinger Color Matrix');
+    matrixCard.content.appendChild(createMatrixSection());
+    content.appendChild(matrixCard.el);
+
+    // 5. Display Modes
+    const modeCard = createSectionCard('Hardware Optimization');
     const at = document.createElement('label');
-    at.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;cursor:pointer;';
-    at.innerHTML=`<div><div style="color:#fff;font-size:14px;font-weight:500;">AMOLED Optimization</div><div style="color:#8b92b4;font-size:11px;margin-top:2px;">Deep blacks & vivid colors</div></div><input type="checkbox" id="amoled-toggle" style="transform:scale(1.4);accent-color:${currentColor};">`;
+    at.style.cssText='display:flex;align-items:center;justify-content:space-between;cursor:pointer;';
+    at.innerHTML=`<div><div style="color:#e2e8f0;font-size:12px;font-weight:500;">AMOLED Matrix Injection</div><div style="color:#64748b;font-size:10px;margin-top:1px;">Optimize subpixel dimming & depth</div></div><input type="checkbox" id="amoled-toggle" style="transform:scale(1.2);accent-color:#38bdf8;cursor:pointer;">`;
     modeCard.content.appendChild(at);
     at.querySelector('input').onchange=()=>debouncedApply(50);
     content.appendChild(modeCard.el);
-
-    // 5. Advanced Matrix
-    const matrixCard = createSectionCard('🔷 Color Matrix (SF 1015)');
-    matrixCard.content.appendChild(createMatrixSection());
-    content.appendChild(matrixCard.el);
 
     box.appendChild(content);
 
     // Footer
     const footer = document.createElement('div');
-    footer.style.cssText = 'padding:16px 24px;border-top:1px solid rgba(255,255,255,0.05);display:flex;gap:12px;';
+    footer.style.cssText = 'padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);background:#121620;display:flex;gap:10px;';
     
-    const ab = document.createElement('button'); ab.textContent='💾 Apply on Boot';
-    ab.style.cssText=`flex:1;padding:14px;background:linear-gradient(135deg,${currentColor},${currentColor}cc);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 15px ${currentColor}40;transition:all 0.2s;`;
+    const ab = document.createElement('button'); ab.textContent='Make Persistent';
+    ab.style.cssText=`flex:1;padding:10px;background:linear-gradient(135deg,${currentColor},${currentColor}bb);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px ${currentColor}33;transition:all 0.2s;`;
     ab.onclick=async()=>{
         const success = await createBootScript();
         if (success && window.showStatus) window.showStatus('✅ Boot script installed', currentColor);
     };
     footer.appendChild(ab);
     
-    const cb = document.createElement('button'); cb.textContent='Close';
-    cb.style.cssText='flex:1;padding:14px;background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.1);border-radius:12px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;';
+    const cb = document.createElement('button'); cb.textContent='Dismiss';
+    cb.style.cssText='flex:1;padding:10px;background:rgba(255,255,255,0.04);color:#94a3b8;border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;';
     cb.onclick=()=>modal.remove(); 
     footer.appendChild(cb);
     
@@ -703,32 +714,27 @@ function showBoostModal() {
 // 🚀 Apply Boost
 async function applyBoost() {
     try {
-        // 1. Dynamically get correct SurfaceFlinger Transaction IDs based on Android SDK
         let TINT = 1037, SATU = 1022, MAT = 1015;
         try {
             const sdkStr = await execFn('getprop ro.build.version.sdk');
             const sdk = parseInt(sdkStr.trim());
-            if (sdk >= 35) TINT = 1038;       // Android 15+
-            else if (sdk >= 33) TINT = 1037;  // Android 13-14
-            else if (sdk >= 31) TINT = 1035;  // Android 12
+            if (sdk >= 35) TINT = 1038;       
+            else if (sdk >= 33) TINT = 1037;  
+            else if (sdk >= 31) TINT = 1035;  
         } catch(e) {}
 
-        // 2. Apply Saturation
         await execFn(`su -c "service call SurfaceFlinger ${SATU} f ${currentSaturation}" 2>/dev/null`);
         
-        // 3. Apply Temperature
         if(currentWarmth !== 0) {
             const tv = 6500 + (currentWarmth * 200);
             await execFn(`su -c "settings put system screen_color_temperature ${tv}"`);
             await execFn(`su -c "settings put system screen_color_temperature_native ${tv}"`);
         }
         
-        // 4. Apply Sharpness
         if(currentSharpness !== 1.0) {
             await execFn(`su -c "setprop sys.display.sharpness ${currentSharpness}"`);
         }
         
-        // 5. AMOLED Toggle
         const ae = document.getElementById('amoled-toggle')?.checked;
         if(ae) {
             await execFn(`su -c "settings put system screen_brightness_mode 0"`);
@@ -739,7 +745,6 @@ async function applyBoost() {
             await execFn(`su -c "setprop persist.sys.led.color.matrix 0"`);
         }
         
-        // 6. Apply Matrix (Force strict float formatting to prevent native crashes)
         if(currentMatrix && Array.isArray(currentMatrix) && currentMatrix.length >= 16) {
             const m16 = currentMatrix.slice(0, 16);
             let mc = `su -c "service call SurfaceFlinger ${MAT} i32 1`;
@@ -748,7 +753,6 @@ async function applyBoost() {
             await execFn(mc);
         }
         
-        // 7. Apply Color Tint (Force strict float formatting)
         const r = parseInt(currentColor.substr(1,2),16)/255;
         const g = parseInt(currentColor.substr(3,2),16)/255;
         const b = parseInt(currentColor.substr(5,2),16)/255;
@@ -756,12 +760,11 @@ async function applyBoost() {
         
         await saveConfig();
         const ms = (currentMatrix && Array.isArray(currentMatrix)) ? ' | Matrix:SF1015' : '';
-        if(window.showStatus) window.showStatus(`✅ Color Boost Applied! Sat:${currentSaturation}x Sharp:${currentSharpness}x${ms}`, currentColor);
+        if(window.showStatus) window.showStatus(`✅ Boost Applied [Sat:${currentSaturation}x Sharp:${currentSharpness}x${ms}]`, currentColor);
         updateDisplay();
     } catch(e) {
         console.error('Boost apply failed:', e);
-        if(window.showStatus) window.showStatus('❌ Color Boost Failed', '#FF453A');
-        alert('Failed to apply color boost. Ensure root access.');
+        if(window.showStatus) window.showStatus('❌ Color Boost Failed', '#ef4444');
     }
 }
 
@@ -784,18 +787,15 @@ async function createBootScript() {
             '',
             'echo "=== $(date) Script Started ===" > "$LOG"',
             '',
-            '# 1. Locate Config & Flag',
             'CONFIG=""',
             'for p in "${CONFIG_PATHS[@]}"; do [ -f "$p" ] && { CONFIG="$p"; break; }; done',
             'FLAG=""',
             'for p in "${FLAG_PATHS[@]}"; do [ -f "$p" ] && { FLAG="$p"; break; }; done',
             '',
             'if [ -z "$CONFIG" ]; then echo "❌ Config not found" >> "$LOG"; exit 0; fi',
-            'echo "✅ Config: $CONFIG" >> "$LOG"',
             '',
-            '# 2. Safe Parser',
             'get_val() {',
-            '    grep "^${1}=" "$CONFIG" 2>/dev/null | head -n 1 | cut -d\'=\' -f2- | sed \'s/\\r$//\' | sed \'s/^[[:space:]]*//;s/[[:space:]]*$//\'',
+            '    grep "^${1}=" "$CONFIG" 2>/dev/null | head -n 1 | cut -d\'=\' -f2- | sed \'s/\\r$//\' \vert{} sed \'s/^[[:space:]]*//;s/[[:space:]]*$//\'',
             '}',
             '',
             'COLOR=$(get_val "color")',
@@ -804,12 +804,7 @@ async function createBootScript() {
             'WARM=$(get_val "warmth")',
             'MATRIX=$(get_val "matrix")',
             '',
-            'echo "📝 Parsed: COLOR=\'$COLOR\' SAT=\'$SAT\' SHARP=\'$SHARP\' WARM=\'$WARM\'" >> "$LOG"',
-            'echo "📝 MATRIX=\'$MATRIX\'" >> "$LOG"',
-            '',
-            '# 3. Android Version / SDK Transaction Mapping',
             'SDK=$(getprop ro.build.version.sdk 2>/dev/null | grep -oE \'^[0-9]+\')',
-            'VER=$(getprop ro.build.version.release 2>/dev/null | grep -oE \'^[0-9]+\')',
             'case "$SDK" in',
             '    36|16) TINT=1038; SATU=1022; MAT=1015 ;;',
             '    35|15) TINT=1038; SATU=1022; MAT=1015 ;;',
@@ -817,38 +812,29 @@ async function createBootScript() {
             '    31|32) TINT=1035; SATU=1022; MAT=1015 ;;',
             '    *) TINT=1037; SATU=1022; MAT=1015 ;;',
             'esac',
-            'echo " SDK $SDK (Android $VER) -> Tint=$TINT Sat=$SATU Matrix=$MAT" >> "$LOG"',
             '',
-            '# 4. Validation & Execution Helpers',
             'safe_float() {',
-            '    echo "$1" | grep -qE \'^-?[0-9]*\\.?[0-9]+$\' && echo "$1" || echo ""',
+            '    echo "$1" \vert{} grep -qE \'^-?[0-9]*\\.?[0-9]+$\' && echo "$1" || echo ""',
             '}',
             'apply_sf() {',
-            '    echo "▶ Executing: service call SurfaceFlinger $@" >> "$LOG"',
-            '    timeout 3 service call SurfaceFlinger "$@" >> "$LOG" 2>&1 || echo "️ SF call failed/timed out (safe)" >> "$LOG"',
+            '    timeout 3 service call SurfaceFlinger "$@" >> "$LOG" 2>&1 || true',
             '}',
             '',
-            '# 5. Apply Settings',
-            '# Saturation',
             'if [ -n "$SAT" ]; then',
             '    V=$(safe_float "$SAT")',
             '    [ -n "$V" ] && apply_sf "$SATU" f "$V"',
             'fi',
             '',
-            '# Temperature',
             'if [ -n "$WARM" ] && [ "$WARM" != "0" ]; then',
             '    TV=$((6500 + WARM * 200))',
-            '    echo "▶ Temp $TV" >> "$LOG"',
-            '    settings put system screen_color_temperature "$TV" 2>/dev/null || settings put secure screen_color_temperature "$TV" 2>/dev/null || echo "⚠️ Settings temp failed" >> "$LOG"',
+            '    settings put system screen_color_temperature "$TV" 2>/dev/null || settings put secure screen_color_temperature "$TV" 2>/dev/null || true',
             'fi',
             '',
-            '# Sharpness',
             'if [ -n "$SHARP" ] && [ "$SHARP" != "1.0" ]; then',
             '    V=$(safe_float "$SHARP")',
-            '    [ -n "$V" ] && { echo "▶ Sharp $V" >> "$LOG"; setprop sys.display.sharpness "$V" 2>/dev/null || true; }',
+            '    [ -n "$V" ] && setprop sys.display.sharpness "$V" 2>/dev/null || true',
             'fi',
             '',
-            '# Color Tint',
             'if [ -n "$COLOR" ]; then',
             '    CLEAN="${COLOR#\\#}"',
             '    if [ "${#CLEAN}" -eq 6 ]; then',
@@ -858,26 +844,19 @@ async function createBootScript() {
             '        RF=$(awk -v r="$R" \'BEGIN{printf "%.2f", r/255}\')',
             '        GF=$(awk -v g="$G" \'BEGIN{printf "%.2f", g/255}\')',
             '        BF=$(awk -v b="$B" \'BEGIN{printf "%.2f", b/255}\')',
-            '        echo "▶ Tint: #$CLEAN -> R=$R($RF) G=$G($GF) B=$B($BF)" >> "$LOG"',
             '        apply_sf "$TINT" f "$RF" f "$GF" f "$BF" f 1.0',
-            '    else',
-            '        echo "❌ Invalid hex length (${#CLEAN})" >> "$LOG"',
             '    fi',
             'fi',
             '',
-            '# Matrix',
             'if [ -n "$MATRIX" ] && [ "$MATRIX" != "default" ]; then',
             '    CNT=0; CMD="service call SurfaceFlinger $MAT i32 1"',
             '    for v in $MATRIX; do',
             '        VAL=$(safe_float "$v"); [ -z "$VAL" ] && VAL="0.0"',
-            '        CMD="$CMD f $VAL"; CNT=$((CNT + 1))',
-            '        [ $CNT -ge 16 ] && break',
+            '        CMD="$CMD f$VAL"; CNT=$((CNT + 1))',             '        [$CNT -ge 16 ] && break',
             '    done',
-            '    echo "▶ Matrix CMD ready ($CNT values)" >> "$LOG"',
-            '    eval "$CMD" >> "$LOG" 2>&1 || echo "⚠️ Matrix execution failed" >> "$LOG"',
+            '    eval "$CMD" >> "$LOG" 2>&1 || true',
             'fi',
             '',
-            '# AMOLED',
             'if [ -n "$FLAG" ] && [ -f "$FLAG" ]; then',
             '    settings put system screen_brightness_mode 0 2>/dev/null || true',
             '    setprop sys.led.color.matrix 1 2>/dev/null || true',
@@ -887,7 +866,6 @@ async function createBootScript() {
             '    setprop persist.sys.led.color.matrix 0 2>/dev/null || true',
             'fi',
             '',
-            'echo "=== ✅ Script Finished ===" >> "$LOG"',
             'exit 0'
         ];
         await execFn(`mkdir -p /sdcard/MTK_AI_Engine`);
