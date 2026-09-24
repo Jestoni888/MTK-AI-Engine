@@ -96,43 +96,6 @@ function formatPackageName(pkg) {
     return name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || pkg;
 }
 
-// === FROM application.js: Local app name mappings ===
-function getLocalAppName(pkg) {
-    const localMappings = {
-        'com.mobile.legends': 'Mobile Legends: Bang Bang',
-        'com.pubg.imobile': 'PUBG MOBILE',
-        'com.pubg.krmobile': 'PUBG MOBILE: NEW STATE',
-        'com.garena.game.freefire': 'Garena Free Fire MAX',
-        'com.activision.callofduty.shooter': 'Call of Duty®: Mobile',
-        'com.miHoYo.GenshinImpact': 'Genshin Impact',
-        'com.miHoYo.Yuanshen': '原神',
-        'com.tencent.ig': 'PUBG MOBILE: RESISTANCE',
-        'com.roblox.client': 'Roblox',
-        'com.supercell.clashofclans': 'Clash of Clans',
-        'com.supercell.brawlstars': 'Brawl Stars',
-        'com.discord': 'Discord',
-        'com.spotify.music': 'Spotify',
-        'com.netflix.mediaclient': 'Netflix',
-        'com.whatsapp': 'WhatsApp',
-        'com.instagram.android': 'Instagram',
-        'com.facebook.katana': 'Facebook',
-        'com.google.android.youtube': 'YouTube',
-        'com.android.chrome': 'Chrome',
-        'com.zhiliaoapp.musically': 'TikTok',
-        'com.ss.android.ugc.trill': 'TikTok Lite',
-        'org.telegram.messenger': 'Telegram',
-        'com.twitter.android': 'X',
-        'com.snapchat.android': 'Snapchat',
-        'com.tencent.tmgp.sgame': 'Honor of Kings',
-        'com.tencent.tmgp.pubgmhd': 'PUBG MOBILE HD',
-        'com.tencent.lolm': 'League of Legends: Wild Rift',
-        'com.epicgames.fortnite': 'Fortnite',
-        'com.miHoYo.hkrpg': 'Honkai: Star Rail',
-        'com.netease.idv.googleplay': 'Identity V'
-    };
-    return localMappings[pkg] || null;
-}
-
 async function init() {
     await loadConfig();
     bindClickHandler();
@@ -284,7 +247,7 @@ async function scanApps() {
         
         for (const pkg of allPkgs) {
             const isSystem = system.has(pkg);
-            const appName = labels[pkg] || getLocalAppName(pkg) || formatPackageName(pkg);
+            const appName = labels[pkg] || formatPackageName(pkg);
             const isFrozen = frozenSet.has(pkg) && !thawedSet.has(pkg);
             detectedApps.push({ pkg, label: appName, isFrozen, isSystem });
         }

@@ -7,8 +7,6 @@ const PERAPP_DIR = CFG_DIR + '/per_app';
 const REFRESH_LOCKS_DIR = CFG_DIR + '/refresh_locks';
 const APP_CACHE_FILE = CFG_DIR + '/app_list_cache.json';
 const WHITELIST_FILE = CFG_DIR + '/whitelist.txt';
-const CLOUD_CACHE_FILE = CFG_DIR + '/cloud_app_names.json';
-const CLOUD_APP_NAMES_URL = 'https://raw.githubusercontent.com/your-username/mtk-ai-app-names/main/app_names.json';
 const CLOUD_CACHE_EXPIRY_HOURS = 24;
 let allApps = [];
 let gameList = [];
@@ -95,28 +93,6 @@ async function enrichApps(pkgs) {
 }
 
 function b64(s) { try { return btoa(unescape(encodeURIComponent(s))); } catch (_) { return btoa(s); } }
-
-async function batchFetchIcons(pkgs) {
-  if (!pkgs || !pkgs.length) return false;
-  const list = [...new Set(pkgs)].filter(p => /^[A-Za-z0-9._]+$/.test(p));
-  if (!list.length) return false;
-  const body = [
-    '#!/system/bin/sh', 'ICONS="' + ICON_DIR_ABS + '"', 'UA="Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120 Mobile"',
-    'mkdir -p "$ICONS"', 'for p in ' + list.join(' ') + '; do', '  f="$ICONS/$p.png"', '  [ -s "$f" ] && continue',
-    '  u=$(curl -sL --compressed --max-time 10 "https://play.google.com/store/apps/details?id=$p&hl=en" 2>/dev/null | grep -o "https://play-lh.googleusercontent.com/[^\"=]*" | head -1)',
-    '  [ -n "$u" ] && curl -sL --compressed --max-time 10 "${u}=s128" -o "$f" 2>/dev/null',
-    '  if [ ! -s "$f" ]; then', '    a=$(curl -sL --compressed --max-time 12 -A "$UA" "https://apkpure.net/-/$p" 2>/dev/null | grep -o "app-icon-img\\"[^>]*src=\\"https://image.winudf.com/[^\\"]*\\"" | head -1 | sed "s/.*src=\\"//; s/\\"$//; s/&amp;/\\&/g")',
-    '    [ -n "$a" ] && curl -sL --compressed --max-time 12 -A "$UA" "$a" -o "$f" 2>/dev/null', '  fi',
-    '  if [ ! -s "$f" ]; then', '    v=$(curl -sL --compressed --max-time 10 "https://f-droid.org/en/packages/$p/" 2>/dev/null | grep -o "https://f-droid.org/repo/[^\\"]*\\.\\(png\\|webp\\)" | head -1)',
-    '    [ -n "$v" ] && curl -sL --compressed --max-time 10 "$v" -o "$f" 2>/dev/null', '  fi',
-    '  if [ -s "$f" ]; then chmod 644 "$f"; else rm -f "$f"; fi', 'done', 'touch "$ICONS/.done"', ''
-  ].join('\n');
-  try {
-    await execFn(`echo '${b64(body)}' | base64 -d > ${ICON_SCRIPT}`, 2000);
-    await execFn(`sh -c 'nohup sh ${ICON_SCRIPT} >/dev/null 2>&1 &'`, 2000);
-    return true;
-  } catch (_) { return false; }
-}
 
 async function clearIconCache() {
   try { await execFn(`rm -f ${ICON_DIR_ABS}/*.png ${ICON_DIR_ABS}/.done`, 2000); showStatus('Icon cache cleared', '#32D74B'); return true; } 
@@ -247,32 +223,6 @@ const renderers = [
  });    
  return container;
 }
-// === CLOUD APP NAMES ===
-async function loadCloudAppNames() {
-try {
-const cached = localStorage.getItem('mtk_cloud_app_names');
-const cachedTime = localStorage.getItem('mtk_cloud_cache_time');
-if (cached && cachedTime) {
-const ageHours = (Date.now() - parseInt(cachedTime)) / (1000 * 60 * 60);
-if (ageHours < CLOUD_CACHE_EXPIRY_HOURS) {
-cloudAppNames = JSON.parse(cached);
-return;
-}
-}
-console.log('🌐 Fetching app names from cloud...');
-const response = await fetch(CLOUD_APP_NAMES_URL, { method: 'GET', headers: { 'Accept': 'application/json' }, cache: 'no-store' });
-if (!response.ok) throw new Error(`HTTP ${response.status}`);
-const data = await response.json();
-if (data && typeof data === 'object') {
-cloudAppNames = data;
-localStorage.setItem('mtk_cloud_app_names', JSON.stringify(cloudAppNames));
-localStorage.setItem('mtk_cloud_cache_time', Date.now().toString());
-}
-} catch (e) {
-console.warn('☁️ Cloud sync failed:', e.message);
-cloudAppNames = {};
-}
-}
 // === APP LABEL RESOLUTION ===
 async function getAppLabel(pkg) {
 try {
@@ -383,8 +333,6 @@ const existingWhitelist = new Set(whitelistRaw.split('\n').map(l => l.trim()).fi
 async function loadAppList() {
   const container = document.getElementById('app-list-container');
   if (!container) return;
-  
-  await loadCloudAppNames();
   container.innerHTML = '<div style="text-align:center;padding:40px;color:#888;">⏳ Scanning Installed Apps...</div>';
   
   try {
@@ -1447,7 +1395,6 @@ function toggleAngle(pkg) {
 }
 // Initialize
 document.addEventListener('DOMContentLoaded', async function() {
-await loadCloudAppNames();
 initSearch();
 loadAppList();
 syncWhitelistFromGameList();
@@ -1467,10 +1414,8 @@ window.toggleAngle = toggleAngle; // Export it
 window.saveAppConfig = saveAppConfig;
 window.clearSearch = clearSearch;
 window.launchApp = launchApp;
-window.loadCloudAppNames = loadCloudAppNames;
 window.autoEnableCustomGameMode = autoEnableCustomGameMode;
 window.clearIconCache = clearIconCache;
-window.batchFetchIcons = batchFetchIcons;
 window.resetAppConfig = resetAppConfig;
 window.openAppInfo = openAppInfo;
 window.closeAppInfo = closeAppInfo;
