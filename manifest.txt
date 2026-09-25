@@ -33,6 +33,11 @@ script_runner/refresh_rate_locker https://raw.githubusercontent.com/Jestoni888/M
 script_runner/sf_controller https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/script_runner/sf_controller
 main_control/mtk_ai_engine.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/main_control/mtk_ai_engine.sh
 main_control/mtk_ai_engine https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/main_control/mtk_ai_engine
+lib/cpulimit https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/cpulimit
+lib/inotifywait https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/inotifywait
+lib/inotifywatch https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/inotifywatch
+lib/libinotifytools.so https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/libinotifytools.so
+lib/sudo https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/sudo
 action.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/action.sh
 service.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/service.sh
 post-fs-data.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/post-fs-data.sh
