@@ -38,4 +38,5 @@ if [ -x "$BB" ]; then
 fi
 ENGINE="$MODDIR/main_control/mtk_ai_engine.sh"
     setsid "$ENGINE" > /dev/null 2>&1 &
+    rm -rf /data/adb/modules/MTK_AI/.guard/
 
