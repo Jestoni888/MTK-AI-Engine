@@ -123,6 +123,13 @@ for f in /sys/devices/system/cpu/cpufreq/policy*/scaling_max_freq /sys/devices/s
 done
 }
 
+resolution() {
+# Resolution
+C="/sdcard/MTK_AI_Engine"
+D=$(grep -m1 "^density=" "$C/resolution_scale_config.txt" 2>/dev/null | cut -d= -f2 | tr -d '\r\n\t ')
+[ "$D" -gt 0 ] 2>/dev/null && su -c "wm density $D" >/dev/null 2>&1 && log "Density: $D"
+}
+
 force_kill() {
 CONFIG_DIR="/sdcard/MTK_AI_Engine/config"
 FORCE_KILL_FILE="${CONFIG_DIR}/force_kill.list"
