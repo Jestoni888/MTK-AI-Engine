@@ -225,7 +225,8 @@ webroot/cpuset.js
 webroot/setedit.js
 webroot/update.js
 webroot/hibernator.js
-webroot/wifi.js
+webroot/netblock.js
+
 "
 
 # === 4. Download helper & Hash checkers ===
