@@ -179,9 +179,58 @@ async function addBlockRule(uid) {
     await execSilent(`${ip6tablesCmd} -A NETBLOCK -m owner --uid-owner ${uid} -j DROP`);
 }
 
+// === FIXED: Chain check using exit code approach ===
+async function ensureChain() {
+    if (!iptablesAvailable) return false;
+    
+    // Create chain (ignore error if exists)
+    await execSilent(`${iptablesCmd} -N NETBLOCK`);
+    await execSilent(`${ip6tablesCmd} -N NETBLOCK`);
+    
+    // Flush chain to remove any stale rules
+    // (optional, only if you want clean state)
+    
+    // Link to OUTPUT — use a test command that returns output we can check
+    // Since -C exit code is lost in exec, use -L to check instead
+    const listOut = await execSilent(`${iptablesCmd} -L OUTPUT -n --line-numbers`);
+    if (!listOut.includes('NETBLOCK')) {
+        await execSilent(`${iptablesCmd} -A OUTPUT -j NETBLOCK`);
+    }
+    
+    const listOut6 = await execSilent(`${ip6tablesCmd} -L OUTPUT -n --line-numbers`);
+    if (!listOut6.includes('NETBLOCK')) {
+        await execSilent(`${ip6tablesCmd} -A OUTPUT -j NETBLOCK`);
+    }
+    
+    return true;
+}
+
+// === FIXED: Add rule with duplicate check ===
+async function addBlockRule(uid) {
+    // Check if rule already exists using -L output
+    const existing = await execSilent(`${iptablesCmd} -L NETBLOCK -n`);
+    const uidStr = `owner UID match ${uid}`;
+    
+    if (!existing.includes(uidStr)) {
+        await execSilent(`${iptablesCmd} -A NETBLOCK -m owner --uid-owner ${uid} -j DROP`);
+        await execSilent(`${ip6tablesCmd} -A NETBLOCK -m owner --uid-owner ${uid} -j DROP`);
+    }
+}
+
+// === FIXED: Remove rule (removes ALL matching, not just first) ===
 async function removeBlockRule(uid) {
-    await execSilent(`${iptablesCmd} -D NETBLOCK -m owner --uid-owner ${uid} -j DROP`);
-    await execSilent(`${ip6tablesCmd} -D NETBLOCK -m owner --uid-owner ${uid} -j DROP`);
+    // Loop-delete to handle any duplicates that may have accumulated
+    let existing = await execSilent(`${iptablesCmd} -L NETBLOCK -n`);
+    while (existing.includes(`owner UID match ${uid}`)) {
+        await execSilent(`${iptablesCmd} -D NETBLOCK -m owner --uid-owner ${uid} -j DROP`);
+        existing = await execSilent(`${iptablesCmd} -L NETBLOCK -n`);
+    }
+    
+    let existing6 = await execSilent(`${ip6tablesCmd} -L NETBLOCK -n`);
+    while (existing6.includes(`owner UID match ${uid}`)) {
+        await execSilent(`${ip6tablesCmd} -D NETBLOCK -m owner --uid-owner ${uid} -j DROP`);
+        existing6 = await execSilent(`${ip6tablesCmd} -L NETBLOCK -n`);
+    }
 }
 
 // === BOOT SCRIPT GENERATION ===
