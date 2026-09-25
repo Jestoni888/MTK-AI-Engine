@@ -34,8 +34,6 @@ if [ -f "$C/limit_surfaceflinger" ]; then
 fi
 M="/data/adb/modules/MTK_AI"; E="/sdcard/MTK_AI_Engine"
 [ -f "$E/enable_fastcharge" ] && export LD_LIBRARY_PATH="$M/lib64:$LD_LIBRARY_PATH" && nohup "$M/MTK_AI/AI_MODE/global_mode/heartbeat" >/dev/null 2>&1 &
-nohup sh "$M/script_runner/boost_color_apply.sh" >/dev/null 2>&1 &
-nohup "$M/MTK_AI/AI_MODE/normal_mode/powersavex" >/dev/null 2>&1 &
 if [ -f "$E/fast_reboot_enabled" ]; then
     log -t MTK_AI "Fast reboot enabled" 2>/dev/null || echo "[MTK_AI] Fast reboot enabled"
     setprop debug.sf.nobootanimation 1; setprop persist.sys.mtk.fast_boot 1 2>/dev/null
