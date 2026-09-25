@@ -218,14 +218,29 @@ refresh_rate() {
 refresh_rate
 
 unblock() {
+    # === CHECK IF BLOCKED (matches JS: blockedPackages.hasOwnProperty(pkg)) ===
     local uid_line=$(grep "^${CURRENT_TOP_APP}=" /sdcard/MTK_AI_Engine/netblock.conf 2>/dev/null)
     [ -z "$uid_line" ] && return 0
+    
     local uid=$(echo "$uid_line" | cut -d= -f2)
-    local ipt=$(command -v iptables-nft || command -v iptables-legacy || command -v iptables)
+    
+    # === IPTABLES DETECTION (matches JS order: iptables → nft → legacy) ===
+    local ipt=$(command -v iptables 2>/dev/null || command -v iptables-nft 2>/dev/null || command -v iptables-legacy 2>/dev/null)
     local ip6t=$(echo "$ipt" | sed 's/iptables/ip6tables/')
-    $ipt -D NETBLOCK -m owner --uid-owner "$uid" -j DROP 2>/dev/null
-    $ip6t -D NETBLOCK -m owner --uid-owner "$uid" -j DROP 2>/dev/null
+    [ -z "$ipt" ] && return 1
+    
+    # === CHAIN SAFETY CHECK (matches JS: ensureChain()) ===
+    # Only delete if NETBLOCK chain exists and rule is present
+    if $ipt -L NETBLOCK -n 2>/dev/null | grep -q "owner UID match $uid"; then
+        # === REMOVE RULE (matches JS: removeBlockRule(uid)) ===
+        $ipt -D NETBLOCK -m owner --uid-owner "$uid" -j DROP 2>/dev/null
+        $ip6t -D NETBLOCK -m owner --uid-owner "$uid" -j DROP 2>/dev/null
+    fi
+    
+    # === REMOVE FROM CONFIG (matches JS: delete blockedPackages[pkg] + saveConfig()) ===
     sed -i "/^${CURRENT_TOP_APP}=/d" /sdcard/MTK_AI_Engine/netblock.conf
+    
+    log_msg "    🔓 NetUnblocked: $CURRENT_TOP_APP (UID=$uid)"
 }
 unblock
 
