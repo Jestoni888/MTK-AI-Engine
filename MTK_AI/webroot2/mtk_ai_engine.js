@@ -34,6 +34,7 @@ const scriptPaths = {
     disable_vsync: { on: null, off: null, isDaemon: false, critical: false },
     sysctl_tweaks: { on: null, off: null, isDaemon: false, critical: false },
     game_driver: { on: null, off: null, isDaemon: false, critical: false },
+    block_network: { on: null, off: null, isDaemon: false, critical: false },
     disable_tap_to_rotate: { on: null, off: null, isDaemon: false, critical: false }
 };
 const toggleConfig = {
@@ -62,6 +63,7 @@ const toggleConfig = {
     disable_vsync: { title:  "Disable Vsync ", desc:  "Disables VSync for the UI, allowing higher frame rates (can cause screen tearing, consumes more battery & overheating). Auto remove properties in normal mode ", group:  "Gaming " },
     sysctl_tweaks: { title:  "System Level tweaks ", desc:  "Enable System level tweaks for sustain performance (disable if you feel lag) ", group:  "Gaming " },
     game_driver: { title:  "Game Driver ", desc:  "Enable Game driver to make game display perfectly sync but a costs of UI glitches sometimes", group:  "Gaming " },
+    block_network: { title:  "Block Network", desc:  "Block background apps internet access to stabilize ping for gaming", group:  "Gaming " },
     enable_disable_thermal: { title:  "Disable Thermals ", desc:  "Bypass thermal throttling (⚠️ Risk of overheating) ", group:  "Gaming " },
     enable_gaming_prop: { title:  "Gaming Properties ", desc:  "Apply gaming-specific system properties ", group:  "Gaming " },
     enable_dnd_during_game: { title:  "DND During Game ", desc:  "Turning off everything in notifications & statusbar during game", group:  "Gaming " },
