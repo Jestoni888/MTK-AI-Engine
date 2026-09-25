@@ -159,12 +159,6 @@ echo "   - OEM services: stopped"
 echo ""
 echo "⚠️  Reboot to restore defaults."
 
-BOOSTER_MODE=$(cat "data/adb/modules/MTK_AI/booster_mode")
-
-while [ -z "$(getprop sys.boot_completed)" ]; do
-	sleep 1
-done
-
 # $1:value $2:filepaths
 lock_val() {
 	for p in $2; do
@@ -176,7 +170,6 @@ lock_val() {
 	done
 }
 
-if [ "$BOOSTER_MODE" -eq 1 ]; then
 	for pid in $(pgrep thermal); do
 		echo "Freeze $pid"
 		kill -SIGSTOP "$pid"
@@ -185,7 +178,6 @@ if [ "$BOOSTER_MODE" -eq 1 ]; then
 	for prop in $(resetprop | grep 'thermal.*running' | awk -F '[][]' '{print $2}'); do
 		resetprop "$prop" freezed
 	done
-fi
 
 if [ -f /proc/driver/thermal/tzcpu ]; then
 	t_limit="125" # Celcius unit
