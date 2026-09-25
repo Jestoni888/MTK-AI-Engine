@@ -28,7 +28,7 @@ echo "$LOG_TAG $*"
 detect_keys_timeout() {
 local event
 # Wait max 10 seconds for a single key event
-event="$(timeout 15 getevent -lqn -c1 2>/dev/null)"
+event="$(timeout 10 getevent -lqn -c1 2>/dev/null)"
 if [ -z "$event" ]; then
 echo "timeout"
 elif echo "$event" | grep -q "${volupkey}.*DOWN"; then
