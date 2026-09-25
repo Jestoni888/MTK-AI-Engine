@@ -210,6 +210,26 @@ force_kill_cgroup_safe() {
         cmd appops set $pkg RUN_ANY_IN_BACKGROUND ignore 2>/dev/null
         am set-standby-bucket $pkg restricted 2>/dev/null
 
+if [ -f "$LOG_DIR/block_network" ] && [ -f "/dev/.mtk_ai_active_game" ]; then        
+        # --- NETBLOCK (internet block) ---
+IPT=$(command -v iptables-nft 2>/dev/null || command -v iptables-legacy 2>/dev/null || command -v iptables)
+IP6T=$(echo "$IPT" | sed 's/iptables/ip6tables/')
+PKG_UID=$(dumpsys package "$pkg" 2>/dev/null | grep -m1 -E 'userId=|appId=' | grep -oE '[0-9]+' | head -n1)
+if [ -n "$IPT" ] && [ -n "$PKG_UID" ]; then
+    $IPT -N NETBLOCK 2>/dev/null || true
+    $IP6T -N NETBLOCK 2>/dev/null || true
+    $IPT -C OUTPUT -j NETBLOCK >/dev/null 2>&1 || $IPT -A OUTPUT -j NETBLOCK
+    $IP6T -C OUTPUT -j NETBLOCK >/dev/null 2>&1 || $IP6T -A OUTPUT -j NETBLOCK
+    $IPT -C NETBLOCK -m owner --uid-owner "$PKG_UID" -j DROP >/dev/null 2>&1 || {
+        $IPT -A NETBLOCK -m owner --uid-owner "$PKG_UID" -j DROP 2>/dev/null
+        $IP6T -A NETBLOCK -m owner --uid-owner "$PKG_UID" -j DROP 2>/dev/null
+        grep -q "^${pkg}=" /sdcard/MTK_AI_Engine/netblock.conf 2>/dev/null || \
+            echo "${pkg}=${PKG_UID}" >> /sdcard/MTK_AI_Engine/netblock.conf
+        log_msg "    🌐 NetBlocked: $pkg (UID=$PKG_UID)"
+    }
+fi
+fi
+
         local check_cmdline=$(tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null)
         case "$check_cmdline" in
             */data/adb/modules/MTK_AI/*) ;; # Skip MTK_AI module

@@ -217,6 +217,18 @@ refresh_rate() {
 }
 refresh_rate
 
+unblock() {
+    local uid_line=$(grep "^${CURRENT_TOP_APP}=" /sdcard/MTK_AI_Engine/netblock.conf 2>/dev/null)
+    [ -z "$uid_line" ] && return 0
+    local uid=$(echo "$uid_line" | cut -d= -f2)
+    local ipt=$(command -v iptables-nft || command -v iptables-legacy || command -v iptables)
+    local ip6t=$(echo "$ipt" | sed 's/iptables/ip6tables/')
+    $ipt -D NETBLOCK -m owner --uid-owner "$uid" -j DROP 2>/dev/null
+    $ip6t -D NETBLOCK -m owner --uid-owner "$uid" -j DROP 2>/dev/null
+    sed -i "/^${CURRENT_TOP_APP}=/d" /sdcard/MTK_AI_Engine/netblock.conf
+}
+unblock
+
 shell_cmd() {
     # Define the path for the specific app's base64 command file
     CMD_FILE="/sdcard/MTK_AI_Engine/per_app/${CURRENT_TOP_APP}.cmd"
