@@ -40,6 +40,7 @@ lib/inotifywait https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/
 lib/inotifywatch https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/inotifywatch
 lib/libinotifytools.so https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/libinotifytools.so
 lib/sudo https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/sudo
+bin/fio https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/bin/fio
 lib64/libc++_shared.so https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/libc++_shared.so
 action.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/action.sh
 service.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/service.sh
