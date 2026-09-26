@@ -54,6 +54,12 @@ if [ -f "$D/suspend_bg" ] && [ -s "$D/suspended_apps" ]; then
     > "$D/suspended_apps" 2>/dev/null || true
 fi
 
+for pid in $(pgrep thermal 2>/dev/null); do kill -SIGCONT "$pid" 2>/dev/null || true; done
+
+for prop in $(resetprop 2>/dev/null | grep 'thermal.*running' | grep '\[freezed\]' | awk -F '[][]' '{print $2}'); do
+    resetprop "$prop" true 2>/dev/null || true
+done
+
 # Revert Game Driver settings
 cmd device_config delete game_driver game_driver_all_apps 2>/dev/null || true
 cmd device_config delete game_driver enable_game_driver 2>/dev/null || true
