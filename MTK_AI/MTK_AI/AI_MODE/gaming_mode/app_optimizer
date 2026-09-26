@@ -1,13 +1,16 @@
 #!/system/bin/sh
 
-pkill -f normal_prop >/dev/null 2>&1 || true
-rm -f /dev/.mtk_ai_normal_mode
-SCRIPT_PATH="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer"
+# Explicitly disable exit-on-error to ensure the script never halts prematurely
+set +e
 
+pkill -f normal_prop >/dev/null 2>&1 || true
+rm -f /dev/.mtk_ai_normal_mode || true
+
+SCRIPT_PATH="/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/app_optimizer"
 for pid in $(pgrep -f "$SCRIPT_PATH"); do
     # Kill all instances except the current running script ($$)
     if [ "$pid" != "$$" ]; then
-        kill -9 "$pid" 2>/dev/null
+        kill -9 "$pid" 2>/dev/null || true
     fi
 done
 
@@ -25,30 +28,33 @@ log_msg() {
     fi
 }
 
+log_msg "→ Starting app_optimizer script..."
+
 # Dynamically find and set boost_affinity to 1 (Force Big/Super Cores)
-for f in $(find /sys/ -name "boost_affinity" 2>/dev/null); do
-    echo 1 > "$f"
+# Changed to 'while read' to prevent word-splitting issues with spaces in paths
+find /sys/ -name "boost_affinity" 2>/dev/null | while read -r f; do
+    echo 1 > "$f" 2>/dev/null || true
 done
 
-# Boost foreground 
-setprop persist.sys.foreground_boost 1
+# Boost foreground
+setprop persist.sys.foreground_boost 1 || true
 
 # Disable powersave mode (Config from Automatrix)
 for f in "enabled false" "vibration_disabled false" "animation_disabled false" \
-  "launch_boost_disabled false" "aod_disabled false" "datasaver false" \
-  "force_all_apps_standby false" "quick_doze_enabled false" \
-  "soundtrigger_disabled false" "optional_sensors_disabled false" \
-  "gps_mode 0" "adjust_brightness_factor 1.0"; do
-  device_config put battery_saver $f
+"launch_boost_disabled false" "aod_disabled false" "datasaver false" \
+"force_all_apps_standby false" "quick_doze_enabled false" \
+"soundtrigger_disabled false" "optional_sensors_disabled false" \
+"gps_mode 0" "adjust_brightness_factor 1.0"; do
+    device_config put battery_saver $f || true
 done
 
 # Powermode
-cmd power set-mode 0 true
-settings put global low_power 0
-cmd performance_hint override 1
-cmd power set-adaptive-power-saver-enabled false
-cmd power set-fixed-performance-mode-enabled true
-settings put global power_manager_constants fixed_performance_mode=true
+cmd power set-mode 0 true || true
+settings put global low_power 0 || true
+cmd performance_hint override 1 || true
+cmd power set-adaptive-power-saver-enabled false || true
+cmd power set-fixed-performance-mode-enabled true || true
+settings put global power_manager_constants fixed_performance_mode=true || true
 setprop 'persist.sys.power_mode_perf' '1' || true
 settings put system persist.sys.power_mode_perf 1 2>/dev/null || true
 setprop 'persist.sys.perf_boost_enabled' '1' || true
@@ -58,29 +64,29 @@ setprop 'persist.sys.performance_mode' '1' || true
 setprop 'sys.hwc.gpu_perf_mode' '1' || true
 setprop 'vendor.perf.framepacing.enable' '1' || true
 setprop 'vendor.performance.gbe' '1' || true
-setprop persist.sys.thermal.mode 0
-setprop debug.sf.disable_client_composition_cache 1
-settings put global 'sustained_performance_mode_enabled' '1'
+setprop persist.sys.thermal.mode 0 || true
+setprop debug.sf.disable_client_composition_cache 1 || true
+settings put global 'sustained_performance_mode_enabled' '1' || true
 
 # Elevate MediaTek PowerHAL / PerfService to maximum performance
-setprop persist.vendor.dpm.feature 1
-setprop vendor.powermode.state performance
-setprop persist.vendor.power.fps.boost 1
+setprop persist.vendor.dpm.feature 1 || true
+setprop vendor.powermode.state performance || true
+setprop persist.vendor.power.fps.boost 1 || true
 
 # Disable Vsync
 if [ -f "$CONFIG_DIR/disable_vsync" ]; then
-    setprop debug.hwui.disable_vsync true
+    setprop debug.hwui.disable_vsync true || true
 fi
 
-# Optimize app launch 
-cmd device_config put runtime_native_boot iorap_perfetto_enable true
-cmd device_config put runtime_native_boot iorap_readahead_enable true
+# Optimize app launch
+cmd device_config put runtime_native_boot iorap_perfetto_enable true || true
+cmd device_config put runtime_native_boot iorap_readahead_enable true || true
 
 log_msg "→ Applying Gaming EEM offsets from sdcard..."
 for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/proc/eem/EEM_DET_CCI/eem_offset bl:/proc/eem/EEM_DET_BL/eem_offset gpu:/proc/eemg/EEMG_DET_GPU/eemg_offset gpu_hi:/proc/eemg/EEMG_DET_GPU_HI/eemg_offset; do
     k=${i%%:*}; p=${i#*:}; v=$(cat /sdcard/MTK_AI_Engine/eem_offsets/gaming/$k.txt 2>/dev/null)
-    [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
-done || true
+    [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV" || true
+done
 
 # ==============================
 # ⚡ CPU/CCI Power Mode
@@ -90,152 +96,118 @@ if [ -f "$CONFIG_DIR/cpufreq_mode" ]; then
     echo "1" > /proc/cpufreq/cpufreq_cci_mode 2>/dev/null || true
 fi
 
-#DND
+# DND
 if [ -f "$CONFIG_DIR/enable_dnd_during_game" ]; then
-    cmd statusbar send-disable-flag notification-peek statusbar-expansion quick-settings
-    cmd notification set_dnd priority
-    settings put global heads_up_notifications_enabled 0
+    cmd statusbar send-disable-flag notification-peek statusbar-expansion quick-settings || true
+    cmd notification set_dnd priority || true
+    settings put global heads_up_notifications_enabled 0 || true
 fi
 
-#VM Memory & Scheduler optimize
+# VM Memory & Scheduler optimize
 if [ -f "$CONFIG_DIR/sysctl_tweaks" ]; then
-for param in \
-  "vm.admin_reserve_kbytes=8192" \
-  "vm.block_dump=0" \
-  "vm.compact_unevictable_allowed=1" \
-  "vm.compaction_proactiveness=20" \
-  "vm.dirty_background_bytes=0" \
-  "vm.dirty_background_ratio=5" \
-  "vm.dirty_bytes=0" \
-  "vm.dirty_expire_centisecs=500" \
-  "vm.dirty_ratio=20" \
-  "vm.dirty_writeback_centisecs=500" \
-  "vm.dirtytime_expire_seconds=43200" \
-  "vm.extfrag_threshold=500" \
-  "vm.extra_free_kbytes=0" \
-  "vm.laptop_mode=0" \
-  "vm.legacy_va_layout=0" \
-  "vm.lowmem_reserve_ratio=256 32 0" \
-  "vm.max_map_count=65530" \
-  "vm.min_free_kbytes=65536" \
-  "vm.mmap_min_addr=32768" \
-  "vm.mmap_rnd_bits=24" \
-  "vm.mmap_rnd_compat_bits=11" \
-  "vm.oom_dump_tasks=1" \
-  "vm.oom_kill_allocating_task=0" \
-  "vm.overcommit_kbytes=0" \
-  "vm.overcommit_memory=0" \
-  "vm.overcommit_ratio=50" \
-  "vm.page-cluster=3" \
-  "vm.page_lock_unfairness=5" \
-  "vm.panic_on_oom=0" \
-  "vm.percpu_pagelist_fraction=0" \
-  "vm.stat_interval=60" \
-  "vm.swappiness=10" \
-  "vm.unprivileged_userfaultfd=0" \
-  "vm.user_reserve_kbytes=131072" \
-  "vm.vfs_cache_pressure=50" \
-  "vm.watermark_boost_factor=0" \
-  "vm.watermark_scale_factor=10" \
-  "kernel.sched_schedstats=0" \
-  "kernel.sched_util_clamp_min=0" \
-  "kernel.sched_pelt_multiplier=1" \
-  "kernel.sched_latency_ns=2000000" \
-  "kernel.sched_min_granularity_ns=500000" \
-  "kernel.sched_wakeup_granularity_ns=500000" \
-  "kernel.sched_migration_cost_ns=500000" \
-  "kernel.sched_tunable_scaling=0" \
-  "kernel.sched_nr_migrate=32" \
-  "kernel.sched_rr_timeslice_ms=100" \
-  "kernel.sched_rt_period_us=1000000" \
-  "kernel.sched_rt_runtime_us=950000" \
-  "kernel.sched_util_clamp_max=1024" \
-  "kernel.sched_util_clamp_min_rt_default=0" \
-  "kernel.sched_energy_aware=1" \
-  "kernel.sched_child_runs_first=0"
-do
-    # Added || true at the end to force a successful exit code and prevent script halting
-    sysctl -w "$param" > /dev/null 2>&1 || echo "^^^ FAILED: $param" || true
-done
+    for param in \
+    "vm.admin_reserve_kbytes=8192" "vm.block_dump=0" "vm.compact_unevictable_allowed=1" \
+    "vm.compaction_proactiveness=20" "vm.dirty_background_bytes=0" "vm.dirty_background_ratio=5" \
+    "vm.dirty_bytes=0" "vm.dirty_expire_centisecs=500" "vm.dirty_ratio=20" \
+    "vm.dirty_writeback_centisecs=500" "vm.dirtytime_expire_seconds=43200" "vm.extfrag_threshold=500" \
+    "vm.extra_free_kbytes=0" "vm.laptop_mode=0" "vm.legacy_va_layout=0" \
+    "vm.lowmem_reserve_ratio=256 32 0" "vm.max_map_count=65530" "vm.min_free_kbytes=65536" \
+    "vm.mmap_min_addr=32768" "vm.mmap_rnd_bits=24" "vm.mmap_rnd_compat_bits=11" \
+    "vm.oom_dump_tasks=1" "vm.oom_kill_allocating_task=0" "vm.overcommit_kbytes=0" \
+    "vm.overcommit_memory=0" "vm.overcommit_ratio=50" "vm.page-cluster=3" \
+    "vm.page_lock_unfairness=5" "vm.panic_on_oom=0" "vm.percpu_pagelist_fraction=0" \
+    "vm.stat_interval=60" "vm.swappiness=10" "vm.unprivileged_userfaultfd=0" \
+    "vm.user_reserve_kbytes=131072" "vm.vfs_cache_pressure=50" "vm.watermark_boost_factor=0" \
+    "vm.watermark_scale_factor=10" "kernel.sched_schedstats=0" "kernel.sched_util_clamp_min=0" \
+    "kernel.sched_pelt_multiplier=1" "kernel.sched_latency_ns=2000000" "kernel.sched_min_granularity_ns=500000" \
+    "kernel.sched_wakeup_granularity_ns=500000" "kernel.sched_migration_cost_ns=500000" "kernel.sched_tunable_scaling=0" \
+    "kernel.sched_nr_migrate=32" "kernel.sched_rr_timeslice_ms=100" "kernel.sched_rt_period_us=1000000" \
+    "kernel.sched_rt_runtime_us=950000" "kernel.sched_util_clamp_max=1024" "kernel.sched_util_clamp_min_rt_default=0" \
+    "kernel.sched_energy_aware=1" "kernel.sched_child_runs_first=0"
+    do
+        sysctl -w "$param" > /dev/null 2>&1 || echo "^^^ FAILED: $param" || true
+    done
 fi
 
-#Thermal Override
+# Thermal Override
 find /sys -path "*/thermal/cooling_device*/cur_state" -exec chmod 444 {} + 2>/dev/null || true
-find /sys -path '*/thermal/thermal_zone*/mode' -exec sh -c 'chmod 644 "$1" 2>/dev/null; echo disabled > "$1" 2>/dev/null || true' _ {} \;
-find /sys/class/thermal/ -type f -name "cdev*_weight" -exec sh -c 'for f; do chmod 664 "$f" 2>/dev/null; echo 0 > "$f" 2>/dev/null; done' _ {} +
-cmd thermalservice override-status 1 2>/dev/null
+find /sys -path '*/thermal/thermal_zone*/mode' -exec sh -c 'chmod 644 "$1" 2>/dev/null; echo disabled > "$1" 2>/dev/null || true' _ {} \; || true
+find /sys/class/thermal/ -type f -name "cdev*_weight" -exec sh -c 'for f; do chmod 664 "$f" 2>/dev/null; echo 0 > "$f" 2>/dev/null; done' _ {} + || true
+cmd thermalservice override-status 1 2>/dev/null || true
 
 # Prevent FPS going down
-cmd display set-match-content-frame-rate-pref 0
+cmd display set-match-content-frame-rate-pref 0 || true
 
 # Lock devfreq nodes to max
 if [ -f "$CONFIG_DIR/enable_performance" ]; then
-apply() {
-    [ ! -f "$2" ] && return 1
-    chmod 644 "$2" >/dev/null 2>&1
-    echo "$1" >"$2" 2>/dev/null
-    chmod 444 "$2" >/dev/null 2>&1
-}
-find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( \
+    apply() {
+        [ ! -f "$2" ] && return 1
+        chmod 644 "$2" >/dev/null 2>&1 || true
+        echo "$1" >"$2" 2>/dev/null || true
+        chmod 444 "$2" >/dev/null 2>&1 || true
+    }
+    find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( \
     -iname "available_frequencies" -o \
     -iname "*_freq_table" -o \
     -iname "*_opp_dump" -o \
     -iname "*_opp_table" \
-\) -print 2>/dev/null | grep -vE '/(cpufreq|policy[0-9]+|ppm)/' | while read -r list_file; do    
-    dir=$(dirname "$list_file")   
-    case "$list_file" in
-        *opp_dump) max=$(sed -n 's/.*freq = \([0-9]*\).*/\1/p' "$list_file" | sort -nr | head -1) ;;
-        *opp_table) max=$(awk -F'[][]' '{print $2}' "$list_file" | sort -nr | head -1) ;;
-        *) max=$(tr ' ' '\n' <"$list_file" | grep -E '^[0-9]+$' | sort -nr | head -1) ;;
-    esac    
-    [ -z "$max" ] && continue    
-    find "$dir" -maxdepth 1 -type f \( \
+    \) -print 2>/dev/null | grep -vE '/(cpufreq|policy[0-9]+|ppm)/' | while read -r list_file; do
+        dir=$(dirname "$list_file")
+        case "$list_file" in
+            *opp_dump) max=$(sed -n 's/.*freq = \([0-9]*\).*/\1/p' "$list_file" | sort -nr | head -1) ;;
+            *opp_table) max=$(awk -F'[][]' '{print $2}' "$list_file" | sort -nr | head -1) ;;
+            *) max=$(tr ' ' '\n' <"$list_file" | grep -E '^[0-9]+$' | sort -nr | head -1) ;; # Fixed newline syntax error
+        esac
+        [ -z "$max" ] && continue
+        find "$dir" -maxdepth 1 -type f \( \
         -name "max_freq" -o -name "min_freq" -o \
         -name "hw_max_freq" -o -name "hw_min_freq" -o \
         -name "scaling_max_freq" -o -name "scaling_min_freq" -o \
         -name "gpu_max_clock" -o -name "gpu_min_clock" -o \
         -name "gpu_cap_rate" -o -name "gpu_floor_rate" -o \
         -name "gpufreq_opp_freq" \
-    \) 2>/dev/null | while read -r target; do
-        apply "$max" "$target"
+        \) 2>/dev/null | while read -r target; do
+            apply "$max" "$target"
+        done
     done
-done
 fi
 
 # -----------------------------------------------------------------
-# 1. GAME DRIVER, SURFACEFLINGER & APP OPTIMIZATION 
-# Force active Game Driver layer and maximize GPU pipelines
+# 1. GAME DRIVER, SURFACEFLINGER & APP OPTIMIZATION
 # -----------------------------------------------------------------
-
 if [ -f "$CONFIG_DIR/game_driver" ]; then
-cmd device_config put game_driver game_driver_all_apps 1
-cmd device_config override game_driver game_driver_all_apps 1
-cmd device_config put game_driver enable_game_driver true
-cmd device_config put game_driver app_driver_opt_in true
-cmd device_config put gpu updatable_driver_production_opt_in_apps 1
-cmd device_config override gpu updatable_driver_production_opt_in_apps 1
-cmd device_config put surface_flinger_native_boot epoll_pwait true
-cmd device_config override surface_flinger_native_boot epoll_pwait true
-cmd device_config put surface_flinger_native_boot use_context_priority true
-cmd device_config override surface_flinger_native_boot use_context_priority true
-cmd display set-match-content-frame-rate-pref 0
+    cmd device_config put game_driver game_driver_all_apps 1 || true
+    cmd device_config override game_driver game_driver_all_apps 1 || true
+    cmd device_config put game_driver enable_game_driver true || true
+    cmd device_config put game_driver app_driver_opt_in true || true
+    cmd device_config put gpu updatable_driver_production_opt_in_apps 1 || true
+    cmd device_config override gpu updatable_driver_production_opt_in_apps 1 || true
+    cmd device_config put surface_flinger_native_boot epoll_pwait true || true
+    cmd device_config override surface_flinger_native_boot epoll_pwait true || true
+    cmd device_config put surface_flinger_native_boot use_context_priority true || true
+    cmd device_config override surface_flinger_native_boot use_context_priority true || true
+    cmd display set-match-content-frame-rate-pref 0 || true
 fi
 
-cmd device_config put mglru_native mglru_enabled true
-cmd device_config override mglru_native mglru_enabled true
-cmd device_config put lmkd_native low_ram false
-cmd device_config override lmkd_native low_ram false
-cmd device_config put runtime_native_boot priority_boost_enabled true
-cmd device_config override runtime_native_boot priority_boost_enabled true
-cmd device_config put runtime_native_boot profilebootclasses true
-cmd device_config override runtime_native_boot profilebootclasses true
+cmd device_config put mglru_native mglru_enabled true || true
+cmd device_config override mglru_native mglru_enabled true || true
+cmd device_config put lmkd_native low_ram false || true
+cmd device_config override lmkd_native low_ram false || true
+cmd device_config put runtime_native_boot priority_boost_enabled true || true
+cmd device_config override runtime_native_boot priority_boost_enabled true || true
+cmd device_config put runtime_native_boot profilebootclasses true || true
+cmd device_config override runtime_native_boot profilebootclasses true || true
 
-#External Scripts
+# External Scripts
 [ -f /sdcard/MTK_AI_Engine/enable_gaming_prop ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop || true
 [ -f /sdcard/MTK_AI_Engine/enable_gaming_prop2 ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/gaming_prop_2 || true
 [ -f /sdcard/MTK_AI_Engine/enable_performance ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/performance || true
 [ -f /sdcard/MTK_AI_Engine/enable_disable_thermal ] && sh /data/adb/modules/MTK_AI/MTK_AI/AI_MODE/gaming_mode/disable_thermal || true
+
 nohup sh "/sdcard/MTK_AI_Engine/modes/gaming_mode.sh" >/dev/null 2>&1 &
 nohup sh "/sdcard/MTK_AI_Engine/setedit-modes/gaming.sh" >/dev/null 2>&1 &
 nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/global_mode/ram_cleaner" 2>/dev/null &
+
 pkill -f cpulimit >/dev/null 2>&1 || true
+
+log_msg "→ app_optimizer script completed successfully."

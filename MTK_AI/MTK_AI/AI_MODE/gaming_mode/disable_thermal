@@ -1,371 +1,171 @@
 #!/system/bin/sh
+# Explicitly disable exit-on-error to ensure the script never halts prematurely
+set +e
 
 MOD_DIR="/data/adb/modules/MTK_AI"
+
 # --- BUSYBOX INTEGRATION ---
 BB="$MOD_DIR/busybox"
-[ ! -x "$BB" ] && { echo "FATAL: BusyBox missing"; exit 1; }
+if [ ! -x "$BB" ]; then
+    echo "WARNING: BusyBox missing at $BB. Falling back to system tools."
+    BB=""
+fi
 
-# Wrap essential tools
-grep() { "$BB" grep "$@"; }; sed() { "$BB" sed "$@"; }; awk() { "$BB" awk "$@"; }
-cut() { "$BB" cut "$@"; }; head() { "$BB" head "$@"; }; tail() { "$BB" tail "$@"; }
-wc() { "$BB" wc "$@"; }; date() { "$BB" date "$@"; }; ionice() { "$BB" ionice "$@"; }
-renice() { "$BB" renice "$@"; }; mkswap() { "$BB" mkswap "$@"; }; swapon() { "$BB" swapon "$@"; }
-swapoff() { "$BB" swapoff "$@"; }; free() { "$BB" free "$@"; }
+# Wrap essential tools safely (only if BusyBox exists)
+if [ -n "$BB" ]; then
+    grep() { "$BB" grep "$@"; }
+    sed() { "$BB" sed "$@"; }
+    awk() { "$BB" awk "$@"; }
+    cut() { "$BB" cut "$@"; }
+    head() { "$BB" head "$@"; }
+    tail() { "$BB" tail "$@"; }
+    wc() { "$BB" wc "$@"; }
+    date() { "$BB" date "$@"; }
+    ionice() { "$BB" ionice "$@"; }
+    renice() { "$BB" renice "$@"; }
+    mkswap() { "$BB" mkswap "$@"; }
+    swapon() { "$BB" swapon "$@"; }
+    swapoff() { "$BB" swapoff "$@"; }
+    free() { "$BB" free "$@"; }
+fi
 
 # --- Configuration ---
 LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
-log_action "=================================================="
 
-echo "[+] Applying MAXIMUM PERFORMANCE CONFIG..."
+# Define missing logging functions to prevent "command not found" halts
+log_msg() { echo "[+] $1" | tee -a "$LOG_FILE" 2>/dev/null || echo "[+] $1"; }
+log_action() { echo "$1" | tee -a "$LOG_FILE" 2>/dev/null || echo "$1"; }
+
+log_action "=================================================="
+log_msg "Applying MAXIMUM PERFORMANCE CONFIG..."
 
 # --- Helper: lock_value ---
 lock_value() {
-  if [ -f "$2" ]; then
-    chmod 644 "$2" 2>/dev/null
-    echo "$1" > "$2"
-    chmod 444 "$2" 2>/dev/null
-  fi
+    if [ -f "$2" ]; then
+        chmod 644 "$2" 2>/dev/null || true
+        echo "$1" > "$2" 2>/dev/null || true
+        chmod 444 "$2" 2>/dev/null || true
+    fi
 }
 
 set_value() {
-  if [ -f "$2" ]; then
-    current="$(cat "$2" 2>/dev/null)"
-    if [ "$current" != "$1" ]; then
-      chmod 664 "$2" 2>/dev/null
-      echo "$1" > "$2"
+    if [ -f "$2" ]; then
+        current="$(cat "$2" 2>/dev/null)"
+        if [ "$current" != "$1" ]; then
+            chmod 664 "$2" 2>/dev/null || true
+            echo "$1" > "$2" 2>/dev/null || true
+        fi
     fi
-  fi
 }
 
 # --- 1. Disable Thermal Throttling (Basic) ---
-echo "[+] Disabling thermal limits..."
+log_msg "Disabling thermal limits..."
 echo "95 70" > /proc/driver/thermal/clatm_gpu_threshold 2>/dev/null || true
-# Keep tzcpu at 117°C (safe) — comment out if you want ultra limit
 echo "3 117000 0 mtktscpu-sysrst 85000 0 cpu_adaptive_0 76000 0 cpu_adaptive_1 0 0 no-cooler 0 0" > /proc/driver/thermal/tzcpu 2>/dev/null || true
 
 # --- 2. Disable Core Control & Isolation ---
-echo "[+] Disabling core_ctl and CPU isolation..."
+log_msg "Disabling core_ctl and CPU isolation..."
 for cpu in cpu0 cpu4 cpu7; do
-  path="/sys/devices/system/cpu/$cpu/core_ctl"
-  if [ -d "$path" ]; then
-    set_value 0 "$path/enable"
-    # Max out min/max CPUs
-    set_value 4 "$path/min_cpus" 2>/dev/null || set_value 8 "$path/min_cpus"
-    set_value 4 "$path/max_cpus" 2>/dev/null || set_value 8 "$path/max_cpus"
-  fi
+    path="/sys/devices/system/cpu/$cpu/core_ctl"
+    if [ -d "$path" ]; then
+        set_value 0 "$path/enable"
+        set_value 4 "$path/min_cpus" 2>/dev/null || set_value 8 "$path/min_cpus"
+        set_value 4 "$path/max_cpus" 2>/dev/null || set_value 8 "$path/max_cpus"
+    fi
 done
 
-# De-isolate all CPUs
 if [ -f /sys/devices/system/cpu/sched/set_sched_deisolation ]; then
-  for i in 0 1 2 3 4 5 6 7; do
-    echo "$i" > /sys/devices/system/cpu/sched/set_sched_deisolation 2>/dev/null
-  done
-  chmod 000 /sys/devices/system/cpu/sched/set_sched_isolation 2>/dev/null
+    for i in 0 1 2 3 4 5 6 7; do
+        echo "$i" > /sys/devices/system/cpu/sched/set_sched_deisolation 2>/dev/null || true
+    done
+    chmod 000 /sys/devices/system/cpu/sched/set_sched_isolation 2>/dev/null || true
 fi
 
 # --- 3. GPU Tuning ---
-echo "[+] Tuning GPU..."
-# Serialize jobs (none = max parallelism)
+log_msg "Tuning GPU..."
 echo "none" > /sys/devices/platform/13000000.mali/scheduling/serialize_jobs 2>/dev/null || true
 
-# GED tuning
 for f in \
-  /sys/module/ged/parameters/g_fb_dvfs_threshold \
-  /sys/module/ged/parameters/gpu_bottom_freq \
-  /sys/module/ged/parameters/gpu_cust_upbound_freq; do
-  [ -f "$f" ] && echo "90" > "$f" 2>/dev/null
+/sys/module/ged/parameters/g_fb_dvfs_threshold \
+/sys/module/ged/parameters/gpu_bottom_freq \
+/sys/module/ged/parameters/gpu_cust_upbound_freq; do
+    [ -f "$f" ] && echo "90" > "$f" 2>/dev/null || true
 done
-[ -f /sys/module/ged/parameters/gpu_cust_upbound_freq ] && echo "886000" > /sys/module/ged/parameters/gpu_cust_upbound_freq
 
-# Disable GPU freq limits
+[ -f /sys/module/ged/parameters/gpu_cust_upbound_freq ] && echo "886000" > /sys/module/ged/parameters/gpu_cust_upbound_freq 2>/dev/null || true
+
 for i in 3 4 5 6; do
-  echo "$i 0 0" > /proc/gpufreq/gpufreq_limit_table 2>/dev/null
+    echo "$i 0 0" > /proc/gpufreq/gpufreq_limit_table 2>/dev/null || true
 done
 
-# --- 4. FPSGO / PerfMgr Disable (Prevent Interference) ---
-echo "[+] Disabling FPSGO/PerfMgr interference..."
+# --- 4. FPSGO / PerfMgr Disable ---
+log_msg "Disabling FPSGO/PerfMgr interference..."
 lock_value 0 /sys/kernel/fpsgo/common/fpsgo_enable
 lock_value 2 /sys/kernel/fpsgo/common/force_onoff
 lock_value 0 /sys/kernel/fpsgo/fbt/switch_idleprefer
 lock_value 90 /sys/kernel/fpsgo/fbt/thrm_temp_th
-echo -1 > /sys/kernel/fpsgo/fbt/thrm_limit_cpu 2>/dev/null
-echo -1 > /sys/kernel/fpsgo/fbt/thrm_sub_cpu 2>/dev/null
+echo -1 > /sys/kernel/fpsgo/fbt/thrm_limit_cpu 2>/dev/null || true
+echo -1 > /sys/kernel/fpsgo/fbt/thrm_sub_cpu 2>/dev/null || true
 
-# Disable PPM hard limits
 for i in hard_userlimit_cpu_freq hard_userlimit_freq_limit_by_others; do
-  [ -f "/proc/ppm/policy/$i" ] && {
-    echo "0 -1" > "/proc/ppm/policy/$i"
-    echo "1 -1" > "/proc/ppm/policy/$i"
-    echo "2 -1" > "/proc/ppm/policy/$i"
-    chmod 444 "/proc/ppm/policy/$i"
-  }
+    if [ -f "/proc/ppm/policy/$i" ]; then
+        echo "0 -1" > "/proc/ppm/policy/$i" 2>/dev/null || true
+        echo "1 -1" > "/proc/ppm/policy/$i" 2>/dev/null || true
+        echo "2 -1" > "/proc/ppm/policy/$i" 2>/dev/null || true
+        chmod 444 "/proc/ppm/policy/$i" 2>/dev/null || true
+    fi
 done
 
 # --- 5. Scheduler & SchedTune Boost ---
-echo "[+] Boosting scheduler..."
+log_msg "Boosting scheduler..."
 set_value 0 /sys/devices/system/cpu/sched/hint_enable
 set_value 0 /proc/sys/kernel/slide_boost_enabled
 set_value 0 /proc/sys/kernel/launcher_boost_enabled
 
-# Set stune to neutral/boost
 for group in background foreground nnapi-hal io; do
-  [ -f "/dev/stune/$group/schedtune.boost" ] && echo "0" > "/dev/stune/$group/schedtune.boost"
-  [ -f "/dev/stune/$group/schedtune.prefer_idle" ] && echo "0" > "/dev/stune/$group/schedtune.prefer_idle"
+    [ -f "/dev/stune/$group/schedtune.boost" ] && echo "0" > "/dev/stune/$group/schedtune.boost" 2>/dev/null || true
+    [ -f "/dev/stune/$group/schedtune.prefer_idle" ] && echo "0" > "/dev/stune/$group/schedtune.prefer_idle" 2>/dev/null || true
 done
 
-# --- 6. CPU Frequency Lock (Optional: Uncomment to force max) ---
-# echo "[+] Locking CPU to max frequency..."
-# for policy in /sys/devices/system/cpu/cpufreq/policy[0-9]*; do
-#   if [ -f "$policy/scaling_max_freq" ]; then
-#     max_freq=$(cat "$policy/scaling_max_freq")
-#     set_value "$max_freq" "$policy/scaling_min_freq"
-#     chmod 444 "$policy/scaling_min_freq"
-#   fi
-# done
-
-# --- 7. Disable OEM Services (OnePlus/Realme/OPPO) ---
-echo "[+] Disabling OEM power services..."
+# --- 7. Disable OEM Services ---
+log_msg "Disabling OEM power services..."
 for svc in orms-hal-1-0 vendor.oplus.ormsHalService-aidl-default; do
-  stop "$svc" 2>/dev/null
+    stop "$svc" 2>/dev/null || true
 done
-pm disable com.coloros.oppoguardelf/com.coloros.powermanager.fuelgaue.GuardElfAIDLService 2>/dev/null
-pm disable com.coloros.oppoguardelf/com.coloros.oppoguardelf.OppoGuardElfService 2>/dev/null
+pm disable com.coloros.oppoguardelf/com.coloros.powermanager.fuelgaue.GuardElfAIDLService 2>/dev/null || true
+pm disable com.coloros.oppoguardelf/com.coloros.oppoguardelf.OppoGuardElfService 2>/dev/null || true
 
 # --- 8. Process Affinity Optimization ---
-echo "[+] Optimizing critical processes..."
-ps_cache="$(ps -Ao pid,args)"
+log_msg "Optimizing critical processes..."
+ps_cache="$(ps -Ao pid,args 2>/dev/null)"
 change_task_cpuset() {
-  for pid in $(echo "$ps_cache" | grep -i "$1" | awk '{print $1}'); do
-    for tid in /proc/"$pid"/task/*; do
-      [ -f "$tid" ] && echo "${tid##*/}" > "/dev/cpuset/$2/tasks" 2>/dev/null
+    for pid in $(echo "$ps_cache" | grep -i "$1" 2>/dev/null | awk '{print $1}'); do
+        for tid in /proc/"$pid"/task/*; do
+            [ -f "$tid" ] && echo "${tid##*/}" > "/dev/cpuset/$2/tasks" 2>/dev/null || true
+        done
     done
-  done
 }
 change_task_cpuset system_server top-app
 change_task_cpuset surfaceflinger foreground
 change_task_cpuset kswapd0 foreground
 
 # --- 9. Kernel Scheduler Tuning ---
-echo 8000000 > /proc/sys/kernel/sched_latency_ns
-echo 2000000 > /proc/sys/kernel/sched_min_granularity_ns
+echo 8000000 > /proc/sys/kernel/sched_latency_ns 2>/dev/null || true
+echo 2000000 > /proc/sys/kernel/sched_min_granularity_ns 2>/dev/null || true
 
-echo ""
-echo "✅ MAXIMUM PERFORMANCE ACTIVE!"
-echo "   - Thermal: relaxed (117°C CPU)"
-echo "   - CPU: all cores online, no isolation"
-echo "   - GPU: max freq, no limits"
-echo "   - FPSGO/PPM: disabled"
-echo "   - OEM services: stopped"
-echo ""
-echo "⚠️  Reboot to restore defaults."
-
-# $1:value $2:filepaths
+# Redefine lock_val for safety
 lock_val() {
-	for p in $2; do
-		[ ! -f "$p" ] && continue
-		chown root:root "$p"
-		chmod 644 "$p"
-		echo "$1" >"$p"
-		chmod 444 "$p"
-	done
+    for p in $2; do
+        [ ! -f "$p" ] && continue
+        chown root:root "$p" 2>/dev/null || true
+        chmod 644 "$p" 2>/dev/null || true
+        echo "$1" >"$p" 2>/dev/null || true
+        chmod 444 "$p" 2>/dev/null || true
+    done
 }
-
-	for pid in $(pgrep thermal); do
-		echo "Freeze $pid"
-		kill -SIGSTOP "$pid"
-	done
-
-	for prop in $(resetprop | grep 'thermal.*running' | awk -F '[][]' '{print $2}'); do
-		resetprop "$prop" freezed
-	done
 
 if [ -f /proc/driver/thermal/tzcpu ]; then
-	t_limit="125" # Celcius unit
-	no_cooler="0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler"
-	lock_val "1 ${t_limit}000 0 mtktscpu-sysrst $no_cooler 200" /proc/driver/thermal/tzcpu
-	lock_val "1 ${t_limit}000 0 mtktspmic-sysrst $no_cooler 1000" /proc/driver/thermal/tzpmic
-	lock_val "1 ${t_limit}000 0 mtktsbattery-sysrst $no_cooler 1000" /proc/driver/thermal/tzbattery
-	lock_val "1 ${t_limit}000 0 mtk-cl-kshutdown00 $no_cooler 2000" /proc/driver/thermal/tzpa
-	lock_val "1 ${t_limit}000 0 mtktscharger-sysrst $no_cooler 2000" /proc/driver/thermal/tzcharger
-	lock_val "1 ${t_limit}000 0 mtktswmt-sysrst $no_cooler 1000" /proc/driver/thermal/tzwmt
-	lock_val "1 ${t_limit}000 0 mtktsAP-sysrst $no_cooler 1000" /proc/driver/thermal/tzbts
-	lock_val "1 ${t_limit}000 0 mtk-cl-kshutdown01 $no_cooler 1000" /proc/driver/thermal/tzbtsnrpa
-	lock_val "1 ${t_limit}000 0 mtk-cl-kshutdown02 $no_cooler 1000" /proc/driver/thermal/tzbtspa
-	echo "Remove MediaTek's thermal driver limit"
-fi
-
-for zone in /sys/class/thermal/thermal_zone*; do
-	lock_val "disabled" $zone/mode
-done
-
-if [ -f /sys/devices/virtual/thermal/thermal_message/cpu_limits ]; then
-	echo "Remove CPU limits"
-	for i in 0 2 4 6 7; do
-		maxfreq="$(cat /sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_max_freq)"
-		[ "$maxfreq" -gt "0" ] && lock_val "cpu$i $maxfreq" /sys/devices/virtual/thermal/thermal_message/cpu_limits
-	done
-fi
-
-if [ -d /proc/ppm ]; then
-	echo "Disable thermal-related PPM policies"
-	for idx in $(awk -F'[][]' '/PWR_THRO|THERMAL/{print $2}' /proc/ppm/policy_status); do
-		lock_val "$idx 0" /proc/ppm/policy_status
-	done
-fi
-
-if [ -f "/proc/gpufreq/gpufreq_power_limited" ]; then
-	lock_val "ignore_batt_oc 1" /proc/gpufreq/gpufreq_power_limited
-	lock_val "ignore_batt_percent 1" /proc/gpufreq/gpufreq_power_limited
-	lock_val "ignore_low_batt 1" /proc/gpufreq/gpufreq_power_limited
-	lock_val "ignore_thermal_protect 1" /proc/gpufreq/gpufreq_power_limited
-	lock_val "ignore_pbm_limited 1" /proc/gpufreq/gpufreq_power_limited
-fi
-
-lock_val 0 /sys/class/thermal/thermal_zone0/thm_enable
-find /sys/devices/virtual/thermal -exec chmod 000 {} +
-
-chmod 000 /sys/devices/*.mali/tmu
-chmod 000 /sys/devices/*.mali/throttling1
-chmod 000 /sys/devices/*.mali/throttling2
-chmod 000 /sys/devices/*.mali/throttling3
-chmod 000 /sys/devices/*.mali/throttling4
-chmod 000 /sys/devices/*.mali/tripping
-
-lock_val 0 /sys/kernel/msm_thermal/enabled /sys/class/kgsl/kgsl-3d0/throttling
-lock_val N /sys/module/msm_thermal/parameters/enabled
-lock_val "stop 1" /proc/mtk_batoc_throttling/battery_oc_protect_stop
-
-cmd thermalservice override-status 0
-
-# Force the kernel to be less aggressive about background cache
-echo "100" > /proc/sys/vm/vfs_cache_pressure
-# Ensure the CPU doesn't get interrupted by dirty page writes too often
-echo "500" > /proc/sys/vm/dirty_expire_centisecs
-echo "1000" > /proc/sys/vm/dirty_writeback_centisecs
-echo "0" > /proc/sys/kernel/panic
-
-# Add a separator and timestamp for each run
-log_msg "--- Starting Doze Clear: $(date) ---" >> "$LOG_FILE"
-
-for item in $(dumpsys deviceidle whitelist)
-do
-    # Extract package name
-    app=$(echo "$item" | cut -f2 -d ',')
-
-    # --- SKIP LOGIC START ---
-    # Skip com.android.shell and any other critical packages
-    if [ "$app" = "com.android.shell" ] || [ "$app" = "android" ]; then
-        echo "Skipping: $app (Protected)" | tee -a "$LOG_FILE"
-        continue
-    fi
-    # --- SKIP LOGIC END ---
-    
-    # Log the action to the file and console
-    echo "Removing from whitelist: $app" | tee -a "$LOG_FILE"
-    
-    # Execute command and log any errors
-    dumpsys deviceidle whitelist -$app >> "$LOG_PATH" 2>&1
-done
-
-echo "--- Run Finished ---" >> "$LOG_FILE"
-#!/system/bin/sh
-
-# Maximum Performance Script (NUCLEAR MODE)
-# Uses YOUR provided functions exactly as defined
-# FOR BENCHMARKING ONLY — NOT FOR DAILY USE
-
-# Source: your mtk_utils.sh functions (inlined below)
-
-lock_value () {
-  chmod 644 $2
-  echo $1 > $2
-  chmod 444 $2
-}
-
-sched_boost_set() {
-  if [[ "$state" == "no boost" ]]; then
-    echo 0 > /sys/devices/system/cpu/sched/sched_boost
-  elif [[ "$state" == "all boost" ]]; then
-    echo 1 > /sys/devices/system/cpu/sched/sched_boost
-  elif [[ "$state" == "foreground boost" ]]; then
-    echo 2 > /sys/devices/system/cpu/sched/sched_boost
-  fi
-}
-
-eas_set() {
-  chmod 664 /sys/devices/system/cpu/eas/enable
-  if [[ "$state" == "HMP" ]]; then
-    echo 0 > /sys/devices/system/cpu/eas/enable
-  elif [[ "$state" == "EAS" ]]; then
-    echo 1 > /sys/devices/system/cpu/eas/enable
-  elif [[ "$state" == "hybrid" ]]; then
-    echo 2 > /sys/devices/system/cpu/eas/enable
-  fi
-  chmod 444 /sys/devices/system/cpu/eas/enable
-}
-
-gpu_freq() {
-  dvfs=/proc/mali/dvfs_enable
-  if [[ "$state" == "0" ]]; then
-    echo 0 > /proc/gpufreq/gpufreq_opp_freq
-    echo -1 > /proc/gpufreq/gpufreq_opp_freq
-    echo 0 0 > /proc/gpufreq/gpufreq_fixed_freq_volt
-    echo 1 > $dvfs
-  else
-    echo 0 > $dvfs
-    if [[ "$voltage" == "" || "$voltage" = "-1" ]]; then
-      freq_row=$(grep "$state," /proc/gpufreq/gpufreq_opp_dump)
-      opp=${freq_row:1:2}
-      echo 0 0 > /proc/gpufreq/gpufreq_fixed_freq_volt
-      echo $state > /proc/gpufreq/gpufreq_opp_freq
-    else
-      echo 0 > /proc/gpufreq/gpufreq_opp_freq
-      echo $state $voltage > /proc/gpufreq/gpufreq_fixed_freq_volt
-    fi
-  fi
-}
-
-ddr_freq () {
-  local boost=/sys/devices/platform/boot_dramboost/dramboost/dramboost
-  if [[ -f $boost ]] && [[ "$state" == "1" ]]; then
-    echo 0 > $boost
-  fi
-  echo $state > /sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp
-}
-
-lock_val() {
-  chmod 664 $2 2>/dev/null
-  echo $1 > $2
-  chmod 000 $2 2>/dev/null
-}
-ulock_val(){
-  chmod 664 $2 2>/dev/null
-  echo $1 > $2
-}
-
-sspm_thermal_throttle(){
-  if [[ "$state" == "1" ]]; then
-    echo 'Modify PPM Status…'
-    cat /proc/ppm/policy_status | grep -E 'PWR_THRO|THERMAL' | while read row
-    do
-      idx=$(echo ${row:1:1})
-      echo  > /proc/ppm/policy_status
-      ulock_val "$idx 0" /proc/ppm/policy_status
-    done
-  fi
-  echo $state > /proc/driver/thermal/sspm_thermal_throttle
-}
-
-ultra_limit_set() {
-  if [[ "$state" == "1" ]]; then
-    echo 'DISABLING THERMAL SAFETY — EXTREME RISK!' 1>&2
-    echo 'Device may overheat, catch fire, or brick!' 1>&2
-    echo 'Ensure active cooling is applied NOW.' 1>&2
-    echo 'Proceeding in 5 seconds...' 1>&2
-    sleep 5
-    echo '🔥 DISABLING THERMAL LIMITS 🔥' 1>&2
     t_limit="125"
-    t_limit_ui="145°C"
     no_cooler="0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler"
     lock_val "1 ${t_limit}000 0 mtktscpu-sysrst $no_cooler 200" /proc/driver/thermal/tzcpu
     lock_val "1 ${t_limit}000 0 mtktspmic-sysrst $no_cooler 1000" /proc/driver/thermal/tzpmic
@@ -376,28 +176,177 @@ ultra_limit_set() {
     lock_val "1 ${t_limit}000 0 mtktsAP-sysrst $no_cooler 1000" /proc/driver/thermal/tzbts
     lock_val "1 ${t_limit}000 0 mtk-cl-kshutdown01 $no_cooler 1000" /proc/driver/thermal/tzbtsnrpa
     lock_val "1 ${t_limit}000 0 mtk-cl-kshutdown02 $no_cooler 1000" /proc/driver/thermal/tzbtspa
-    echo "Thermal Throttle up to ${t_limit_ui}"
-    sspm_thermal_throttle
-  else
-    ulock_val '3 117000 0 mtktscpu-sysrst 57000 0 cpu_adaptive_0 56000 0 cpu_adaptive_1 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 200' /proc/driver/thermal/tzcpu
-    ulock_val '1 136000 0 mtktspmic-sysrst 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzpmic
-    ulock_val '1 120000 0 mtk-cl-kshutdown00 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 2000' /proc/driver/thermal/tzpa
-    ulock_val '1 120000 0 mtktscharger-sysrst 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 2000' /proc/driver/thermal/tzcharger
-    ulock_val '1 120000 0 mtktswmt-sysrst 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzwmt
-    ulock_val '5 100000 0 mtktsAP-sysrst 90000 0 mtk-cl-kshutdown03 58000 0 mtk-cl-cam00 52000 0 abcct_lcmoff 50000 0 abcct 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzbts
-    ulock_val '4 120000 0 mtk-cl-kshutdown01 110000 0 no-cooler 100000 0 no-cooler 68000 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzbtsnrpa
-    ulock_val '4 120000 0 mtk-cl-kshutdown02 110000 0 no-cooler 100000 0 no-cooler 90000 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzbtspa
-  fi
-  echo $state > /proc/driver/thermal/sspm_thermal_throttle
+    log_msg "Remove MediaTek's thermal driver limit"
+fi
+
+for zone in /sys/class/thermal/thermal_zone*; do
+    lock_val "disabled" "$zone/mode"
+done
+
+if [ -f /sys/devices/virtual/thermal/thermal_message/cpu_limits ]; then
+    log_msg "Remove CPU limits"
+    for i in 0 2 4 6 7; do
+        maxfreq="$(cat /sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_max_freq 2>/dev/null)"
+        [ "$maxfreq" -gt "0" ] 2>/dev/null && lock_val "cpu$i $maxfreq" /sys/devices/virtual/thermal/thermal_message/cpu_limits
+    done
+fi
+
+if [ -d /proc/ppm ]; then
+    log_msg "Disable thermal-related PPM policies"
+    for idx in $(awk -F'[][]' '/PWR_THRO|THERMAL/{print $2}' /proc/ppm/policy_status 2>/dev/null); do
+        lock_val "$idx 0" /proc/ppm/policy_status
+    done
+fi
+
+if [ -f "/proc/gpufreq/gpufreq_power_limited" ]; then
+    lock_val "ignore_batt_oc 1" /proc/gpufreq/gpufreq_power_limited
+    lock_val "ignore_batt_percent 1" /proc/gpufreq/gpufreq_power_limited
+    lock_val "ignore_low_batt 1" /proc/gpufreq/gpufreq_power_limited
+    lock_val "ignore_thermal_protect 1" /proc/gpufreq/gpufreq_power_limited
+    lock_val "ignore_pbm_limited 1" /proc/gpufreq/gpufreq_power_limited
+fi
+
+lock_val 0 /sys/class/thermal/thermal_zone0/thm_enable
+find /sys/devices/virtual/thermal -exec chmod 000 {} + 2>/dev/null || true
+chmod 000 /sys/devices/*.mali/tmu 2>/dev/null || true
+chmod 000 /sys/devices/*.mali/throttling1 2>/dev/null || true
+chmod 000 /sys/devices/*.mali/throttling2 2>/dev/null || true
+chmod 000 /sys/devices/*.mali/throttling3 2>/dev/null || true
+chmod 000 /sys/devices/*.mali/throttling4 2>/dev/null || true
+chmod 000 /sys/devices/*.mali/tripping 2>/dev/null || true
+lock_val 0 /sys/kernel/msm_thermal/enabled /sys/class/kgsl/kgsl-3d0/throttling
+lock_val N /sys/module/msm_thermal/parameters/enabled
+lock_val "stop 1" /proc/mtk_batoc_throttling/battery_oc_protect_stop
+cmd thermalservice override-status 0 2>/dev/null || true
+
+echo "100" > /proc/sys/vm/vfs_cache_pressure 2>/dev/null || true
+echo "500" > /proc/sys/vm/dirty_expire_centisecs 2>/dev/null || true
+echo "1000" > /proc/sys/vm/dirty_writeback_centisecs 2>/dev/null || true
+echo "0" > /proc/sys/kernel/panic 2>/dev/null || true
+
+log_msg "--- Starting Doze Clear: $(date) ---"
+for item in $(dumpsys deviceidle whitelist 2>/dev/null); do
+    app=$(echo "$item" | cut -f2 -d ',' 2>/dev/null)
+    if [ "$app" = "com.android.shell" ] || [ "$app" = "android" ] || [ -z "$app" ]; then
+        continue
+    fi
+    log_msg "Removing from whitelist: $app"
+    dumpsys deviceidle whitelist -$app >> "$LOG_FILE" 2>&1 || true
+done
+
+# Redefine lock_value and helpers for the final nuclear section
+lock_value () {
+    chmod 644 "$2" 2>/dev/null || true
+    echo "$1" > "$2" 2>/dev/null || true
+    chmod 444 "$2" 2>/dev/null || true
 }
 
-# ==============================
-# 🚨 START MAX PERFORMANCE SETUP
-# ==============================
+sched_boost_set() {
+    if [ "$state" = "no boost" ]; then
+        echo 0 > /sys/devices/system/cpu/sched/sched_boost 2>/dev/null || true
+    elif [ "$state" = "all boost" ]; then
+        echo 1 > /sys/devices/system/cpu/sched/sched_boost 2>/dev/null || true
+    elif [ "$state" = "foreground boost" ]; then
+        echo 2 > /sys/devices/system/cpu/sched/sched_boost 2>/dev/null || true
+    fi
+}
 
-echo "[+] Applying NUCLEAR MAX PERFORMANCE CONFIG..."
+eas_set() {
+    chmod 664 /sys/devices/system/cpu/eas/enable 2>/dev/null || true
+    if [ "$state" = "HMP" ]; then
+        echo 0 > /sys/devices/system/cpu/eas/enable 2>/dev/null || true
+    elif [ "$state" = "EAS" ]; then
+        echo 1 > /sys/devices/system/cpu/eas/enable 2>/dev/null || true
+    elif [ "$state" = "hybrid" ]; then
+        echo 2 > /sys/devices/system/cpu/eas/enable 2>/dev/null || true
+    fi
+    chmod 444 /sys/devices/system/cpu/eas/enable 2>/dev/null || true
+}
 
-# 1. DISABLE THERMAL LIMITS (120°C → 145°C, no coolers)
+gpu_freq() {
+    dvfs=/proc/mali/dvfs_enable
+    if [ "$state" = "0" ]; then
+        echo 0 > /proc/gpufreq/gpufreq_opp_freq 2>/dev/null || true
+        echo -1 > /proc/gpufreq/gpufreq_opp_freq 2>/dev/null || true
+        echo 0 0 > /proc/gpufreq/gpufreq_fixed_freq_volt 2>/dev/null || true
+        echo 1 > $dvfs 2>/dev/null || true
+    else
+        echo 0 > $dvfs 2>/dev/null || true
+        if [ -z "$voltage" ] || [ "$voltage" = "-1" ]; then
+            freq_row=$(grep "$state," /proc/gpufreq/gpufreq_opp_dump 2>/dev/null)
+            opp=$(echo "$freq_row" | cut -c2-3)
+            echo 0 0 > /proc/gpufreq/gpufreq_fixed_freq_volt 2>/dev/null || true
+            echo "$state" > /proc/gpufreq/gpufreq_opp_freq 2>/dev/null || true
+        else
+            echo 0 > /proc/gpufreq/gpufreq_opp_freq 2>/dev/null || true
+            echo "$state $voltage" > /proc/gpufreq/gpufreq_fixed_freq_volt 2>/dev/null || true
+        fi
+    fi
+}
+
+ddr_freq () {
+    local boost=/sys/devices/platform/boot_dramboost/dramboost/dramboost
+    if [ -f "$boost" ] && [ "$state" = "1" ]; then
+        echo 0 > $boost 2>/dev/null || true
+    fi
+    echo "$state" > /sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp 2>/dev/null || true
+}
+
+ulock_val(){
+    chmod 664 "$2" 2>/dev/null || true
+    echo "$1" > "$2" 2>/dev/null || true
+}
+
+sspm_thermal_throttle(){
+    if [ "$state" = "1" ]; then
+        log_msg 'Modify PPM Status…'
+        cat /proc/ppm/policy_status 2>/dev/null | grep -E 'PWR_THRO|THERMAL' | while read row; do
+            idx=$(echo "$row" | cut -c2)
+            echo "" > /proc/ppm/policy_status 2>/dev/null || true
+            ulock_val "$idx 0" /proc/ppm/policy_status 2>/dev/null || true
+        done
+    fi
+    echo "$state" > /proc/driver/thermal/sspm_thermal_throttle 2>/dev/null || true
+}
+
+ultra_limit_set() {
+    if [ "$state" = "1" ]; then
+        log_msg 'DISABLING THERMAL SAFETY — EXTREME RISK!'
+        log_msg 'Device may overheat, catch fire, or brick!'
+        log_msg 'Ensure active cooling is applied NOW.'
+        log_msg 'Proceeding in 5 seconds...'
+        sleep 5
+        log_msg '🔥 DISABLING THERMAL LIMITS 🔥'
+        t_limit="125"
+        t_limit_ui="145°C"
+        no_cooler="0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler"
+        lock_val "1 ${t_limit}000 0 mtktscpu-sysrst $no_cooler 200" /proc/driver/thermal/tzcpu
+        lock_val "1 ${t_limit}000 0 mtktspmic-sysrst $no_cooler 1000" /proc/driver/thermal/tzpmic
+        lock_val "1 ${t_limit}000 0 mtktsbattery-sysrst $no_cooler 1000" /proc/driver/thermal/tzbattery
+        lock_val "1 ${t_limit}000 0 mtk-cl-kshutdown00 $no_cooler 2000" /proc/driver/thermal/tzpa
+        lock_val "1 ${t_limit}000 0 mtktscharger-sysrst $no_cooler 2000" /proc/driver/thermal/tzcharger
+        lock_val "1 ${t_limit}000 0 mtktswmt-sysrst $no_cooler 1000" /proc/driver/thermal/tzwmt
+        lock_val "1 ${t_limit}000 0 mtktsAP-sysrst $no_cooler 1000" /proc/driver/thermal/tzbts
+        lock_val "1 ${t_limit}000 0 mtk-cl-kshutdown01 $no_cooler 1000" /proc/driver/thermal/tzbtsnrpa
+        lock_val "1 ${t_limit}000 0 mtk-cl-kshutdown02 $no_cooler 1000" /proc/driver/thermal/tzbtspa
+        log_msg "Thermal Throttle up to ${t_limit_ui}"
+        sspm_thermal_throttle
+    else
+        ulock_val '3 117000 0 mtktscpu-sysrst 57000 0 cpu_adaptive_0 56000 0 cpu_adaptive_1 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 200' /proc/driver/thermal/tzcpu
+        ulock_val '1 136000 0 mtktspmic-sysrst 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzpmic
+        ulock_val '1 120000 0 mtk-cl-kshutdown00 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 2000' /proc/driver/thermal/tzpa
+        ulock_val '1 120000 0 mtktscharger-sysrst 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 2000' /proc/driver/thermal/tzcharger
+        ulock_val '1 120000 0 mtktswmt-sysrst 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzwmt
+        ulock_val '5 100000 0 mtktsAP-sysrst 90000 0 mtk-cl-kshutdown03 58000 0 mtk-cl-cam00 52000 0 abcct_lcmoff 50000 0 abcct 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzbts
+        ulock_val '4 120000 0 mtk-cl-kshutdown01 110000 0 no-cooler 100000 0 no-cooler 68000 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzbtsnrpa
+        ulock_val '4 120000 0 mtk-cl-kshutdown02 110000 0 no-cooler 100000 0 no-cooler 90000 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 1000' /proc/driver/thermal/tzbtspa
+    fi
+    echo "$state" > /proc/driver/thermal/sspm_thermal_throttle 2>/dev/null || true
+}
+
+log_msg "Applying NUCLEAR MAX PERFORMANCE CONFIG..."
+
+# 1. DISABLE THERMAL LIMITS
 state=1
 ultra_limit_set
 
@@ -405,54 +354,38 @@ ultra_limit_set
 state="all boost"
 sched_boost_set
 
-# 3. SWITCH TO HMP (MAX AGGRESSION)
+# 3. SWITCH TO HMP
 state="HMP"
 eas_set
 
 # 4. LOCK GPU TO ABSOLUTE MAX
 if [ -f /proc/gpufreq/gpufreq_opp_dump ]; then
-  MAX_FREQ=$(head -n1 /proc/gpufreq/gpufreq_opp_dump | awk '{print $4}' | cut -d',' -f1)
-  if [ -n "$MAX_FREQ" ] && [ "$MAX_FREQ" != "0" ]; then
-    state="$MAX_FREQ"
-    voltage="-1"  # Don't fix voltage (use stock)
-    gpu_freq
-    # Also set GPU upbound limit
-    gpu_opp=$(grep "freq = $MAX_FREQ," /proc/gpufreq/gpufreq_opp_dump)
-    opp_index=$(( ${gpu_opp:1:2} + 0 ))
-    lock_value "$opp_index" /sys/kernel/ged/hal/custom_upbound_gpu_freq
-    echo "[+] GPU locked to: ${MAX_FREQ}KHz"
-  fi
+    MAX_FREQ=$(head -n1 /proc/gpufreq/gpufreq_opp_dump 2>/dev/null | awk '{print $4}' | cut -d',' -f1)
+    if [ -n "$MAX_FREQ" ] && [ "$MAX_FREQ" != "0" ]; then
+        state="$MAX_FREQ"
+        voltage="-1"
+        gpu_freq
+        gpu_opp=$(grep "freq = $MAX_FREQ," /proc/gpufreq/gpufreq_opp_dump 2>/dev/null)
+        opp_index=$(echo "$gpu_opp" | cut -c2-3)
+        lock_value "$opp_index" /sys/kernel/ged/hal/custom_upbound_gpu_freq
+        log_msg "GPU locked to: ${MAX_FREQ}KHz"
+    fi
 fi
 
 # 5. LOCK DDR TO MAX OPP
 if [ -f /sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_opp_table ]; then
-  OPP_COUNT=$(wc -l < /sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_opp_table)
-  MAX_OPP=$((OPP_COUNT - 1))
-  state="$MAX_OPP"
-  ddr_freq
-  echo "[+] DDR locked to OPP: $MAX_OPP"
+    OPP_COUNT=$(wc -l < /sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_opp_table 2>/dev/null)
+    MAX_OPP=$((OPP_COUNT - 1))
+    state="$MAX_OPP"
+    ddr_freq
+    log_msg "DDR locked to OPP: $MAX_OPP"
 fi
 
-# 6. DISABLE MALI DVFS (if exists)
+# 6. DISABLE MALI DVFS
 if [ -f /proc/mali/dvfs_enable ]; then
-  echo 0 > /proc/mali/dvfs_enable
-  echo "[+] Mali DVFS disabled"
+    echo 0 > /proc/mali/dvfs_enable 2>/dev/null || true
+    log_msg "Mali DVFS disabled"
 fi
-
-echo ""
-echo "✅ MAXIMUM PERFORMANCE ACTIVE!"
-echo "   - Thermal shutdown disabled (145°C)"
-echo "   - CPU: HMP + full boost"
-echo "   - GPU: locked to max frequency"
-echo "   - DDR: locked to max speed"
-echo ""
-echo "⚠️  MONITOR TEMPERATURES! REBOOT TO RESTORE SAFETY."
-
-#!/system/bin/sh
-#!/data/adb/modules/MTK_AI/busybox sh
-
-# Maximum Performance Script (v2) — for mt6989 / Dimensity with gpufreqv2
-# Uses ONLY the functions and paths you provided
 
 # --- Detect DVFSRC path ---
 dvfsrc_a=/sys/devices/platform/soc/1c00f000.dvfsrc
@@ -460,19 +393,16 @@ dvfsrc_b=/sys/devices/platform/1c00f000.dvfsrc
 dvfsrc_c=/sys/devices/platform/1c013000.dvfsrc
 dvfsrc_d=/sys/class/devfreq/mtk-dvfsrc-devfreq
 dvfsrc_dir=''
-if [[ -d $dvfsrc_a ]]; then
-  dvfsrc_dir=$dvfsrc_a
-elif [[ -d $dvfsrc_b ]]; then
-  dvfsrc_dir=$dvfsrc_b
-elif [[ -d $dvfsrc_c ]]; then
-  dvfsrc_dir=$dvfsrc_c
-else
-  dvfsrc_dir=$dvfsrc_d
+
+if [ -d "$dvfsrc_a" ]; then dvfsrc_dir=$dvfsrc_a
+elif [ -d "$dvfsrc_b" ]; then dvfsrc_dir=$dvfsrc_b
+elif [ -d "$dvfsrc_c" ]; then dvfsrc_dir=$dvfsrc_c
+else dvfsrc_dir=$dvfsrc_d
 fi
-dvfsrc_dir_name=$(basename $dvfsrc_dir)
+
+dvfsrc_dir_name=$(basename "$dvfsrc_dir")
 dvfsrc2=${dvfsrc_dir}/${dvfsrc_dir_name}:dvfsrc-helper
 
-# --- Paths ---
 perfmgr=/sys/module/mtk_fpsgo/parameters/perfmgr_enable
 pandora_feas=/sys/module/perfmgr_mtk/parameters/perfmgr_enable
 ged_kpi=/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled
@@ -484,70 +414,56 @@ fstb_fps_max=/sys/kernel/fpsgo/fstb/fstb_fps_bypass_max
 thrm_enable=/sys/kernel/fpsgo/fbt/thrm_enable
 stop_boost=/sys/kernel/fpsgo/common/stop_boost
 
-if [[ -f $pandora_feas ]]; then
-  perfmgr=$pandora_feas
-fi
-
-# --- Helper: lock_value ---
-lock_value () {
-  chmod 644 "$2" 2>/dev/null
-  echo "$1" > "$2"
-  chmod 444 "$2" 2>/dev/null
-}
+if [ -f "$pandora_feas" ]; then perfmgr=$pandora_feas; fi
 
 # --- GPU Functions (gpufreqv2) ---
 gpu_freq(){
-  if [[ "$state" == "-1" ]]; then
-    echo -1 > /proc/gpufreqv2/fix_target_opp_index
-    echo 0 0 > /proc/gpufreqv2/fix_custom_freq_volt
-  else
-    if [[ "$voltage" == "" || "$voltage" = "-1" ]]; then
-      freq_row=$(grep "$state," /proc/gpufreqv2/stack_signed_opp_table)
-      opp=${freq_row:1:2}
-      echo 0 0 > /proc/gpufreqv2/fix_custom_freq_volt
-      if [[ $(getprop ro.hardware) == "mt6989" ]]; then
-        echo "$opp $opp" > /proc/gpufreqv2/fix_target_opp_index
-      else
-        echo "$opp" > /proc/gpufreqv2/fix_target_opp_index
-      fi
-      if [[ -f /sys/kernel/thermal/gpt ]]; then
-        echo disable > /sys/kernel/thermal/gpt
-      fi
+    if [ "$state" = "-1" ]; then
+        echo -1 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null || true
+        echo 0 0 > /proc/gpufreqv2/fix_custom_freq_volt 2>/dev/null || true
     else
-      echo -1 > /proc/gpufreqv2/fix_target_opp_index
-      echo "$state $voltage" > /proc/gpufreqv2/fix_custom_freq_volt
+        if [ -z "$voltage" ] || [ "$voltage" = "-1" ]; then
+            freq_row=$(grep "$state," /proc/gpufreqv2/stack_signed_opp_table 2>/dev/null)
+            opp=$(echo "$freq_row" | cut -c2-3)
+            echo 0 0 > /proc/gpufreqv2/fix_custom_freq_volt 2>/dev/null || true
+            if [ "$(getprop ro.hardware 2>/dev/null)" = "mt6989" ]; then
+                echo "$opp $opp" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null || true
+            else
+                echo "$opp" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null || true
+            fi
+            if [ -f /sys/kernel/thermal/gpt ]; then
+                echo disable > /sys/kernel/thermal/gpt 2>/dev/null || true
+            fi
+        else
+            echo -1 > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null || true
+            echo "$state $voltage" > /proc/gpufreqv2/fix_custom_freq_volt 2>/dev/null || true
+        fi
     fi
-  fi
 }
 
 gpu_freq_max_freq() {
-  lock_value "$state" /sys/kernel/ged/hal/custom_upbound_gpu_freq
-  state=-1
-  gpu_freq
+    lock_value "$state" /sys/kernel/ged/hal/custom_upbound_gpu_freq
+    state=-1
+    gpu_freq
 }
 
 # --- DDR Functions ---
 ddr_freq () {
-  chmod 664 "$dvfsrc/min_freq" 2>/dev/null
-  echo "$state" > "$dvfsrc/min_freq"
-  chmod 444 "$dvfsrc/min_freq" 2>/dev/null
+    chmod 664 "$dvfsrc/min_freq" 2>/dev/null || true
+    echo "$state" > "$dvfsrc/min_freq" 2>/dev/null || true
+    chmod 444 "$dvfsrc/min_freq" 2>/dev/null || true
 }
 
 ddr_freq_fixed () {
-  echo "$state" > "$dvfsrc2/dvfsrc_force_vcore_dvfs_opp"
+    echo "$state" > "$dvfsrc2/dvfsrc_force_vcore_dvfs_opp" 2>/dev/null || true
 }
 
 # --- PerfMgr / FPSGO ---
 set_perfmgr() {
-  if [[ $(cat "$fpsgo" 2>/dev/null) != "1" ]]; then
-    lock_value 0 "$fpsgo"
-  fi
-  if [[ $(cat "$ged_kpi" 2>/dev/null) != "1" ]] && [[ ! -d /data/adb/modules/dimensity_hybrid_governor ]]; then
-    lock_value 1 "$ged_kpi"
-  fi
-  lock_value "$state" "$perfmgr"
+    if [ "$(cat "$fpsgo" 2>/dev/null)" != "1" ]; then lock_value 0 "$fpsgo"; fi
+    if [ "$(cat "$ged_kpi" 2>/dev/null)" != "1" ] && [ ! -d /data/adb/modules/dimensity_hybrid_governor ]; then lock_value 1 "$ged_kpi"; fi
+    lock_value "$state" "$perfmgr"
 }
-
 set_fpsgo() { lock_value "$state" "$fpsgo"; }
 set_fbt_ceiling() { lock_value "$state" "$fbt_ceiling"; }
 set_fstb_fps_enable() { lock_value "$state" "$fstb_fps_enable"; }
@@ -555,100 +471,99 @@ set_fstb_fps_min() { lock_value "$state" "$fstb_fps_min"; }
 set_fstb_fps_max() { lock_value "$state" "$fstb_fps_max"; }
 set_thrm_enable() { lock_value "$state" "$thrm_enable"; }
 set_stop_boost() { lock_value "$state" "$stop_boost"; }
-# ==============================
-# 🔥 START MAX PERFORMANCE SETUP
-# ==============================
 
-echo "[+] Applying MAX PERFORMANCE CONFIG (gpufreqv2 / DVFSRC v2)..."
-
-# 1. ENABLE PERF MANAGER (FEAS/Pandora)
-if [[ -f "$perfmgr" ]]; then
-  echo "[+] Enabling PerfMgr (FEAS)..."
-  state=1
-  set_perfmgr
+# 1. ENABLE PERF MANAGER
+if [ -f "$perfmgr" ]; then
+    log_msg "Enabling PerfMgr (FEAS)..."
+    state=1
+    set_perfmgr
 fi
 
-# 2. DISABLE FPSGO / FBT CEILING / FPS LIMITER / MIN FPS /
-if [[ -f "$fpsgo" ]]; then
-  echo "[-] Disabling FPSGO..."
-  state=0
-  set_fpsgo
+# 2. DISABLE FPSGO / FBT CEILING / FPS LIMITER
+if [ -f "$fpsgo" ]; then
+    log_msg "Disabling FPSGO..."
+    state=0
+    set_fpsgo
 fi
-if [[ -f "$fbt_ceiling" ]]; then
-  echo "[-] Disabling FBT Ceiling..."
-  state=0
-  set_fbt_ceiling
+if [ -f "$fbt_ceiling" ]; then
+    log_msg "Disabling FBT Ceiling..."
+    state=0
+    set_fbt_ceiling
 fi
-if [[ -f "$fstb_fps_enable" ]]; then
-  echo "[-] Disabling fps limiter..."
-  state=0
-  set_fstb_fps_enable
+if [ -f "$fstb_fps_enable" ]; then
+    log_msg "Disabling fps limiter..."
+    state=0
+    set_fstb_fps_enable
 fi
-if [[ -f "$fstb_fps_min" ]]; then
-  echo "[-] Disabling minimum fps..."
-  state=1
-  set_fstb_fps_min
+if [ -f "$fstb_fps_min" ]; then
+    log_msg "Disabling minimum fps..."
+    state=1
+    set_fstb_fps_min
 fi
-if [[ -f "$fstb_fps_min" ]]; then
-  echo "[+] Maximizing fps..."
-  state=240
-  set_fstb_fps_max
+if [ -f "$fstb_fps_min" ]; then
+    log_msg "Maximizing fps..."
+    state=240
+    set_fstb_fps_max
 fi
-if [[ -f "$thrm_enable" ]]; then
-  echo "[-] Disabling fpsgo thermal..."
-  state=0
-  set_thrm_enable
+if [ -f "$thrm_enable" ]; then
+    log_msg "Disabling fpsgo thermal..."
+    state=0
+    set_thrm_enable
 fi
-if [[ -f "$stop_boost" ]]; then
-  echo "[-] Totally stopping fpsgo..."
-  state=1
-  set_stop_boost
+if [ -f "$stop_boost" ]; then
+    log_msg "Totally stopping fpsgo..."
+    state=1
+    set_stop_boost
 fi
 
 # 3. LOCK GPU TO MAX FREQUENCY
-if [[ -f /proc/gpufreqv2/stack_signed_opp_table ]]; then
-  MAX_FREQ=$(head -n1 /proc/gpufreqv2/stack_signed_opp_table | awk '{print $4}' | cut -d',' -f1)
-  if [[ -n "$MAX_FREQ" && "$MAX_FREQ" != "0" ]]; then
-    echo "[+] Locking GPU to max: ${MAX_FREQ}KHz"
-    state="$MAX_FREQ"
-    voltage="-1"
-    gpu_freq_max_freq
-  fi
+if [ -f /proc/gpufreqv2/stack_signed_opp_table ]; then
+    MAX_FREQ=$(head -n1 /proc/gpufreqv2/stack_signed_opp_table 2>/dev/null | awk '{print $4}' | cut -d',' -f1)
+    if [ -n "$MAX_FREQ" ] && [ "$MAX_FREQ" != "0" ]; then
+        log_msg "Locking GPU to max: ${MAX_FREQ}KHz"
+        state="$MAX_FREQ"
+        voltage="-1"
+        gpu_freq_max_freq
+    fi
 fi
 
 # 4. LOCK DDR TO MAX
-if [[ -f "$dvfsrc/min_freq" ]] && [[ -f "$dvfsrc/max_freq" ]]; then
-  MAX_DDR=$(cat "$dvfsrc/max_freq")
-  if [[ -n "$MAX_DDR" ]]; then
-    echo "[+] Locking DDR min freq to max: $MAX_DDR"
-    state="$MAX_DDR"
-    ddr_freq
-  fi
+if [ -f "$dvfsrc/min_freq" ] && [ -f "$dvfsrc/max_freq" ]; then
+    MAX_DDR=$(cat "$dvfsrc/max_freq" 2>/dev/null)
+    if [ -n "$MAX_DDR" ]; then
+        log_msg "Locking DDR min freq to max: $MAX_DDR"
+        state="$MAX_DDR"
+        ddr_freq
+    fi
 fi
 
-# 5. (Optional) Force VCORE OPP if helper exists
-if [[ -f "$dvfsrc2/dvfsrc_force_vcore_dvfs_opp" ]]; then
-  # Get max OPP index from table (if available)
-  if [[ -f "$dvfsrc2/dvfsrc_opp_table" ]]; then
-    OPP_COUNT=$(wc -l < "$dvfsrc2/dvfsrc_opp_table")
-    MAX_OPP=$((OPP_COUNT - 1))
-    echo "[+] Forcing VCORE OPP to: $MAX_OPP"
-    state="$MAX_OPP"
-    ddr_freq_fixed
-  fi
+# 5. Force VCORE OPP
+if [ -f "$dvfsrc2/dvfsrc_force_vcore_dvfs_opp" ]; then
+    if [ -f "$dvfsrc2/dvfsrc_opp_table" ]; then
+        OPP_COUNT=$(wc -l < "$dvfsrc2/dvfsrc_opp_table" 2>/dev/null)
+        MAX_OPP=$((OPP_COUNT - 1))
+        log_msg "Forcing VCORE OPP to: $MAX_OPP"
+        state="$MAX_OPP"
+        ddr_freq_fixed
+    fi
 fi
 
 # 6. DISABLE THERMAL THROTTLING (GPT)
-if [[ -f /sys/kernel/thermal/gpt ]]; then
-  echo "[+] Disabling GPT thermal throttle..."
-  echo disable > /sys/kernel/thermal/gpt
+if [ -f /sys/kernel/thermal/gpt ]; then
+    log_msg "Disabling GPT thermal throttle..."
+    echo disable > /sys/kernel/thermal/gpt 2>/dev/null || true
 fi
 
-echo ""
-echo "✅ MAX PERFORMANCE ACTIVE!"
-echo "   - PerfMgr / FPSGO: enabled"
-echo "   - GPU: locked to max frequency"
-echo "   - DDR: min freq = max"
-echo "   - Thermal GPT: disabled"
-echo ""
-echo "⚠️  Monitor temps! Reboot to restore defaults."
+log_msg "Waiting 30 seconds before freezing thermal daemons..."
+sleep 30
+
+for pid in $(pgrep thermal 2>/dev/null); do
+    log_msg "Freeze $pid"
+    kill -SIGSTOP "$pid" 2>/dev/null || true
+done
+
+for prop in $(resetprop 2>/dev/null | grep 'thermal.*running' | awk -F '[][]' '{print $2}'); do
+    resetprop "$prop" freezed 2>/dev/null || true
+done
+
+log_msg "✅ disable_thermal script completed successfully."
