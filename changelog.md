@@ -2,6 +2,8 @@
 
 •Fixing some permissions denied on some scripts
 
+•Module needs reboot because of post-fs-data to backup default tweaks value
+
 --- version 0.0.1.24 ---
 
 •Adding netblock on specific app (Blocking wifi/data) with toggle for gaming to block background apps on sharing internet & stabilize ping for gaming
