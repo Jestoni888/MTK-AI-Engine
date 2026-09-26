@@ -1,5 +1,8 @@
 #!/system/bin/sh
-[ -f "/dev/.mtk_ai_normal_mode" ] && return 0
+# Explicitly disable exit-on-error to ensure the script never halts prematurely
+set +e
+
+[ -f "/dev/.mtk_ai_normal_mode" ] && exit 0
 pkill -f app_optimizer >/dev/null 2>&1 || true
 
 # --- LOCKFILE TO PREVENT SPAM ---
@@ -10,61 +13,62 @@ fi
 echo $$ > "$LOCKFILE"
 trap 'rm -f "$LOCKFILE"' EXIT
 # --------------------------------
-# ==========================================
-. /data/adb/modules/MTK_AI/script_runner/mtk_ai_manual
-LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 
+# ==========================================
+# Source manual tweaks safely (ignore if missing/broken)
+. /data/adb/modules/MTK_AI/script_runner/mtk_ai_manual 2>/dev/null || true
+
+LOG_FILE="/sdcard/MTK_AI_Engine/MTK_AI_Engine.log"
 log_msg() {
-if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
-  echo "log disabled"
-else
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE" || true
-fi
+    if [ -f "/sdcard/MTK_AI_Engine/disable_log" ]; then
+        echo "log disabled"
+    else
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE" 2>/dev/null || true
+    fi
 }
+
 SDCARD="/sdcard/MTK_AI_Engine"
 BB="/data/adb/modules/MTK_AI/busybox"
 SAVE_DIR="$SDCARD/cooldown_values"
 
 if [ -f "$SDCARD/devfreq_config.json" ] && [ -f "$SDCARD/devfreq_other_config.json" ]; then
-devfreq
+    devfreq 2>/dev/null || true
 else
-nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/default_dvfs.sh" >/dev/null 2>&1 &
+    nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/default_dvfs.sh" >/dev/null 2>&1 &
 fi
 
 # DND
 if [ -f "$SDCARD/enable_dnd_during_game" ]; then
-    cmd statusbar send-disable-flag none
-    cmd notification set_dnd off
-    settings put global heads_up_notifications_enabled 1
+    cmd statusbar send-disable-flag none 2>/dev/null || true
+    cmd notification set_dnd off 2>/dev/null || true
+    settings put global heads_up_notifications_enabled 1 2>/dev/null || true
 fi
 
 # unsuspend background apps
 D="/sdcard/MTK_AI_Engine"
-[ -f "$D/suspend_bg" ] && [ -s "$D/suspended_apps" ] && {
+if [ -f "$D/suspend_bg" ] && [ -s "$D/suspended_apps" ]; then
     while IFS= read -r p || [ -n "$p" ]; do
         p="${p//$'\r'/}"
-        # Added "< /dev/null" to stop pm from eating the rest of the file
-        [ -n "$p" ] && [ ! -f "$D/freeze/$p" ] && pm unsuspend "$p" < /dev/null 2>/dev/null
+        [ -n "$p" ] && [ ! -f "$D/freeze/$p" ] && pm unsuspend "$p" < /dev/null 2>/dev/null || true
     done < "$D/suspended_apps"
-    > "$D/suspended_apps"
-}
+    > "$D/suspended_apps" 2>/dev/null || true
+fi
 
 # Revert Game Driver settings
-cmd device_config delete game_driver game_driver_all_apps
-cmd device_config delete game_driver enable_game_driver
-cmd device_config delete game_driver app_driver_opt_in
+cmd device_config delete game_driver game_driver_all_apps 2>/dev/null || true
+cmd device_config delete game_driver enable_game_driver 2>/dev/null || true
+cmd device_config delete game_driver app_driver_opt_in 2>/dev/null || true
 
 # Revert Updatable GPU Driver settings
-cmd device_config delete gpu updatable_driver_production_opt_in_apps
+cmd device_config delete gpu updatable_driver_production_opt_in_apps 2>/dev/null || true
 
 # Revert SurfaceFlinger Context Priority
-cmd device_config delete surface_flinger_native_boot use_context_priority
+cmd device_config delete surface_flinger_native_boot use_context_priority 2>/dev/null || true
 
 # Remove Vsync
-su -c resetprop -d debug.hwui.disable_vsync 2>/dev/null
-
-echo "-1" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null
-echo "-1" > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null
+su -c resetprop -d debug.hwui.disable_vsync 2>/dev/null || true
+echo "-1" > /proc/gpufreqv2/fix_target_opp_index 2>/dev/null || true
+echo "-1" > /proc/gpufreq/gpufreq_opp_dump 2>/dev/null || true
 
 nohup sh "/sdcard/MTK_AI_Engine/modes/normal_mode.sh" >/dev/null 2>&1 &
 nohup sh "/sdcard/MTK_AI_Engine/setedit-modes/normal.sh" >/dev/null 2>&1 &
@@ -72,84 +76,85 @@ nohup sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/stock_tweaks.sh" >
 
 log_msg "→ Applying Normal EEM offsets from sdcard..."
 for i in b:/proc/eem/EEM_DET_B/eem_offset l:/proc/eem/EEM_DET_L/eem_offset cci:/proc/eem/EEM_DET_CCI/eem_offset bl:/proc/eem/EEM_DET_BL/eem_offset gpu:/proc/eemg/EEMG_DET_GPU/eemg_offset gpu_hi:/proc/eemg/EEMG_DET_GPU_HI/eemg_offset; do
-  k=${i%%:*}; p=${i#*:}; v=$(cat /sdcard/MTK_AI_Engine/eem_offsets/normal/$k.txt 2>/dev/null)
-  [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV"
-done || true
+    k=${i%%:*}; p=${i#*:}; v=$(cat /sdcard/MTK_AI_Engine/eem_offsets/normal/$k.txt 2>/dev/null)
+    [ -n "$v" ] && echo "$v" > "$p" 2>/dev/null && log_msg "[✓] $k: ${v}mV" || true
+done
 
 #Thermal Restored
-find /sys -path '*/thermal/thermal_zone*/mode' -exec sh -c 'chmod 644 "$1" 2>/dev/null; echo enabled > "$1" 2>/dev/null || true' _ {} \;
-cmd thermalservice reset 2>/dev/null
+find /sys -path '*/thermal/thermal_zone*/mode' -exec sh -c 'chmod 644 "$1" 2>/dev/null; echo enabled > "$1" 2>/dev/null || true' _ {} \; 2>/dev/null || true
+cmd thermalservice reset 2>/dev/null || true
 
 #CPUFREQ POWER MODE
 if [ -f "$SDCARD/cpufreq_mode" ]; then
-echo "0" > /proc/cpufreq/cpufreq_power_mode || true
-echo "0" > /proc/cpufreq/cpufreq_cci_mode || true
+    echo "0" > /proc/cpufreq/cpufreq_power_mode 2>/dev/null || true
+    echo "0" > /proc/cpufreq/cpufreq_cci_mode 2>/dev/null || true
 fi
 
 # Powersaver
-settings put global low_power 1
-battery_saver
+settings put global low_power 1 2>/dev/null || true
+battery_saver 2>/dev/null || true
 
 #Powermode
-setprop 'persist.sys.power_mode_perf' '0' || true
-setprop 'persist.sys.perf_boost_enabled' '0' || true
-setprop 'persist.sys.perf_mode' '0' || true
-setprop 'persist.sys.performance' '0' || true
-setprop 'persist.sys.performance_mode' '0' || true
-setprop 'sys.hwc.gpu_perf_mode' '0' || true
-setprop 'vendor.perf.framepacing.enable' '0' || true
-setprop 'vendor.performance.gbe' '0' || true
-settings put global 'sustained_performance_mode_enabled' '0'
+setprop 'persist.sys.power_mode_perf' '0' 2>/dev/null || true
+setprop 'persist.sys.perf_boost_enabled' '0' 2>/dev/null || true
+setprop 'persist.sys.perf_mode' '0' 2>/dev/null || true
+setprop 'persist.sys.performance' '0' 2>/dev/null || true
+setprop 'persist.sys.performance_mode' '0' 2>/dev/null || true
+setprop 'sys.hwc.gpu_perf_mode' '0' 2>/dev/null || true
+setprop 'vendor.perf.framepacing.enable' '0' 2>/dev/null || true
+setprop 'vendor.performance.gbe' '0' 2>/dev/null || true
+settings put global 'sustained_performance_mode_enabled' '0' 2>/dev/null || true
 settings put system persist.sys.power_mode_perf 0 2>/dev/null || true
-cmd power set-mode 1
-cmd power set-adaptive-power-saver-enabled true
-su -c "cmd power set-fixed-performance-mode-enabled false" || true
-su -c "settings put global power_manager_constants fixed_performance_mode=false" || true
+cmd power set-mode 1 2>/dev/null || true
+cmd power set-adaptive-power-saver-enabled true 2>/dev/null || true
+su -c "cmd power set-fixed-performance-mode-enabled false" 2>/dev/null || true
+su -c "settings put global power_manager_constants fixed_performance_mode=false" 2>/dev/null || true
 
 # Powersaving in normal use
-setprop persist.sys.batterysaver true || true
-setprop persist.sys.doze_mode true || true
+setprop persist.sys.batterysaver true 2>/dev/null || true
+setprop persist.sys.doze_mode true 2>/dev/null || true
 
-# Zygote & background apps optimization 
-setprop 'dalvik.vm.usap_pool_enabled' 'true' || true
-settings put global app_standby_enabled 1 || true
-settings put global background_dex_opt_job true || true
+# Zygote & background apps optimization
+setprop 'dalvik.vm.usap_pool_enabled' 'true' 2>/dev/null || true
+settings put global app_standby_enabled 1 2>/dev/null || true
+settings put global background_dex_opt_job true 2>/dev/null || true
 
 # Restore Disable HW & 4XMSAA
-setprop debug.egl.force_msaa false || true
+setprop debug.egl.force_msaa false 2>/dev/null || true
 service call SurfaceFlinger 1008 i32 0 >/dev/null 2>&1 || true
 
 # --- Helper Functions ---
 apply() {
-[ ! -f "$2" ] && return 1
-chmod 644 "$2" >/dev/null 2>&1
-echo "$1" >"$2" 2>/dev/null
-chmod 444 "$2" >/dev/null 2>&1
+    [ ! -f "$2" ] && return 0
+    chmod 644 "$2" >/dev/null 2>&1 || true
+    echo "$1" >"$2" 2>/dev/null || true
+    chmod 444 "$2" >/dev/null 2>&1 || true
 }
-
 write() {
-[ ! -f "$2" ] && return 1
-chmod 644 "$2" >/dev/null 2>&1
-echo "$1" >"$2" 2>/dev/null
+    [ ! -f "$2" ] && return 0
+    chmod 644 "$2" >/dev/null 2>&1 || true
+    echo "$1" >"$2" 2>/dev/null || true
 }
 
 cpufreq_ppm_max_perf() {
-cluster=-1
-for path in /sys/devices/system/cpu/cpufreq/policy*; do
-((cluster++))
-cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
-write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-done
+    cluster=-1
+    for path in /sys/devices/system/cpu/cpufreq/policy*; do
+        [ -d "$path" ] || continue
+        cluster=$((cluster + 1))
+        cpu_maxfreq=$(cat "$path/cpuinfo_max_freq" 2>/dev/null)
+        [ -n "$cpu_maxfreq" ] && write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
+        [ -n "$cpu_maxfreq" ] && write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
+    done
 }
 
 cpufreq_max_perf() {
-for path in /sys/devices/system/cpu/*/cpufreq; do
-cpu_maxfreq=$(<"$path/cpuinfo_max_freq")
-apply "$cpu_maxfreq" "$path/scaling_max_freq"
-apply "$cpu_maxfreq" "$path/scaling_min_freq"
-done
-chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq 2>/dev/null
+    for path in /sys/devices/system/cpu/*/cpufreq; do
+        [ -d "$path" ] || continue
+        cpu_maxfreq=$(cat "$path/cpuinfo_max_freq" 2>/dev/null)
+        [ -n "$cpu_maxfreq" ] && apply "$cpu_maxfreq" "$path/scaling_max_freq"
+        [ -n "$cpu_maxfreq" ] && apply "$cpu_maxfreq" "$path/scaling_min_freq"
+    done
+    chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq 2>/dev/null || true
 }
 
 # --- Common System Tweaks ---
@@ -157,15 +162,15 @@ apply 0 /proc/sys/kernel/panic
 apply 0 /proc/sys/kernel/panic_on_oops
 apply 0 /proc/sys/kernel/panic_on_warn
 apply 0 /proc/sys/kernel/softlockup_panic
-sync
+sync 2>/dev/null || true
 
-find /sys/block -maxdepth 1 -mindepth 1 -exec sh -c 'for d; do echo 0 > $d/queue/iostats; echo 0 > $d/queue/add_random; done' _ {} + &
+find /sys/block -maxdepth 1 -mindepth 1 -exec sh -c 'for d; do echo 0 > $d/queue/iostats 2>/dev/null; echo 0 > $d/queue/add_random 2>/dev/null; done' _ {} + 2>/dev/null &
 
 for algo in bbr3 bbr2 bbrplus bbr westwood cubic; do
-if grep -q "$algo" /proc/sys/net/ipv4/tcp_available_congestion_control 2>/dev/null; then
-apply "$algo" /proc/sys/net/ipv4/tcp_congestion_control
-break
-fi
+    if grep -q "$algo" /proc/sys/net/ipv4/tcp_available_congestion_control 2>/dev/null; then
+        apply "$algo" /proc/sys/net/ipv4/tcp_congestion_control
+        break
+    fi
 done
 
 apply 1 /proc/sys/net/ipv4/tcp_low_latency
@@ -193,49 +198,52 @@ apply 0 /proc/oplus_scheduler/sched_assist/sched_assist_enabled
 apply "libunity.so, libil2cpp.so, libmain.so, libUE4.so, libgodot_android.so, libgdx.so, libgdx-box2d.so, libminecraftpe.so, libLive2DCubismCore.so, libyuzu-android.so, libryujinx.so, libcitra-android.so, libhdr_pro_engine.so, libandroidx.graphics.path.so, libeffect.so" /proc/sys/kernel/sched_lib_name
 apply 255 /proc/sys/kernel/sched_lib_mask_force
 
-find /sys/class/thermal -maxdepth 1 -name "thermal_zone*" -exec sh -c 'for d; do echo step_wise > $d/policy; done' _ {} +
+find /sys/class/thermal -maxdepth 1 -name "thermal_zone*" -exec sh -c 'for d; do echo step_wise > $d/policy 2>/dev/null; done' _ {} + 2>/dev/null || true
 
 # --- Performance Profile ---
-[ -f /sys/module/battery_saver/parameters/enabled ] && {
-if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled; then
-apply 0 /sys/module/battery_saver/parameters/enabled
-else
-apply N /sys/module/battery_saver/parameters/enabled
+if [ -f /sys/module/battery_saver/parameters/enabled ]; then
+    if grep -qo '[0-9]\+' /sys/module/battery_saver/parameters/enabled 2>/dev/null; then
+        apply 0 /sys/module/battery_saver/parameters/enabled
+    else
+        apply N /sys/module/battery_saver/parameters/enabled
+    fi
 fi
-}
 
 apply 0 /proc/sys/kernel/split_lock_mitigate
 
 if [ -f "/sys/kernel/debug/sched_features" ]; then
-apply NEXT_BUDDY /sys/kernel/debug/sched_features
-apply NO_TTWU_QUEUE /sys/kernel/debug/sched_features
+    apply NEXT_BUDDY /sys/kernel/debug/sched_features
+    apply NO_TTWU_QUEUE /sys/kernel/debug/sched_features
 fi
 
 if [ -d "/dev/stune/" ]; then
-apply 1 /dev/stune/top-app/schedtune.prefer_idle
-apply 1 /dev/stune/top-app/schedtune.boost
+    apply 1 /dev/stune/top-app/schedtune.prefer_idle
+    apply 1 /dev/stune/top-app/schedtune.boost
 fi
 
 tp_path="/proc/touchpanel"
 if [ -d "$tp_path" ]; then
-apply 1 $tp_path/game_switch_enable
-apply 0 $tp_path/oplus_tp_limit_enable
-apply 0 $tp_path/oppo_tp_limit_enable
-apply 1 $tp_path/oplus_tp_direction
-apply 1 $tp_path/oppo_tp_direction
+    apply 1 $tp_path/game_switch_enable
+    apply 0 $tp_path/oplus_tp_limit_enable
+    apply 0 $tp_path/oppo_tp_limit_enable
+    apply 1 $tp_path/oplus_tp_direction
+    apply 1 $tp_path/oppo_tp_direction
 fi
 
 apply 80 /proc/sys/vm/vfs_cache_pressure
 
 # Force CPU to highest possible frequency (Frequency locking, not governor)
 if [ -d /proc/ppm ]; then
-cpufreq_ppm_max_perf
+    cpufreq_ppm_max_perf
 else
-cpufreq_max_perf
+    cpufreq_max_perf
 fi
 
-echo 3 >/proc/sys/vm/drop_caches
-wait
-sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" || true
-touch /dev/.mtk_ai_normal_mode
+echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+wait 2>/dev/null || true
+
+sh "/data/adb/modules/MTK_AI/MTK_AI/AI_MODE/normal_mode/bypass_off" 2>/dev/null || true
+touch /dev/.mtk_ai_normal_mode 2>/dev/null || true
+
+log_msg "→ normal_prop script completed successfully."
 exit 0
