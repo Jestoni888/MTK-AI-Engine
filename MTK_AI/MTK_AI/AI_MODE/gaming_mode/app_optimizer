@@ -161,7 +161,7 @@ fi
 
 #Thermal Override
 find /sys -path "*/thermal/cooling_device*/cur_state" -exec chmod 444 {} + 2>/dev/null || true
-find /sys -path '*/thermal/thermal_zone*/mode' -exec sh -c 'echo disabled > "$1" 2>/dev/null || true' _ {} \;
+find /sys -path '*/thermal/thermal_zone*/mode' -exec sh -c 'chmod 644 "$1" 2>/dev/null; echo disabled > "$1" 2>/dev/null || true' _ {} \;
 find /sys/class/thermal/ -type f -name "cdev*_weight" -exec sh -c 'for f; do chmod 664 "$f" 2>/dev/null; echo 0 > "$f" 2>/dev/null; done' _ {} +
 cmd thermalservice override-status 1 2>/dev/null
 
