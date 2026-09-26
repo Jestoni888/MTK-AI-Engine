@@ -1,5 +1,7 @@
 --- version 0.0.1.25 ---
 
+•Boost color boot script fixed
+
 •Fixing some permissions denied on some scripts
 
 •Module needs reboot because of post-fs-data to backup default tweaks value
