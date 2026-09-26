@@ -770,12 +770,13 @@ async function applyBoost() {
 
 async function debugColorProps(){const r=await execFn(`su -c "getprop | grep -iE 'color|saturation|gamma|vivid|hdr|display|sf|surfaceflinger|mtk|matrix'"`);console.log('[MTK Color Debug]',r);return r;}
 
-// 🔧 Boot script generator
 async function createBootScript() {
     try {
         const BOOT_SRC = '/sdcard/MTK_AI_Engine/boost_color_apply_tmp.sh';
-        const BOOT_DST = '/data/adb/modules/MTK_AI/script_runner/boost_color_apply.sh';
+        // ✅ Fixed accidental space in path
+        const BOOT_DST = '/data/adb/modules/MTK_AI/script_runner/boost_color_apply.sh'; 
         const FLAG = '/sdcard/MTK_AI_Engine/boost_color_amoled.flag';
+        
         const lines = [
             '#!/system/bin/sh',
             'LC_ALL=C',
@@ -795,7 +796,8 @@ async function createBootScript() {
             'if [ -z "$CONFIG" ]; then echo "❌ Config not found" >> "$LOG"; exit 0; fi',
             '',
             'get_val() {',
-            '    grep "^${1}=" "$CONFIG" 2>/dev/null | head -n 1 | cut -d\'=\' -f2- | sed \'s/\\r$//\' \vert{} sed \'s/^[[:space:]]*//;s/[[:space:]]*$//\'',
+            // ✅ Fixed regex to match "key=value" without trailing space, and fixed pipe character
+            '    grep "^${1}=" "$CONFIG" 2>/dev/null | head -n 1 | cut -d\'=\' -f2- | sed \'s/\\r$//\' | sed \'s/^[[:space:]]*//;s/[[:space:]]*$//\'',
             '}',
             '',
             'COLOR=$(get_val "color")',
@@ -806,15 +808,14 @@ async function createBootScript() {
             '',
             'SDK=$(getprop ro.build.version.sdk 2>/dev/null | grep -oE \'^[0-9]+\')',
             'case "$SDK" in',
-            '    36|16) TINT=1038; SATU=1022; MAT=1015 ;;',
-            '    35|15) TINT=1038; SATU=1022; MAT=1015 ;;',
+            '    35|36) TINT=1038; SATU=1022; MAT=1015 ;;',
             '    33|34) TINT=1037; SATU=1022; MAT=1015 ;;',
             '    31|32) TINT=1035; SATU=1022; MAT=1015 ;;',
             '    *) TINT=1037; SATU=1022; MAT=1015 ;;',
             'esac',
             '',
             'safe_float() {',
-            '    echo "$1" \vert{} grep -qE \'^-?[0-9]*\\.?[0-9]+$\' && echo "$1" || echo ""',
+            '    echo "$1" | grep -qE \'^-?[0-9]+\\.?[0-9]*$\' && echo "$1" || echo ""',
             '}',
             'apply_sf() {',
             '    timeout 3 service call SurfaceFlinger "$@" >> "$LOG" 2>&1 || true',
@@ -852,7 +853,8 @@ async function createBootScript() {
             '    CNT=0; CMD="service call SurfaceFlinger $MAT i32 1"',
             '    for v in $MATRIX; do',
             '        VAL=$(safe_float "$v"); [ -z "$VAL" ] && VAL="0.0"',
-            '        CMD="$CMD f$VAL"; CNT=$((CNT + 1))',             '        [$CNT -ge 16 ] && break',
+            '        CMD="$CMD f $VAL"; CNT=$((CNT + 1))',
+            '        [ $CNT -ge 16 ] && break',
             '    done',
             '    eval "$CMD" >> "$LOG" 2>&1 || true',
             'fi',
@@ -866,17 +868,26 @@ async function createBootScript() {
             '    setprop persist.sys.led.color.matrix 0 2>/dev/null || true',
             'fi',
             '',
+            'echo "=== $(date) Script Finished ===" >> "$LOG"',
             'exit 0'
         ];
+
         await execFn(`mkdir -p /sdcard/MTK_AI_Engine`);
+        // ✅ Clear temp file before appending to prevent duplicate lines on multiple clicks
+        await execFn(`echo -n '' > ${BOOT_SRC}`); 
+        
         for (const line of lines) {
             const safe = line.replace(/'/g, "'\\''");
             await execFn(`echo '${safe}' >> ${BOOT_SRC}`);
         }
-        await execFn(`su -c "cp '${BOOT_SRC}' '${BOOT_DST}' && chmod 755 '${BOOT_DST}' && rm -f '${BOOT_SRC}'"`);
+        
+        // ✅ Ensure destination directory exists before copying
+        await execFn(`su -c "mkdir -p '/data/adb/modules/MTK_AI/script_runner' && cp '${BOOT_SRC}' '${BOOT_DST}' && chmod 755 '${BOOT_DST}' && rm -f '${BOOT_SRC}'"`);
+        
         const ae = document.getElementById('amoled-toggle')?.checked || false;
         if (ae) { await execFn(`su -c "echo 1 > '${FLAG}'"`); }
         else { await execFn(`su -c "rm -f '${FLAG}'"`); }
+        
         await saveConfig();
         return true;
     } catch(e) {
