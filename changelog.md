@@ -1,3 +1,7 @@
+--- version 0.0.1.25 ---
+
+•Fixing some permissions denied on some scripts
+
 --- version 0.0.1.24 ---
 
 •Adding netblock on specific app (Blocking wifi/data) with toggle for gaming to block background apps on sharing internet & stabilize ping for gaming
