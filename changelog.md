@@ -1,3 +1,7 @@
+--- version 0.0.1.26 ---
+
+•Added rollback module version by using commit history hash sha256
+
 --- version 0.0.1.25 ---
 
 •Boost color boot script fixed
