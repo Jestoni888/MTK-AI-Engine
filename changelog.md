@@ -1,4 +1,4 @@
---- version 0.0.1.26 ---
+--- version 0.0.1.27 ---
 
 •Added rollback module version by using commit history hash sha256
 ⚠️Old version might need to reboot to fully functional 
