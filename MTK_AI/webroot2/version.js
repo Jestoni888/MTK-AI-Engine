@@ -1,4 +1,4 @@
-// version.js - Module Version & Live Rollback Manager (File History Fetcher)
+// version.js - Module Version & Live Rollback Manager (Fixed Manifest Matching)
 (function() {
     'use strict';
     
@@ -32,48 +32,37 @@
 
     async function fetchVersions() {
         try {
-            // 1. Fetch the list of hashes from version.txt
             const hashResponse = await fetch(ONLINE_HASH_URL + '?t=' + Date.now());
             if (!hashResponse.ok) throw new Error('Failed to fetch hashes');
             
             const hashText = await hashResponse.text();
             const hashes = hashText.split('\n').map(h => h.trim()).filter(h => h.length > 10);
 
-            // 2. Fetch commit history from GitHub API to get dates
             let commitHistory = [];
             try {
                 const apiResponse = await fetch(GITHUB_API_URL + '&t=' + Date.now());
                 if (apiResponse.ok) commitHistory = await apiResponse.json();
             } catch (apiErr) { console.warn('GitHub API error, falling back to raw hashes.'); }
 
-            // 3. Fetch actual module.prop content for each hash to get the real version string
             availableVersions = await Promise.all(hashes.map(async (hash) => {
                 const match = commitHistory.find(c => c.sha === hash || c.sha.startsWith(hash));
                 const date = match ? new Date(match.commit.author.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown Date';
                 
-                let historicalVersion = hash.substring(0, 7); // Fallback
+                let historicalVersion = hash.substring(0, 7); 
                 
                 try {
-                    // Fetch the raw module.prop file from this specific commit
                     const propUrl = `https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/${hash}/MTK_AI/module.prop?t=${Date.now()}`;
                     const propRes = await fetch(propUrl);
                     if (propRes.ok) {
                         const propText = await propRes.text();
-                        // Extract the version= line
                         const versionMatch = propText.match(/^version=(.*)$/m);
                         if (versionMatch && versionMatch[1].trim()) {
                             historicalVersion = versionMatch[1].trim();
                         }
                     }
-                } catch (e) {
-                    console.warn(`Failed to fetch prop for ${hash}`);
-                }
+                } catch (e) { console.warn(`Failed to fetch prop for ${hash}`); }
 
-                return { 
-                    hash: hash, 
-                    label: `${historicalVersion} (${date})`, // e.g., "v2.0.0 (Sep 26, 2026)"
-                    shortHash: hash.substring(0, 7) 
-                };
+                return { hash: hash, label: `${historicalVersion} (${date})`, shortHash: hash.substring(0, 7) };
             }));
 
         } catch (e) {
@@ -89,10 +78,7 @@
             
             localVersion = versionMatch ? versionMatch[1].trim() : 'Unknown';
             localHash = hashMatch ? hashMatch[1].trim() : '';
-        } catch (e) { 
-            localVersion = 'Unknown'; 
-            localHash = '';
-        }
+        } catch (e) { localVersion = 'Unknown'; localHash = ''; }
         updateCardDisplay();
     }
 
@@ -135,7 +121,6 @@
         select.id = 'version-select';
         select.style.cssText = `width: 100%; padding: 12px; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; font-size: 13px; outline: none;`;
         
-        // Show loading state if versions aren't ready
         if (availableVersions.length === 0 || availableVersions[0].hash === 'error') {
             const option = document.createElement('option');
             option.textContent = 'Loading commit history...';
@@ -157,9 +142,9 @@
         select.addEventListener('change', (e) => { hashPreview.textContent = `Commit Hash: ${e.target.value}`; });
         selectRow.appendChild(hashPreview);
 
-        // --- LIVE INSTALL BUTTON ---
+        // --- LIVE INSTALL BUTTON (FIXED MANIFEST LOGIC) ---
         const installBtn = document.createElement('button');
-        installBtn.textContent = '⚡ Live Install Selected Version';
+        installBtn.textContent = ' Live Install Selected Version';
         installBtn.style.cssText = `width: 100%; padding: 14px; margin-top: 15px; background: linear-gradient(135deg, #FF453A, #d63031); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 69, 58, 0.4);`;
         
         installBtn.onclick = async () => {
@@ -169,11 +154,15 @@
             
             installBtn.disabled = true;
             installBtn.style.opacity = '0.7';
-            installBtn.textContent = '📥 Fetching manifest...';
+            installBtn.textContent = '📥 Fetching historical manifest...';
             
             try {
-                const manifestRes = await fetch(`${ONLINE_MANIFEST_URL}?t=${Date.now()}`);
-                if (!manifestRes.ok) throw new Error('Manifest fetch failed');
+                // FIX: Fetch the manifest FROM THE TARGET COMMIT HASH, not from main!
+                // This ensures we only download files that actually existed at that time.
+                const targetManifestUrl = ONLINE_MANIFEST_URL.replace('refs/heads/main', targetHash);
+                const manifestRes = await fetch(`${targetManifestUrl}?t=${Date.now()}`);
+                
+                if (!manifestRes.ok) throw new Error('Historical manifest fetch failed');
                 const manifestText = await manifestRes.text();
                 const lines = manifestText.split('\n').filter(l => l.trim() && !l.startsWith('#'));
                 
@@ -186,6 +175,9 @@
                     
                     const destPath = parts[0];
                     let sourceUrl = parts[1];
+                    
+                    // The URLs in the old manifest already point to the old commit, 
+                    // but we replace just in case they were hardcoded to main.
                     sourceUrl = sourceUrl.replace('refs/heads/main', targetHash);
                     
                     const fullPath = `${MODULE_DIR}/${destPath}`;
