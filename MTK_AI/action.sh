@@ -226,7 +226,7 @@ webroot/setedit.js
 webroot/update.js
 webroot/hibernator.js
 webroot/netblock.js
-
+version.js
 "
 
 # === 4. Download helper & Hash checkers ===
