@@ -156,29 +156,6 @@ function formatPackageName(pkg) {
     return name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || pkg;
 }
 
-// === IPTABLES OPERATIONS (with chain auto-creation) ===
-async function ensureChain() {
-    if (!iptablesAvailable) return false;
-    // Create chain if missing
-    await execSilent(`${iptablesCmd} -N NETBLOCK`);
-    await execSilent(`${ip6tablesCmd} -N NETBLOCK`);
-    // Link to OUTPUT if not already linked
-    const linked = await execSilent(`${iptablesCmd} -C OUTPUT -j NETBLOCK`);
-    if (!linked || linked.toLowerCase().includes('no chain') || linked.toLowerCase().includes('bad')) {
-        await execSilent(`${iptablesCmd} -A OUTPUT -j NETBLOCK`);
-    }
-    const linked6 = await execSilent(`${ip6tablesCmd} -C OUTPUT -j NETBLOCK`);
-    if (!linked6 || linked6.toLowerCase().includes('no chain') || linked6.toLowerCase().includes('bad')) {
-        await execSilent(`${ip6tablesCmd} -A OUTPUT -j NETBLOCK`);
-    }
-    return true;
-}
-
-async function addBlockRule(uid) {
-    await execSilent(`${iptablesCmd} -A NETBLOCK -m owner --uid-owner ${uid} -j DROP`);
-    await execSilent(`${ip6tablesCmd} -A NETBLOCK -m owner --uid-owner ${uid} -j DROP`);
-}
-
 // === FIXED: Chain check using exit code approach ===
 async function ensureChain() {
     if (!iptablesAvailable) return false;
@@ -187,11 +164,7 @@ async function ensureChain() {
     await execSilent(`${iptablesCmd} -N NETBLOCK`);
     await execSilent(`${ip6tablesCmd} -N NETBLOCK`);
     
-    // Flush chain to remove any stale rules
-    // (optional, only if you want clean state)
-    
-    // Link to OUTPUT — use a test command that returns output we can check
-    // Since -C exit code is lost in exec, use -L to check instead
+    // Link to OUTPUT — check via -L output
     const listOut = await execSilent(`${iptablesCmd} -L OUTPUT -n --line-numbers`);
     if (!listOut.includes('NETBLOCK')) {
         await execSilent(`${iptablesCmd} -A OUTPUT -j NETBLOCK`);
@@ -207,7 +180,6 @@ async function ensureChain() {
 
 // === FIXED: Add rule with duplicate check ===
 async function addBlockRule(uid) {
-    // Check if rule already exists using -L output
     const existing = await execSilent(`${iptablesCmd} -L NETBLOCK -n`);
     const uidStr = `owner UID match ${uid}`;
     
@@ -219,7 +191,6 @@ async function addBlockRule(uid) {
 
 // === FIXED: Remove rule (removes ALL matching, not just first) ===
 async function removeBlockRule(uid) {
-    // Loop-delete to handle any duplicates that may have accumulated
     let existing = await execSilent(`${iptablesCmd} -L NETBLOCK -n`);
     while (existing.includes(`owner UID match ${uid}`)) {
         await execSilent(`${iptablesCmd} -D NETBLOCK -m owner --uid-owner ${uid} -j DROP`);
@@ -299,7 +270,6 @@ log "=== Done: \$COUNT rules applied ==="
     
     await execFn(`mkdir -p /data/adb/service.d`, 3000);
     await execFn(`mkdir -p "${CONFIG_DIR}"`, 3000);
-    // Write script using printf to avoid shell escaping issues
     const escaped = script.replace(/'/g, "'\\''");
     await execFn(`printf '%s' '${escaped}' > ${BOOT_SCRIPT}`, 5000);
     await execFn(`chmod 755 ${BOOT_SCRIPT}`, 2000);
@@ -366,8 +336,9 @@ function showNetBlockModal() {
         <div style="background:rgba(6,182,212,0.1);color:#7dd3fc;padding:10px;border-radius:8px;font-size:11px;text-align:center;margin-bottom:15px;">
             <i class="fas fa-info-circle"></i> Engine: <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">${iptablesCmd}</code> | Boot: <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">service.d</code>
         </div>
-        <div style="display:flex;gap:10px;">
-            <button id="netblock-unblock-all" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:1px solid #06b6d4;border-radius:10px;font-size:13px;cursor:pointer;">Unblock All</button>
+        <div style="display:flex;gap:8px;">
+            <button id="netblock-block-all" style="flex:1;padding:12px;background:rgba(239,68,68,0.2);color:#ef4444;border:1px solid #ef4444;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Block All</button>
+            <button id="netblock-unblock-all" style="flex:1;padding:12px;background:rgba(16,185,129,0.2);color:#10b981;border:1px solid #10b981;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Unblock All</button>
             <button id="netblock-cancel-btn" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;">Close</button>
         </div>
     `;
@@ -382,6 +353,9 @@ function showNetBlockModal() {
     const refreshBtn = document.getElementById('netblock-refresh-btn');
     if (refreshBtn) refreshBtn.onclick = async () => { await loadConfig(); await scanApps(); };
     
+    const blockAllBtn = document.getElementById('netblock-block-all');
+    if (blockAllBtn) blockAllBtn.onclick = async () => await toggleAllApps(true);
+
     const unblockAllBtn = document.getElementById('netblock-unblock-all');
     if (unblockAllBtn) unblockAllBtn.onclick = async () => await toggleAllApps(false);
     
@@ -550,7 +524,7 @@ async function toggleAllApps(block) {
     if (!statusEl) return;
     
     statusEl.style.display = 'block';
-    statusEl.innerHTML = `<span style="color:#06b6d4;"> ${block ? 'Blocking' : 'Unblocking'}...</span>`;
+    statusEl.innerHTML = `<span style="color:#06b6d4;">⏳ ${block ? 'Blocking all' : 'Unblocking all'} apps...</span>`;
     
     try {
         await ensureChain();
@@ -574,10 +548,11 @@ async function toggleAllApps(block) {
         }
         
         await saveConfig();
-        statusEl.innerHTML = `<span style="color:#32D74B;">✅ Done</span>`;
+        statusEl.innerHTML = `<span style="color:#10b981;">✅ Done</span>`;
         setTimeout(() => { statusEl.style.display = 'none'; }, 1500);
     } catch (e) {
-        statusEl.innerHTML = `<span style="color:#FF453A;">❌ Error</span>`;
+        console.error('Toggle all failed:', e);
+        statusEl.innerHTML = `<span style="color:#ef4444;">❌ Error executing action</span>`;
     }
 }
 
