@@ -1,5 +1,7 @@
 --- version 0.0.1.28 ---
 
+•302e1a8 - Ram hibernator removes save config button, it now automatically setup whatever you do
+
 •e253738 - Added block all apps in netblock (tools tab)
 
 •09ba658 - Added admins access source code (Admin only)
