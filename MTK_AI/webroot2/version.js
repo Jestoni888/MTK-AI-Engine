@@ -1,4 +1,4 @@
-// version.js - Module Version & Live Rollback Manager + GitHub File Manager (GitHub SHA + Commit History)
+// version.js - Module Version & Live Rollback Manager + GitHub File Manager (Enhanced History)
 (function() {
 'use strict';
 const ONLINE_HASH_URL = 'https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/version.txt';
@@ -51,8 +51,9 @@ async function saveGhToken(token) {
     } catch(e) { console.error('Failed to save token:', e); }
 }
 
-async function getGitHubFile(path) {
-    const res = await fetch(`https://api.github.com/repos/${ghCurrentRepo}/contents/${path}`, {
+async function getGitHubFile(path, ref = 'main') {
+    const url = `https://api.github.com/repos/${ghCurrentRepo}/contents/${path}${ref !== 'main' ? '?ref=' + ref : ''}`;
+    const res = await fetch(url, {
         headers: { 'Authorization': `token ${ghToken}`, 'Accept': 'application/vnd.github.v3+json' }
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -180,7 +181,7 @@ function showVersionModal() {
     modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: center; justify-content: center;`;
     const box = document.createElement('div');
     box.style.cssText = `background: linear-gradient(135deg, #1a1f3a, #2d3561); border: 2px solid #FF453A; border-radius: 20px; padding: 24px; width: 95%; max-width: 450px; max-height: 90vh; overflow-y: auto;`;
-    box.innerHTML = `<h3 style="color: #FF453A; margin: 0 0 20px; text-align: center; font-size: 20px;">📦 Module Version & Live Rollback</h3> <div style="margin-bottom: 16px;"> <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #fff; font-size: 13px; font-weight: 600;">Currently Installed</span><span style="color: #32D74B; font-size: 12px;">Local</span></div> <div style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; color: #fff; font-size: 13px; border: 1px solid rgba(255,255,255,0.1);">${localVersion}</div> </div> <div style="margin-bottom: 16px;"> <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #fff; font-size: 13px; font-weight: 600;">Select Target Version</span><span style="color: #0A84FF; font-size: 12px;">GitHub History</span></div> <select id="version-select" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; font-size: 13px;"></select> <div id="hash-preview" style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; color: #FFD700; font-size: 11px; margin-top: 8px; text-align: center;"></div> </div> <button id="install-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #FF453A, #d63031); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer;">📥 Live Install Selected Version</button> <button id="gh-manager-btn" style="width: 100%; padding: 12px; margin-top: 10px; background: rgba(255,255,255,0.05); color: #FFD700; border: 1px solid rgba(255,215,0,0.3); border-radius: 10px; font-size: 13px; cursor: pointer;"> GitHub File Manager (Admin)</button> <button id="close-btn" style="width: 100%; padding: 12px; margin-top: 10px; background: rgba(255,255,255,0.05); color: #8b92b4; border: none; border-radius: 10px; font-size: 13px; cursor: pointer;">Close</button>`;
+    box.innerHTML = `<h3 style="color: #FF453A; margin: 0 0 20px; text-align: center; font-size: 20px;">📦 Module Version & Live Rollback</h3> <div style="margin-bottom: 16px;"> <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #fff; font-size: 13px; font-weight: 600;">Currently Installed</span><span style="color: #32D74B; font-size: 12px;">Local</span></div> <div style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; color: #fff; font-size: 13px; border: 1px solid rgba(255,255,255,0.1);">${localVersion}</div> </div> <div style="margin-bottom: 16px;"> <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #fff; font-size: 13px; font-weight: 600;">Select Target Version</span><span style="color: #0A84FF; font-size: 12px;">GitHub History</span></div> <select id="version-select" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; font-size: 13px;"></select> <div id="hash-preview" style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; color: #FFD700; font-size: 11px; margin-top: 8px; text-align: center;"></div> </div> <button id="install-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #FF453A, #d63031); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer;">📥 Live Install Selected Version</button> <button id="gh-manager-btn" style="width: 100%; padding: 12px; margin-top: 10px; background: rgba(255,255,255,0.05); color: #FFD700; border: 1px solid rgba(255,215,0,0.3); border-radius: 10px; font-size: 13px; cursor: pointer;">📤 GitHub File Manager (Admin)</button> <button id="close-btn" style="width: 100%; padding: 12px; margin-top: 10px; background: rgba(255,255,255,0.05); color: #8b92b4; border: none; border-radius: 10px; font-size: 13px; cursor: pointer;">Close</button>`;
     modal.appendChild(box);
     document.body.appendChild(modal);
     modal.onclick = e => { if (e.target === modal) modal.remove(); };
@@ -296,21 +297,18 @@ function showUploadModal() {
                 <button id="gh-copy-link-btn" style="width:100%; padding:8px; background:#32D74B; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📋 Copy Link</button>
             </div>
             
-            <!-- NEW: GitHub SHA (matches GitHub format) -->
             <button id="gh-act-blobsha" style="width:100%; padding:12px; margin-bottom:10px; background:#17A2B8; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">🔐 View GitHub Blob SHA</button>
             <div id="gh-blobsha-container" style="display:none; margin-bottom:10px; padding:10px; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid rgba(255,255,255,0.2);">
-                <div style="color:#8b92b4; font-size:11px; margin-bottom:6px;">GitHub Blob SHA (same as shown on GitHub):</div>
+                <div style="color:#8b92b4; font-size:11px; margin-bottom:6px;">GitHub Blob SHA:</div>
                 <div id="gh-blobsha-short" style="color:#17A2B8; font-size:14px; font-family:monospace; font-weight:bold; margin-bottom:4px;"></div>
                 <div id="gh-blobsha-full" style="color:#8b92b4; font-size:10px; word-break:break-all; font-family:monospace; margin-bottom:8px;"></div>
-                <button id="gh-copy-blobsha-btn" style="width:100%; padding:8px; background:#17A2B8; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📋 Copy SHA</button>
+                <button id="gh-copy-blobsha-btn" style="width:100%; padding:8px; background:#17A2B8; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;"> Copy SHA</button>
             </div>
             
-            <!-- NEW: View on GitHub -->
-            <button id="gh-act-viewongithub" style="width:100%; padding:12px; margin-bottom:10px; background:#24292e; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">🌐 View on GitHub</button>
+            <button id="gh-act-viewongithub" style="width:100%; padding:12px; margin-bottom:10px; background:#24292e; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;"> View on GitHub</button>
             
-            <!-- NEW: Commit History -->
             <button id="gh-act-history" style="width:100%; padding:12px; margin-bottom:10px; background:#6E5494; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">📜 Commit History</button>
-            <div id="gh-history-container" style="display:none; margin-bottom:10px; padding:10px; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid rgba(255,255,255,0.2); max-height:250px; overflow-y:auto;">
+            <div id="gh-history-container" style="display:none; margin-bottom:10px; padding:10px; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid rgba(255,255,255,0.2); max-height:280px; overflow-y:auto;">
                 <div id="gh-history-list"></div>
             </div>
             
@@ -321,7 +319,7 @@ function showUploadModal() {
         <!-- SIMPLE EDITOR -->
         <div id="gh-simple-editor" style="display:none; position:absolute; inset:0; background:#1e1e1e; z-index:11; flex-direction:column;">
             <div style="padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                <button id="gh-editor-back" style="background:transparent; color:#0A84FF; border:1px solid #0A84FF; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer;">⬅ Back</button>
+                <button id="gh-editor-back" style="background:transparent; color:#0A84FF; border:1px solid #0A84FF; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer;"> Back</button>
                 <span id="gh-editor-title" style="color:#FFD700; font-size:13px; font-weight:bold; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
                 <button id="gh-editor-save" style="padding:6px 14px; background:#32D74B; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">💾 Save</button>
             </div>
@@ -329,6 +327,25 @@ function showUploadModal() {
             <div style="padding:6px 16px; background:rgba(0,0,0,0.3); color:#8b92b4; font-size:11px; display:flex; justify-content:space-between; flex-shrink:0; border-top:1px solid rgba(255,255,255,0.1);">
                 <span id="gh-editor-msg">Ready</span>
                 <span id="gh-editor-size">0 bytes</span>
+            </div>
+        </div>
+
+        <!-- HISTORICAL FILE VIEWER (READ-ONLY) -->
+        <div id="gh-history-viewer" style="display:none; position:absolute; inset:0; background:#1e1e1e; z-index:12; flex-direction:column;">
+            <div style="padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap;">
+                <button id="gh-viewer-back" style="background:transparent; color:#0A84FF; border:1px solid #0A84FF; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer;">⬅ Back</button>
+                <span id="gh-viewer-title" style="color:#FFD700; font-size:13px; font-weight:bold; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+                <span id="gh-viewer-commit-sha" style="color:#17A2B8; font-size:11px; font-family:monospace;"></span>
+            </div>
+            <div style="padding:6px 16px; background:rgba(110,84,148,0.2); border-bottom:1px solid rgba(255,255,255,0.1); flex-shrink:0;">
+                <div style="color:#8b92b4; font-size:10px;">📌 Commit Message:</div>
+                <div id="gh-viewer-commit-msg" style="color:#fff; font-size:12px; word-break:break-word;"></div>
+                <div style="color:#8b92b4; font-size:10px; margin-top:4px;">by <span id="gh-viewer-author"></span> on <span id="gh-viewer-date"></span></div>
+            </div>
+            <textarea id="gh-viewer-textarea" readonly style="flex:1; width:100%; background:#1e1e1e; color:#D4D4D4; border:none; outline:none; padding:12px; font-family:'Courier New', monospace; font-size:13px; line-height:1.5; resize:none; box-sizing:border-box; tab-size:4;"></textarea>
+            <div style="padding:6px 16px; background:rgba(0,0,0,0.3); color:#FF9500; font-size:11px; display:flex; justify-content:space-between; flex-shrink:0; border-top:1px solid rgba(255,255,255,0.1);">
+                <span>🔒 READ-ONLY — Historical Snapshot</span>
+                <span id="gh-viewer-size">0 bytes</span>
             </div>
         </div>
     `;
@@ -360,7 +377,7 @@ function showUploadModal() {
             document.getElementById('gh-auth-section').style.display = 'none';
             document.getElementById('gh-main-section').style.display = 'flex';
             if (!silent) { statusEl().textContent = '✅ Connected!'; statusEl().style.color = '#32D74B'; }
-        } catch (e) { if (!silent) { statusEl().textContent = ` ${e.message}`; statusEl().style.color = '#FF453A'; } }
+        } catch (e) { if (!silent) { statusEl().textContent = `❌ ${e.message}`; statusEl().style.color = '#FF453A'; } }
     }
 
     document.getElementById('gh-connect-btn').onclick = async () => {
@@ -510,22 +527,17 @@ function showUploadModal() {
         }
     };
 
-    // ========== GITHUB BLOB SHA (matches GitHub format) ==========
+    // BLOB SHA
     document.getElementById('gh-act-blobsha').onclick = async () => {
         const container = document.getElementById('gh-blobsha-container');
         const shortEl = document.getElementById('gh-blobsha-short');
         const fullEl = document.getElementById('gh-blobsha-full');
         container.style.display = 'block';
-        
-        // Ensure we have the latest SHA
         try {
             const info = await getGitHubFile(ghCurrentFile.path);
             ghCurrentFile = info;
-            const fullSha = info.sha;
-            const shortSha = fullSha.substring(0, 7); // GitHub's default short format
-            
-            shortEl.textContent = shortSha; // Big, bold, like GitHub
-            fullEl.textContent = fullSha;   // Full 40-char SHA below
+            shortEl.textContent = info.sha.substring(0, 7);
+            fullEl.textContent = info.sha;
         } catch(e) {
             shortEl.textContent = 'Error';
             fullEl.textContent = e.message;
@@ -547,17 +559,14 @@ function showUploadModal() {
         }
     };
 
-    // ========== VIEW ON GITHUB ==========
+    // VIEW ON GITHUB
     document.getElementById('gh-act-viewongithub').onclick = () => {
         const githubUrl = `https://github.com/${ghCurrentRepo}/blob/main/${ghCurrentFile.path}`;
-        // Try to open in external browser via shell
         execFn(`am start -a android.intent.action.VIEW -d "${githubUrl}" 2>/dev/null`, 3000).catch(() => {});
-        // Fallback: show URL for manual copy
         actionStatusEl().textContent = `🌐 Opening: ${githubUrl}`;
-        actionStatusEl().style.color = '#24292e';
     };
 
-    // ========== COMMIT HISTORY ==========
+    // ========== ENHANCED COMMIT HISTORY ==========
     document.getElementById('gh-act-history').onclick = async () => {
         const container = document.getElementById('gh-history-container');
         const listEl = document.getElementById('gh-history-list');
@@ -581,27 +590,99 @@ function showUploadModal() {
                 const date = new Date(commit.commit.author.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                 
                 const item = document.createElement('div');
-                item.style.cssText = 'padding:10px; margin-bottom:8px; background:rgba(0,0,0,0.3); border-radius:6px; border-left:3px solid #6E5494; cursor:pointer;';
+                item.style.cssText = 'padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.3); border-radius:8px; border-left:3px solid #6E5494;';
                 item.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <span style="color:#17A2B8; font-family:monospace; font-size:12px; font-weight:bold;">${shortSha}</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:4px;">
+                        <span style="color:#17A2B8; font-family:monospace; font-size:13px; font-weight:bold;">${shortSha}</span>
                         <span style="color:#8b92b4; font-size:10px;">${date}</span>
                     </div>
-                    <div style="color:#fff; font-size:12px; margin-bottom:4px; word-break:break-word;">${escapeHtml(message)}</div>
-                    <div style="color:#8b92b4; font-size:10px;">by ${escapeHtml(author)}</div>
+                    <div style="color:#fff; font-size:12px; margin-bottom:6px; word-break:break-word;">${escapeHtml(message)}</div>
+                    <div style="color:#8b92b4; font-size:10px; margin-bottom:8px;">by ${escapeHtml(author)}</div>
+                    
+                    <!-- Full SHA row -->
+                    <div style="background:rgba(0,0,0,0.3); border-radius:6px; padding:6px 8px; margin-bottom:6px;">
+                        <div style="color:#8b92b4; font-size:9px; margin-bottom:3px;">Full Commit SHA:</div>
+                        <div style="color:#17A2B8; font-size:10px; font-family:monospace; word-break:break-all; line-height:1.3;">${sha}</div>
+                    </div>
+                    
+                    <!-- Action buttons -->
+                    <div style="display:flex; gap:6px;">
+                        <button class="hist-copy-sha" data-sha="${sha}" style="flex:1; padding:7px; background:rgba(23,162,184,0.2); color:#17A2B8; border:1px solid #17A2B8; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">📋 Copy SHA</button>
+                        <button class="hist-view-file" data-sha="${sha}" data-msg="${escapeAttr(message)}" data-author="${escapeAttr(author)}" data-date="${date}" style="flex:1; padding:7px; background:rgba(110,84,148,0.3); color:#D4B8FF; border:1px solid #6E5494; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">👁️ View File</button>
+                        <button class="hist-open-commit" data-sha="${sha}" style="padding:7px 10px; background:rgba(36,41,46,0.8); color:#fff; border:1px solid #444; border-radius:5px; font-size:11px; cursor:pointer;">🌐</button>
+                    </div>
                 `;
-                item.onclick = () => {
-                    // Open this specific commit on GitHub
+                listEl.appendChild(item);
+            });
+            
+            // Attach event listeners to dynamically created buttons
+            listEl.querySelectorAll('.hist-copy-sha').forEach(btn => {
+                btn.onclick = async () => {
+                    const sha = btn.dataset.sha;
+                    try {
+                        await navigator.clipboard.writeText(sha);
+                        btn.textContent = '✅ Copied!';
+                        setTimeout(() => { btn.textContent = '📋 Copy SHA'; }, 1500);
+                    } catch(err) {
+                        const ta = document.createElement('textarea'); ta.value = sha; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                        document.body.appendChild(ta); ta.select();
+                        try { document.execCommand('copy'); btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy SHA'; }, 1500); } catch(e) {}
+                        document.body.removeChild(ta);
+                    }
+                };
+            });
+            
+            listEl.querySelectorAll('.hist-view-file').forEach(btn => {
+                btn.onclick = () => openHistoricalViewer(btn.dataset.sha, btn.dataset.msg, btn.dataset.author, btn.dataset.date);
+            });
+            
+            listEl.querySelectorAll('.hist-open-commit').forEach(btn => {
+                btn.onclick = () => {
+                    const sha = btn.dataset.sha;
                     const commitUrl = `https://github.com/${ghCurrentRepo}/commit/${sha}`;
                     execFn(`am start -a android.intent.action.VIEW -d "${commitUrl}" 2>/dev/null`, 3000).catch(() => {});
-                    actionStatusEl().textContent = `🌐 Opening commit ${shortSha}...`;
-                    actionStatusEl().style.color = '#6E5494';
+                    actionStatusEl().textContent = `🌐 Opening commit ${sha.substring(0,7)}...`;
                 };
-                listEl.appendChild(item);
             });
         } catch(e) {
             listEl.innerHTML = `<div style="color:#FF453A; font-size:12px; text-align:center; padding:10px;">❌ ${e.message}</div>`;
         }
+    };
+
+    // ========== HISTORICAL FILE VIEWER (READ-ONLY) ==========
+    async function openHistoricalViewer(sha, message, author, date) {
+        const viewer = document.getElementById('gh-history-viewer');
+        const textarea = document.getElementById('gh-viewer-textarea');
+        const title = document.getElementById('gh-viewer-title');
+        const commitShaEl = document.getElementById('gh-viewer-commit-sha');
+        const commitMsgEl = document.getElementById('gh-viewer-commit-msg');
+        const authorEl = document.getElementById('gh-viewer-author');
+        const dateEl = document.getElementById('gh-viewer-date');
+        const sizeEl = document.getElementById('gh-viewer-size');
+        
+        title.textContent = ghCurrentFile.name;
+        commitShaEl.textContent = sha.substring(0, 7);
+        commitMsgEl.textContent = message;
+        authorEl.textContent = author;
+        dateEl.textContent = date;
+        textarea.value = '⏳ Loading historical snapshot...';
+        sizeEl.textContent = '...';
+        viewer.style.display = 'flex';
+        
+        try {
+            // Fetch file content at this specific commit
+            const info = await getGitHubFile(ghCurrentFile.path, sha);
+            const decoded = decodeBase64UTF8(info.content);
+            textarea.value = decoded;
+            sizeEl.textContent = formatBytes(new Blob([decoded]).size);
+        } catch(e) {
+            textarea.value = `❌ Failed to load file at commit ${sha.substring(0,7)}:\n${e.message}\n\nNote: This file may not have existed at this commit, or the path may have changed.`;
+            sizeEl.textContent = 'Error';
+        }
+    }
+
+    document.getElementById('gh-viewer-back').onclick = () => {
+        document.getElementById('gh-history-viewer').style.display = 'none';
     };
 
     function escapeHtml(text) {
@@ -609,11 +690,15 @@ function showUploadModal() {
         div.textContent = text;
         return div.innerHTML;
     }
+    
+    function escapeAttr(text) {
+        return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
 
     // UPLOAD
     document.getElementById('gh-upload-btn').onclick = async () => {
         const fileInput = document.getElementById('gh-file-input');
-        if (!fileInput.files.length) { statusEl().textContent = '❌ Select a file first.'; statusEl().style.color = '#FF453A'; return; }
+        if (!fileInput.files.length) { statusEl().textContent = ' Select a file first.'; statusEl().style.color = '#FF453A'; return; }
         const file = fileInput.files[0];
         const targetPath = ghCurrentPath ? `${ghCurrentPath}/${file.name}` : file.name;
         statusEl().textContent = `⏳ Uploading ${file.name}...`; statusEl().style.color = '#FFD700';
@@ -642,7 +727,7 @@ function showUploadModal() {
                 data.sort((a, b) => (a.type === b.type ? 0 : a.type === 'dir' ? -1 : 1));
                 if (ghCurrentPath !== '') {
                     const backItem = document.createElement('div');
-                    backItem.textContent = '⬅ ..';
+                    backItem.textContent = ' ..';
                     backItem.style.cssText = 'padding: 10px; color: #0A84FF; cursor: pointer; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.05);';
                     backItem.onclick = () => { ghCurrentPath = ghCurrentPath.split('/').slice(0, -1).join('/'); updateBreadcrumb(); fetchDirectoryContents(); };
                     listEl.appendChild(backItem);
