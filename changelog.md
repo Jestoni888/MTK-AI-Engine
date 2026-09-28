@@ -1,6 +1,6 @@
 --- version 0.0.1.29 ---
 
-•768f7c9 - Added CPU governor tunables
+•768f7c9 - Added CPU governor tunables (Cpu governor in Webui)
 
 --- version 0.0.1.28 ---
 
