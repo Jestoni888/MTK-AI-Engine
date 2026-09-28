@@ -1,4 +1,4 @@
-// cpu.js - CPU Frequency Control - TRUE POPUP MODAL (Unified Global Slider + Off-Screen Profile)
+// cpu.js - CPU Frequency Control - TRUE POPUP MODAL (Unified Global Slider + Off-Screen Profile + Tunables Script Generator)
 (function() {
 'use strict';
 const CONFIG_DIR = '/sdcard/MTK_AI_Engine';
@@ -25,8 +25,9 @@ let offscreenFreqPercent = 50;
 let offscreenGovernor = 'powersave';
 let offscreenSaveTimer = null;
 let tunableTimers = {};
+let modifiedTunables = {}; // ✅ Tracks modified tunables for script generation
 
-console.log('[CPU.js] Script loaded - Unified Global Slider, Off-Screen Profile & Governor Tunables Popup');
+console.log('[CPU.js] Script loaded - Unified Global Slider, Off-Screen Profile & Tunables Script Generator');
 
 const execFn = async function(cmd, timeout = 10000) {
 return new Promise((resolve) => {
@@ -266,15 +267,18 @@ const modalContent = document.createElement('div');
 modalContent.style.cssText = `background: linear-gradient(135deg, #121418, #1a1f3a); border: 2px solid #AF52DE; border-radius: 16px; width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(175, 82, 222, 0.4); position: relative; color: #fff;`;
 
 const header = document.createElement('div');
-header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:2px solid #2a3152; position: sticky; top: 0; background: linear-gradient(135deg, #121418, #1a1f3a); z-index: 10; border-radius: 16px 16px 0 0;';
+header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:2px solid #2a3152; position: sticky; top: 0; background: linear-gradient(135deg, #121418, #1a1f3a); z-index: 10; border-radius: 16px 16px 0 0; flex-wrap: wrap; gap: 10px;';
 header.innerHTML = `
-<div>
-<div style="color:#AF52DE; font-size:18px; font-weight:700;">⚙️ Governor Tunables</div>
-<div style="color:#8b92b4; font-size:12px; margin-top:2px;" id="tunables-modal-gov-name">Current: ${currentGovernor}</div>
+<div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
+    <div>
+        <div style="color:#AF52DE; font-size:18px; font-weight:700;">⚙️ Governor Tunables</div>
+        <div style="color:#8b92b4; font-size:12px; margin-top:2px;" id="tunables-modal-gov-name">Current: ${currentGovernor}</div>
+    </div>
 </div>
-<div style="display:flex; align-items:center; gap:12px;">
-<button id="refresh-tunables-btn" style="background:#2a3152; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; font-weight:600;">🔄 Refresh</button>
-<button id="tunables-close-btn" style="width:32px; height:32px; border-radius:50%; border:none; background:#2a3152; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: background 0.2s; line-height:1;">×</button>
+<div style="display:flex; align-items:center; gap:8px; flex-wrap: wrap;">
+    <button id="refresh-tunables-btn" style="background:#2a3152; color:#fff; border:none; border-radius:8px; padding:8px 12px; font-size:12px; cursor:pointer; font-weight:600;">🔄 Refresh</button>
+    <button id="generate-script-btn" style="background:linear-gradient(135deg,#AF52DE,#8B5CF6); color:#fff; border:none; border-radius:8px; padding:8px 12px; font-size:12px; cursor:pointer; font-weight:600; box-shadow: 0 4px 10px rgba(175,82,222,0.3);">💾 Save Script</button>
+    <button id="tunables-close-btn" style="width:32px; height:32px; border-radius:50%; border:none; background:#2a3152; color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: background 0.2s; line-height:1;">×</button>
 </div>`;
 modalContent.appendChild(header);
 
@@ -296,11 +300,88 @@ e.stopPropagation();
 loadAndRenderTunables();
 });
 
+// ✅ Script Generator Event Listener
+document.getElementById('generate-script-btn')?.addEventListener('click', (e) => {
+e.stopPropagation();
+generateTunablesScript();
+});
+
 document.addEventListener('keydown', function tunablesEscHandler(e) {
 if (e.key === 'Escape' && tunablesModalElement?.style.display === 'flex') {
 closeTunablesModal();
 }
 });
+}
+
+// ✅ FIXED SCRIPT GENERATOR - No Unicode, line-by-line writing
+async function generateTunablesScript() {
+    const btn = document.getElementById('generate-script-btn');
+    if (btn) { btn.textContent = '⏳ Generating...'; btn.style.opacity = '0.7'; }
+
+    const scriptPath = `${CONFIG_DIR}/apply_tunables.sh`;
+    
+    try {
+        await execFn(`su -c 'chmod 777 "${CONFIG_DIR}"'`, 100);
+        
+        // Build script as array of lines (ASCII only - no emojis)
+        const lines = [
+            '#!/system/bin/sh',
+            '# MTK AI Engine - Governor Tunables Script',
+            `# Generated: ${new Date().toISOString()}`,
+            `# Governor: ${currentGovernor}`,
+            '',
+            `echo "Applying tunables for ${currentGovernor}..."`,
+            ''
+        ];
+        
+        const entries = Object.entries(modifiedTunables);
+        if (entries.length === 0) {
+            lines.push('echo "No tunables modified in this session."');
+        } else {
+            for (const [path, value] of entries) {
+                // Escape single quotes for shell safety
+                const safeValue = value.replace(/'/g, "'\\''");
+                lines.push(`if [ -f "${path}" ]; then`);
+                lines.push(`  echo '${safeValue}' > "${path}"`);
+                lines.push(`  echo "Applied: ${path} = ${value}"`);
+                lines.push('else');
+                lines.push(`  echo "Skipped (not found): ${path}"`);
+                lines.push('fi');
+                lines.push('');
+            }
+        }
+        
+        // Write file line by line to avoid escaping issues
+        await execFn(`su -c 'echo "${lines[0]}" > "${scriptPath}"'`, 100);
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].replace(/"/g, '\\"');
+            await execFn(`su -c 'echo "${line}" >> "${scriptPath}"'`, 50);
+        }
+        
+        await execFn(`su -c 'chmod 755 "${scriptPath}"'`, 100);
+        
+        // Verify file was created
+        const verify = await execFn(`su -c 'test -f "${scriptPath}" && echo "OK" || echo "FAIL"'`, 100);
+        
+        if (verify?.trim() === 'OK') {
+            if (btn) {
+                btn.textContent = '✅ Saved!';
+                btn.style.opacity = '1';
+                setTimeout(() => { btn.textContent = '💾 Save Script'; }, 2000);
+            }
+            if (window.showStatus) window.showStatus(`Script saved: /sdcard/MTK_AI_Engine/apply_tunables.sh`, '#32D74B');
+        } else {
+            throw new Error('File verification failed');
+        }
+    } catch (e) {
+        console.error('Script generation failed:', e);
+        if (btn) { 
+            btn.textContent = '❌ Failed'; 
+            btn.style.opacity = '1'; 
+            setTimeout(() => { btn.textContent = '💾 Save Script'; }, 2000); 
+        }
+        if (window.showStatus) window.showStatus(`Script generation failed: ${e.message}`, '#FF453A');
+    }
 }
 
 function renderModal() {
@@ -317,7 +398,6 @@ if (e.target === modalElement) closeModal();
 const modalContent = document.createElement('div');
 modalContent.style.cssText = `background: linear-gradient(135deg, #121418, #1a1f3a); border: 2px solid #4a9eff; border-radius: 16px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(74, 158, 255, 0.4); position: relative; color: #fff;`;
 
-// ✅ HEADER: Professional Governor Tunables button
 const header = document.createElement('div');
 header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:2px solid #2a3152; position: sticky; top: 0; background: linear-gradient(135deg, #121418, #1a1f3a); z-index: 10; border-radius: 16px 16px 0 0;';
 header.innerHTML = `
@@ -357,10 +437,9 @@ modalContent.appendChild(header);
 const body = document.createElement('div');
 body.style.cssText = 'padding:20px 24px;';
 
-// Protection toggle
 const protectionRow = document.createElement('div');
 protectionRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding:12px 16px; background:#0a0c10; border-radius:10px; border:1px solid #2a3152;';
-protectionRow.innerHTML = `<div> <div style="color:#fff; font-size:14px; font-weight:600;"> Lock Frequencies</div> <div style="color:#8b92b4; font-size:11px; margin-top:2px;">Prevent system overrides</div> </div>`;
+protectionRow.innerHTML = `<div> <div style="color:#fff; font-size:14px; font-weight:600;">🔒 Lock Frequencies</div> <div style="color:#8b92b4; font-size:11px; margin-top:2px;">Prevent system overrides</div> </div>`;
 const toggleContainer = document.createElement('label');
 toggleContainer.style.cssText = 'position:relative; display:inline-block; width:52px; height:28px; cursor:pointer;';
 const toggleInput = document.createElement('input');
@@ -386,13 +465,11 @@ const statusEl = document.getElementById('status-global');
 if (statusEl) statusEl.textContent = protectionEnabled ? '🔒 Will lock after apply' : '✏️ Editable';
 });
 
-// ON-SCREEN PROFILE
 const slidersContainer = document.createElement('div');
 slidersContainer.style.cssText = 'display:flex; flex-direction:column; gap:16px;';
 slidersContainer.appendChild(createGlobalSlider());
 body.appendChild(slidersContainer);
 
-// OFF-SCREEN PROFILE
 body.appendChild(createOffscreenCard());
 
 modalContent.appendChild(body);
@@ -404,7 +481,6 @@ e.stopPropagation();
 closeModal();
 });
 
-// ✅ Governor Tunables button handler
 document.getElementById('open-tunables-btn')?.addEventListener('click', (e) => {
 e.stopPropagation();
 openTunablesModal();
@@ -470,7 +546,7 @@ card.appendChild(changeBtn);
 const statusRow = document.createElement('div');
 statusRow.id = 'status-global';
 statusRow.style.cssText = 'text-align:center; color:#8b92b4; font-size:11px; margin-top:12px; min-height:16px; font-weight:600;';
-statusRow.textContent = protectionEnabled ? ' Will lock after apply' : '✏️ Editable';
+statusRow.textContent = protectionEnabled ? '🔒 Will lock after apply' : '✏️ Editable';
 card.appendChild(statusRow);
 return card;
 }
@@ -524,7 +600,7 @@ await new Promise(r => setTimeout(r, 100));
 const statusEl = document.getElementById('status-global');
 if (statusEl) {
 if (protectionEnabled && successCount > 0) {
-statusEl.textContent = `🔒 Locked MAX: ${globalMaxPercent}%`;
+statusEl.textContent = ` Locked MAX: ${globalMaxPercent}%`;
 statusEl.style.color = '#32D74B';
 } else if (successCount > 0) {
 statusEl.textContent = `✅ Applied MAX: ${globalMaxPercent}%`;
@@ -535,7 +611,7 @@ statusEl.style.color = '#FF453A';
 }
 }
 if (successCount > 0 && window.showStatus) {
-window.showStatus(`Global MAX: ${globalMaxPercent}% ${protectionEnabled ? '🔒' : ''}`, '#32D74B');
+window.showStatus(`Global MAX: ${globalMaxPercent}% ${protectionEnabled ? '' : ''}`, '#32D74B');
 }
 if (sliderElement) sliderElement.style.opacity = '1';
 } catch (e) {
@@ -550,7 +626,7 @@ const card = document.createElement('div');
 card.style.cssText = 'background:#0a0c10; border:1px solid #2a3152; border-radius:12px; padding:16px; margin-top:16px;';
 const headerRow = document.createElement('div');
 headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;';
-headerRow.innerHTML = `<div><div style="color:#FF9F0A; font-size:16px; font-weight:700;">🌙 Off-Screen Profile</div><div style="color:#8b92b4; font-size:11px; margin-top:2px;">Auto-apply when display is off</div></div>`;
+headerRow.innerHTML = `<div><div style="color:#FF9F0A; font-size:16px; font-weight:700;"> Off-Screen Profile</div><div style="color:#8b92b4; font-size:11px; margin-top:2px;">Auto-apply when display is off</div></div>`;
 const toggleContainer = document.createElement('label');
 toggleContainer.style.cssText = 'position:relative; display:inline-block; width:52px; height:28px; cursor:pointer;';
 const toggleInput = document.createElement('input');
@@ -570,7 +646,7 @@ offscreenEnabled = e.target.checked;
 toggleSlider.style.background = offscreenEnabled ? '#FF9F0A' : '#2a3152';
 toggleKnob.style.left = offscreenEnabled ? '27px' : '3px';
 saveOffscreenSettings();
-if (window.showStatus) window.showStatus(`Off-Screen Profile: ${offscreenEnabled ? 'ENABLED 🌙' : 'DISABLED'}`, offscreenEnabled ? '#FF9F0A' : '#8b92b4');
+if (window.showStatus) window.showStatus(`Off-Screen Profile: ${offscreenEnabled ? 'ENABLED ' : 'DISABLED'}`, offscreenEnabled ? '#FF9F0A' : '#8b92b4');
 });
 card.appendChild(headerRow);
 const content = document.createElement('div');
@@ -741,6 +817,10 @@ const govNameEl = document.getElementById('panel-gov-name');
 if (govNameEl) govNameEl.textContent = currentGovernor;
 const govNameModalEl = document.getElementById('tunables-modal-gov-name');
 if (govNameModalEl) govNameModalEl.textContent = `Current: ${currentGovernor}`;
+
+// ✅ Clear modified tunables when governor changes (paths are governor-specific)
+modifiedTunables = {}; 
+
 if (window.showStatus) window.showStatus(`Governor → ${currentGovernor} ${protectionEnabled ? '🔒' : ''}`, '#32D74B');
 titleEl.textContent = '✅ Applied';
 statusEl.textContent = `${currentGovernor} active`; statusEl.style.color = '#32D74B';
@@ -761,7 +841,7 @@ modal.id = 'cpu-gov-modal';
 modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10001; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px);`;
 const box = document.createElement('div');
 box.style.cssText = `background: linear-gradient(135deg, #1a1f3a, #151b2d); border: 2px solid #4a9eff; border-radius: 16px; padding: 24px; width: 90%; max-width: 400px; box-shadow: 0 20px 60px rgba(74, 158, 255, 0.4);`;
-box.innerHTML = `<h3 style="margin:0 0 16px; font-size:18px; font-weight:700; text-align:center; color:#fff;">🔄 Select Active Governor</h3> <div style="color:#8b92b4; font-size:13px; margin-bottom:20px; text-align:center;"> Current: <span style="color:#32D74B; font-weight:700;">${currentGovernor}</span> </div> <div id="gov-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px;"></div> <button id="gov-close" style="width:100%; padding:12px; background:#2a3152; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">Cancel</button>`;
+box.innerHTML = `<h3 style="margin:0 0 16px; font-size:18px; font-weight:700; text-align:center; color:#fff;"> Select Active Governor</h3> <div style="color:#8b92b4; font-size:13px; margin-bottom:20px; text-align:center;"> Current: <span style="color:#32D74B; font-weight:700;">${currentGovernor}</span> </div> <div id="gov-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:20px;"></div> <button id="gov-close" style="width:100%; padding:12px; background:#2a3152; color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer;">Cancel</button>`;
 const grid = box.querySelector('#gov-grid');
 availableGovernors.forEach(gov => {
 const btn = document.createElement('button');
@@ -895,6 +975,8 @@ const success = await writeWithBusybox(path, value);
 if (protectionEnabled) await lockFilePermissions(path);
 if (statusEl) {
 if (success) {
+// ✅ Track modified tunable for script generation
+modifiedTunables[path] = value;
 statusEl.textContent = '✅ Applied';
 statusEl.style.color = '#32D74B';
 } else {
