@@ -348,7 +348,7 @@ apply_cpu_settings() {
             for cpu in /sys/devices/system/cpu/cpu[0-9]*; do
                 chmod 777 "$cpu/cpufreq/scaling_governor" 2>/dev/null
                 echo "$gov" > "$cpu/cpufreq/scaling_governor" 2>/dev/null
-                setsid /sdcard/MTK_AI_Engine/apply_tunables.sh >/dev/null 2>&1&
+                nohup sh "/sdcard/MTK_AI_Engine/apply_tunables.sh" >/dev/null 2>&1&
             done
         fi
     fi
