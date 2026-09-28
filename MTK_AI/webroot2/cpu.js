@@ -313,22 +313,22 @@ closeTunablesModal();
 });
 }
 
-// ✅ FIXED SCRIPT GENERATOR - No Unicode, line-by-line writing
+// ✅ FIXED SCRIPT GENERATOR - Applies to ALL CPUs, not just cpu0
 async function generateTunablesScript() {
     const btn = document.getElementById('generate-script-btn');
-    if (btn) { btn.textContent = '⏳ Generating...'; btn.style.opacity = '0.7'; }
+    if (btn) { btn.textContent = 'Generating...'; btn.style.opacity = '0.7'; }
 
     const scriptPath = `${CONFIG_DIR}/apply_tunables.sh`;
     
     try {
         await execFn(`su -c 'chmod 777 "${CONFIG_DIR}"'`, 100);
         
-        // Build script as array of lines (ASCII only - no emojis)
         const lines = [
             '#!/system/bin/sh',
             '# MTK AI Engine - Governor Tunables Script',
             `# Generated: ${new Date().toISOString()}`,
             `# Governor: ${currentGovernor}`,
+            '# Applies tunables to ALL CPU cores',
             '',
             `echo "Applying tunables for ${currentGovernor}..."`,
             ''
@@ -339,19 +339,45 @@ async function generateTunablesScript() {
             lines.push('echo "No tunables modified in this session."');
         } else {
             for (const [path, value] of entries) {
-                // Escape single quotes for shell safety
                 const safeValue = value.replace(/'/g, "'\\''");
-                lines.push(`if [ -f "${path}" ]; then`);
-                lines.push(`  echo '${safeValue}' > "${path}"`);
-                lines.push(`  echo "Applied: ${path} = ${value}"`);
-                lines.push('else');
-                lines.push(`  echo "Skipped (not found): ${path}"`);
-                lines.push('fi');
+                
+                // Detect if path is CPU-specific (contains /cpuN/)
+                const cpuMatch = path.match(/\/cpu(\d+)\//);
+                
+                if (cpuMatch) {
+                    // Generate loop for all CPUs
+                    lines.push(`# Apply to all CPU cores`);
+                    lines.push(`for cpu_dir in /sys/devices/system/cpu/cpu[0-9]*; do`);
+                    lines.push(`  tunable_path="$cpu_dir/cpufreq/${currentGovernor}/${path.split('/').pop()}"`);
+                    lines.push(`  if [ -f "$tunable_path" ]; then`);
+                    lines.push(`    echo '${safeValue}' > "$tunable_path"`);
+                    lines.push(`    echo "Applied: $tunable_path = ${value}"`);
+                    lines.push(`  fi`);
+                    lines.push(`done`);
+                } else if (path.includes('/cpufreq/policy')) {
+                    // Generate loop for all policies
+                    lines.push(`# Apply to all CPU policies`);
+                    lines.push(`for policy_dir in /sys/devices/system/cpu/cpufreq/policy*; do`);
+                    lines.push(`  tunable_path="$policy_dir/${path.split('/').pop()}"`);
+                    lines.push(`  if [ -f "$tunable_path" ]; then`);
+                    lines.push(`    echo '${safeValue}' > "$tunable_path"`);
+                    lines.push(`    echo "Applied: $tunable_path = ${value}"`);
+                    lines.push(`  fi`);
+                    lines.push(`done`);
+                } else {
+                    // Single path (no expansion needed)
+                    lines.push(`if [ -f "${path}" ]; then`);
+                    lines.push(`  echo '${safeValue}' > "${path}"`);
+                    lines.push(`  echo "Applied: ${path} = ${value}"`);
+                    lines.push('else');
+                    lines.push(`  echo "Skipped (not found): ${path}"`);
+                    lines.push('fi');
+                }
                 lines.push('');
             }
         }
         
-        // Write file line by line to avoid escaping issues
+        // Write file line by line
         await execFn(`su -c 'echo "${lines[0]}" > "${scriptPath}"'`, 100);
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].replace(/"/g, '\\"');
@@ -360,27 +386,26 @@ async function generateTunablesScript() {
         
         await execFn(`su -c 'chmod 755 "${scriptPath}"'`, 100);
         
-        // Verify file was created
         const verify = await execFn(`su -c 'test -f "${scriptPath}" && echo "OK" || echo "FAIL"'`, 100);
         
         if (verify?.trim() === 'OK') {
             if (btn) {
-                btn.textContent = '✅ Saved!';
+                btn.textContent = 'Saved!';
                 btn.style.opacity = '1';
-                setTimeout(() => { btn.textContent = '💾 Save Script'; }, 2000);
+                setTimeout(() => { btn.textContent = 'Save Script'; }, 2000);
             }
-            if (window.showStatus) window.showStatus(`Script saved: /sdcard/MTK_AI_Engine/apply_tunables.sh`, '#32D74B');
+            if (window.showStatus) window.showStatus('Script saved: /sdcard/MTK_AI_Engine/apply_tunables.sh', '#32D74B');
         } else {
             throw new Error('File verification failed');
         }
     } catch (e) {
         console.error('Script generation failed:', e);
         if (btn) { 
-            btn.textContent = '❌ Failed'; 
+            btn.textContent = 'Failed'; 
             btn.style.opacity = '1'; 
-            setTimeout(() => { btn.textContent = '💾 Save Script'; }, 2000); 
+            setTimeout(() => { btn.textContent = 'Save Script'; }, 2000); 
         }
-        if (window.showStatus) window.showStatus(`Script generation failed: ${e.message}`, '#FF453A');
+        if (window.showStatus) window.showStatus('Script generation failed: ' + e.message, '#FF453A');
     }
 }
 
