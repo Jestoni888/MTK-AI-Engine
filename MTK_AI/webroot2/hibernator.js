@@ -1,4 +1,4 @@
-// hibernator.js - RAM Hibernator with Real App Names & Icons
+// hibernator.js - RAM Hibernator with Real App Names & Icons (Auto-Save Enabled)
 (function() {
 'use strict';
 const execFn = window.exec || async function(cmd, timeout = 5000) {
@@ -30,11 +30,10 @@ const CRITICAL_APPS = [
 ];
 
 let installedPackages = [];
-let appLabels = {}; // pkg -> real app name
+let appLabels = {}; 
 let forceKillList = [];
 let neverKillList = [];
 
-// === FROM application.js: Normalize package list ===
 function normalizePkgList(raw) {
     let arr = [];
     if (Array.isArray(raw)) arr = raw;
@@ -45,10 +44,9 @@ function normalizePkgList(raw) {
         else arr = s.split('\n');
     }
     return arr.map(p => (typeof p === 'string' ? p : (p && (p.packageName || p.package)) || ''))
-              .map(s => s.replace(/^package:/, '').trim()).filter(Boolean);
+        .map(s => s.replace(/^package:/, '').trim()).filter(Boolean);
 }
 
-// === FROM application.js: Get all packages ===
 async function getAllPackages() {
     let pkgs = [];
     try {
@@ -62,7 +60,6 @@ async function getAllPackages() {
     return pkgs;
 }
 
-// === FROM application.js: Enrich apps with labels ===
 async function enrichApps(pkgs) {
     const labels = {};
     try {
@@ -81,9 +78,8 @@ async function enrichApps(pkgs) {
     return labels;
 }
 
-// === FROM application.js: Format package name ===
 function formatPackageName(pkg) {
-    let name = pkg.replace(/^(com|io|org|net|app|me|jp|kr|cn|in|br|ru|de|fr|es|it)\./, '');
+    let name = pkg.replace(/^(com|io|org|net|app|me|jp|kr|cn|in|br|ru|de|fr|es|it)./, '');
     const parts = name.split('.');
     if (parts.length >= 2) name = parts.slice(-2).join(' ');
     return name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || pkg;
@@ -101,14 +97,18 @@ async function init() {
 async function showHibernatorModal() {
     const existing = document.getElementById('hibernator-modal');
     if (existing) existing.remove();
+
     const modal = document.createElement('div');
     modal.id = 'hibernator-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);';
+
     const box = document.createElement('div');
     box.style.cssText = 'background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #3b82f6;border-radius:20px;padding:24px;width:95%;max-width:640px;max-height:90vh;overflow-y:auto;';
+    
     box.innerHTML = `
         <h3 style="color:#3b82f6;margin:0 0 5px;font-size:20px;text-align:center;">❄️ RAM Hibernator</h3>
-        <p style="color:#8b92b4;font-size:12px;text-align:center;margin-bottom:20px;">Manage auto-kill rules per app</p>
+        <p style="color:#8b92b4;font-size:12px;text-align:center;margin-bottom:20px;">Manage auto-kill rules per app (Auto-Save Enabled)</p>
+        
         <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
             <div style="display:flex;align-items:center;gap:12px;flex:1;">
                 <div style="width:36px;height:36px;background:rgba(59,130,246,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -126,42 +126,34 @@ async function showHibernatorModal() {
                 </span>
             </label>
         </div>
+
         <div style="margin-bottom:25px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
                 <label style="color:#fff;font-size:13px;font-weight:600;">RAM usage Threshold to trigger hibernator</label>
                 <span id="threshold-value" style="color:#3b82f6;font-size:16px;font-weight:700;background:rgba(59,130,246,0.15);padding:4px 12px;border-radius:6px;">60%</span>
             </div>
-            <input type="range" id="hib-threshold" min="30" max="90" value="60" step="5"
-                style="width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;outline:none;-webkit-appearance:none;">
+            <input type="range" id="hib-threshold" min="30" max="90" value="60" step="5" style="width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;outline:none;-webkit-appearance:none;">
             <div style="display:flex;justify-content:space-between;margin-top:6px;">
                 <span style="color:#6b7280;font-size:10px;">30%</span>
                 <span style="color:#6b7280;font-size:10px;">60%</span>
                 <span style="color:#6b7280;font-size:10px;">90%</span>
             </div>
         </div>
+
         <div style="margin-bottom:15px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <label style="color:#fff;font-size:13px;font-weight:600;"> Installed Apps</label>
+                    <label style="color:#fff;font-size:13px;font-weight:600;">Installed Apps</label>
                     <span id="app-count" style="color:#8b92b4;font-size:11px;"></span>
                 </div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    <button id="kill-all-now-btn" style="padding:6px 12px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">
-                        ☠️ Kill All Now
-                    </button>
-                    <button id="bulk-force-btn" style="padding:6px 12px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">
-                        ⚡ Add All to Force Kill
-                    </button>
-                    <button id="bulk-never-btn" style="padding:6px 12px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">
-                        🛡️ Protect All
-                    </button>
-                    <button id="clear-all-btn" style="padding:6px 12px;background:rgba(107,114,128,0.3);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;white-space:nowrap;">
-                        Clear Lists
-                    </button>
+                    <button id="kill-all-now-btn" style="padding:6px 12px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">☠️ Kill All Now</button>
+                    <button id="bulk-force-btn" style="padding:6px 12px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">⚡ Add All to Force Kill</button>
+                    <button id="bulk-never-btn" style="padding:6px 12px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">🛡️ Protect All</button>
+                    <button id="clear-all-btn" style="padding:6px 12px;background:rgba(107,114,128,0.3);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;white-space:nowrap;">Clear Lists</button>
                 </div>
             </div>
-            <input type="text" id="hib-pkg-search" placeholder="🔍 Search apps..." 
-                style="width:100%;padding:10px;background:rgba(0,0,0,0.3);border:1px solid #4b5563;border-radius:10px;color:#fff;font-size:12px;outline:none;margin-bottom:10px;">
+            <input type="text" id="hib-pkg-search" placeholder="🔍 Search apps..." style="width:100%;padding:10px;background:rgba(0,0,0,0.3);border:1px solid #4b5563;border-radius:10px;color:#fff;font-size:12px;outline:none;margin-bottom:10px;">
             <div id="hib-pkg-list" style="max-height:380px;overflow-y:auto;">
                 <div style="padding:20px;color:#8b92b4;text-align:center;font-size:12px;">
                     <div style="margin-bottom:8px;">⏳ Loading apps...</div>
@@ -169,25 +161,44 @@ async function showHibernatorModal() {
                 </div>
             </div>
         </div>
+
         <div id="hib-status" style="text-align:center;color:#fbbf24;font-size:12px;margin-bottom:15px;min-height:18px;"></div>
+        
         <div style="display:flex;gap:10px;">
-            <button id="hib-save-btn" style="flex:1;padding:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;">
-                💾 Save Config
-            </button>
-            <button id="hib-close-btn" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;transition:all 0.2s;">
-                Close
-            </button>
+            <button id="hib-close-btn" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;transition:all 0.2s;">Close</button>
         </div>
     `;
+
     modal.appendChild(box);
     document.body.appendChild(modal);
+
     modal.onclick = e => { if (e.target === modal) modal.remove(); };
     document.getElementById('hib-close-btn').onclick = () => modal.remove();
+
     const slider = document.getElementById('hib-threshold');
     const thresholdValue = document.getElementById('threshold-value');
-    slider.oninput = function() { thresholdValue.textContent = this.value + '%'; };
+    
+    // Auto-save threshold with debounce
+    let thresholdSaveTimeout;
+    slider.oninput = function() {
+        thresholdValue.textContent = this.value + '%';
+        clearTimeout(thresholdSaveTimeout);
+        thresholdSaveTimeout = setTimeout(async () => {
+            try {
+                await writeConfigFile(THRESHOLD_FILE, this.value);
+                const statusEl = document.getElementById('hib-status');
+                if (statusEl) {
+                    statusEl.textContent = '✅ Threshold saved';
+                    statusEl.style.color = '#10b981';
+                    setTimeout(() => { statusEl.textContent = ''; }, 1500);
+                }
+            } catch (e) { console.error(e); }
+        }, 400);
+    };
+
     const toggle = document.getElementById('enable-cleaner-toggle');
     const toggleSlider = document.getElementById('toggle-slider');
+
     function updateToggleVisual() {
         if (toggle.checked) {
             toggleSlider.style.backgroundColor = '#3b82f6';
@@ -197,10 +208,12 @@ async function showHibernatorModal() {
             toggleSlider.querySelector('span').style.transform = 'translateX(0)';
         }
     }
+
     toggle.onchange = async function() {
         try {
             if (this.checked) await execFn(`touch ${ENABLE_CLEANER_FILE}`);
             else await execFn(`rm -f ${ENABLE_CLEANER_FILE}`);
+            
             const statusEl = document.getElementById('hib-status');
             statusEl.textContent = `✅ Auto RAM Cleaner ${this.checked ? 'Enabled' : 'Disabled'}`;
             statusEl.style.color = '#10b981';
@@ -208,12 +221,13 @@ async function showHibernatorModal() {
         } catch (e) { console.error(e); }
         updateToggleVisual();
     };
+
     document.getElementById('kill-all-now-btn').onclick = () => killAllRunningNow();
     document.getElementById('bulk-force-btn').onclick = () => bulkAddToForceKill();
     document.getElementById('bulk-never-btn').onclick = () => bulkAddToNeverKill();
     document.getElementById('clear-all-btn').onclick = () => clearAllLists();
     document.getElementById('hib-pkg-search').addEventListener('input', filterPackages);
-    document.getElementById('hib-save-btn').onclick = saveConfigs;
+
     await loadConfigs();
     await loadCleanerToggle();
     await loadPackages();
@@ -233,12 +247,12 @@ async function loadCleanerToggle() {
 }
 
 function isCriticalApp(pkg) {
-    return CRITICAL_APPS.includes(pkg) || 
-           pkg.startsWith('android.hardware.') || 
-           pkg.startsWith('android.system.') || 
-           pkg.startsWith('vendor.') ||
-           pkg.startsWith('com.android.system') ||
-           pkg === 'com.google.android.webview';
+    return CRITICAL_APPS.includes(pkg) ||
+        pkg.startsWith('android.hardware.') ||
+        pkg.startsWith('android.system.') ||
+        pkg.startsWith('vendor.') ||
+        pkg.startsWith('com.android.system') ||
+        pkg === 'com.google.android.webview';
 }
 
 async function loadPackages() {
@@ -247,11 +261,8 @@ async function loadPackages() {
     try {
         const allPkgs = await getAllPackages();
         installedPackages = allPkgs;
-        
-        // Enrich with real app names
         const labels = await enrichApps(allPkgs);
         appLabels = labels;
-        
         renderPackages(installedPackages);
         appCountEl.textContent = `${installedPackages.length} apps`;
     } catch (e) {
@@ -281,9 +292,11 @@ async function showAppDetails(pkg) {
     const inForceKill = forceKillList.includes(pkg);
     const inNeverKill = neverKillList.includes(pkg);
     const isCritical = isCriticalApp(pkg);
+
     const detailModal = document.createElement('div');
     detailModal.id = 'app-detail-modal';
     detailModal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);';
+
     let statusBadge = '';
     if (isCritical) {
         statusBadge = '<span style="color:#f59e0b;font-size:11px;font-weight:700;padding:4px 10px;background:rgba(245,158,11,0.2);border-radius:4px;">CRITICAL - LOCKED</span>';
@@ -294,6 +307,7 @@ async function showAppDetails(pkg) {
     } else {
         statusBadge = '<span style="color:#6b7280;font-size:11px;font-weight:600;padding:4px 10px;background:rgba(107,114,128,0.15);border-radius:4px;">INACTIVE</span>';
     }
+
     let runningStatus = '';
     if (runningInfo.isRunning) {
         runningStatus = `
@@ -305,9 +319,7 @@ async function showAppDetails(pkg) {
                 <div style="color:#fff;font-size:12px;margin-bottom:8px;">PID: <span style="color:#fca5a5;font-family:monospace;">${runningInfo.pid}</span></div>
                 <div style="color:#fff;font-size:12px;margin-bottom:12px;">Processes: <span style="color:#fca5a5;">${runningInfo.processCount}</span></div>
                 ${runningInfo.memInfo ? `<div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px;margin-bottom:12px;"><pre style="color:#8b92b4;font-size:10px;margin:0;font-family:monospace;">${runningInfo.memInfo}</pre></div>` : ''}
-                <button id="force-stop-btn" style="width:100%;padding:10px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
-                    ☠️ Force Stop Now
-                </button>
+                <button id="force-stop-btn" style="width:100%;padding:10px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">☠️ Force Stop Now</button>
             </div>
         `;
     } else {
@@ -321,13 +333,12 @@ async function showAppDetails(pkg) {
             </div>
         `;
     }
+
     detailModal.innerHTML = `
         <div style="background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #3b82f6;border-radius:20px;padding:24px;width:95%;max-width:450px;position:relative;">
             <button id="detail-close-btn" style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.1);border:none;border-radius:50%;width:32px;height:32px;color:#fff;cursor:pointer;font-size:16px;">✕</button>
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;">
-                <img src="ksu://icon/${pkg}" 
-                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
-                    style="width:56px;height:56px;border-radius:12px;object-fit:cover;">
+                <img src="ksu://icon/${pkg}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:56px;height:56px;border-radius:12px;object-fit:cover;">
                 <div style="display:none;width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:bold;">${getAppName(pkg).charAt(0).toUpperCase()}</div>
                 <div style="flex:1;min-width:0;">
                     <div style="color:#fff;font-size:16px;font-weight:700;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${getAppName(pkg)}</div>
@@ -341,19 +352,21 @@ async function showAppDetails(pkg) {
             </div>
             <div style="display:flex;gap:8px;margin-top:15px;">
                 ${!isCritical ? `
-                <button id="modal-force-btn" data-action="force" style="flex:1;padding:10px;background:${inForceKill ? '#ef4444' : 'rgba(239,68,68,0.15)'};color:${inForceKill ? '#fff' : '#fca5a5'};border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;">
-                    ${inForceKill ? '✓ Remove from Force Kill' : '⚡ Add to Force Kill'}
-                </button>
-                <button id="modal-never-btn" data-action="never" style="flex:1;padding:10px;background:${inNeverKill ? '#10b981' : 'rgba(16,185,129,0.15)'};color:${inNeverKill ? '#fff' : '#6ee7b7'};border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;">
-                    ${inNeverKill ? '✓ Remove Protection' : '🛡️ Protect'}
-                </button>
+                    <button id="modal-force-btn" data-action="force" style="flex:1;padding:10px;background:${inForceKill ? '#ef4444' : 'rgba(239,68,68,0.15)'};color:${inForceKill ? '#fff' : '#fca5a5'};border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;">
+                        ${inForceKill ? '✓ Remove from Force Kill' : '⚡ Add to Force Kill'}
+                    </button>
+                    <button id="modal-never-btn" data-action="never" style="flex:1;padding:10px;background:${inNeverKill ? '#10b981' : 'rgba(16,185,129,0.15)'};color:${inNeverKill ? '#fff' : '#6ee7b7'};border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;">
+                        ${inNeverKill ? '✓ Remove Protection' : '🛡️ Protect'}
+                    </button>
                 ` : '<div style="flex:1;text-align:center;color:#6b7280;font-size:11px;">Cannot modify critical app</div>'}
             </div>
         </div>
     `;
+
     document.body.appendChild(detailModal);
     detailModal.onclick = e => { if (e.target === detailModal) detailModal.remove(); };
     document.getElementById('detail-close-btn').onclick = () => detailModal.remove();
+
     if (!isCritical) {
         document.getElementById('modal-force-btn').onclick = () => {
             togglePackage(pkg, 'force');
@@ -370,6 +383,7 @@ async function showAppDetails(pkg) {
             renderPackages(filtered);
         };
     }
+
     if (runningInfo.isRunning) {
         document.getElementById('force-stop-btn').onclick = async () => {
             const btn = document.getElementById('force-stop-btn');
@@ -401,19 +415,22 @@ function renderPackages(pkgs) {
         listEl.innerHTML = '<div style="padding:20px;color:#8b92b4;text-align:center;font-size:12px;">No matching packages found</div>';
         return;
     }
+
     listEl.innerHTML = pkgs.map(pkg => {
         const inForceKill = forceKillList.includes(pkg);
         const inNeverKill = neverKillList.includes(pkg);
         const isCritical = isCriticalApp(pkg);
         const appName = getAppName(pkg);
         const firstLetter = appName.charAt(0).toUpperCase();
+
         let statusHtml = '';
         let forceBtnStyle = 'background:rgba(239,68,68,0.15);color:#fca5a5;';
         let neverBtnStyle = 'background:rgba(16,185,129,0.15);color:#6ee7b7;';
         let forceBtnText = '⚡ Force Kill';
-        let neverBtnText = '️ Never Kill';
+        let neverBtnText = '🛡️ Never Kill';
         let forceDisabled = isCritical ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : '';
         let neverDisabled = isCritical ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : '';
+
         if (isCritical) {
             statusHtml = '<span style="color:#f59e0b;font-size:10px;font-weight:700;padding:3px 8px;background:rgba(245,158,11,0.2);border-radius:4px;">CRITICAL</span>';
             forceBtnText = '🔒 Locked';
@@ -429,32 +446,26 @@ function renderPackages(pkgs) {
         } else {
             statusHtml = '<span style="color:#6b7280;font-size:10px;font-weight:600;padding:3px 8px;background:rgba(107,114,128,0.15);border-radius:4px;">INACTIVE</span>';
         }
+
         return `
-        <div class="app-item" data-pkg="${pkg}" style="display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:8px;background:rgba(255,255,255,0.05);border-radius:12px;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-            <img src="ksu://icon/${pkg}" 
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" 
-                style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;background:rgba(0,0,0,0.2);">
-            <div style="display:none;width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#2563eb);align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:bold;flex-shrink:0;">${firstLetter}</div>
-            <div style="flex:1;min-width:0;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
-                    <span style="color:#fff;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${appName}</span>
-                    ${statusHtml}
+            <div class="app-item" data-pkg="${pkg}" style="display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:8px;background:rgba(255,255,255,0.05);border-radius:12px;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                <img src="ksu://icon/${pkg}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;background:rgba(0,0,0,0.2);">
+                <div style="display:none;width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#2563eb);align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:bold;flex-shrink:0;">${firstLetter}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                        <span style="color:#fff;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${appName}</span>
+                        ${statusHtml}
+                    </div>
+                    <div style="color:#8b92b4;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pkg}</div>
                 </div>
-                <div style="color:#8b92b4;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pkg}</div>
+                <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+                    <button data-pkg="${pkg}" data-action="force" class="toggle-btn" ${forceDisabled} style="${forceBtnStyle}padding:6px 10px;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap;transition:all 0.2s;min-width:85px;">${forceBtnText}</button>
+                    <button data-pkg="${pkg}" data-action="never" class="toggle-btn" ${neverDisabled} style="${neverBtnStyle}padding:6px 10px;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap;transition:all 0.2s;min-width:85px;">${neverBtnText}</button>
+                </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
-                <button data-pkg="${pkg}" data-action="force" class="toggle-btn" 
-                    ${forceDisabled} style="${forceBtnStyle}padding:6px 10px;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap;transition:all 0.2s;min-width:85px;">
-                    ${forceBtnText}
-                </button>
-                <button data-pkg="${pkg}" data-action="never" class="toggle-btn" 
-                    ${neverDisabled} style="${neverBtnStyle}padding:6px 10px;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap;transition:all 0.2s;min-width:85px;">
-                    ${neverBtnText}
-                </button>
-            </div>
-        </div>
         `;
     }).join('');
+
     listEl.querySelectorAll('.app-item').forEach(item => {
         item.onclick = (e) => {
             if (!e.target.classList.contains('toggle-btn')) {
@@ -463,6 +474,7 @@ function renderPackages(pkgs) {
             }
         };
     });
+
     listEl.querySelectorAll('.toggle-btn:not([disabled])').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation();
@@ -502,30 +514,39 @@ function togglePackage(pkg, action) {
             if (forceIdx > -1) forceKillList.splice(forceIdx, 1);
         }
     }
+    
     const q = document.getElementById('hib-pkg-search').value.toLowerCase().trim();
     const filtered = q ? installedPackages.filter(p => getAppName(p).toLowerCase().includes(q) || p.toLowerCase().includes(q)) : installedPackages;
     renderPackages(filtered);
+    
+    // Auto-save lists
+    autoSaveLists();
 }
 
 async function killAllRunningNow() {
     const statusEl = document.getElementById('hib-status');
     const btn = document.getElementById('kill-all-now-btn');
     const runningApps = [];
+
     for (const pkg of forceKillList) {
         const info = await getAppRunningInfo(pkg);
         if (info.isRunning) runningApps.push(pkg);
     }
+
     if (runningApps.length === 0) {
         statusEl.textContent = 'ℹ️ No apps from Force Kill list are currently running';
         statusEl.style.color = '#6b7280';
         setTimeout(() => { statusEl.textContent = ''; }, 2500);
         return;
     }
+
     if (!confirm(`Kill ${runningApps.length} running apps NOW?\n\n${runningApps.map(p => getAppName(p)).join('\n')}\n\nThis will force stop them immediately.`)) return;
+
     btn.disabled = true;
     btn.innerHTML = '☠️ Killing...';
     statusEl.textContent = `⏳ Killing ${runningApps.length} apps...`;
     statusEl.style.color = '#fbbf24';
+
     let killedCount = 0;
     for (const pkg of runningApps) {
         try {
@@ -535,11 +556,13 @@ async function killAllRunningNow() {
             await new Promise(r => setTimeout(r, 300));
         } catch (e) { console.error(`Failed to kill ${pkg}:`, e); }
     }
+
     btn.disabled = false;
-    btn.innerHTML = '️ Kill All Now';
+    btn.innerHTML = '☠️ Kill All Now';
     statusEl.textContent = `✅ Successfully killed ${killedCount}/${runningApps.length} apps`;
     statusEl.style.color = '#10b981';
     setTimeout(() => { statusEl.textContent = ''; }, 3000);
+
     const q = document.getElementById('hib-pkg-search').value.toLowerCase().trim();
     const filtered = q ? installedPackages.filter(p => getAppName(p).toLowerCase().includes(q) || p.toLowerCase().includes(q)) : installedPackages;
     renderPackages(filtered);
@@ -548,14 +571,18 @@ async function killAllRunningNow() {
 async function bulkAddToForceKill() {
     const statusEl = document.getElementById('hib-status');
     const nonCritical = installedPackages.filter(pkg => !isCriticalApp(pkg) && !forceKillList.includes(pkg));
+
     if (nonCritical.length === 0) {
         statusEl.textContent = 'ℹ️ All eligible apps already in Force Kill list';
         statusEl.style.color = '#6b7280';
         return;
     }
+
     if (!confirm(`Add ${nonCritical.length} apps to Force Kill list?\n\nCritical system apps will be excluded automatically.`)) return;
+
     statusEl.textContent = `⏳ Adding ${nonCritical.length} apps to Force Kill...`;
     statusEl.style.color = '#fbbf24';
+
     nonCritical.forEach(pkg => {
         if (!forceKillList.includes(pkg)) {
             forceKillList.push(pkg);
@@ -563,7 +590,10 @@ async function bulkAddToForceKill() {
             if (idx > -1) neverKillList.splice(idx, 1);
         }
     });
+
     renderPackages(installedPackages);
+    autoSaveLists(); // Auto-save
+    
     statusEl.textContent = `✅ Added ${nonCritical.length} apps to Force Kill list`;
     statusEl.style.color = '#10b981';
     setTimeout(() => { statusEl.textContent = ''; }, 2500);
@@ -572,14 +602,18 @@ async function bulkAddToForceKill() {
 async function bulkAddToNeverKill() {
     const statusEl = document.getElementById('hib-status');
     const nonCritical = installedPackages.filter(pkg => !isCriticalApp(pkg) && !neverKillList.includes(pkg));
+
     if (nonCritical.length === 0) {
-        statusEl.textContent = '️ All eligible apps already protected';
+        statusEl.textContent = '🛡️ All eligible apps already protected';
         statusEl.style.color = '#6b7280';
         return;
     }
+
     if (!confirm(`Protect ${nonCritical.length} apps from being killed?\n\nCritical system apps are always protected.`)) return;
+
     statusEl.textContent = `⏳ Protecting ${nonCritical.length} apps...`;
     statusEl.style.color = '#fbbf24';
+
     nonCritical.forEach(pkg => {
         if (!neverKillList.includes(pkg)) {
             neverKillList.push(pkg);
@@ -587,7 +621,10 @@ async function bulkAddToNeverKill() {
             if (idx > -1) forceKillList.splice(idx, 1);
         }
     });
+
     renderPackages(installedPackages);
+    autoSaveLists(); // Auto-save
+    
     statusEl.textContent = `✅ Protected ${nonCritical.length} apps`;
     statusEl.style.color = '#10b981';
     setTimeout(() => { statusEl.textContent = ''; }, 2500);
@@ -595,9 +632,12 @@ async function bulkAddToNeverKill() {
 
 function clearAllLists() {
     if (!confirm('Clear both Force Kill and Never Kill lists?\n\nThis will reset all app rules.')) return;
+    
     forceKillList = [];
     neverKillList = [];
     renderPackages(installedPackages);
+    autoSaveLists(); // Auto-save
+    
     const statusEl = document.getElementById('hib-status');
     statusEl.textContent = '✅ All lists cleared';
     statusEl.style.color = '#10b981';
@@ -613,15 +653,19 @@ async function loadConfigs() {
         const threshold = (await execFn(`cat ${THRESHOLD_FILE} 2>/dev/null`)).trim();
         const forceKill = (await execFn(`cat ${FORCE_KILL_FILE} 2>/dev/null`)).trim();
         const neverKill = (await execFn(`cat ${NEVER_KILL_FILE} 2>/dev/null`)).trim();
+
         const thresholdNum = parseInt(threshold) || 60;
         document.getElementById('hib-threshold').value = thresholdNum;
         document.getElementById('threshold-value').textContent = thresholdNum + '%';
+
         forceKillList = forceKill ? forceKill.split('\n').map(l => l.trim()).filter(l => l) : [];
         neverKillList = neverKill ? neverKill.split('\n').map(l => l.trim()).filter(l => l) : [];
+
         statusEl.textContent = '✅ Configs loaded';
         statusEl.style.color = '#10b981';
+        setTimeout(() => { statusEl.textContent = ''; }, 2000);
     } catch (e) {
-        statusEl.textContent = '️ Failed to load configs';
+        statusEl.textContent = '❌ Failed to load configs';
         statusEl.style.color = '#ef4444';
     }
 }
@@ -631,29 +675,13 @@ async function writeConfigFile(path, content) {
     await execFn(`printf '%b\\n' '${escaped}' > ${path}`);
 }
 
-async function saveConfigs() {
-    const statusEl = document.getElementById('hib-status');
-    const saveBtn = document.getElementById('hib-save-btn');
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '💾 Saving...';
-    statusEl.textContent = 'Writing to disk...';
-    statusEl.style.color = '#fbbf24';
-    const threshold = document.getElementById('hib-threshold').value;
-    const forceKill = forceKillList.join('\n');
-    const neverKill = neverKillList.join('\n');
+// === NEW AUTO-SAVE FUNCTION ===
+async function autoSaveLists() {
     try {
-        await writeConfigFile(THRESHOLD_FILE, threshold);
-        await writeConfigFile(FORCE_KILL_FILE, forceKill);
-        await writeConfigFile(NEVER_KILL_FILE, neverKill);
-        statusEl.textContent = '✅ Saved! Shell script will apply on next cycle.';
-        statusEl.style.color = '#10b981';
-        setTimeout(() => document.getElementById('hibernator-modal').remove(), 1200);
+        await writeConfigFile(FORCE_KILL_FILE, forceKillList.join('\n'));
+        await writeConfigFile(NEVER_KILL_FILE, neverKillList.join('\n'));
     } catch (e) {
-        statusEl.textContent = '❌ Save failed. Check root permissions.';
-        statusEl.style.color = '#ef4444';
-    } finally {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '💾 Save Config';
+        console.error('Auto-save failed:', e);
     }
 }
 
