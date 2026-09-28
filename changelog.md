@@ -1,8 +1,8 @@
 --- version 0.0.1.28 ---
 
-•Added block all apps in netblock (tools tab)
+•e253738-Added block all apps in netblock (tools tab)
 
-•Added admins access source code (Admin only)
+•09ba658-Added admins access source code (Admin only)
 
 --- version 0.0.1.27 ---
 
