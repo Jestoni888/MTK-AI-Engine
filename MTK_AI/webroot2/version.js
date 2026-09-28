@@ -1,9 +1,8 @@
-// version.js - Module Version & Live Rollback Manager + GitHub File Manager (Enhanced History)
+// version.js - Module Version & Live Rollback Manager + GitHub File Manager (Auto-Update Enabled)
 (function() {
 'use strict';
 const ONLINE_HASH_URL = 'https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/version.txt';
 const ONLINE_MANIFEST_URL = 'https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt';
-const GITHUB_API_URL = 'https://api.github.com/repos/Jestoni888/MTK-AI-Engine/commits?path=MTK_AI/module.prop&per_page=100';
 const LOCAL_PROP_PATH = '/data/adb/modules/MTK_AI/module.prop';
 const MODULE_DIR = '/data/adb/modules/MTK_AI';
 const BUSYBOX = '/data/adb/modules/MTK_AI/busybox';
@@ -108,6 +107,15 @@ function readFileAsBase64(file) {
     });
 }
 
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsText(file);
+    });
+}
+
 function decodeBase64UTF8(b64) {
     try {
         const binary = atob(b64.replace(/\n/g, ''));
@@ -124,14 +132,95 @@ function encodeUTF8Base64(text) {
     return btoa(binary);
 }
 
+// ========== AUTO-UPDATE VERSION CHAIN ==========
+async function autoUpdateModuleProp(initialContent) {
+    const msgEl = document.getElementById('gh-editor-msg') || document.getElementById('gh-status') || document.getElementById('gh-action-status');
+    const setStatus = (text, color) => { if (msgEl) { msgEl.textContent = text; if (color) msgEl.style.color = color; } };
+    
+    try {
+        setStatus('⏳ Uploading initial module.prop...', '#FFD700');
+        const base64_1 = encodeUTF8Base64(initialContent);
+        const res1 = await uploadOrReplaceFile('MTK_AI/module.prop', base64_1, 'Update module.prop via WebUI');
+        const commit1Sha = res1.commit.sha;
+        const shortSha = commit1Sha.slice(-7);
+        
+        let updatedContent = initialContent.replace(/^version=.+$/m, (match) => {
+            const ver = match.substring(8).replace(/-[a-f0-9]{7}$/, '');
+            return `version=${ver}-${shortSha}`;
+        });
+        
+        const vcMatch = updatedContent.match(/^versionCode=(\d+)$/m);
+        const versionMatch = updatedContent.match(/^version=(.+)$/m);
+        const newVersion = versionMatch ? versionMatch[1] : '';
+        const newVersionCode = vcMatch ? parseInt(vcMatch[1]) : null;
+        
+        setStatus(' Appending SHA to version...', '#FFD700');
+        const base64_2 = encodeUTF8Base64(updatedContent);
+        const res2 = await uploadOrReplaceFile('MTK_AI/module.prop', base64_2, `Update version to ${newVersion}`);
+        const commit2Sha = res2.commit.sha;
+        
+        setStatus(' Updating version.txt...', '#FFD700');
+        let versionTxtContent = '';
+        try {
+            const vInfo = await getGitHubFile('version.txt');
+            versionTxtContent = decodeBase64UTF8(vInfo.content);
+        } catch(e) {}
+        versionTxtContent = commit2Sha + '\n' + versionTxtContent;
+        await uploadOrReplaceFile('version.txt', encodeUTF8Base64(versionTxtContent), `Prepend commit ${commit2Sha.slice(0,7)}`);
+        
+        if (newVersion && newVersionCode !== null) {
+            setStatus('🔄 Updating update.json...', '#FFD700');
+            try {
+                const uInfo = await getGitHubFile('update.json');
+                let uJson = JSON.parse(decodeBase64UTF8(uInfo.content));
+                uJson.version = newVersion;
+                uJson.versionCode = newVersionCode;
+                await uploadOrReplaceFile('update.json', encodeUTF8Base64(JSON.stringify(uJson, null, 2)), `Update to ${newVersion}`);
+            } catch(e) { console.error('Failed to update update.json', e); }
+        }
+        
+        setStatus('✅ All version files auto-updated!', '#32D74B');
+        return true;
+    } catch (e) {
+        setStatus(`❌ Auto-update failed: ${e.message}`, '#FF453A');
+        console.error(e);
+        return false;
+    }
+}
+
 async function fetchVersions() {
     try {
         const hashResponse = await fetch(ONLINE_HASH_URL + '?t=' + Date.now());
         if (!hashResponse.ok) throw new Error('Failed to fetch hashes');
         const hashText = await hashResponse.text();
         const hashes = hashText.split('\n').map(h => h.trim()).filter(h => h.length > 10);
+        
         let commitHistory = [];
-        try { const apiResponse = await fetch(GITHUB_API_URL + '&t=' + Date.now()); if (apiResponse.ok) commitHistory = await apiResponse.json(); } catch (apiErr) {}
+        let page = 1;
+        let hasMore = true;
+        
+        try {
+            while (hasMore) {
+                const apiUrl = `https://api.github.com/repos/Jestoni888/MTK-AI-Engine/commits?path=MTK_AI/module.prop&per_page=100&page=${page}&t=${Date.now()}`;
+                const apiResponse = await fetch(apiUrl);
+                if (apiResponse.ok) {
+                    const data = await apiResponse.json();
+                    if (data.length === 0) {
+                        hasMore = false;
+                    } else {
+                        commitHistory = commitHistory.concat(data);
+                        page++;
+                        const allFound = hashes.every(h => commitHistory.some(c => c.sha === h || c.sha.startsWith(h)));
+                        if (allFound) hasMore = false;
+                    }
+                } else {
+                    hasMore = false;
+                }
+            }
+        } catch (apiErr) {
+            console.error("Pagination error:", apiErr);
+        }
+        
         availableVersions = await Promise.all(hashes.map(async (hash) => {
             const match = commitHistory.find(c => c.sha === hash || c.sha.startsWith(hash));
             const date = match ? new Date(match.commit.author.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown Date';
@@ -181,12 +270,14 @@ function showVersionModal() {
     modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: center; justify-content: center;`;
     const box = document.createElement('div');
     box.style.cssText = `background: linear-gradient(135deg, #1a1f3a, #2d3561); border: 2px solid #FF453A; border-radius: 20px; padding: 24px; width: 95%; max-width: 450px; max-height: 90vh; overflow-y: auto;`;
-    box.innerHTML = `<h3 style="color: #FF453A; margin: 0 0 20px; text-align: center; font-size: 20px;">📦 Module Version & Live Rollback</h3> <div style="margin-bottom: 16px;"> <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #fff; font-size: 13px; font-weight: 600;">Currently Installed</span><span style="color: #32D74B; font-size: 12px;">Local</span></div> <div style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; color: #fff; font-size: 13px; border: 1px solid rgba(255,255,255,0.1);">${localVersion}</div> </div> <div style="margin-bottom: 16px;"> <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #fff; font-size: 13px; font-weight: 600;">Select Target Version</span><span style="color: #0A84FF; font-size: 12px;">GitHub History</span></div> <select id="version-select" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; font-size: 13px;"></select> <div id="hash-preview" style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; color: #FFD700; font-size: 11px; margin-top: 8px; text-align: center;"></div> </div> <button id="install-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #FF453A, #d63031); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer;">📥 Live Install Selected Version</button> <button id="gh-manager-btn" style="width: 100%; padding: 12px; margin-top: 10px; background: rgba(255,255,255,0.05); color: #FFD700; border: 1px solid rgba(255,215,0,0.3); border-radius: 10px; font-size: 13px; cursor: pointer;">📤 GitHub File Manager (Admin)</button> <button id="close-btn" style="width: 100%; padding: 12px; margin-top: 10px; background: rgba(255,255,255,0.05); color: #8b92b4; border: none; border-radius: 10px; font-size: 13px; cursor: pointer;">Close</button>`;
+    box.innerHTML = `<h3 style="color: #FF453A; margin: 0 0 20px; text-align: center; font-size: 20px;">📦 Module Version & Live Rollback</h3> <div style="margin-bottom: 16px;"> <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #fff; font-size: 13px; font-weight: 600;">Currently Installed</span><span style="color: #32D74B; font-size: 12px;">Local</span></div> <div style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; color: #fff; font-size: 13px; border: 1px solid rgba(255,255,255,0.1);">${localVersion}</div> </div> <div style="margin-bottom: 16px;"> <div style="display: flex; justify-content: space-between; margin-bottom: 6px;"><span style="color: #fff; font-size: 13px; font-weight: 600;">Select Target Version</span><span style="color: #0A84FF; font-size: 12px;">GitHub History</span></div> <select id="version-select" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; font-size: 13px;"></select> <div id="hash-preview" style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 10px; color: #FFD700; font-size: 11px; margin-top: 8px; text-align: center;"></div> </div> <button id="install-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #FF453A, #d63031); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer;"> Live Install Selected Version</button> <button id="gh-manager-btn" style="width: 100%; padding: 12px; margin-top: 10px; background: rgba(255,255,255,0.05); color: #FFD700; border: 1px solid rgba(255,215,0,0.3); border-radius: 10px; font-size: 13px; cursor: pointer;">📤 GitHub File Manager (Admin)</button> <button id="close-btn" style="width: 100%; padding: 12px; margin-top: 10px; background: rgba(255,255,255,0.05); color: #8b92b4; border: none; border-radius: 10px; font-size: 13px; cursor: pointer;">Close</button>`;
     modal.appendChild(box);
     document.body.appendChild(modal);
     modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    
     const select = box.querySelector('#version-select');
     const hashPreview = box.querySelector('#hash-preview');
+    
     if (availableVersions.length === 0 || availableVersions[0].hash === 'error') {
         const option = document.createElement('option'); option.textContent = 'Loading...'; select.appendChild(option);
     } else {
@@ -195,14 +286,16 @@ function showVersionModal() {
             if (v.hash === localHash) option.selected = true; select.appendChild(option);
         });
     }
+    
     hashPreview.textContent = `Commit Hash: ${select.value}`;
     select.addEventListener('change', (e) => { hashPreview.textContent = `Commit Hash: ${e.target.value}`; });
+    
     box.querySelector('#install-btn').onclick = async () => {
         const targetHash = select.value;
         const selectedVersion = availableVersions.find(v => v.hash === targetHash);
         if (targetHash === 'error' || !targetHash || targetHash.length < 10) return alert('Invalid selection');
         const btn = box.querySelector('#install-btn');
-        btn.disabled = true; btn.style.opacity = '0.7'; btn.textContent = '📥 Fetching manifest...';
+        btn.disabled = true; btn.style.opacity = '0.7'; btn.textContent = '📥 Fetching manifest...'; 
         try {
             const targetManifestUrl = ONLINE_MANIFEST_URL.replace('refs/heads/main', targetHash);
             const manifestRes = await fetch(`${targetManifestUrl}?t=${Date.now()}`);
@@ -231,9 +324,10 @@ function showVersionModal() {
             btn.style.background = 'linear-gradient(135deg, #32D74B, #248a3d)';
             localVersion = humanVersion; localHash = targetHash;
             updateCardDisplay();
-        } catch (err) { btn.textContent = '❌ Failed. Check logs.'; btn.style.background = '#FF453A'; }
+        } catch (err) { btn.textContent = ' Failed. Check logs.'; btn.style.background = '#FF453A'; }
         btn.disabled = false; btn.style.opacity = '1';
     };
+    
     box.querySelector('#gh-manager-btn').onclick = () => { modal.remove(); showUploadModal(); };
     box.querySelector('#close-btn').onclick = () => modal.remove();
 }
@@ -247,7 +341,6 @@ function showUploadModal() {
     modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 8px; box-sizing: border-box;`;
     const box = document.createElement('div');
     box.style.cssText = `background: linear-gradient(135deg, #1a1f3a, #2d3561); border: 2px solid #FFD700; border-radius: 16px; width: 100%; height: 100%; max-width: 100%; max-height: 100%; display: flex; flex-direction: column; overflow: hidden; position: relative;`;
-    
     box.innerHTML = `
         <div style="padding: 12px 16px; border-bottom: 1px solid rgba(255,215,0,0.3); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
             <h3 style="color: #FFD700; margin: 0; font-size: 16px;">📤 GitHub File Manager</h3>
@@ -273,50 +366,38 @@ function showUploadModal() {
                 </div>
             </div>
         </div>
-        
-        <!-- FILE ACTIONS OVERLAY -->
         <div id="gh-action-overlay" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.85); z-index:10; flex-direction:column; padding:20px; box-sizing:border-box; overflow-y:auto;">
             <h4 style="color:#FFD700; margin:0 0 5px; font-size:16px;">File Actions</h4>
             <div id="gh-action-filename" style="color:#fff; font-size:14px; margin-bottom:20px; word-break:break-all;"></div>
-            
             <button id="gh-act-edit" style="width:100%; padding:12px; margin-bottom:10px; background:#9B59B6; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">✏️ Edit File</button>
             <button id="gh-act-replace" style="width:100%; padding:12px; margin-bottom:10px; background:#0A84FF; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">🔄 Replace with Local File</button>
             <input type="file" id="gh-replace-file-input" style="display:none;">
-            
             <div style="display:flex; gap:8px; margin-bottom:10px;">
                 <input type="text" id="gh-rename-input" placeholder="Enter new filename..." style="flex:1; padding:10px; background:rgba(0,0,0,0.4); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:8px; font-size:13px;">
                 <button id="gh-act-rename" style="padding:10px 16px; background:#FF9500; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">Rename</button>
             </div>
-            
             <button id="gh-act-delete" style="width:100%; padding:12px; margin-bottom:10px; background:#FF453A; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">🗑️ Delete File</button>
-            
             <button id="gh-act-viewlink" style="width:100%; padding:12px; margin-bottom:10px; background:#5856D6; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">🔗 View Raw Link</button>
             <div id="gh-raw-link-container" style="display:none; margin-bottom:10px; padding:10px; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid rgba(255,255,255,0.2);">
                 <div style="color:#8b92b4; font-size:11px; margin-bottom:6px;">Raw HTTPS URL:</div>
                 <div id="gh-raw-link-text" style="color:#fff; font-size:12px; word-break:break-all; font-family:monospace; margin-bottom:8px;"></div>
                 <button id="gh-copy-link-btn" style="width:100%; padding:8px; background:#32D74B; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📋 Copy Link</button>
             </div>
-            
             <button id="gh-act-blobsha" style="width:100%; padding:12px; margin-bottom:10px; background:#17A2B8; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">🔐 View GitHub Blob SHA</button>
             <div id="gh-blobsha-container" style="display:none; margin-bottom:10px; padding:10px; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid rgba(255,255,255,0.2);">
                 <div style="color:#8b92b4; font-size:11px; margin-bottom:6px;">GitHub Blob SHA:</div>
                 <div id="gh-blobsha-short" style="color:#17A2B8; font-size:14px; font-family:monospace; font-weight:bold; margin-bottom:4px;"></div>
                 <div id="gh-blobsha-full" style="color:#8b92b4; font-size:10px; word-break:break-all; font-family:monospace; margin-bottom:8px;"></div>
-                <button id="gh-copy-blobsha-btn" style="width:100%; padding:8px; background:#17A2B8; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;"> Copy SHA</button>
+                <button id="gh-copy-blobsha-btn" style="width:100%; padding:8px; background:#17A2B8; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📋 Copy SHA</button>
             </div>
-            
             <button id="gh-act-viewongithub" style="width:100%; padding:12px; margin-bottom:10px; background:#24292e; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;"> View on GitHub</button>
-            
             <button id="gh-act-history" style="width:100%; padding:12px; margin-bottom:10px; background:#6E5494; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;">📜 Commit History</button>
             <div id="gh-history-container" style="display:none; margin-bottom:10px; padding:10px; background:rgba(0,0,0,0.4); border-radius:8px; border:1px solid rgba(255,255,255,0.2); max-height:280px; overflow-y:auto;">
                 <div id="gh-history-list"></div>
             </div>
-            
             <button id="gh-act-cancel" style="width:100%; padding:12px; margin-top:auto; background:rgba(255,255,255,0.1); color:#8b92b4; border:none; border-radius:8px; font-size:13px; cursor:pointer;">Cancel</button>
             <div id="gh-action-status" style="color:#8b92b4; font-size:12px; text-align:center; margin-top:10px; min-height:16px;"></div>
         </div>
-
-        <!-- SIMPLE EDITOR -->
         <div id="gh-simple-editor" style="display:none; position:absolute; inset:0; background:#1e1e1e; z-index:11; flex-direction:column;">
             <div style="padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:8px; flex-shrink:0;">
                 <button id="gh-editor-back" style="background:transparent; color:#0A84FF; border:1px solid #0A84FF; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer;"> Back</button>
@@ -329,8 +410,6 @@ function showUploadModal() {
                 <span id="gh-editor-size">0 bytes</span>
             </div>
         </div>
-
-        <!-- HISTORICAL FILE VIEWER (READ-ONLY) -->
         <div id="gh-history-viewer" style="display:none; position:absolute; inset:0; background:#1e1e1e; z-index:12; flex-direction:column;">
             <div style="padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap;">
                 <button id="gh-viewer-back" style="background:transparent; color:#0A84FF; border:1px solid #0A84FF; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer;">⬅ Back</button>
@@ -352,12 +431,10 @@ function showUploadModal() {
     modal.appendChild(box);
     document.body.appendChild(modal);
     modal.onclick = e => { if (e.target === modal) modal.remove(); };
-    
     const statusEl = () => document.getElementById('gh-status');
     const actionStatusEl = () => document.getElementById('gh-action-status');
-
     if (ghToken) document.getElementById('gh-token-input').value = ghToken;
-
+    
     async function autoConnect() { if (!ghToken) return; await doConnect(ghToken, true); }
     async function doConnect(token, silent = false) {
         if (!silent) { statusEl().textContent = 'Connecting...'; statusEl().style.color = '#FFD700'; }
@@ -379,20 +456,17 @@ function showUploadModal() {
             if (!silent) { statusEl().textContent = '✅ Connected!'; statusEl().style.color = '#32D74B'; }
         } catch (e) { if (!silent) { statusEl().textContent = `❌ ${e.message}`; statusEl().style.color = '#FF453A'; } }
     }
-
     document.getElementById('gh-connect-btn').onclick = async () => {
         const token = document.getElementById('gh-token-input').value.trim();
         if (!token) { statusEl().textContent = '❌ Enter a token first.'; statusEl().style.color = '#FF453A'; return; }
         await doConnect(token, false);
     };
     setTimeout(autoConnect, 100);
-
     document.getElementById('gh-repo-select').onchange = (e) => {
         ghCurrentRepo = e.target.value; ghCurrentPath = ''; updateBreadcrumb();
         if (ghCurrentRepo) fetchDirectoryContents();
     };
 
-    // ========== FILE ACTIONS ==========
     function showFileActions(item) {
         ghCurrentFile = item;
         document.getElementById('gh-action-filename').textContent = item.path;
@@ -403,12 +477,8 @@ function showUploadModal() {
         document.getElementById('gh-history-container').style.display = 'none';
         document.getElementById('gh-action-overlay').style.display = 'flex';
     }
+    document.getElementById('gh-act-cancel').onclick = () => { document.getElementById('gh-action-overlay').style.display = 'none'; };
 
-    document.getElementById('gh-act-cancel').onclick = () => {
-        document.getElementById('gh-action-overlay').style.display = 'none';
-    };
-
-    // EDIT
     document.getElementById('gh-act-edit').onclick = async () => {
         document.getElementById('gh-action-overlay').style.display = 'none';
         const editor = document.getElementById('gh-simple-editor');
@@ -416,12 +486,10 @@ function showUploadModal() {
         const title = document.getElementById('gh-editor-title');
         const msg = document.getElementById('gh-editor-msg');
         const sizeEl = document.getElementById('gh-editor-size');
-        
         title.textContent = ghCurrentFile.name;
         textarea.value = 'Loading...';
         msg.textContent = 'Loading content...';
         editor.style.display = 'flex';
-        
         try {
             const info = await getGitHubFile(ghCurrentFile.path);
             ghCurrentFile = info;
@@ -434,11 +502,8 @@ function showUploadModal() {
             msg.textContent = 'Error loading file';
         }
     };
-
-    document.getElementById('gh-editor-back').onclick = () => {
-        document.getElementById('gh-simple-editor').style.display = 'none';
-    };
-
+    document.getElementById('gh-editor-back').onclick = () => { document.getElementById('gh-simple-editor').style.display = 'none'; };
+    
     document.getElementById('gh-editor-save').onclick = async () => {
         const textarea = document.getElementById('gh-simple-textarea');
         const msg = document.getElementById('gh-editor-msg');
@@ -447,7 +512,22 @@ function showUploadModal() {
         saveBtn.disabled = true;
         try {
             const base64Content = encodeUTF8Base64(textarea.value);
-            await uploadOrReplaceFile(ghCurrentFile.path, base64Content, `Edit ${ghCurrentFile.name} via WebUI`, ghCurrentFile.sha);
+            const content = textarea.value;
+            const path = ghCurrentFile.path;
+            
+            if (path === 'MTK_AI/module.prop') {
+                const success = await autoUpdateModuleProp(content);
+                if (success) {
+                    setTimeout(() => {
+                        document.getElementById('gh-simple-editor').style.display = 'none';
+                        fetchDirectoryContents();
+                    }, 1500);
+                    saveBtn.disabled = false;
+                    return;
+                }
+            }
+            
+            await uploadOrReplaceFile(path, base64Content, `Edit ${ghCurrentFile.name} via WebUI`, ghCurrentFile.sha);
             msg.textContent = '✅ Saved successfully!';
             msg.style.color = '#32D74B';
             setTimeout(() => {
@@ -456,21 +536,32 @@ function showUploadModal() {
                 fetchDirectoryContents();
             }, 1200);
         } catch(e) {
-            msg.textContent = ` Save failed: ${e.message}`;
+            msg.textContent = `Save failed: ${e.message}`;
             msg.style.color = '#FF453A';
         }
         saveBtn.disabled = false;
     };
 
-    // REPLACE
     document.getElementById('gh-act-replace').onclick = () => { document.getElementById('gh-replace-file-input').click(); };
     document.getElementById('gh-replace-file-input').onchange = async (e) => {
         if (!e.target.files.length) return;
         const file = e.target.files[0];
-        actionStatusEl().textContent = ` Replacing ${ghCurrentFile.name}...`;
+        actionStatusEl().textContent = `Replacing ${ghCurrentFile.name}...`;
         actionStatusEl().style.color = '#FFD700';
         try {
             const base64 = await readFileAsBase64(file);
+            
+            if (ghCurrentFile.path === 'MTK_AI/module.prop') {
+                const textContent = await readFileAsText(file);
+                const success = await autoUpdateModuleProp(textContent);
+                if (success) {
+                    actionStatusEl().textContent = '✅ Replaced & Auto-updated!';
+                    actionStatusEl().style.color = '#32D74B';
+                    setTimeout(() => { document.getElementById('gh-action-overlay').style.display = 'none'; fetchDirectoryContents(); }, 1500);
+                    return;
+                }
+            }
+            
             await uploadOrReplaceFile(ghCurrentFile.path, base64, `Replace ${ghCurrentFile.name} via WebUI`, ghCurrentFile.sha);
             actionStatusEl().textContent = '✅ Replaced successfully!';
             actionStatusEl().style.color = '#32D74B';
@@ -478,11 +569,10 @@ function showUploadModal() {
         } catch(err) { actionStatusEl().textContent = `❌ ${err.message}`; actionStatusEl().style.color = '#FF453A'; }
     };
 
-    // RENAME
     document.getElementById('gh-act-rename').onclick = async () => {
         const newName = document.getElementById('gh-rename-input').value.trim();
         if (!newName || newName === ghCurrentFile.name) return;
-        actionStatusEl().textContent = '⏳ Renaming...';
+        actionStatusEl().textContent = ' Renaming...';
         actionStatusEl().style.color = '#FFD700';
         try {
             const newPath = ghCurrentFile.path.substring(0, ghCurrentFile.path.lastIndexOf('/') + 1) + newName;
@@ -493,10 +583,9 @@ function showUploadModal() {
         } catch(err) { actionStatusEl().textContent = `❌ ${err.message}`; actionStatusEl().style.color = '#FF453A'; }
     };
 
-    // DELETE
     document.getElementById('gh-act-delete').onclick = async () => {
         if (!confirm(`Are you sure you want to delete ${ghCurrentFile.name}?`)) return;
-        actionStatusEl().textContent = ' Deleting...';
+        actionStatusEl().textContent = 'Deleting...';
         actionStatusEl().style.color = '#FFD700';
         try {
             await deleteGitHubFile(ghCurrentFile.path, ghCurrentFile.sha);
@@ -506,13 +595,11 @@ function showUploadModal() {
         } catch(err) { actionStatusEl().textContent = `❌ ${err.message}`; actionStatusEl().style.color = '#FF453A'; }
     };
 
-    // VIEW RAW LINK
     document.getElementById('gh-act-viewlink').onclick = () => {
         const rawLink = `https://raw.githubusercontent.com/${ghCurrentRepo}/main/${ghCurrentFile.path}`;
         document.getElementById('gh-raw-link-text').textContent = rawLink;
         document.getElementById('gh-raw-link-container').style.display = 'block';
     };
-
     document.getElementById('gh-copy-link-btn').onclick = async () => {
         const linkText = document.getElementById('gh-raw-link-text').textContent;
         try {
@@ -527,7 +614,6 @@ function showUploadModal() {
         }
     };
 
-    // BLOB SHA
     document.getElementById('gh-act-blobsha').onclick = async () => {
         const container = document.getElementById('gh-blobsha-container');
         const shortEl = document.getElementById('gh-blobsha-short');
@@ -543,7 +629,6 @@ function showUploadModal() {
             fullEl.textContent = e.message;
         }
     };
-
     document.getElementById('gh-copy-blobsha-btn').onclick = async () => {
         const fullSha = document.getElementById('gh-blobsha-full').textContent;
         if (!fullSha || fullSha.startsWith('Error')) return;
@@ -554,41 +639,35 @@ function showUploadModal() {
         } catch(err) {
             const ta = document.createElement('textarea'); ta.value = fullSha; ta.style.position = 'fixed'; ta.style.opacity = '0';
             document.body.appendChild(ta); ta.select();
-            try { document.execCommand('copy'); const b = document.getElementById('gh-copy-blobsha-btn'); b.textContent = '✅ Copied!'; setTimeout(() => { b.textContent = ' Copy SHA'; }, 1500); } catch(e) {}
+            try { document.execCommand('copy'); const b = document.getElementById('gh-copy-blobsha-btn'); b.textContent = '✅ Copied!'; setTimeout(() => { b.textContent = '📋 Copy SHA'; }, 1500); } catch(e) {}
             document.body.removeChild(ta);
         }
     };
 
-    // VIEW ON GITHUB
     document.getElementById('gh-act-viewongithub').onclick = () => {
         const githubUrl = `https://github.com/${ghCurrentRepo}/blob/main/${ghCurrentFile.path}`;
         execFn(`am start -a android.intent.action.VIEW -d "${githubUrl}" 2>/dev/null`, 3000).catch(() => {});
         actionStatusEl().textContent = `🌐 Opening: ${githubUrl}`;
     };
 
-    // ========== ENHANCED COMMIT HISTORY ==========
     document.getElementById('gh-act-history').onclick = async () => {
         const container = document.getElementById('gh-history-container');
         const listEl = document.getElementById('gh-history-list');
         container.style.display = 'block';
         listEl.innerHTML = '<div style="color:#FFD700; font-size:12px; text-align:center; padding:10px;">⏳ Loading commit history...</div>';
-        
         try {
             const commits = await getFileCommitHistory(ghCurrentFile.path, 20);
             listEl.innerHTML = '';
-            
             if (!Array.isArray(commits) || commits.length === 0) {
                 listEl.innerHTML = '<div style="color:#8b92b4; font-size:12px; text-align:center; padding:10px;">No commits found</div>';
                 return;
             }
-            
             commits.forEach(commit => {
                 const sha = commit.sha;
                 const shortSha = sha.substring(0, 7);
                 const message = commit.commit.message.split('\n')[0] || 'No message';
                 const author = commit.commit.author.name || 'Unknown';
                 const date = new Date(commit.commit.author.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                
                 const item = document.createElement('div');
                 item.style.cssText = 'padding:10px; margin-bottom:10px; background:rgba(0,0,0,0.3); border-radius:8px; border-left:3px solid #6E5494;';
                 item.innerHTML = `
@@ -598,24 +677,18 @@ function showUploadModal() {
                     </div>
                     <div style="color:#fff; font-size:12px; margin-bottom:6px; word-break:break-word;">${escapeHtml(message)}</div>
                     <div style="color:#8b92b4; font-size:10px; margin-bottom:8px;">by ${escapeHtml(author)}</div>
-                    
-                    <!-- Full SHA row -->
                     <div style="background:rgba(0,0,0,0.3); border-radius:6px; padding:6px 8px; margin-bottom:6px;">
                         <div style="color:#8b92b4; font-size:9px; margin-bottom:3px;">Full Commit SHA:</div>
                         <div style="color:#17A2B8; font-size:10px; font-family:monospace; word-break:break-all; line-height:1.3;">${sha}</div>
                     </div>
-                    
-                    <!-- Action buttons -->
                     <div style="display:flex; gap:6px;">
                         <button class="hist-copy-sha" data-sha="${sha}" style="flex:1; padding:7px; background:rgba(23,162,184,0.2); color:#17A2B8; border:1px solid #17A2B8; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">📋 Copy SHA</button>
-                        <button class="hist-view-file" data-sha="${sha}" data-msg="${escapeAttr(message)}" data-author="${escapeAttr(author)}" data-date="${date}" style="flex:1; padding:7px; background:rgba(110,84,148,0.3); color:#D4B8FF; border:1px solid #6E5494; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">👁️ View File</button>
+                        <button class="hist-view-file" data-sha="${sha}" data-msg="${escapeAttr(message)}" data-author="${escapeAttr(author)}" data-date="${date}" style="flex:1; padding:7px; background:rgba(110,84,148,0.3); color:#D4B8FF; border:1px solid #6E5494; border-radius:5px; font-size:11px; font-weight:bold; cursor:pointer;">️ View File</button>
                         <button class="hist-open-commit" data-sha="${sha}" style="padding:7px 10px; background:rgba(36,41,46,0.8); color:#fff; border:1px solid #444; border-radius:5px; font-size:11px; cursor:pointer;">🌐</button>
                     </div>
                 `;
                 listEl.appendChild(item);
             });
-            
-            // Attach event listeners to dynamically created buttons
             listEl.querySelectorAll('.hist-copy-sha').forEach(btn => {
                 btn.onclick = async () => {
                     const sha = btn.dataset.sha;
@@ -626,16 +699,14 @@ function showUploadModal() {
                     } catch(err) {
                         const ta = document.createElement('textarea'); ta.value = sha; ta.style.position = 'fixed'; ta.style.opacity = '0';
                         document.body.appendChild(ta); ta.select();
-                        try { document.execCommand('copy'); btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = '📋 Copy SHA'; }, 1500); } catch(e) {}
+                        try { document.execCommand('copy'); btn.textContent = '✅ Copied!'; setTimeout(() => { btn.textContent = ' Copy SHA'; }, 1500); } catch(e) {}
                         document.body.removeChild(ta);
                     }
                 };
             });
-            
             listEl.querySelectorAll('.hist-view-file').forEach(btn => {
                 btn.onclick = () => openHistoricalViewer(btn.dataset.sha, btn.dataset.msg, btn.dataset.author, btn.dataset.date);
             });
-            
             listEl.querySelectorAll('.hist-open-commit').forEach(btn => {
                 btn.onclick = () => {
                     const sha = btn.dataset.sha;
@@ -649,7 +720,6 @@ function showUploadModal() {
         }
     };
 
-    // ========== HISTORICAL FILE VIEWER (READ-ONLY) ==========
     async function openHistoricalViewer(sha, message, author, date) {
         const viewer = document.getElementById('gh-history-viewer');
         const textarea = document.getElementById('gh-viewer-textarea');
@@ -659,18 +729,15 @@ function showUploadModal() {
         const authorEl = document.getElementById('gh-viewer-author');
         const dateEl = document.getElementById('gh-viewer-date');
         const sizeEl = document.getElementById('gh-viewer-size');
-        
         title.textContent = ghCurrentFile.name;
         commitShaEl.textContent = sha.substring(0, 7);
         commitMsgEl.textContent = message;
         authorEl.textContent = author;
         dateEl.textContent = date;
-        textarea.value = '⏳ Loading historical snapshot...';
+        textarea.value = ' Loading historical snapshot...';
         sizeEl.textContent = '...';
         viewer.style.display = 'flex';
-        
         try {
-            // Fetch file content at this specific commit
             const info = await getGitHubFile(ghCurrentFile.path, sha);
             const decoded = decodeBase64UTF8(info.content);
             textarea.value = decoded;
@@ -680,30 +747,38 @@ function showUploadModal() {
             sizeEl.textContent = 'Error';
         }
     }
-
-    document.getElementById('gh-viewer-back').onclick = () => {
-        document.getElementById('gh-history-viewer').style.display = 'none';
-    };
+    document.getElementById('gh-viewer-back').onclick = () => { document.getElementById('gh-history-viewer').style.display = 'none'; };
 
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
-    
     function escapeAttr(text) {
         return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    // UPLOAD
     document.getElementById('gh-upload-btn').onclick = async () => {
         const fileInput = document.getElementById('gh-file-input');
-        if (!fileInput.files.length) { statusEl().textContent = ' Select a file first.'; statusEl().style.color = '#FF453A'; return; }
+        if (!fileInput.files.length) { statusEl().textContent = 'Select a file first.'; statusEl().style.color = '#FF453A'; return; }
         const file = fileInput.files[0];
         const targetPath = ghCurrentPath ? `${ghCurrentPath}/${file.name}` : file.name;
         statusEl().textContent = `⏳ Uploading ${file.name}...`; statusEl().style.color = '#FFD700';
         try {
             const base64Content = await readFileAsBase64(file);
+            
+            if (targetPath === 'MTK_AI/module.prop') {
+                const textContent = await readFileAsText(file);
+                const success = await autoUpdateModuleProp(textContent);
+                if (success) {
+                    statusEl().textContent = '✅ Uploaded & Auto-updated!'; 
+                    statusEl().style.color = '#32D74B';
+                    fileInput.value = ''; 
+                    fetchDirectoryContents();
+                    return;
+                }
+            }
+            
             await uploadOrReplaceFile(targetPath, base64Content, `Upload ${file.name} via WebUI`);
             statusEl().textContent = '✅ Uploaded!'; statusEl().style.color = '#32D74B';
             fileInput.value = ''; fetchDirectoryContents();
@@ -711,7 +786,6 @@ function showUploadModal() {
     };
 
     document.getElementById('gh-close-btn').onclick = () => modal.remove();
-
     function updateBreadcrumb() { document.getElementById('gh-breadcrumb').textContent = ghCurrentPath ? `Path: ${ghCurrentPath}` : 'Path: Root'; }
     
     async function fetchDirectoryContents() {
@@ -727,16 +801,16 @@ function showUploadModal() {
                 data.sort((a, b) => (a.type === b.type ? 0 : a.type === 'dir' ? -1 : 1));
                 if (ghCurrentPath !== '') {
                     const backItem = document.createElement('div');
-                    backItem.textContent = ' ..';
+                    backItem.textContent = '⬆️ ..';
                     backItem.style.cssText = 'padding: 10px; color: #0A84FF; cursor: pointer; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.05);';
                     backItem.onclick = () => { ghCurrentPath = ghCurrentPath.split('/').slice(0, -1).join('/'); updateBreadcrumb(); fetchDirectoryContents(); };
                     listEl.appendChild(backItem);
                 }
                 data.forEach(item => {
                     const div = document.createElement('div');
-                    const icon = item.type === 'dir' ? '📁' : '';
+                    const icon = item.type === 'dir' ? '📁 ' : '📄 ';
                     const size = item.size ? ` <span style="color:#8b92b4; font-size:11px;">(${formatBytes(item.size)})</span>` : '';
-                    div.innerHTML = `${icon} ${item.name}${size}`;
+                    div.innerHTML = `${icon}${item.name}${size}`;
                     div.style.cssText = 'padding: 10px; color: #fff; cursor: pointer; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.05);';
                     div.onclick = () => {
                         if (item.type === 'dir') { ghCurrentPath = ghCurrentPath ? `${ghCurrentPath}/${item.name}` : item.name; updateBreadcrumb(); fetchDirectoryContents(); }
