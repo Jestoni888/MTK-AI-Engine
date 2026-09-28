@@ -1,3 +1,7 @@
+--- version 0.0.1.29 ---
+
+•768f7c9 - Added CPU governor tunables
+
 --- version 0.0.1.28 ---
 
 •a2fcfce - Ram hibernator removes save config button, it now automatically setup whatever you do
