@@ -32,6 +32,17 @@
             --border-color: #222222;
         }
 
+        /* Weather Canvas Layer */
+        #weather-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 1;
+        }
+
         /* Theme Variations */
         [data-theme="blue"] {
             --bg-primary: #0a0e1a;
@@ -53,7 +64,8 @@
             --bg-primary: #0a1a0f;
             --bg-secondary: #1b2d1f;
             --bg-card: #2b3d2f;
-            --text-secondary: #8bb495;            --border-color: #3b5242;
+            --text-secondary: #8bb495;
+            --border-color: #3b5242;
         }
 
         [data-theme="orange"] {
@@ -80,6 +92,42 @@
             --border-color: #325252;
         }
 
+        [data-theme="snow"] {
+            --bg-primary: #0b131e;
+            --bg-secondary: #142030;
+            --bg-card: #1c2d42;
+            --text-secondary: #9bb3ce;
+            --border-color: #2a415e;
+            --accent-blue: #70b5ff;
+        }
+
+        [data-theme="rain"] {
+            --bg-primary: #080e18;
+            --bg-secondary: #101928;
+            --bg-card: #182538;
+            --text-secondary: #8aa4c4;
+            --border-color: #223752;
+            --accent-blue: #3892ff;
+        }
+        
+        [data-theme="thunder"] {
+    --bg-primary: #000000;
+    --bg-secondary: #0a0a0c;
+    --bg-card: #121216;
+    --text-secondary: #94a3b8;
+    --border-color: #27272a;
+    --accent-blue: #eab308; /* Lightning yellow accent */
+}
+
+        [data-theme="universe"] {
+    --bg-primary: #03001e;
+    --bg-secondary: #0a0526;
+    --bg-card: #120b38;
+    --text-secondary: #a78bfa;
+    --border-color: #2e1065;
+    --accent-blue: #c084fc;
+}
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: var(--bg-primary);
@@ -102,7 +150,9 @@
             align-items: center;
         }
 
-        .logo {            display: flex;            flex-direction: column;
+        .logo {
+            display: flex;
+            flex-direction: column;
         }
 
         .logo h1 {
@@ -136,6 +186,8 @@
         .page {
             display: none;
             padding: 20px;
+            position: relative;
+            z-index: 2;
         }
 
         .page.active {
@@ -151,7 +203,8 @@
             border: 1px solid var(--border-color);
         }
         .section-label {
-            font-size: 12px;            color: var(--text-secondary);
+            font-size: 12px;
+            color: var(--text-secondary);
             margin-bottom: 15px;
             display: flex;
             align-items: center;
@@ -198,7 +251,8 @@
         }
 
         .spec-item {
-            display: flex;            align-items: center;
+            display: flex;
+            align-items: center;
             gap: 10px;
         }
         .spec-icon {
@@ -246,10 +300,12 @@
         }
 
         /* System Status */
-        .system-status {            margin-bottom: 20px;
+        .system-status {
+            margin-bottom: 20px;
         }
 
-        .status-grid {            display: grid;
+        .status-grid {
+            display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 12px;
         }
@@ -294,7 +350,8 @@
         .progress-text {
             position: absolute;
             top: 50%;
-            left: 50%;            transform: translate(-50%, -50%);
+            left: 50%;
+            transform: translate(-50%, -50%);
             font-size: 14px;
             font-weight: 700;
         }
@@ -342,7 +399,8 @@
         .service-icon {
             width: 36px;
             height: 36px;
-            background: var(--bg-secondary);            border-radius: 10px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -396,7 +454,8 @@
             border-radius: 12px;
             padding: 15px;
             border: 1px solid var(--border-color);
-            cursor: pointer;            transition: all 0.3s;
+            cursor: pointer;
+            transition: all 0.3s;
             display: flex;
             align-items: center;
             gap: 15px;
@@ -438,14 +497,16 @@
 
         .setting-description {
             font-size: 12px;
-            color: var(--text-secondary);        }
+            color: var(--text-secondary);
+        }
 
         .setting-value {
             font-size: 14px;
             font-weight: 600;
             color: var(--accent-blue);
             display: flex;
-            align-items: center;            gap: 5px;
+            align-items: center;
+            gap: 5px;
         }
 
         .setting-value.purple { color: var(--accent-purple); }
@@ -494,7 +555,8 @@
     box-shadow: 
         0 8px 32px rgba(0, 0, 0, 0.4),
         0 0 0 0.5px rgba(255, 255, 255, 0.05),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);    z-index: 1000;
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    z-index: 1000;
     width: auto;
     max-width: 95%;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
@@ -523,7 +585,8 @@
     padding: 8px 14px;
     border-radius: 20px;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);    position: relative;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
     min-width: 60px;
     user-select: none;
     color: var(--text-secondary);
@@ -571,7 +634,8 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 0;    height: 0;
+    width: 0;
+    height: 0;
     border-radius: 50%;
     background: rgba(74, 158, 255, 0.25);
     transform: translate(-50%, -50%);
@@ -592,7 +656,8 @@ body {
     padding-bottom: 100px;
 }
 
-/* Mobile optimization */@media (max-width: 380px) {
+/* Mobile optimization */
+@media (max-width: 380px) {
     .bottom-nav {
         bottom: 12px;
         padding: 5px;
@@ -632,7 +697,8 @@ body {
         }
 
         /* Responsive */
-        @media (max-width: 480px) {            .status-grid {
+        @media (max-width: 480px) {
+            .status-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
             
@@ -641,7 +707,8 @@ body {
             }
         }
         
-        /* Header */.header {
+        /* Header */
+.header {
     background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
     padding: 15px 20px;
     border-bottom: 1px solid var(--border-color);
@@ -690,7 +757,8 @@ body {
 }
 
 .header-btn:hover {
-    color: var(--accent-blue);    transform: scale(1.1);
+    color: var(--accent-blue);
+    transform: scale(1.1);
 }
 
 .menu-btn, .more-btn {
@@ -739,7 +807,8 @@ body {
 }
 
 .header-left {
-    display: flex;    align-items: center;
+    display: flex;
+    align-items: center;
     gap: 15px;
     flex: 1;
 }
@@ -907,7 +976,8 @@ Matches MTK AI Engine Theme
 }
 
 /* App Info */
-#app-list-container .item-info {    flex: 1;
+#app-list-container .item-info {
+    flex: 1;
     min-width: 0;
     overflow: hidden;
 }
@@ -935,7 +1005,8 @@ Matches MTK AI Engine Theme
 
 /* Action Buttons Container */
 #app-list-container .item-actions {
-    display: flex;    gap: 8px;
+    display: flex;
+    gap: 8px;
     align-items: center;
     flex-shrink: 0;
 }
@@ -955,7 +1026,8 @@ Matches MTK AI Engine Theme
     transition: all 0.2s;
     display: flex;
     align-items: center;
-    justify-content: center;}
+    justify-content: center;
+}
 
 #app-list-container .item-actions button[onclick*="openMonitorPopup"]:hover {
     background: rgba(76, 217, 100, 0.2);
@@ -984,7 +1056,8 @@ Matches MTK AI Engine Theme
     min-width: 80px;
 }
 
-#app-list-container .item-actions button[onclick*="addGame"] {    background: var(--color-blue);
+#app-list-container .item-actions button[onclick*="addGame"] {
+    background: var(--color-blue);
     color: #fff;
 }
 
@@ -1033,7 +1106,8 @@ Matches MTK AI Engine Theme
     width: 100%;
     padding: 14px 50px 14px 48px;
     border-radius: 12px;
-    border: 2px solid var(--border-color);    background: rgba(0,0,0,0.5);
+    border: 2px solid var(--border-color);
+    background: rgba(0,0,0,0.5);
     color: #fff;
     font-size: 14px;
     outline: none;
@@ -1099,7 +1173,8 @@ Matches MTK AI Engine Theme
 .stat-badge {
     background: rgba(255,255,255,0.05);
     border-radius: 12px;
-    padding: 14px 8px;    text-align: center;
+    padding: 14px 8px;
+    text-align: center;
     border: 2px solid transparent;
     transition: all 0.3s ease;
     cursor: pointer;
@@ -1147,7 +1222,8 @@ Matches MTK AI Engine Theme
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    font-weight: 600;}
+    font-weight: 600;
+}
 
 /* Loading State */
 .loading-state {
@@ -1195,7 +1271,8 @@ Matches MTK AI Engine Theme
     to {
         opacity: 1;
         transform: translateY(0);
-    }}
+    }
+}
 
 @keyframes spin {
     to { transform: rotate(360deg); }
@@ -1297,7 +1374,8 @@ Matches MTK AI Engine Theme
 }
 
 #app-list-container .item-title {
-    font-size: 15px !important;    font-weight: 600 !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
     color: #fff !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -1327,7 +1405,8 @@ Matches MTK AI Engine Theme
     width: 36px !important;
     height: 36px !important;
     min-width: 36px !important;
-    border-radius: 10px !important;    background: rgba(255,255,255,0.08) !important;
+    border-radius: 10px !important;
+    background: rgba(255,255,255,0.08) !important;
     border: none !important;
     display: flex !important;
     align-items: center !important;
@@ -1345,7 +1424,8 @@ Matches MTK AI Engine Theme
 
 #app-list-container .item-actions button[onclick*="openAppPopup"]:hover {
     background: rgba(10, 132, 255, 0.2) !important;
-    color: #0A84FF !important;}
+    color: #0A84FF !important;
+}
 
 /* ADD / REMOVE Buttons */
 #app-list-container .item-actions button[onclick*="addGame"],
@@ -1376,7 +1456,8 @@ Matches MTK AI Engine Theme
 /* Theme Selector Styles */
 .theme-selector-container {
     background: var(--bg-card);
-    border-radius: 16px;    padding: 20px;
+    border-radius: 16px;
+    padding: 20px;
     margin-bottom: 20px;
     border: 1px solid var(--border-color);
 }
@@ -1425,10 +1506,19 @@ Matches MTK AI Engine Theme
 
 .theme-preview.black { background: linear-gradient(135deg, #000000 0%, #111111 100%); }
 .theme-preview.blue { background: linear-gradient(135deg, #0a0e1a 0%, #1a1f3a 100%); }
-.theme-preview.purple { background: linear-gradient(135deg, #1a0b2e 0%, #3d2b5e 100%); }.theme-preview.green { background: linear-gradient(135deg, #0a1a0f 0%, #2b3d2f 100%); }
+.theme-preview.purple { background: linear-gradient(135deg, #1a0b2e 0%, #3d2b5e 100%); }
+.theme-preview.green { background: linear-gradient(135deg, #0a1a0f 0%, #2b3d2f 100%); }
 .theme-preview.orange { background: linear-gradient(135deg, #1a0f0a 0%, #3d2f1f 100%); }
 .theme-preview.red { background: linear-gradient(135deg, #1a0a0a 0%, #3d1f1f 100%); }
 .theme-preview.teal { background: linear-gradient(135deg, #0a1a1a 0%, #1f3d3d 100%); }
+.theme-preview.snow { background: linear-gradient(135deg, #0b131e 0%, #1c2d42 100%); }
+.theme-preview.rain { background: linear-gradient(135deg, #080e18 0%, #182538 100%); }
+.theme-preview.thunder { 
+    background: linear-gradient(135deg, #000000 0%, #1e1b4b 50%, #000000 100%); 
+}
+.theme-preview.universe { 
+    background: linear-gradient(135deg, #03001e 0%, #240046 50%, #7b2cbf 100%); 
+}
 
 .theme-name {
     text-align: center;
@@ -1469,12 +1559,14 @@ Matches MTK AI Engine Theme
     </style>
 </head>
 <body>
+    <canvas id="weather-canvas"></canvas>
     <!-- Header -->
 <div class="header">
     <div class="header-left">
         <button class="header-btn menu-btn">
             <i class="fas fa-refresh" id="update-btn"></i>
-        </button>        <div class="logo">
+        </button>
+        <div class="logo">
             <h1>MTK <span style="color: var(--accent-blue);">AI</span> ENGINE</h1>
             <span>LIVE MANAGER</span>
         </div>
@@ -1517,13 +1609,15 @@ Matches MTK AI Engine Theme
                                 <span class="spec-label">Android</span>
                                 <span class="spec-value" id="android-version">--</span>
                             </div>
-                        </div>                        <div class="spec-item">
+                        </div>
+                        <div class="spec-item">
                             <div class="spec-icon"><i class="fas fa-microchip"></i></div>
                             <div class="spec-text">
                                 <span class="spec-label">Chipset</span>
                                 <span class="spec-value" id="chipset">--</span>
                             </div>
-                        </div>                        <div class="spec-item">
+                        </div>
+                        <div class="spec-item">
                             <div class="spec-icon"><i class="fas fa-memory"></i></div>
                             <div class="spec-text">
                                 <span class="spec-label">RAM</span>
@@ -1565,14 +1659,16 @@ Matches MTK AI Engine Theme
                     <svg width="65" height="65">
                         <circle class="progress-bg" cx="32.5" cy="32.5" r="28"></circle>
                         <circle class="progress-bar cpu" cx="32.5" cy="32.5" r="28" stroke-dasharray="175.9" stroke-dashoffset="126.65"></circle>
-                    </svg>                    <div class="progress-text">28%</div>
+                    </svg>
+                    <div class="progress-text">28%</div>
                 </div>
                 <div class="status-label">CPU</div>
                 <div class="status-value" id="cpu-freq">1.02 GHz</div>
             </div>
             <div class="status-card">
                 <div class="circular-progress" id="gpu-progress">
-                    <svg width="65" height="65">                        <circle class="progress-bg" cx="32.5" cy="32.5" r="28"></circle>
+                    <svg width="65" height="65">
+                        <circle class="progress-bg" cx="32.5" cy="32.5" r="28"></circle>
                         <circle class="progress-bar gpu" cx="32.5" cy="32.5" r="28" stroke-dasharray="175.9" stroke-dashoffset="144.24"></circle>
                     </svg>
                     <div class="progress-text">18%</div>
@@ -1613,7 +1709,8 @@ Matches MTK AI Engine Theme
                         <h3>MTK AI SERVICES</h3>
                         <div class="service-status">
                             <span class="status-dot" id="services-status-dot"></span>
-                            <span id="mon_services">Active</span>                        </div>
+                            <span id="mon_services">Active</span>
+                        </div>
                     </div>
                 </div>
                 <div class="service-subtitle">Click to Toggle <i class="fas fa-chevron-right"></i></div>
@@ -1621,7 +1718,8 @@ Matches MTK AI Engine Theme
             <div class="service-card" onclick="toggleOverlay()" style="cursor: pointer;">
                 <div class="service-header">
                     <div class="service-icon blue"><i class="fas fa-eye"></i></div>
-                    <div class="service-info">                        <h3>REFRESH RATE OVERLAY</h3>
+                    <div class="service-info">
+                        <h3>REFRESH RATE OVERLAY</h3>
                         <div class="service-status">
                             <span class="status-dot" id="overlay-status-dot" style="display: none;"></span>
                             <span id="mon_overlay" style="color: #FF453A;">OFF</span>
@@ -1702,7 +1800,8 @@ Matches MTK AI Engine Theme
     </div>
 </div>
 
-<div class="setting-item" id="gpu-freq-item">        <div class="setting-icon red"><i class="fas fa-microchip"></i></div>
+<div class="setting-item" id="gpu-freq-item">
+        <div class="setting-icon red"><i class="fas fa-microchip"></i></div>
         <div class="setting-content">
             <div class="setting-title">GPU frequency</div>
             <div class="setting-description">Adjust GPU frequency for system graphics performance</div>
@@ -1820,7 +1919,8 @@ Matches MTK AI Engine Theme
     </div>
     
     <div id="app-list-container" class="ios-list" style="margin:0 16px 20px;">
-        <!-- Apps will be loaded here -->    </div>
+        <!-- Apps will be loaded here -->
+    </div>
 </div>
 
     <!-- TOOLS PAGE -->
@@ -2114,6 +2214,26 @@ Matches MTK AI Engine Theme
                 <div class="theme-name">Teal</div>
                 <div class="theme-check"><i class="fas fa-check"></i></div>
             </div>
+            <div class="theme-option" data-theme="snow" onclick="changeTheme('snow')">
+                <div class="theme-preview snow"></div>
+                <div class="theme-name">Snowing</div>
+                <div class="theme-check"><i class="fas fa-check"></i></div>
+            </div>
+            <div class="theme-option" data-theme="rain" onclick="changeTheme('rain')">
+                <div class="theme-preview rain"></div>
+                <div class="theme-name">Raining</div>
+                <div class="theme-check"><i class="fas fa-check"></i></div>
+            </div>
+            <div class="theme-option" data-theme="thunder" onclick="changeTheme('thunder')">
+    <div class="theme-preview thunder"></div>
+    <div class="theme-name">Thunder</div>
+    <div class="theme-check"><i class="fas fa-check"></i></div>
+</div>
+<div class="theme-option" data-theme="universe" onclick="changeTheme('universe')">
+    <div class="theme-preview universe"></div>
+    <div class="theme-name">Universe</div>
+    <div class="theme-check"><i class="fas fa-check"></i></div>
+</div>
         </div>
     </div>    
     <div class="settings-list" id="mtk-ai-controls">
@@ -2270,6 +2390,123 @@ Matches MTK AI Engine Theme
 })();
 </script>
     <script>
+// Weather FX Manager
+let weatherAnimFrame = null;
+let particles = [];
+
+function initWeatherEffect(mode) {
+    const canvas = document.getElementById('weather-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Stop active weather animation loop
+    if (weatherAnimFrame) {
+        cancelAnimationFrame(weatherAnimFrame);
+        weatherAnimFrame = null;
+    }
+
+    if (mode !== 'snow' && mode !== 'rain' && mode !== 'thunder' && mode !== 'universe') {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles = [];
+    return;
+}
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resize();
+    window.removeEventListener('resize', resize);
+    window.addEventListener('resize', resize);
+
+    particles = [];
+const count = mode === 'snow' ? 70 : (mode === 'universe' ? 120 : 100);
+
+for (let i = 0; i < count; i++) {
+    if (mode === 'universe') {
+        const colors = ['#ffffff', '#a855f7', '#38bdf8', '#f472b6'];
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 1.8 + 0.4,
+            speedY: (Math.random() - 0.5) * 0.15, // Slow zero-gravity drift
+            speedX: (Math.random() - 0.5) * 0.15,
+            opacity: Math.random(),
+            twinkleSpeed: Math.random() * 0.02 + 0.005,
+            color: colors[Math.floor(Math.random() * colors.length)]
+        });
+    } else {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: mode === 'snow' ? Math.random() * 3 + 1 : Math.random() * 15 + 10,
+            speedY: mode === 'snow' ? Math.random() * 1 + 0.5 : Math.random() * 12 + 10,
+            speedX: mode === 'snow' ? Math.sin(Math.random() * Math.PI) * 0.5 : Math.random() * 0.5 - 0.25,
+            opacity: Math.random() * 0.6 + 0.3
+        });
+    }
+}
+
+    let flashOpacity = 0;
+
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Render rain / thunder particles
+    particles.forEach(p => {
+    ctx.beginPath();
+
+    if (mode === 'universe') {
+        // Twinkle opacity cycle
+        p.opacity += p.twinkleSpeed;
+        if (p.opacity > 1 || p.opacity < 0.2) {
+            p.twinkleSpeed = -p.twinkleSpeed;
+        }
+
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(0.1, Math.min(1, p.opacity));
+        ctx.fill();
+        ctx.globalAlpha = 1.0; // Reset global alpha
+    } else if (mode === 'snow') {
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+        ctx.fill();
+    } else if (mode === 'rain' || mode === 'thunder') {
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + p.speedX, p.y + p.size);
+        ctx.strokeStyle = mode === 'thunder' ? `rgba(200, 220, 255, ${p.opacity})` : `rgba(112, 181, 255, ${p.opacity})`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+    }
+
+    p.y += p.speedY;
+    p.x += p.speedX;
+
+    // Wrap particles around screen edges
+    if (p.y > canvas.height) p.y = 0;
+    if (p.y < 0) p.y = canvas.height;
+    if (p.x > canvas.width) p.x = 0;
+    if (p.x < 0) p.x = canvas.width;
+});
+
+    // Thunder Flash with smooth fade out
+    if (mode === 'thunder' && flashOpacity <= 0 && Math.random() < 0.008) {
+        flashOpacity = Math.random() * 0.4 + 0.2;
+    }
+
+    if (flashOpacity > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${flashOpacity})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        flashOpacity -= 0.04; 
+    }
+
+    weatherAnimFrame = requestAnimationFrame(render);
+}
+
+    render();
+}
+
 // Theme Management
 function changeTheme(themeName) {
     // Remove theme attribute if black (default)
@@ -2289,6 +2526,9 @@ function changeTheme(themeName) {
     
     // Save to localStorage
     localStorage.setItem('mtk-theme', themeName);
+
+    // Trigger Weather Effect
+    initWeatherEffect(themeName);
     
     // Show feedback
     showStatusMessage(`Theme changed to ${themeName.charAt(0).toUpperCase() + themeName.slice(1)}`);
@@ -2302,11 +2542,15 @@ function loadSavedTheme() {
     }
     
     // Update UI
-    document.querySelectorAll('.theme-option').forEach(option => {        option.classList.remove('active');
+    document.querySelectorAll('.theme-option').forEach(option => {
+        option.classList.remove('active');
         if (option.dataset.theme === savedTheme) {
             option.classList.add('active');
         }
     });
+
+    // Initialize Weather Effects
+    initWeatherEffect(savedTheme);
 }
 
 // Status message helper
@@ -2372,7 +2616,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Show nav when user stops scrolling
     let scrollTimeout;
     window.addEventListener('scroll', function() {
-        clearTimeout(scrollTimeout);        scrollTimeout = setTimeout(function() {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(function() {
             bottomNav.classList.remove('hidden');
             bottomNav.classList.add('show');
         }, 800); // Show after 800ms of no scrolling
@@ -2400,7 +2645,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     page.classList.add('active');
                     // Scroll to top when switching tabs
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                }            });       
+                }
+            });
             
             // Always show nav when switching tabs
             const bottomNav = document.querySelector('.bottom-nav');
@@ -2411,7 +2657,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Save state to localStorage
             localStorage.setItem('activeTab', this.dataset.page);
-        });    });
+        });
+    });
     
     // Initialize nav as visible
     const bottomNav = document.querySelector('.bottom-nav');
