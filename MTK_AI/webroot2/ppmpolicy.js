@@ -47,7 +47,8 @@
         const sysBoostEnabled = policies[9] === true;
         const thermalDisabled = policies[4] === false;
         
-        let enabledCount = 0;        for (let i = 0; i <= 9; i++) {
+        let enabledCount = 0;
+        for (let i = 0; i <= 9; i++) {
             if (policies[i] === true) enabledCount++;
         }
         
@@ -72,11 +73,11 @@
         const valEl = document.querySelector('#ppm-policy-item .setting-value');
         if (valEl) {
             valEl.innerHTML = `${profileName} <i class="fas fa-chevron-right"></i>`;
-            // Color code based on profile
-            if (profileName === 'Performance') valEl.style.color = '#FF453A';
-            else if (profileName === 'Balanced') valEl.style.color = '#AF52DE';
-            else if (profileName === 'Power Saving') valEl.style.color = '#32D74B';
-            else valEl.style.color = '#8b92b4';
+            // Color code based on profile using theme variables
+            if (profileName === 'Performance') valEl.style.color = 'var(--accent-red)';
+            else if (profileName === 'Balanced') valEl.style.color = 'var(--accent-purple)';
+            else if (profileName === 'Power Saving') valEl.style.color = 'var(--accent-green)';
+            else valEl.style.color = 'var(--text-secondary)';
         }
     }
 
@@ -96,7 +97,7 @@
                     parsed[idx] = status;
                 }
             }
-                        return parsed;
+            return parsed;
         } catch (e) {
             console.error("PPM Load Error:", e);
             return false;
@@ -117,18 +118,18 @@
 
         const box = document.createElement('div');
         box.style.cssText = `
-            background: linear-gradient(135deg, #1a1f3a, #2d3561);
-            border: 2px solid #AF52DE;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 24px; width: 95%; max-width: 450px;
-            box-shadow: 0 0 40px rgba(175, 82, 222, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         `;
 
         const header = document.createElement('div');
         header.style.cssText = 'text-align: center; margin-bottom: 10px;';
         header.innerHTML = `
-            <h3 style="color: #AF52DE; margin: 0; font-size: 20px;">🛡️ PPM Policy Control</h3>
-            <p style="color: #8b92b4; font-size: 12px; margin: 5px 0 0;">Power Performance Management</p>
+            <h3 style="color: #fff; margin: 0; font-size: 20px;">🛡️ PPM Policy Control</h3>
+            <p style="color: #fff; font-size: 12px; margin: 5px 0 0;">Power Performance Management</p>
         `;
 
         const actions = document.createElement('div');
@@ -137,15 +138,16 @@
         const btnPerf = document.createElement('button');
         btnPerf.textContent = '🔥 Performance Mode';
         btnPerf.style.cssText = `
-            padding: 10px; background: rgba(255, 69, 58, 0.2); color: #FF453A;
-            border: 1px solid #FF453A; border-radius: 8px; cursor: pointer; font-size: 12px;
+            padding: 10px; background: rgba(231, 76, 60, 0.2); color: #fff;
+            border: 1px solid var(--accent-red); border-radius: 8px; cursor: pointer; font-size: 12px;
         `;
         btnPerf.onclick = () => applyProfile('perf');
 
         const btnBalanced = document.createElement('button');
         btnBalanced.textContent = '⚖️ Balanced Mode';
         btnBalanced.style.cssText = `
-            padding: 10px; background: rgba(50, 215, 116, 0.2); color: #32D74B;            border: 1px solid #32D74B; border-radius: 8px; cursor: pointer; font-size: 12px;
+            padding: 10px; background: rgba(46, 204, 113, 0.2); color: #fff;
+            border: 1px solid var(--accent-green); border-radius: 8px; cursor: pointer; font-size: 12px;
         `;
         btnBalanced.onclick = () => applyProfile('balanced');
 
@@ -155,13 +157,13 @@
         const listContainer = document.createElement('div');
         listContainer.id = 'ppm-policy-list';
         listContainer.style.cssText = 'max-height: 40vh; overflow-y: auto; margin-bottom: 10px;';
-        listContainer.innerHTML = '<div style="text-align:center; padding: 20px; color: #8b92b4;">Loading policies...</div>';
+        listContainer.innerHTML = '<div style="text-align:center; padding: 20px; color: #fff;">Loading policies...</div>';
         box.appendChild(listContainer);
 
         const cancelBtn = document.createElement('button');
         cancelBtn.textContent = 'Close';
         cancelBtn.style.cssText = `
-            width: 100%; padding: 12px; background: rgba(255,255,255,0.1); color: #fff;
+            width: 100%; padding: 12px; background: var(--border-color); color: #fff;
             border: none; border-radius: 10px; font-size: 13px; cursor: pointer;
         `;
         cancelBtn.onclick = () => modal.remove();
@@ -177,7 +179,7 @@
 
     function renderPolicies(policies, container) {
         if (!policies) {
-            container.innerHTML = '<div style="text-align:center; padding: 20px; color: #FF453A;">Failed to load PPM data</div>';
+            container.innerHTML = '<div style="text-align:center; padding: 20px; color: #fff;">Failed to load PPM data</div>';
             return;
         }
 
@@ -194,7 +196,9 @@
             
             const row = document.createElement('div');
             row.style.cssText = `
-                display: flex; align-items: center; justify-content: space-between;                background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 8px; margin-bottom: 8px;
+                display: flex; align-items: center; justify-content: space-between;
+                background: var(--bg-secondary); padding: 10px 12px; border-radius: 8px; margin-bottom: 8px;
+                border: 1px solid var(--border-color);
             `;
 
             const label = document.createElement('span');
@@ -213,13 +217,13 @@
             const slider = document.createElement('span');
             slider.style.cssText = `
                 position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-                background-color: ${isEnabled ? '#32D74B' : '#ccc'}; transition: .4s; border-radius: 20px;
+                background-color: ${isEnabled ? 'var(--accent-green)' : 'var(--border-color)'}; transition: .4s; border-radius: 20px;
             `;
             
             const dot = document.createElement('span');
             dot.style.cssText = `
                 position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px;
-                background-color: white; transition: .4s; border-radius: 50%;
+                background-color: #fff; transition: .4s; border-radius: 50%;
                 transform: ${isEnabled ? 'translateX(20px)' : 'translateX(0)'};
             `;
 

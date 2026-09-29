@@ -68,9 +68,9 @@ function updatePartitionDisplay() {
     const display = document.getElementById('selected-partitions-display');
     if (display) {
         if (selectedPartitions.length === 0) {
-            display.innerHTML = '<span style="color:#FF453A;">No partitions selected</span>';
+            display.innerHTML = '<span style="color:var(--accent-red);">No partitions selected</span>';
         } else {
-            display.innerHTML = `<span style="color:#32D74B;">✓ ${selectedPartitions.length} partition(s) selected</span>`;
+            display.innerHTML = `<span style="color:var(--accent-green);">✓ ${selectedPartitions.length} partition(s) selected</span>`;
         }
     }
 }
@@ -81,19 +81,19 @@ async function showPartitionPicker() {
     picker.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);`;
     
     const box = document.createElement('div');
-    box.style.cssText = `background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #4a9eff;border-radius:20px;padding:20px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto;margin:20px;`;
+    box.style.cssText = `background:var(--bg-card);border:1px solid var(--border-color);border-radius:20px;padding:20px;width:90%;max-width:500px;max-height:80vh;overflow-y:auto;margin:20px;`;
     
     box.innerHTML = `
-        <h3 style="color:#4a9eff;margin:0 0 15px;text-align:center;">Select Partitions</h3>
-        <div id="partition-loading" style="text-align:center;color:#8b92b4;">Loading partitions...</div>
-        <div id="partition-list" style="display:none;max-height:50vh;overflow-y:auto;background:rgba(0,0,0,0.3);border-radius:10px;padding:10px;margin-bottom:15px;"></div>
+        <h3 style="color:var(--accent-blue);margin:0 0 15px;text-align:center;">Select Partitions</h3>
+        <div id="partition-loading" style="text-align:center;color:var(--text-secondary);">Loading partitions...</div>
+        <div id="partition-list" style="display:none;max-height:50vh;overflow-y:auto;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:10px;margin-bottom:15px;"></div>
         <div style="display:flex;gap:8px;margin-bottom:15px;">
-            <button id="part-select-all" style="flex:1;padding:10px;background:rgba(74,158,255,0.2);color:#4a9eff;border:1px solid #4a9eff;border-radius:8px;font-size:12px;cursor:pointer;">Select All</button>
-            <button id="part-deselect-all" style="flex:1;padding:10px;background:rgba(255,69,58,0.2);color:#FF453A;border:1px solid #FF453A;border-radius:8px;font-size:12px;cursor:pointer;">Deselect All</button>
+            <button id="part-select-all" style="flex:1;padding:10px;background:rgba(74, 158, 255, 0.2);color:var(--accent-blue);border:1px solid var(--accent-blue);border-radius:8px;font-size:12px;cursor:pointer;">Select All</button>
+            <button id="part-deselect-all" style="flex:1;padding:10px;background:rgba(255, 69, 58, 0.2);color:var(--accent-red);border:1px solid var(--accent-red);border-radius:8px;font-size:12px;cursor:pointer;">Deselect All</button>
         </div>
         <div style="display:flex;gap:8px;">
-            <button id="part-cancel" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;">Cancel</button>
-            <button id="part-save" style="flex:2;padding:12px;background:linear-gradient(135deg,#4a9eff,#2980b9);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">Save Selection</button>
+            <button id="part-cancel" style="flex:1;padding:12px;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:10px;font-size:14px;cursor:pointer;">Cancel</button>
+            <button id="part-save" style="flex:2;padding:12px;background:var(--accent-blue);color:var(--text-primary);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">Save Selection</button>
         </div>
     `;
     
@@ -112,9 +112,9 @@ async function showPartitionPicker() {
         listEl.style.display = 'block';
         
         listEl.innerHTML = parts.map(p => `
-            <label style="display:flex;align-items:center;padding:8px;background:rgba(255,255,255,0.05);border-radius:8px;margin-bottom:5px;cursor:pointer;">
-                <input type="checkbox" class="part-checkbox" value="${p}" ${selectedPartitions.includes(p)?'checked':''} style="margin-right:10px;accent-color:#4a9eff;width:18px;height:18px;">
-                <span style="color:#fff;font-size:13px;font-family:monospace;">${p}</span>
+            <label style="display:flex;align-items:center;padding:8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;margin-bottom:5px;cursor:pointer;">
+                <input type="checkbox" class="part-checkbox" value="${p}" ${selectedPartitions.includes(p)?'checked':''} style="margin-right:10px;accent-color:var(--accent-blue);width:18px;height:18px;">
+                <span style="color:var(--text-primary);font-size:13px;font-family:monospace;">${p}</span>
             </label>
         `).join('');
         
@@ -131,7 +131,7 @@ async function showPartitionPicker() {
             picker.remove();
         };
     } catch (e) {
-        document.getElementById('partition-loading').innerHTML = '<span style="color:#FF453A;">Failed to load partitions. Root required.</span>';
+        document.getElementById('partition-loading').innerHTML = '<span style="color:var(--accent-red);">Failed to load partitions. Root required.</span>';
     }
 }
 
@@ -140,42 +140,40 @@ function showMaintenanceModal() {
     if (existing) existing.remove();
     const modal = document.createElement('div');
     modal.id = 'maintenance-modal';
-    // ✅ CENTERED UI: align-items:center + justify-content:center
     modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);padding:20px;`;
     const box = document.createElement('div');
-    // ✅ All corners rounded (no longer bottom-sheet style)
-    box.style.cssText = `background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #4a9eff;border-radius:20px;padding:20px;width:100%;max-width:600px;box-shadow:0 0 40px rgba(74,158,255,0.2);max-height:85vh;overflow-y:auto;`;
+    box.style.cssText = `background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:20px;width:100%;max-width:600px;box-shadow:0 0 40px rgba(0,0,0,0.5);max-height:85vh;overflow-y:auto;`;
     
     const createToggle = (id, label, desc) => {
         const on = taskStates[id];
         return `
-        <div class="task-item" data-task="${id}" style="background:${on?'rgba(74,158,255,0.15)':'rgba(255,255,255,0.05)'};border:${on?'1px solid rgba(74,158,255,0.5)':'1px solid transparent'};border-radius:10px;padding:12px;margin-bottom:8px;transition:all 0.2s;">
+        <div class="task-item" data-task="${id}" style="background:${on?'rgba(74, 158, 255, 0.15)':'var(--bg-secondary)'};border:${on?'1px solid var(--accent-blue)':'1px solid var(--border-color)'};border-radius:10px;padding:12px;margin-bottom:8px;transition:all 0.2s;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <div style="flex:1;">
-                    <div class="task-title" style="color:${on?'#4a9eff':'#fff'};font-size:13px;font-weight:600;margin-bottom:2px;">${label}</div>
-                    ${desc ? `<div style="color:#8b92b4;font-size:11px;">${desc}</div>` : ''}
+                    <div class="task-title" style="color:${on?'var(--accent-blue)':'var(--text-primary)'};font-size:13px;font-weight:600;margin-bottom:2px;">${label}</div>
+                    ${desc ? `<div style="color:var(--text-secondary);font-size:11px;">${desc}</div>` : ''}
                 </div>
                 <label class="toggle-wrap" style="position:relative;display:inline-block;width:50px;height:26px;cursor:pointer;">
                     <input type="checkbox" class="task-checkbox" data-task="${id}" style="opacity:0;width:0;height:0;">
-                    <span class="toggle-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:${on?'#4a9eff':'#555'};transition:.3s;border-radius:26px;box-shadow:${on?'0 0 8px rgba(74,158,255,0.6)':'none'};"></span>
-                    <span class="toggle-knob" id="knob-${id}" style="position:absolute;height:20px;width:20px;left:3px;bottom:3px;background-color:white;transition:.3s;border-radius:50%;transform:${on?'translateX(24px)':'translateX(0)'};"></span>
+                    <span class="toggle-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:${on?'var(--accent-blue)':'var(--border-color)'};transition:.3s;border-radius:26px;box-shadow:${on?'0 0 8px rgba(74, 158, 255, 0.6)':'none'};"></span>
+                    <span class="toggle-knob" id="knob-${id}" style="position:absolute;height:20px;width:20px;left:3px;bottom:3px;background-color:var(--text-primary);transition:.3s;border-radius:50%;transform:${on?'translateX(24px)':'translateX(0)'};"></span>
                 </label>
             </div>
         </div>`;
     };
     
     box.innerHTML = `
-        <h3 style="color:#4a9eff;margin:0 0 5px;font-size:18px;text-align:center;">🔧 Maintenance Tasks</h3>
-        <p style="color:#8b92b4;font-size:11px;text-align:center;margin-bottom:15px;">Select tasks to perform now</p>
+        <h3 style="color:var(--accent-blue);margin:0 0 5px;font-size:18px;text-align:center;">🔧 Maintenance Tasks</h3>
+        <p style="color:var(--text-secondary);font-size:11px;text-align:center;margin-bottom:15px;">Select tasks to perform now</p>
         <div id="task-list">
-            <div style="color:#4a9eff;font-size:12px;font-weight:600;margin:10px 0 5px;padding-left:5px;">Backup & Optimization</div>
+            <div style="color:var(--accent-blue);font-size:12px;font-weight:600;margin:10px 0 5px;padding-left:5px;">Backup & Optimization</div>
             ${createToggle('update_backups','Update existing backups','Refresh current backup files')}
             ${createToggle('backup_apps','Backup all user apps','Create APK backups of installed apps')}
             ${createToggle('fix_permissions','Fix permissions','Repair app & file permissions')}
             ${createToggle('clear_caches','Clear caches','Remove app cache files')}
             ${createToggle('optimize_apps','Optimize apps loading','Run dexopt on installed apps')}
             ${createToggle('optimize_db','Optimize database accesses','Vacuum & optimize app databases')}
-            <div style="color:#4a9eff;font-size:12px;font-weight:600;margin:15px 0 5px;padding-left:5px;">Data Backup</div>                
+            <div style="color:var(--accent-blue);font-size:12px;font-weight:600;margin:15px 0 5px;padding-left:5px;">Data Backup</div>                
             ${createToggle('backup_sms','Backup SMS','Save text messages to backup')}
             ${createToggle('backup_calllog','Backup call-log','Save call history')}
             ${createToggle('backup_contacts','Backup contacts','Export contacts to VCF')}
@@ -183,27 +181,27 @@ function showMaintenanceModal() {
             ${createToggle('backup_wifi','Backup Wi-Fi settings','Save WiFi configurations')}
             ${createToggle('backup_partitions','Backup Partition Images','Backup specific images from /dev/block/by-name/')}
             <div style="margin:-4px 0 12px 0; padding: 0 4px;">
-                <button id="select-partitions-btn" style="width:100%;padding:10px;background:rgba(255,255,255,0.05);color:#8b92b4;border:1px dashed rgba(255,255,255,0.2);border-radius:8px;font-size:12px;cursor:pointer;">
+                <button id="select-partitions-btn" style="width:100%;padding:10px;background:var(--bg-secondary);color:var(--text-secondary);border:1px dashed var(--border-color);border-radius:8px;font-size:12px;cursor:pointer;">
                     📂 Choose Partitions to Backup
                 </button>
-                <div id="selected-partitions-display" style="text-align:center;font-size:11px;margin-top:5px;color:#8b92b4;">No partitions selected</div>
+                <div id="selected-partitions-display" style="text-align:center;font-size:11px;margin-top:5px;color:var(--text-secondary);">No partitions selected</div>
             </div>
-            <div style="color:#4a9eff;font-size:12px;font-weight:600;margin:15px 0 5px;padding-left:5px;">System Cleanup</div>
+            <div style="color:var(--accent-blue);font-size:12px;font-weight:600;margin:15px 0 5px;padding-left:5px;">System Cleanup</div>
             ${createToggle('clean_memory','Clean memory','Free up RAM')}
             ${createToggle('clean_system_apps','Clean updated system apps','Remove system app updates')}
             ${createToggle('trim_partitions','Trim all partitions','Run fstrim on storage')}
             ${createToggle('clear_clipboard','Clear clipboard','Clear clipboard history')}
             ${createToggle('clean_dalvik','Clean dalvik','Remove dalvik cache files')}
             ${createToggle('wipe_dalvik_reboot','Wipe dalvik (auto-reboot)','Full dalvik wipe + reboot')}
-            <div style="color:#4a9eff;font-size:12px;font-weight:600;margin:15px 0 5px;padding-left:5px;">Options</div>
+            <div style="color:var(--accent-blue);font-size:12px;font-weight:600;margin:15px 0 5px;padding-left:5px;">Options</div>
             ${createToggle('show_notification','Show results in notification','Display completion status')}
         </div>
-        <div id="maint-status" style="text-align:center;font-size:12px;color:#666;margin-bottom:12px;min-height:40px;padding:10px;background:rgba(0,0,0,0.3);border-radius:10px;display:none;"></div>
+        <div id="maint-status" style="text-align:center;font-size:12px;color:var(--text-secondary);margin-bottom:12px;min-height:40px;padding:10px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;display:none;"></div>
         <div style="display:flex;gap:8px;margin-top:15px;">
-            <button id="maint-cancel-btn" style="flex:1;padding:14px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>
-            <button id="maint-run-btn" style="flex:2;padding:14px;background:linear-gradient(135deg,#4a9eff,#2980b9);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">▶ Run Selected Tasks</button>
+            <button id="maint-cancel-btn" style="flex:1;padding:14px;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>
+            <button id="maint-run-btn" style="flex:2;padding:14px;background:var(--accent-blue);color:var(--text-primary);border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">▶ Run Selected Tasks</button>
         </div>
-        <div style="margin-top:12px;padding:10px;background:rgba(241,196,15,0.1);border:1px solid rgba(241,196,15,0.3);border-radius:8px;font-size:10px;color:#f1c40f;line-height:1.4;">
+        <div style="margin-top:12px;padding:10px;background:rgba(241,196,15,0.1);border:1px solid rgba(241,196,15,0.3);border-radius:8px;font-size:10px;color:var(--accent-orange);line-height:1.4;">
             ⚠️ <strong>Warning:</strong> Some tasks require root access. Ensure backups exist before proceeding. Partition backups require significant storage space.
         </div>
     `;
@@ -232,14 +230,14 @@ function handleToggleChange(e) {
 function updateTaskVisuals(id, isEnabled) {
     const item = document.querySelector(`.task-item[data-task="${id}"]`);
     if (!item) return;
-    item.style.background = isEnabled ? 'rgba(74,158,255,0.15)' : 'rgba(255,255,255,0.05)';
-    item.style.border = isEnabled ? '1px solid rgba(74,158,255,0.5)' : '1px solid transparent';
+    item.style.background = isEnabled ? 'rgba(74, 158, 255, 0.15)' : 'var(--bg-secondary)';
+    item.style.border = isEnabled ? '1px solid var(--accent-blue)' : '1px solid var(--border-color)';
     const title = item.querySelector('.task-title');
-    if (title) title.style.color = isEnabled ? '#4a9eff' : '#fff';
+    if (title) title.style.color = isEnabled ? 'var(--accent-blue)' : 'var(--text-primary)';
     const slider = item.querySelector('.toggle-slider');
     if (slider) {
-        slider.style.backgroundColor = isEnabled ? '#4a9eff' : '#555';
-        slider.style.boxShadow = isEnabled ? '0 0 8px rgba(74,158,255,0.6)' : 'none';
+        slider.style.backgroundColor = isEnabled ? 'var(--accent-blue)' : 'var(--border-color)';
+        slider.style.boxShadow = isEnabled ? '0 0 8px rgba(74, 158, 255, 0.6)' : 'none';
     }
     const knob = document.getElementById(`knob-${id}`);
     if (knob) knob.style.transform = isEnabled ? 'translateX(24px)' : 'translateX(0)';
@@ -253,41 +251,41 @@ async function runMaintenanceTasks() {
     
     if (selected.length === 0) {
         statusEl.style.display = 'block';
-        statusEl.innerHTML = '<span style="color:#FF453A;">⚠️ No tasks selected</span>';
+        statusEl.innerHTML = '<span style="color:var(--accent-red);">⚠️ No tasks selected</span>';
         return;
     }
     
     runBtn.disabled = true; runBtn.innerHTML = '⏳ Running...';
     cancelBtn.disabled = true;
     statusEl.style.display = 'block';
-    statusEl.innerHTML = `<span style="color:#4a9eff;">🔄 Starting ${selected.length} tasks...</span>`;
+    statusEl.innerHTML = `<span style="color:var(--accent-blue);">🔄 Starting ${selected.length} tasks...</span>`;
     
     let completed = 0, errors = [];
     try {
         await execFn(`mkdir -p ${BACKUP_DIR}`);
         for (const task of selected) {
             try {
-                statusEl.innerHTML = `<span style="color:#FF9F0A;">⏳ ${formatName(task)}...</span>`;
+                statusEl.innerHTML = `<span style="color:var(--accent-orange);">⏳ ${formatName(task)}...</span>`;
                 await executeTask(task);
                 completed++;
-                statusEl.innerHTML = `<span style="color:#32D74B;">✓ ${formatName(task)}</span>`;
+                statusEl.innerHTML = `<span style="color:var(--accent-green);">✓ ${formatName(task)}</span>`;
                 await new Promise(r => setTimeout(r, 300));
             } catch (e) {
                 errors.push(`${task}: ${e.message}`);
-                statusEl.innerHTML = `<span style="color:#FF453A;">✗ ${formatName(task)}</span>`;
+                statusEl.innerHTML = `<span style="color:var(--accent-red);">✗ ${formatName(task)}</span>`;
                 await new Promise(r => setTimeout(r, 300));
             }
         }
-        statusEl.innerHTML = `<span style="color:#32D74B;">✅ ${completed}/${selected.length} completed</span>${errors.length?`<br><small style="color:#FF453A">${errors.length} errors</small>`:''}`;
-        if (taskStates.show_notification && window.showStatus) window.showStatus(`✅ ${completed} tasks done`, '#4a9eff');
+        statusEl.innerHTML = `<span style="color:var(--accent-green);">✅ ${completed}/${selected.length} completed</span>${errors.length?`<br><small style="color:var(--accent-red)">${errors.length} errors</small>`:''}`;
+        if (taskStates.show_notification && window.showStatus) window.showStatus(`✅ ${completed} tasks done`, 'var(--accent-blue)');
         if (taskStates.wipe_dalvik_reboot) {
-            statusEl.innerHTML += '<br><span style="color:#FF9F0A;">🔄 Rebooting...</span>';
+            statusEl.innerHTML += '<br><span style="color:var(--accent-orange);">🔄 Rebooting...</span>';
             await new Promise(r => setTimeout(r, 2000));
             await execFn('su -c "reboot"');
         }
         setTimeout(() => document.getElementById('maintenance-modal')?.remove(), 2500);
     } catch (e) {
-        statusEl.innerHTML = `<span style="color:#FF453A;">❌ ${e.message}</span>`;
+        statusEl.innerHTML = `<span style="color:var(--accent-red);">❌ ${e.message}</span>`;
         runBtn.disabled = false; runBtn.innerHTML = '▶ Run Selected Tasks';
         cancelBtn.disabled = false;
     }
@@ -298,7 +296,6 @@ async function executeTask(task) {
         if (selectedPartitions.length === 0) throw new Error('No partitions selected');
         await execFn('su -c "mkdir -p /sdcard/AndroidBackups"', 5000);
         for (const p of selectedPartitions) {
-            // 5 minutes timeout per partition to handle large images
             await execFn(`su -c "dd if=/dev/block/by-name/${p} of=/sdcard/AndroidBackups/${p}.img bs=4M 2>/dev/null"`, 300000);
         }
         return;

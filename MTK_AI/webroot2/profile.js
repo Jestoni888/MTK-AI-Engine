@@ -62,19 +62,19 @@ function init() {
 function createModal() {
     const overlay = document.createElement('div');
     overlay.id = 'profile-modal-overlay';
-    overlay.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:9999;justify-content:center;align-items:center;font-family:system-ui,sans-serif;';
+    overlay.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;justify-content:center;align-items:center;font-family:system-ui,sans-serif;backdrop-filter:blur(5px);';
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
     
     const modal = document.createElement('div');
-    modal.style.cssText = 'background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:16px;padding:24px;max-width:400px;width:90%;color:#fff;position:relative;box-shadow:0 10px 40px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1);';
+    modal.style.cssText = 'background:linear-gradient(135deg,var(--bg-secondary),var(--bg-card));border-radius:20px;padding:24px;max-width:400px;width:90%;color:#fff;position:relative;box-shadow:0 10px 40px rgba(0,0,0,0.5);border:2px solid var(--border-color);';
     
     modal.innerHTML += `
-        <div style="text-align:center;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:16px">
-            <i class="fas fa-robot" style="font-size:32px;color:#00d9ff;margin-bottom:8px;display:block"></i>
-            <h3 style="margin:0;font-size:18px;font-weight:600">${PROFILE.name}</h3>
-            ${PROFILE.country ? `<p style="margin:4px 0 0 0;font-size:14px;color:#aaa;">📍 ${PROFILE.country}</p>` : ''}
+        <div style="text-align:center;padding-bottom:16px;border-bottom:1px solid var(--border-color);margin-bottom:16px">
+            <i class="fas fa-robot" style="font-size:32px;color:#fff;margin-bottom:8px;display:block"></i>
+            <h3 style="margin:0;font-size:18px;font-weight:600;color:#fff;">${PROFILE.name}</h3>
+            ${PROFILE.country ? `<p style="margin:4px 0 0 0;font-size:14px;color:#fff;">📍 ${PROFILE.country}</p>` : ''}
         </div>
-        <p style="color:#ccc;text-align:center;margin:0 0 20px 0;line-height:1.5;font-size:14px">${PROFILE.message}</p>
+        <p style="color:#fff;text-align:center;margin:0 0 20px 0;line-height:1.5;font-size:14px">${PROFILE.message}</p>
     `;
     
     const linksContainer = document.createElement('div');
@@ -83,18 +83,18 @@ function createModal() {
     PROFILE.links.forEach(link => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,0.08);border-radius:10px;border:1px solid rgba(255,255,255,0.1);color:#fff;cursor:pointer;width:100%;font-size:14px;transition:all 0.2s;text-align:left;';
-        btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(255,255,255,0.15)'; });
-        btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(255,255,255,0.08)'; });
+        btn.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg-card);border-radius:10px;border:1px solid var(--border-color);color:#fff;cursor:pointer;width:100%;font-size:14px;transition:all 0.2s;text-align:left;';
+        btn.addEventListener('mouseenter', () => { btn.style.background = 'var(--bg-secondary)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.background = 'var(--bg-card)'; });
         btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openExternal(link.url); });
-        btn.innerHTML = `<i class="${link.icon}" style="font-size:20px;width:24px;text-align:center"></i><span style="font-weight:500;flex:1">${link.label}</span><i class="fas fa-external-link-alt" style="font-size:12px;opacity:0.6"></i>`;
+        btn.innerHTML = `<i class="${link.icon}" style="font-size:20px;width:24px;text-align:center;color:#fff;"></i><span style="font-weight:500;flex:1;color:#fff;">${link.label}</span><i class="fas fa-external-link-alt" style="font-size:12px;opacity:0.8;color:#fff;"></i>`;
         linksContainer.appendChild(btn);
     });
     
     modal.appendChild(linksContainer);
     
     const note = document.createElement('p');
-    note.style.cssText = 'color:#888;text-align:center;margin:0;font-size:12px;font-style:italic;';
+    note.style.cssText = 'color:#fff;text-align:center;margin:0;font-size:12px;font-style:italic;';
     note.textContent = PROFILE.note;
     modal.appendChild(note);
     

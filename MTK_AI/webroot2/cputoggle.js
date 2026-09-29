@@ -58,28 +58,28 @@
 
         const box = document.createElement('div');
         box.style.cssText = `
-            background: linear-gradient(135deg, #1a1f3a, #2d3561);
-            border: 2px solid #a855f7;
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 24px; width: 95%; max-width: 450px;
-            box-shadow: 0 0 40px rgba(168, 85, 247, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         `;
 
         box.innerHTML = `
-            <h3 style="color: #a855f7; margin: 0 0 5px; font-size: 20px; text-align: center;">⚡ CPU Core Toggle</h3>
-            <p style="color: #8b92b4; font-size: 12px; text-align: center; margin-bottom: 20px;">Toggle cores online/offline</p>
+            <h3 style="color: #fff; margin: 0 0 5px; font-size: 20px; text-align: center;">⚡ CPU Core Toggle</h3>
+            <p style="color: #fff; font-size: 12px; text-align: center; margin-bottom: 20px;">Toggle cores online/offline</p>
 
-            <div id="cpu-scan-status" style="text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; min-height: 40px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                <span style="color: #FF9F0A;">🔍 Reading LIVE CPU status...</span>
+            <div id="cpu-scan-status" style="text-align: center; font-size: 12px; color: #fff; margin-bottom: 15px; min-height: 40px; padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
+                <span style="color: #fff;">🔍 Reading LIVE CPU status...</span>
             </div>
 
             <div id="cpu-list" style="display: none; flex-direction: column; gap: 10px; margin-bottom: 15px; max-height: 220px; overflow-y: auto; padding-right: 4px;"></div>
 
-            <div style="background: rgba(168,85,247,0.1); color: #c4b5fd; padding: 10px; border-radius: 8px; font-size: 11px; text-align: center; margin-bottom: 15px;">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 8px; font-size: 11px; text-align: center; margin-bottom: 15px;">
                 <i class="fas fa-info-circle"></i> CPU0 usually cannot be offlined. Status shows LIVE kernel state.
             </div>
 
-            <button id="cpu-cancel-btn" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 10px; font-size: 13px; cursor: pointer;">Cancel</button>
+            <button id="cpu-cancel-btn" style="width: 100%; padding: 12px; background: var(--bg-secondary); color: #fff; border: 1px solid var(--border-color); border-radius: 10px; font-size: 13px; cursor: pointer;">Cancel</button>
         `;
 
         modal.appendChild(box);
@@ -105,7 +105,7 @@
             const cpuPaths = cpuPathsRaw.trim().split('\n').filter(p => p.trim());
 
             if (!cpuPaths.length) {
-                statusEl.innerHTML = '<span style="color: #666;">No CPU cores detected. Check root access.</span>';
+                statusEl.innerHTML = '<span style="color: #fff;">No CPU cores detected. Check root access.</span>';
                 listEl.style.display = 'none';
                 return;
             }
@@ -131,28 +131,25 @@
                 const canToggle = isHotplug && parseInt(id) > 0;
                 const isOnline = liveOnline;
                 
-                // Dynamic styling based on state
-                const statusColor = isOnline ? '#32D74B' : '#FF453A';
-                const statusBg = isOnline ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)';
-                const btnBg = isOnline ? '#FF453A' : '#32D74B';
+                const statusBg = isOnline ? 'var(--accent-green)' : 'var(--accent-red)';
+                const btnBg = isOnline ? 'var(--accent-red)' : 'var(--accent-green)';
                 const btnText = isOnline ? 'Offline' : 'Online';
 
                 const coreEl = document.createElement('div');
                 coreEl.id = `cpu-core-row-${id}`;
-                coreEl.style.cssText = 'background: rgba(0,0,0,0.3); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;';
+                coreEl.style.cssText = 'background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;';
                 
-                // ✅ Added unique IDs to elements for targeted partial updates
                 coreEl.innerHTML = `
                     <div style="flex: 1;">
                         <div style="color: #fff; font-size: 13px; font-weight: 600;">
                             CPU${id}
-                            <span id="cpu-badge-${id}" style="font-size: 10px; background: ${statusBg}; color: ${statusColor}; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">
+                            <span id="cpu-badge-${id}" style="font-size: 10px; background: ${statusBg}; color: #fff; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">
                                 LIVE
                             </span>
                         </div>
-                        <div style="color: #666; font-size: 11px; margin-top: 2px;">
-                            <span id="cpu-freq-${id}">${freq}</span> • <span id="cpu-status-${id}" style="color: ${statusColor}">${isOnline ? 'online' : 'offline'}</span>
-                            ${!canToggle ? ' • <span style="color: #888;">locked</span>' : ''}
+                        <div style="color: #fff; font-size: 11px; margin-top: 2px;">
+                            <span id="cpu-freq-${id}">${freq}</span> • <span id="cpu-status-${id}" style="color: #fff">${isOnline ? 'online' : 'offline'}</span>
+                            ${!canToggle ? ' • <span style="color: #fff;">locked</span>' : ''}
                         </div>
                     </div>
                     <button id="cpu-btn-${id}" class="cpu-core-toggle" data-id="${id}" data-live="${isOnline ? '1' : '0'}" ${!canToggle ? 'disabled' : ''} 
@@ -174,7 +171,6 @@
                     
                     const newOnline = currentLive ? '0' : '1';
                     
-                    // ✅ Target specific elements for this CPU core only
                     const btnEl = document.getElementById(`cpu-btn-${id}`);
                     const badgeEl = document.getElementById(`cpu-badge-${id}`);
                     const statusTextEl = document.getElementById(`cpu-status-${id}`);
@@ -186,13 +182,9 @@
                     }
                     
                     try {
-                        // ✅ STEP 1: Make the online file writable (chmod 644)
                         await execFn(`su -c "chmod 644 ${core.path}/online"`);
-                        
-                        // ✅ STEP 2: Write the new state
                         await execFn(`su -c "echo ${newOnline} > ${core.path}/online"`);
                         
-                        // ✅ Save state for persistence to sdcard
                         savedCoreStates[id] = newOnline;
                         let cfg = '';
                         for (const [cid, state] of Object.entries(savedCoreStates)) {
@@ -200,7 +192,6 @@
                         }
                         await execFn(`mkdir -p /sdcard/MTK_AI_Engine && echo "${cfg}" > ${CONFIG_FILE}`);
                         
-                        // ✅ Re-read LIVE status after toggle FOR THIS CORE ONLY
                         await new Promise(r => setTimeout(r, 300));
                         const updatedOnlineRaw = await execFn(`cat ${core.path}/online 2>/dev/null`);
                         const updatedLive = updatedOnlineRaw && updatedOnlineRaw.trim() === '1';
@@ -208,23 +199,20 @@
                         const updatedFreqRaw = await execFn(`cat ${core.path}/cpufreq/scaling_cur_freq 2>/dev/null`);
                         const updatedFreq = updatedFreqRaw && updatedFreqRaw.trim() ? `${Math.floor(parseInt(updatedFreqRaw)/1000)} MHz` : 'N/A';
 
-                        // Update state in memory
                         core.liveOnline = updatedLive;
                         core.freq = updatedFreq;
 
-                        // ✅ Update UI text and styles of this particular CPU core ONLY (No full UI refresh)
                         const isOnline = updatedLive;
-                        const statusColor = isOnline ? '#32D74B' : '#FF453A';
-                        const statusBg = isOnline ? 'rgba(50,215,75,0.2)' : 'rgba(255,69,58,0.2)';
-                        const btnBg = isOnline ? '#FF453A' : '#32D74B';
+                        const statusBg = isOnline ? 'var(--accent-green)' : 'var(--accent-red)';
+                        const btnBg = isOnline ? 'var(--accent-red)' : 'var(--accent-green)';
                         const btnText = isOnline ? 'Offline' : 'Online';
 
                         if (badgeEl) {
                             badgeEl.style.background = statusBg;
-                            badgeEl.style.color = statusColor;
+                            badgeEl.style.color = '#fff';
                         }
                         if (statusTextEl) {
-                            statusTextEl.style.color = statusColor;
+                            statusTextEl.style.color = '#fff';
                             statusTextEl.textContent = isOnline ? 'online' : 'offline';
                         }
                         if (freqEl) {
@@ -249,7 +237,7 @@
 
         } catch (e) {
             console.error('CPUToggle: Scan failed:', e);
-            statusEl.innerHTML = `<span style="color: #FF453A;">❌ Error: ${e.message}</span>`;
+            statusEl.innerHTML = `<span style="color: #fff;">❌ Error: ${e.message}</span>`;
         }
     }
 

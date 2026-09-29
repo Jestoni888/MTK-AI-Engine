@@ -273,20 +273,20 @@ function showDevfreqModal() {
 
     const box = document.createElement('div');
     box.style.cssText = `
-        background: linear-gradient(145deg, #1e2342, #2a3059);
-        border: 1px solid rgba(99, 102, 241, 0.4);
+        background: linear-gradient(145deg, var(--bg-secondary), var(--bg-card));
+        border: 1px solid var(--border-color);
         border-radius: 18px;
         padding: 22px; width: 92%; max-width: 460px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
-        color: #fff; transform: translateY(0); transition: transform 0.2s ease;
+        color: #ffffff; transform: translateY(0); transition: transform 0.2s ease;
     `;
 
     // Header
     const header = document.createElement('div');
-    header.style.cssText = 'text-align: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.08);';
+    header.style.cssText = 'text-align: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border-color);';
     header.innerHTML = `
-        <h3 style="color: #6366f1; margin: 0 0 4px; font-size: 19px; font-weight: 600;">⚡ Devfreq Global Control</h3>
-        <p style="color: #7a82b0; font-size: 12px; margin: 0; opacity: 0.9;">
+        <h3 style="color: #ffffff; margin: 0 0 4px; font-size: 19px; font-weight: 600;">⚡ Devfreq Global Control</h3>
+        <p style="color: #ffffff; font-size: 12px; margin: 0; opacity: 0.9;">
             ${nodeName} • ${hardwareMinFreq}–${hardwareMaxFreq} MHz
         </p>
     `;
@@ -297,10 +297,10 @@ function showDevfreqModal() {
     govSection.style.cssText = 'margin-bottom: 18px;';
     govSection.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-            <span style="color:#fff;font-size:14px;font-weight:500;">Devfreq Governor</span>
-            <span id="devfreq-gov-val" style="color:#60a5fa;font-size:12px;font-weight:500;background:rgba(96,165,250,0.15);padding:3px 10px;border-radius:6px;">${currentConfig.governor}</span>
+            <span style="color:#ffffff;font-size:14px;font-weight:500;">Devfreq Governor</span>
+            <span id="devfreq-gov-val" style="color:#ffffff;font-size:12px;font-weight:500;background:rgba(255,255,255,0.15);padding:3px 10px;border-radius:6px;">${currentConfig.governor}</span>
         </div>
-        <select id="devfreq-gov-select" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#fff;font-size:13px;outline:none;transition:border-color 0.2s;">
+        <select id="devfreq-gov-select" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-secondary);color:#ffffff;font-size:13px;outline:none;transition:border-color 0.2s;">
             ${availableGovernors.map(g => `<option value="${g}" ${g === currentConfig.governor ? 'selected' : ''}>${g}</option>`).join('')}
         </select>
     `;
@@ -310,15 +310,15 @@ function showDevfreqModal() {
     const lockSection = document.createElement('div');
     lockSection.style.cssText = 'margin-bottom: 16px;';
     lockSection.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:rgba(30,41,59,0.6);border:1px solid rgba(99,102,241,0.2);border-radius:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:16px;">
             <div style="flex:1;">
-                <div style="color:#60a5fa;font-size:14px;font-weight:600;margin-bottom:4px;">Lock Frequency Range</div>
-                <div style="color:#94a3b8;font-size:12px;">Override dynamic limits with target range</div>
+                <div style="color:#ffffff;font-size:14px;font-weight:600;margin-bottom:4px;">Lock Frequency Range</div>
+                <div style="color:#ffffff;font-size:12px;">Override dynamic limits with target range</div>
             </div>
             <label class="devfreq-switch" style="position:relative;display:inline-block;width:52px;height:28px;cursor:pointer;margin-left:16px;">
                 <input type="checkbox" id="devfreq-lock-toggle" ${currentConfig.isLocked ? 'checked' : ''} style="opacity:0;width:0;height:0;">
-                <span class="devfreq-slider" style="position:absolute;top:0;left:0;right:0;bottom:0;background-color:#475569;transition:all 0.3s ease;border-radius:28px;">
-                    <span class="devfreq-knob" style="position:absolute;content:'';height:22px;width:22px;left:3px;top:3px;background-color:#fff;transition:all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.2);"></span>
+                <span class="devfreq-slider" style="position:absolute;top:0;left:0;right:0;bottom:0;background-color:var(--border-color);transition:all 0.3s ease;border-radius:28px;">
+                    <span class="devfreq-knob" style="position:absolute;content:'';height:22px;width:22px;left:3px;top:3px;background-color:#ffffff;transition:all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.2);"></span>
                 </span>
             </label>
         </div>
@@ -329,7 +329,8 @@ function showDevfreqModal() {
     const slidersContainer = document.createElement('div');
     slidersContainer.id = 'devfreq-sliders-container';
     slidersContainer.style.cssText = `
-        margin-bottom:22px; padding:14px; background:rgba(255,255,255,0.04); 
+        margin-bottom:22px; padding:14px; background:var(--bg-secondary); 
+        border:1px solid var(--border-color);
         border-radius:12px; transition:opacity 0.2s ease, filter 0.2s ease;
         ${currentConfig.isLocked ? '' : 'opacity:0.6;filter:blur(0.5px);pointer-events:none;'}
     `;
@@ -340,11 +341,11 @@ function showDevfreqModal() {
     minBlock.style.cssText = 'margin-bottom: 16px;';
     minBlock.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-            <span style="color:#fff;font-size:13px;font-weight:500;">Minimum Frequency</span>
-            <span id="devfreq-min-val" style="color:#6366f1;font-size:16px;font-weight:700;">${availableFrequencies[minIdx]} MHz</span>
+            <span style="color:#ffffff;font-size:13px;font-weight:500;">Minimum Frequency</span>
+            <span id="devfreq-min-val" style="color:#ffffff;font-size:16px;font-weight:700;">${availableFrequencies[minIdx]} MHz</span>
         </div>
         <input type="range" id="devfreq-min-slider" min="0" max="${availableFrequencies.length - 1}" step="1" value="${minIdx}"
-            style="width:100%;height:5px;background:linear-gradient(90deg,#374151,#4b5563);border-radius:3px;outline:none;-webkit-appearance:none;cursor:pointer;">
+            style="width:100%;height:5px;background:linear-gradient(90deg,var(--border-color),var(--accent-blue));border-radius:3px;outline:none;-webkit-appearance:none;cursor:pointer;">
     `;
 
     // Maximum Frequency Slider
@@ -352,11 +353,11 @@ function showDevfreqModal() {
     const maxBlock = document.createElement('div');
     maxBlock.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-            <span style="color:#fff;font-size:13px;font-weight:500;">Maximum Frequency</span>
-            <span id="devfreq-max-val" style="color:#ef4444;font-size:16px;font-weight:700;">${availableFrequencies[maxIdx]} MHz</span>
+            <span style="color:#ffffff;font-size:13px;font-weight:500;">Maximum Frequency</span>
+            <span id="devfreq-max-val" style="color:#ffffff;font-size:16px;font-weight:700;">${availableFrequencies[maxIdx]} MHz</span>
         </div>
         <input type="range" id="devfreq-max-slider" min="0" max="${availableFrequencies.length - 1}" step="1" value="${maxIdx}"
-            style="width:100%;height:5px;background:linear-gradient(90deg,#374151,#4b5563);border-radius:3px;outline:none;-webkit-appearance:none;cursor:pointer;">
+            style="width:100%;height:5px;background:linear-gradient(90deg,var(--border-color),var(--accent-blue));border-radius:3px;outline:none;-webkit-appearance:none;cursor:pointer;">
     `;
 
     slidersContainer.appendChild(minBlock);
@@ -368,9 +369,9 @@ function showDevfreqModal() {
         const style = document.createElement('style');
         style.id = 'devfreq-custom-style';
         style.textContent = `
-            .devfreq-switch input:checked + .devfreq-slider { background-color: #6366f1; }
+            .devfreq-switch input:checked + .devfreq-slider { background-color: var(--accent-blue); }
             .devfreq-switch input:checked + .devfreq-slider .devfreq-knob { transform: translateX(24px); }
-            .devfreq-switch input:focus + .devfreq-slider { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3); }
+            .devfreq-switch input:focus + .devfreq-slider { box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.3); }
         `;
         document.head.appendChild(style);
     }
@@ -378,7 +379,7 @@ function showDevfreqModal() {
     // Status Message
     const statusEl = document.createElement('div');
     statusEl.id = 'devfreq-status-msg';
-    statusEl.style.cssText = 'text-align:center;font-size:13px;color:#9ca3af;margin-bottom:14px;min-height:22px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);transition:all 0.2s ease;';
+    statusEl.style.cssText = 'text-align:center;font-size:13px;color:#ffffff;margin-bottom:14px;min-height:22px;padding:10px;border-radius:10px;background:var(--bg-secondary);border:1px solid var(--border-color);transition:all 0.2s ease;';
     statusEl.textContent = 'Status: Ready to apply';
     box.appendChild(statusEl);
 
@@ -387,10 +388,10 @@ function showDevfreqModal() {
     applyBtn.textContent = '💾 Apply Devfreq Settings';
     applyBtn.style.cssText = `
         width:100%;padding:13px;margin-bottom:10px;
-        background:linear-gradient(135deg,#6366f1,#4f46e5);
-        color:#fff;border:none;border-radius:12px;
+        background:linear-gradient(135deg,var(--accent-blue),var(--accent-purple));
+        color:#ffffff;border:none;border-radius:12px;
         font-size:14px;font-weight:600;cursor:pointer;
-        box-shadow:0 4px 14px rgba(99,102,241,0.35);
+        box-shadow:0 4px 14px rgba(74,158,255,0.35);
         transition:all 0.2s ease;
     `;
 
@@ -403,8 +404,8 @@ function showDevfreqModal() {
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Cancel';
     cancelBtn.style.cssText = `
-        width:100%;padding:11px;background:rgba(255,255,255,0.08);color:#fff;
-        border:1px solid rgba(255,255,255,0.12);border-radius:10px;
+        width:100%;padding:11px;background:var(--bg-secondary);color:#ffffff;
+        border:1px solid var(--border-color);border-radius:10px;
         font-size:13px;cursor:pointer;transition:all 0.2s ease;font-weight:500;
     `;
     cancelBtn.onclick = () => {
@@ -448,7 +449,6 @@ function showDevfreqModal() {
         slidersContainer.style.filter = isLocked ? 'none' : 'blur(0.5px)';
         slidersContainer.style.pointerEvents = isLocked ? 'auto' : 'none';
         statusEl.textContent = isLocked ? '🔒 Locked range selected' : '🔓 Dynamic scaling selected';
-        statusEl.style.color = isLocked ? '#fbbf24' : '#60a5fa';
     });
 
     document.getElementById('devfreq-gov-select').addEventListener('change', (e) => {
@@ -559,7 +559,7 @@ async function detectOtherDevfreqNodes() {
             availableFrequencies: uniqueFreqs,
             minFreq: uniqueFreqs[0],
             maxFreq: uniqueFreqs[uniqueFreqs.length - 1],
-            targets // Store whether it uses "min_max" or "set"
+            targets
         });
     }
     console.log(`🔧 Found ${otherDevfreqNodes.length} other devfreq node(s)`);
@@ -599,7 +599,6 @@ async function saveOtherNodesConfig() {
     }
 }
 
-// Apply settings to a single node with strict chmod sequence
 async function applyOtherNodeSettings(nodeName) {
     const node = otherDevfreqNodes.find(n => n.name === nodeName);
     if (!node) return false;
@@ -628,7 +627,6 @@ async function applyOtherNodeSettings(nodeName) {
     }
 }
 
-// Apply settings to ALL other nodes in ONE batched execution (Prevents UI freeze)
 async function applyAllOtherNodes() {
     if (otherDevfreqNodes.length === 0) return 0;
     
@@ -650,7 +648,6 @@ async function applyAllOtherNodes() {
     
     try {
         if (cmd) {
-            // Executes everything in ONE root shell instantly
             await execFn(`su -c "${cmd}"`, 3000); 
         }
         await saveOtherNodesConfig();
@@ -681,14 +678,14 @@ function createOtherDevfreqCard() {
     card.className = existingCard.className;
     card.style.cssText = existingCard.style.cssText || '';
     card.innerHTML = `
-        <div class="setting-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+        <div class="setting-icon" style="background:var(--bg-secondary);color:var(--accent-orange);">
             <i class="fas fa-microchip"></i>
         </div>
         <div class="setting-info" style="flex:1;">
-            <div class="setting-title">Other Devfreq Nodes</div>
-            <div class="setting-desc">SoC, bandwidth & misc frequency control</div>
+            <div class="setting-title" style="color:#ffffff;">Other Devfreq Nodes</div>
+            <div class="setting-desc" style="color:#ffffff;">SoC, bandwidth & misc frequency control</div>
         </div>
-        <div class="setting-value" style="color:#f59e0b;font-size:12px;font-weight:500;">
+        <div class="setting-value" style="color:#ffffff;font-size:12px;font-weight:500;">
             Loading... <i class="fas fa-chevron-right"></i>
         </div>
     `;
@@ -707,53 +704,53 @@ function showOtherDevfreqModal() {
     }
     
     if (!document.getElementById('other-slider-style')) {
-    const style = document.createElement('style');
-    style.id = 'other-slider-style';
-    style.textContent = `
-        .other-slider {
-            -webkit-appearance: none !important;
-            appearance: none !important;
-            width: 100%;
-            height: 30px; /* Larger invisible touch area */
-            background: transparent !important;
-            outline: none;
-            cursor: pointer;
-            margin: 0;
-        }
-        .other-slider::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 6px;
-            background: linear-gradient(90deg, #374151, #4b5563);
-            border-radius: 3px;
-        }
-        .other-slider::-webkit-slider-thumb {
-            -webkit-appearance: none !important;
-            appearance: none !important;
-            height: 24px;
-            width: 24px;
-            border-radius: 50%;
-            background: #f59e0b;
-            margin-top: -9px; /* Perfectly centers thumb on track */
-            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-            border: 2px solid #fff;
-        }
-        .other-slider::-moz-range-track {
-            width: 100%;
-            height: 6px;
-            background: linear-gradient(90deg, #374151, #4b5563);
-            border-radius: 3px;
-        }
-        .other-slider::-moz-range-thumb {
-            height: 24px;
-            width: 24px;
-            border-radius: 50%;
-            background: #f59e0b;
-            border: 2px solid #fff;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-        }
-    `;
-    document.head.appendChild(style);
-}
+        const style = document.createElement('style');
+        style.id = 'other-slider-style';
+        style.textContent = `
+            .other-slider {
+                -webkit-appearance: none !important;
+                appearance: none !important;
+                width: 100%;
+                height: 30px;
+                background: transparent !important;
+                outline: none;
+                cursor: pointer;
+                margin: 0;
+            }
+            .other-slider::-webkit-slider-runnable-track {
+                width: 100%;
+                height: 6px;
+                background: linear-gradient(90deg, var(--border-color), var(--accent-blue));
+                border-radius: 3px;
+            }
+            .other-slider::-webkit-slider-thumb {
+                -webkit-appearance: none !important;
+                appearance: none !important;
+                height: 24px;
+                width: 24px;
+                border-radius: 50%;
+                background: var(--accent-orange);
+                margin-top: -9px;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+                border: 2px solid #ffffff;
+            }
+            .other-slider::-moz-range-track {
+                width: 100%;
+                height: 6px;
+                background: linear-gradient(90deg, var(--border-color), var(--accent-blue));
+                border-radius: 3px;
+            }
+            .other-slider::-moz-range-thumb {
+                height: 24px;
+                width: 24px;
+                border-radius: 50%;
+                background: var(--accent-orange);
+                border: 2px solid #ffffff;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+            }
+        `;
+        document.head.appendChild(style);
+    }
 
     const modal = document.createElement('div');
     modal.id = 'other-devfreq-modal';
@@ -765,19 +762,19 @@ function showOtherDevfreqModal() {
 
     const box = document.createElement('div');
     box.style.cssText = `
-        background: linear-gradient(145deg, #1e2342, #2a3059);
-        border: 1px solid rgba(245, 158, 11, 0.4);
+        background: linear-gradient(145deg, var(--bg-secondary), var(--bg-card));
+        border: 1px solid var(--border-color);
         border-radius: 18px; padding: 22px;
         width: 92%; max-width: 480px; max-height: 85vh; overflow-y: auto;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.4); color: #fff;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4); color: #ffffff;
     `;
 
     // Header
     const header = document.createElement('div');
-    header.style.cssText = 'text-align:center;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.08);';
+    header.style.cssText = 'text-align:center;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border-color);';
     header.innerHTML = `
-        <h3 style="color:#f59e0b;margin:0 0 4px;font-size:19px;font-weight:600;">🔧 Other Devfreq Nodes</h3>
-        <p style="color:#7a82b0;font-size:12px;margin:0;">Frequency adjustment only (‼️Setting to higher frequency will put in maximum performance state with a costs of OVERHEATING🔥)</p>
+        <h3 style="color:#ffffff;margin:0 0 4px;font-size:19px;font-weight:600;">🔧 Other Devfreq Nodes</h3>
+        <p style="color:#ffffff;font-size:12px;margin:0;">Frequency adjustment only (‼️Setting to higher frequency will put in maximum performance state with a costs of OVERHEATING🔥)</p>
     `;
     box.appendChild(header);
 
@@ -791,33 +788,33 @@ function showOtherDevfreqModal() {
         const block = document.createElement('div');
         block.style.cssText = `
             margin-bottom:14px;padding:14px;
-            background:rgba(255,255,255,0.04);
-            border:1px solid rgba(245,158,11,0.15);
+            background:var(--bg-secondary);
+            border:1px solid var(--border-color);
             border-radius:12px;
         `;
         block.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                <span style="color:#f59e0b;font-size:14px;font-weight:600;">📍 ${node.name}</span>
-                <span style="color:#94a3b8;font-size:11px;">${node.availableFrequencies[0]}–${node.availableFrequencies[node.availableFrequencies.length-1]} MHz</span>
+                <span style="color:#ffffff;font-size:14px;font-weight:600;">📍 ${node.name}</span>
+                <span style="color:#ffffff;font-size:11px;">${node.availableFrequencies[0]}–${node.availableFrequencies[node.availableFrequencies.length-1]} MHz</span>
             </div>
             <div style="margin-bottom:10px;">
                 <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                    <span style="color:#fff;font-size:12px;">Min</span>
-                    <span id="other-min-val-${idx}" style="color:#6366f1;font-size:13px;font-weight:700;">${node.availableFrequencies[minIdx]} MHz</span>
+                    <span style="color:#ffffff;font-size:12px;">Min</span>
+                    <span id="other-min-val-${idx}" style="color:#ffffff;font-size:13px;font-weight:700;">${node.availableFrequencies[minIdx]} MHz</span>
                 </div>
                 <input type="range" class="other-slider" id="other-min-slider-${idx}" min="0" max="${node.availableFrequencies.length - 1}" step="1" value="${minIdx}">
             </div>
             <div style="margin-bottom:12px;">
                 <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                    <span style="color:#fff;font-size:12px;">Max</span>
-                    <span id="other-max-val-${idx}" style="color:#ef4444;font-size:13px;font-weight:700;">${node.availableFrequencies[safeMax]} MHz</span>
+                    <span style="color:#ffffff;font-size:12px;">Max</span>
+                    <span id="other-max-val-${idx}" style="color:#ffffff;font-size:13px;font-weight:700;">${node.availableFrequencies[safeMax]} MHz</span>
                 </div>
                 <input type="range" class="other-slider" id="other-max-slider-${idx}" min="0" max="${node.availableFrequencies.length - 1}" step="1" value="${safeMax}">
             </div>
             <button class="other-apply-btn" data-idx="${idx}" style="
                 width:100%;padding:9px;
-                background:linear-gradient(135deg,#f59e0b,#d97706);
-                color:#fff;border:none;border-radius:8px;
+                background:linear-gradient(135deg,var(--accent-orange),var(--accent-red));
+                color:#ffffff;border:none;border-radius:8px;
                 font-size:12px;font-weight:600;cursor:pointer;
             ">Apply ${node.name}</button>
         `;
@@ -828,7 +825,7 @@ function showOtherDevfreqModal() {
     // Status
     const statusEl = document.createElement('div');
     statusEl.id = 'other-status-msg';
-    statusEl.style.cssText = 'text-align:center;font-size:12px;color:#9ca3af;margin:12px 0;min-height:18px;';
+    statusEl.style.cssText = 'text-align:center;font-size:12px;color:#ffffff;margin:12px 0;min-height:18px;';
     statusEl.textContent = 'Adjust sliders and apply per node';
     box.appendChild(statusEl);
 
@@ -837,8 +834,8 @@ function showOtherDevfreqModal() {
     applyAllBtn.textContent = '💾 Apply All & Save';
     applyAllBtn.style.cssText = `
         width:100%;padding:12px;margin-bottom:10px;
-        background:linear-gradient(135deg,#f59e0b,#d97706);
-        color:#fff;border:none;border-radius:12px;
+        background:linear-gradient(135deg,var(--accent-orange),var(--accent-red));
+        color:#ffffff;border:none;border-radius:12px;
         font-size:14px;font-weight:600;cursor:pointer;
     `;
     applyAllBtn.onclick = async () => {
@@ -852,7 +849,6 @@ function showOtherDevfreqModal() {
         applyAllBtn.textContent = '⏳ Applying...';
         const success = await applyAllOtherNodes();
         statusEl.textContent = `✅ Applied ${success}/${otherDevfreqNodes.length} nodes & saved`;
-        statusEl.style.color = '#10b981';
         applyAllBtn.disabled = false;
         applyAllBtn.textContent = '💾 Apply All & Save';
         updateOtherCardDisplay();
@@ -867,8 +863,8 @@ function showOtherDevfreqModal() {
     const cancelBtn = document.createElement('button');
     cancelBtn.textContent = 'Cancel';
     cancelBtn.style.cssText = `
-        width:100%;padding:10px;background:rgba(255,255,255,0.08);color:#fff;
-        border:1px solid rgba(255,255,255,0.12);border-radius:10px;
+        width:100%;padding:10px;background:var(--bg-secondary);color:#ffffff;
+        border:1px solid var(--border-color);border-radius:10px;
         font-size:13px;cursor:pointer;
     `;
     cancelBtn.onclick = () => {
@@ -880,63 +876,58 @@ function showOtherDevfreqModal() {
     modal.appendChild(box);
     document.body.appendChild(modal);
 
-    // === FIXED SLIDER EVENT BINDING ===
-otherDevfreqNodes.forEach((node, idx) => {
-    const minSlider = document.getElementById(`other-min-slider-${idx}`);
-    const maxSlider = document.getElementById(`other-max-slider-${idx}`);
-    const minVal = document.getElementById(`other-min-val-${idx}`);
-    const maxVal = document.getElementById(`other-max-val-${idx}`);
+    otherDevfreqNodes.forEach((node, idx) => {
+        const minSlider = document.getElementById(`other-min-slider-${idx}`);
+        const maxSlider = document.getElementById(`other-max-slider-${idx}`);
+        const minVal = document.getElementById(`other-min-val-${idx}`);
+        const maxVal = document.getElementById(`other-max-val-${idx}`);
 
-    // Clean handlers (NO preventDefault!)
-    const handleMinInput = () => {
-        let minI = parseInt(minSlider.value);
-        let maxI = parseInt(maxSlider.value);
-        if (minI > maxI) {
-            maxSlider.value = minI;
-            maxVal.textContent = `${node.availableFrequencies[minI]} MHz`;
-        }
-        minVal.textContent = `${node.availableFrequencies[minI]} MHz`;
-    };
-
-    const handleMaxInput = () => {
-        let maxI = parseInt(maxSlider.value);
-        let minI = parseInt(minSlider.value);
-        if (maxI < minI) {
-            minSlider.value = maxI;
-            minVal.textContent = `${node.availableFrequencies[maxI]} MHz`;
-        }
-        maxVal.textContent = `${node.availableFrequencies[maxI]} MHz`;
-    };
-
-    // ONLY use 'input' event. It handles both mouse and touch dragging natively.
-    minSlider.addEventListener('input', handleMinInput);
-    maxSlider.addEventListener('input', handleMaxInput);
-
-    // Apply button handler
-    const applyBtn = nodesContainer.querySelectorAll('.other-apply-btn')[idx];
-    if (applyBtn) {
-        applyBtn.onclick = async () => {
-            node.minFreq = node.availableFrequencies[parseInt(minSlider.value)];
-            node.maxFreq = node.availableFrequencies[parseInt(maxSlider.value)];
-            applyBtn.disabled = true;
-            applyBtn.textContent = '⏳ Applying...';
-            const ok = await applyOtherNodeSettings(node.name);
-            await saveOtherNodesConfig();
-            applyBtn.disabled = false;
-            applyBtn.textContent = `Apply ${node.name}`;
-            statusEl.textContent = ok ? `✅ ${node.name} applied & saved` : `❌ ${node.name} failed`;
-            statusEl.style.color = ok ? '#10b981' : '#ef4444';
-            updateOtherCardDisplay();
+        const handleMinInput = () => {
+            let minI = parseInt(minSlider.value);
+            let maxI = parseInt(maxSlider.value);
+            if (minI > maxI) {
+                maxSlider.value = minI;
+                maxVal.textContent = `${node.availableFrequencies[minI]} MHz`;
+            }
+            minVal.textContent = `${node.availableFrequencies[minI]} MHz`;
         };
-    }
-});
 
-modal.onclick = e => {
-    if (e.target === modal) {
-        modal.style.opacity = '0';
-        setTimeout(() => modal.remove(), 150);
-    }
-};
+        const handleMaxInput = () => {
+            let maxI = parseInt(maxSlider.value);
+            let minI = parseInt(minSlider.value);
+            if (maxI < minI) {
+                minSlider.value = maxI;
+                minVal.textContent = `${node.availableFrequencies[maxI]} MHz`;
+            }
+            maxVal.textContent = `${node.availableFrequencies[maxI]} MHz`;
+        };
+
+        minSlider.addEventListener('input', handleMinInput);
+        maxSlider.addEventListener('input', handleMaxInput);
+
+        const applyBtn = nodesContainer.querySelectorAll('.other-apply-btn')[idx];
+        if (applyBtn) {
+            applyBtn.onclick = async () => {
+                node.minFreq = node.availableFrequencies[parseInt(minSlider.value)];
+                node.maxFreq = node.availableFrequencies[parseInt(maxSlider.value)];
+                applyBtn.disabled = true;
+                applyBtn.textContent = '⏳ Applying...';
+                const ok = await applyOtherNodeSettings(node.name);
+                await saveOtherNodesConfig();
+                applyBtn.disabled = false;
+                applyBtn.textContent = `Apply ${node.name}`;
+                statusEl.textContent = ok ? `✅ ${node.name} applied & saved` : `❌ ${node.name} failed`;
+                updateOtherCardDisplay();
+            };
+        }
+    });
+
+    modal.onclick = e => {
+        if (e.target === modal) {
+            modal.style.opacity = '0';
+            setTimeout(() => modal.remove(), 150);
+        }
+    };
 }
 
 async function init() {
@@ -948,7 +939,6 @@ async function init() {
     updateCardDisplay();
     bindClickHandler();
 
-    // === NEW: Other devfreq nodes ===
     await detectOtherDevfreqNodes();
     await loadOtherNodesConfig();
     createOtherDevfreqCard();
@@ -964,7 +954,6 @@ window.DevfreqManager = {
     saveGlobalConfig,
     applySysfsSettings,
     getConfig: () => currentConfig,
-    // NEW
     getOtherNodes: () => otherDevfreqNodes,
     showOtherDevfreqModal,
     applyAllOtherNodes,

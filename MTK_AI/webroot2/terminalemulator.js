@@ -5,12 +5,13 @@ const CONFIG_FILE = '/sdcard/MTK_AI_Engine/terminal.conf';
 const MAX_HISTORY = 50;
 let config = {
     history: [],
+    historyIndex: -1,
     autoScroll: true,
     fontSize: 16,
     theme: 'dark'
 };
 
-// Predefined commands list - Easy to extend!
+// Predefined commands list
 const PREDEFINED_COMMANDS = [
     { label: '🔍 getprop | grep [keyword]', cmd: 'getprop | grep ', copyOnly: true, hint: 'Paste keyword after' },
     { label: '📱 List all properties', cmd: 'getprop', copyOnly: false },
@@ -33,7 +34,6 @@ const PREDEFINED_COMMANDS = [
     { label: '🔌 Reboot recovery', cmd: 'reboot recovery', copyOnly: false, confirm: true },
 ];
 
-// Safe exec wrapper (matches your existing pattern)
 const execFn = window.exec || async function(cmd, timeout = 15000) {
     return new Promise(resolve => {
         const cb = `term_exec_${Date.now()}_${Math.random().toString(36).substring(2)}`;
@@ -44,48 +44,61 @@ const execFn = window.exec || async function(cmd, timeout = 15000) {
     });
 };
 
-// ── Live Monitor State ──
-let liveMonitorInterval = null;
+function escapeHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
-function stopLiveMonitor(outputEl) {
-    if (liveMonitorInterval) {
-        clearInterval(liveMonitorInterval);
-        liveMonitorInterval = null;
-        if (outputEl) {
-            appendOutput(`<span style="color:#f85149;">⏹️ Live monitor stopped.\n</span>`, outputEl);
-        }
+function appendOutput(html) {
+    const historyEl = document.getElementById('terminal-history');
+    const outputEl = document.getElementById('terminal-output');
+    if (!historyEl) return;
+    historyEl.innerHTML += html;
+    if (config.autoScroll && outputEl) {
+        outputEl.scrollTop = outputEl.scrollHeight;
     }
 }
 
-function startLiveMonitor(cmdObj, outputEl) {
-    // Toggle: if already running, stop it
+let liveMonitorInterval = null;
+
+function stopLiveMonitor() {
     if (liveMonitorInterval) {
-        stopLiveMonitor(outputEl);
+        clearInterval(liveMonitorInterval);
+        liveMonitorInterval = null;
+        appendOutput(`<span style="color:var(--accent-red);">⏹️ Live monitor stopped.\n</span>`);
+    }
+}
+
+function startLiveMonitor(cmdObj) {
+    if (liveMonitorInterval) {
+        stopLiveMonitor();
         return;
     }
 
-    appendOutput(`<span style="color:#3fb950;">▶️ Starting live monitor (every ${cmdObj.interval}ms). Click 'Run' again to stop.\n</span>`, outputEl);
+    appendOutput(`<span style="color:var(--accent-green);">▶️ Starting live monitor (every ${cmdObj.interval}ms). Click 'Run' again to stop.\n</span>`);
 
     const poll = async () => {
         const time = new Date().toLocaleTimeString();
         try {
             const res = await execFn(cmdObj.cmd, 3000);
             if (res && res.trim()) {
-                appendOutput(`<span style="color:#8b949e;">[${time}]</span> ${escapeHtml(res.trim())}\n`, outputEl);
+                appendOutput(`<span style="color:#ffffff;">[${time}]</span> <span style="color:#ffffff;">${escapeHtml(res.trim())}</span>\n`);
             }
-        } catch (e) {
-            // Silently ignore timeout errors in live monitors
-        }
+        } catch (e) {}
     };
 
-    poll(); // Run immediately on first click
+    poll();
     liveMonitorInterval = setInterval(poll, cmdObj.interval);
 }
 
-// ── Init ──
 async function init() {
     await loadConfig();
     bindClickHandler();
+    bindKeyboardShortcut();
 }
 
 async function loadConfig() {
@@ -110,6 +123,24 @@ function bindClickHandler() {
     btn.addEventListener('click', () => showTerminalModal());
 }
 
+function bindKeyboardShortcut() {
+    document.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.code === 'Space') {
+            const activeEl = document.activeElement;
+            const isEditing = activeEl && (
+                activeEl.tagName === 'INPUT' ||
+                activeEl.tagName === 'TEXTAREA' ||
+                activeEl.isContentEditable
+            );
+
+            if (!isEditing && !document.getElementById('terminal-modal')) {
+                e.preventDefault();
+                showTerminalModal();
+            }
+        }
+    });
+}
+
 async function detectTermux() {
     try {
         const res = await execFn('pm path com.termux 2>/dev/null');
@@ -121,57 +152,58 @@ function showTerminalModal() {
     const existing = document.getElementById('terminal-modal');
     if (existing) existing.remove();
 
+    // Backdrop container centered with flex alignment
     const modal = document.createElement('div');
     modal.id = 'terminal-modal';
-    modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:10000;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(6px);`;
+    modal.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:10000;display:flex;align-items:center;justify-content:center;padding:12px;backdrop-filter:blur(6px);box-sizing:border-box;transition:align-items 0.2s ease, padding 0.2s ease;`;
 
+    // Modal Box sizing adaptively based on available viewport
     const box = document.createElement('div');
-    box.style.cssText = `background:#0d1117;border:1px solid #30363d;border-radius:16px 16px 0 0;width:100%;max-width:700px;height:85vh;display:flex;flex-direction:column;overflow:hidden;`;
+    box.style.cssText = `background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;width:100%;max-width:720px;height:100%;max-height:750px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 32px rgba(0,0,0,0.6);transition:max-height 0.2s ease;`;
 
     // Header
     const header = document.createElement('div');
-    header.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#161b22;border-bottom:1px solid #30363d;`;
+    header.style.cssText = `display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg-secondary);border-bottom:1px solid var(--border-color);flex-shrink:0;`;
     header.innerHTML = `
         <div style="display:flex;align-items:center;gap:8px;">
-            <i class="fas fa-terminal" style="color:#58a6ff;"></i>
-            <span style="color:#c9d1d9;font-weight:600;font-size:15px;">Terminal Emulator</span>
-            <span id="termux-badge" style="display:none;background:#238636;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px;">TERMUX DETECTED</span>
+            <i class="fas fa-terminal" style="color:var(--accent-blue);"></i>
+            <span style="color:#ffffff;font-weight:600;font-size:15px;">Terminal Emulator</span>
+            <span id="termux-badge" style="display:none;background:var(--accent-green);color:#ffffff;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:6px;">TERMUX DETECTED</span>
         </div>
         <div style="display:flex;gap:6px;">
-            <button id="term-commands-btn" style="background:#30363d;color:#c9d1d9;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:4px;"><i class="fas fa-list"></i> Commands</button>
-            <button id="term-clear-btn" style="background:#21262d;color:#c9d1d9;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;"><i class="fas fa-trash"></i> Clear</button>
-            <button id="term-copy-btn" style="background:#21262d;color:#c9d1d9;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;"><i class="fas fa-copy"></i> Copy</button>
-            <button id="term-close-btn" style="background:#da3633;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;"><i class="fas fa-times"></i></button>
+            <button id="term-commands-btn" style="background:var(--bg-card);color:#ffffff;border:1px solid var(--border-color);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:4px;"><i class="fas fa-list"></i> Commands</button>
+            <button id="term-clear-btn" style="background:var(--bg-card);color:#ffffff;border:1px solid var(--border-color);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;"><i class="fas fa-trash"></i> Clear</button>
+            <button id="term-copy-btn" style="background:var(--bg-card);color:#ffffff;border:1px solid var(--border-color);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;"><i class="fas fa-copy"></i> Copy</button>
+            <button id="term-close-btn" style="background:var(--accent-red);color:#ffffff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:12px;"><i class="fas fa-times"></i></button>
         </div>
     `;
 
-    // Output area
+    // Main Terminal Viewport (Screen history + Inline prompt)
     const output = document.createElement('div');
     output.id = 'terminal-output';
-    output.style.cssText = `flex:1;overflow-y:auto;padding:12px 16px;font-family:'Courier New',Courier,monospace;font-size:${config.fontSize}px;color:#c9d1d9;line-height:1.5;white-space:pre-wrap;word-break:break-all;`;
-    output.innerHTML = `<span style="color:#58a6ff;">root@mtk-ai-engine:~#</span> <span style="color:#8b949e;">Welcome to Terminal Emulator. Type 'help' for commands.\n</span>`;
+    output.style.cssText = `flex:1;overflow-y:auto;padding:12px 16px;font-family:'Courier New',Courier,monospace;font-size:${config.fontSize}px;color:#ffffff;line-height:1.5;white-space:pre-wrap;word-break:break-all;cursor:text;`;
 
-    // Input area
-    const inputWrap = document.createElement('div');
-    inputWrap.style.cssText = `display:flex;align-items:center;padding:10px 16px;background:#0d1117;border-top:1px solid #30363d;gap:8px;`;
-    inputWrap.innerHTML = `
-        <span style="color:#58a6ff;font-weight:bold;font-family:monospace;font-size:${config.fontSize}px;">root@device:~#</span>
-        <input id="terminal-input" type="text" style="flex:1;background:transparent;border:none;color:#c9d1d9;font-family:'Courier New',monospace;font-size:${config.fontSize}px;outline:none;padding:4px;" placeholder="Type command..." autocomplete="off" spellcheck="false">
+    output.innerHTML = `
+        <div id="terminal-history"><span style="color:var(--accent-blue);">root@mtk-ai-engine:~#</span> <span style="color:#ffffff;">Welcome to Terminal Emulator. Type 'help' for commands.\n</span></div>
+        <div id="terminal-prompt-line" style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+            <span style="color:var(--accent-blue);font-weight:bold;font-family:monospace;font-size:${config.fontSize}px;flex-shrink:0;">root@device:~#</span>
+            <input id="terminal-input" type="text" style="flex:1;background:transparent;border:none;color:#ffffff;font-family:'Courier New',Courier,monospace;font-size:${config.fontSize}px;outline:none;padding:0;margin:0;width:100%;" autocomplete="off" spellcheck="false">
+        </div>
     `;
 
-    // Commands dropdown (hidden by default)
+    // Commands dropdown
     const commandsDropdown = document.createElement('div');
     commandsDropdown.id = 'commands-dropdown';
-    commandsDropdown.style.cssText = `display:none;position:absolute;top:52px;right:16px;background:#161b22;border:1px solid #30363d;border-radius:8px;max-height:300px;overflow-y:auto;z-index:10001;min-width:280px;box-shadow:0 8px 24px rgba(0,0,0,0.4);`;
+    commandsDropdown.style.cssText = `display:none;position:absolute;top:52px;right:16px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;max-height:250px;overflow-y:auto;z-index:10001;min-width:280px;box-shadow:0 8px 24px rgba(0,0,0,0.4);`;
     commandsDropdown.innerHTML = PREDEFINED_COMMANDS.map((item, i) => `
-        <div style="padding:10px 12px;border-bottom:1px solid #30363d;cursor:pointer;display:flex;justify-content:space-between;align-items:center;" data-cmd-index="${i}">
+        <div style="padding:10px 12px;border-bottom:1px solid var(--border-color);cursor:pointer;display:flex;justify-content:space-between;align-items:center;" data-cmd-index="${i}">
             <div style="flex:1;min-width:0;">
-                <div style="color:#c9d1d9;font-size:13px;font-weight:500;">${item.label}</div>
-                ${item.hint ? `<div style="color:#8b949e;font-size:11px;margin-top:2px;">${item.hint}</div>` : ''}
+                <div style="color:#ffffff;font-size:13px;font-weight:500;">${escapeHtml(item.label)}</div>
+                ${item.hint ? `<div style="color:#ffffff;font-size:11px;margin-top:2px;opacity:0.8;">${escapeHtml(item.hint)}</div>` : ''}
             </div>
             <div style="display:flex;gap:4px;flex-shrink:0;">
-                <button class="cmd-copy-btn" data-cmd-index="${i}" style="background:#30363d;color:#c9d1d9;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;">Copy</button>
-                ${!item.copyOnly ? `<button class="cmd-run-btn" data-cmd-index="${i}" style="background:#238636;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;">Run</button>` : ''}
+                <button class="cmd-copy-btn" data-cmd-index="${i}" style="background:var(--bg-card);color:#ffffff;border:1px solid var(--border-color);padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;">Copy</button>
+                ${!item.copyOnly ? `<button class="cmd-run-btn" data-cmd-index="${i}" style="background:var(--accent-green);color:#ffffff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;">Run</button>` : ''}
             </div>
         </div>
     `).join('');
@@ -179,172 +211,224 @@ function showTerminalModal() {
     // Termux launch bar
     const termuxBar = document.createElement('div');
     termuxBar.id = 'termux-bar';
-    termuxBar.style.cssText = `display:none;padding:8px 16px;background:#161b22;border-top:1px solid #30363d;`;
-    termuxBar.innerHTML = `
-        <button id="open-termux-btn" style="width:100%;padding:10px;background:#238636;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
-            <i class="fas fa-external-link-alt"></i> Open in Termux (Full PTY Support)
-        </button>
-    `;
+    termuxBar.style.cssText = `display:none;padding:8px 16px;background:var(--bg-secondary);border-top:1px solid var(--border-color);text-align:center;flex-shrink:0;`;
+    termuxBar.innerHTML = `<button id="launch-termux-btn" style="background:var(--accent-purple);color:#ffffff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;"><i class="fas fa-terminal"></i> Open in Termux App</button>`;
 
-    box.append(header, output, inputWrap, termuxBar);
+    box.appendChild(header);
+    box.appendChild(output);
+    box.appendChild(commandsDropdown);
+    box.appendChild(termuxBar);
     modal.appendChild(box);
-    modal.appendChild(commandsDropdown);
     document.body.appendChild(modal);
 
-    // Close modal (with live monitor cleanup)
-    modal.onclick = e => {
-        if (e.target === modal) {
-            stopLiveMonitor(null);
-            modal.remove();
-        }
-        commandsDropdown.style.display = 'none';
-    };
-
-    // Post-DOM event binding
     const input = document.getElementById('terminal-input');
-    const outputEl = document.getElementById('terminal-output');
-    let historyIndex = -1;
 
-    input.addEventListener('keydown', async (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const cmd = input.value.trim();
-            if (!cmd) return;
-            input.value = '';
-            historyIndex = -1;
-            if (config.history[config.history.length - 1] !== cmd) {
-                config.history.push(cmd);
-                if (config.history.length > MAX_HISTORY) config.history.shift();
-                await saveConfig();
-            }
-            await executeCommand(cmd, outputEl);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            if (config.history.length === 0) return;
-            historyIndex = Math.max(-1, historyIndex - 1);
-            input.value = historyIndex === -1 ? '' : config.history[config.history.length - 1 - historyIndex];
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            if (historyIndex === -1) return;
-            historyIndex = Math.min(config.history.length - 1, historyIndex + 1);
-            input.value = historyIndex === -1 ? '' : config.history[config.history.length - 1 - historyIndex];
+    // Tap anywhere on terminal screen to focus input
+    output.addEventListener('click', (e) => {
+        const selection = window.getSelection();
+        if (!selection || selection.toString().length === 0) {
+            if (input) input.focus();
         }
     });
 
-    // Header buttons
-    document.getElementById('term-close-btn').onclick = () => {
-        stopLiveMonitor(null);
+    // Dynamic keyboard & viewport resize handling
+    const handleViewportChange = () => {
+        if (!window.visualViewport) return;
+        const vp = window.visualViewport;
+        const isFocused = document.activeElement === input;
+        const keyboardActive = vp.height < window.innerHeight * 0.85 || isFocused;
+
+        if (keyboardActive) {
+            modal.style.alignItems = 'flex-start';
+            modal.style.paddingTop = '8px';
+            modal.style.height = `${vp.height}px`;
+            modal.style.top = `${vp.offsetTop}px`;
+            box.style.maxHeight = `${vp.height - 16}px`;
+        } else {
+            modal.style.alignItems = 'center';
+            modal.style.paddingTop = '12px';
+            modal.style.height = '100%';
+            modal.style.top = '0px';
+            box.style.maxHeight = '750px';
+        }
+        output.scrollTop = output.scrollHeight;
+    };
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleViewportChange);
+        window.visualViewport.addEventListener('scroll', handleViewportChange);
+    }
+
+    if (input) {
+        input.focus();
+        input.addEventListener('focus', () => setTimeout(handleViewportChange, 100));
+        input.addEventListener('blur', () => setTimeout(handleViewportChange, 100));
+    }
+
+    detectTermux().then(hasTermux => {
+        if (hasTermux) {
+            const badge = document.getElementById('termux-badge');
+            const bar = document.getElementById('termux-bar');
+            if (badge) badge.style.display = 'inline-block';
+            if (bar) bar.style.display = 'block';
+        }
+    });
+
+    const cleanupModal = () => {
+        if (window.visualViewport) {
+            window.visualViewport.removeEventListener('resize', handleViewportChange);
+            window.visualViewport.removeEventListener('scroll', handleViewportChange);
+        }
+        stopLiveMonitor();
         modal.remove();
     };
 
-    document.getElementById('term-clear-btn').onclick = () => {
-        outputEl.innerHTML = '';
-        appendOutput(`<span style="color:#58a6ff;">root@mtk-ai-engine:~#</span> <span style="color:#8b949e;">Screen cleared.\n</span>`, outputEl);
-    };
+    document.getElementById('term-close-btn').addEventListener('click', cleanupModal);
 
-    document.getElementById('term-copy-btn').onclick = () => {
-        const text = outputEl.innerText;
-        navigator.clipboard.writeText(text).then(() => {
-            appendOutput(`<span style="color:#3fb950;">📋 Output copied to clipboard</span>\n`, outputEl);
-        }).catch(() => appendOutput(`<span style="color:#f85149;">❌ Copy failed</span>\n`, outputEl));
-    };
+    document.getElementById('term-clear-btn').addEventListener('click', () => {
+        const historyEl = document.getElementById('terminal-history');
+        if (historyEl) {
+            historyEl.innerHTML = `<span style="color:var(--accent-blue);">root@mtk-ai-engine:~#</span> <span style="color:#ffffff;">Console cleared.\n</span>`;
+        }
+    });
 
-    // Commands dropdown toggle
-    document.getElementById('term-commands-btn').onclick = (e) => {
+    document.getElementById('term-copy-btn').addEventListener('click', () => {
+        const historyEl = document.getElementById('terminal-history');
+        const textToCopy = historyEl ? historyEl.innerText : output.innerText;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            appendOutput(`<span style="color:var(--accent-green);">📋 Output copied to clipboard.\n</span>`);
+        }).catch(() => {
+            appendOutput(`<span style="color:var(--accent-red);">❌ Failed to copy output.\n</span>`);
+        });
+    });
+
+    document.getElementById('term-commands-btn').addEventListener('click', (e) => {
         e.stopPropagation();
-        const isVisible = commandsDropdown.style.display === 'block';
-        commandsDropdown.style.display = isVisible ? 'none' : 'block';
-    };
+        const dd = document.getElementById('commands-dropdown');
+        if (dd) dd.style.display = (dd.style.display === 'none' || !dd.style.display) ? 'block' : 'none';
+    });
 
-    // Commands dropdown interactions
-    commandsDropdown.addEventListener('click', (e) => {
+    modal.addEventListener('click', (e) => {
+        const dd = document.getElementById('commands-dropdown');
+        const btn = document.getElementById('term-commands-btn');
+        if (dd && dd.style.display === 'block' && !dd.contains(e.target) && !btn.contains(e.target)) {
+            dd.style.display = 'none';
+        }
+    });
+
+    commandsDropdown.addEventListener('click', async (e) => {
         const copyBtn = e.target.closest('.cmd-copy-btn');
         const runBtn = e.target.closest('.cmd-run-btn');
-        const item = e.target.closest('[data-cmd-index]');
 
-        if (copyBtn || runBtn) {
+        if (copyBtn) {
             e.stopPropagation();
-            const idx = parseInt((copyBtn || runBtn).dataset.cmdIndex);
-            const cmdObj = PREDEFINED_COMMANDS[idx];
-
-            if (copyBtn) {
-                navigator.clipboard.writeText(cmdObj.cmd).then(() => {
-                    appendOutput(`<span style="color:#3fb950;">📋 Copied: ${escapeHtml(cmdObj.label)}</span>\n`, outputEl);
-                    if (cmdObj.copyOnly) {
-                        input.value = cmdObj.cmd;
-                        input.focus();
-                    }
-                });
+            const idx = parseInt(copyBtn.dataset.cmdIndex, 10);
+            const item = PREDEFINED_COMMANDS[idx];
+            if (item && input) {
+                input.value = item.cmd;
+                input.focus();
+                commandsDropdown.style.display = 'none';
+                output.scrollTop = output.scrollHeight;
             }
-
-            if (runBtn && !cmdObj.copyOnly) {
-                if (cmdObj.confirm && !confirm(`⚠️ Execute: ${cmdObj.cmd}?`)) return;
-                input.value = cmdObj.cmd;
-
-                if (cmdObj.live) {
-                    startLiveMonitor(cmdObj, outputEl);
+        } else if (runBtn) {
+            e.stopPropagation();
+            const idx = parseInt(runBtn.dataset.cmdIndex, 10);
+            const item = PREDEFINED_COMMANDS[idx];
+            if (item) {
+                commandsDropdown.style.display = 'none';
+                if (item.confirm && !confirm(`Execute '${item.cmd}'?`)) return;
+                if (item.live) {
+                    startLiveMonitor(item);
                 } else {
-                    executeCommand(cmdObj.cmd, outputEl);
+                    executeCommand(item.cmd);
                 }
             }
-            commandsDropdown.style.display = 'none';
-        } else if (item && !e.target.closest('button')) {
-            // Click on item row -> copy to input for editing
-            const idx = parseInt(item.dataset.cmdIndex);
-            input.value = PREDEFINED_COMMANDS[idx].cmd;
-            input.focus();
-            commandsDropdown.style.display = 'none';
         }
     });
 
-    // Termux detection & launch
-    detectTermux().then(hasTermux => {
-        if (hasTermux) {
-            document.getElementById('termux-badge').style.display = 'inline-block';
-            document.getElementById('termux-bar').style.display = 'block';
+    modal.addEventListener('click', function handleTermuxLaunch(e) {
+        if (e.target && e.target.closest('#launch-termux-btn')) {
+            execFn('am start -n com.termux/.app.TermuxActivity 2>/dev/null');
         }
     });
 
-    document.getElementById('open-termux-btn').onclick = () => {
-        execFn('am start -n com.termux/.app.TermuxActivity 2>/dev/null || am start -a android.intent.action.VIEW -d termux:// 2>/dev/null');
-        if (window.showStatus) window.showStatus('🚀 Opening Termux...', '#238636');
-    };
+    let historyIdx = -1;
+    input.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+            const cmd = input.value.trim();
+            input.value = '';
 
-    // Focus input
-    setTimeout(() => input.focus(), 100);
+            if (!cmd) {
+                appendOutput(`<span style="color:var(--accent-blue);">root@device:~#</span>\n`);
+                return;
+            }
+
+            if (config.history[config.history.length - 1] !== cmd) {
+                config.history.push(cmd);
+                if (config.history.length > MAX_HISTORY) config.history.shift();
+                saveConfig();
+            }
+            historyIdx = -1;
+
+            if (cmd === 'clear') {
+                const historyEl = document.getElementById('terminal-history');
+                if (historyEl) {
+                    historyEl.innerHTML = `<span style="color:var(--accent-blue);">root@mtk-ai-engine:~#</span> <span style="color:#ffffff;">Console cleared.\n</span>`;
+                }
+                return;
+            }
+
+            if (cmd === 'help') {
+                appendOutput(`<span style="color:var(--accent-blue);">root@device:~#</span> <span style="color:#ffffff;">${escapeHtml(cmd)}</span>\n`);
+                appendOutput(`<span style="color:#ffffff;">Available built-in commands:\n  help    - Show this message\n  clear   - Clear terminal output\n  exit    - Close terminal emulator\n</span>`);
+                return;
+            }
+
+            if (cmd === 'exit') {
+                cleanupModal();
+                return;
+            }
+
+            await executeCommand(cmd);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (config.history.length > 0) {
+                if (historyIdx === -1) historyIdx = config.history.length - 1;
+                else if (historyIdx > 0) historyIdx--;
+                input.value = config.history[historyIdx] || '';
+            }
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (historyIdx !== -1) {
+                if (historyIdx < config.history.length - 1) {
+                    historyIdx++;
+                    input.value = config.history[historyIdx] || '';
+                } else {
+                    historyIdx = -1;
+                    input.value = '';
+                }
+            }
+        }
+    });
 }
 
-async function executeCommand(cmd, outputEl) {
-    appendOutput(`<span style="color:#58a6ff;">root@mtk-ai-engine:~#</span> ${escapeHtml(cmd)}\n`, outputEl);
+async function executeCommand(cmd) {
+    appendOutput(`<span style="color:var(--accent-blue);">root@device:~#</span> <span style="color:#ffffff;">${escapeHtml(cmd)}</span>\n`);
     try {
-        const result = await execFn(cmd, 15000);
-        if (result !== undefined && result !== '') {
-            appendOutput(`${escapeHtml(result)}\n`, outputEl);
+        const res = await execFn(cmd);
+        if (res) {
+            appendOutput(`<span style="color:#ffffff;">${escapeHtml(res)}</span>\n`);
         } else {
-            appendOutput(`<span style="color:#8b949e;">(command completed with no output)\n</span>`, outputEl);
+            appendOutput(`<span style="color:#ffffff;">(Command returned no output)</span>\n`);
         }
-    } catch (e) {
-        appendOutput(`<span style="color:#f85149;">Error: ${escapeHtml(e.message || 'Execution failed')}\n</span>`, outputEl);
+    } catch (err) {
+        appendOutput(`<span style="color:var(--accent-red);">Error: ${escapeHtml(err.message || String(err))}</span>\n`);
     }
-    scrollToBottom(outputEl);
 }
 
-function appendOutput(html, outputEl) {
-    outputEl.innerHTML += html;
-    if (config.autoScroll) scrollToBottom(outputEl);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
 }
-
-function scrollToBottom(outputEl) {
-    outputEl.scrollTop = outputEl.scrollHeight;
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Initialize
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-else init();
 })();

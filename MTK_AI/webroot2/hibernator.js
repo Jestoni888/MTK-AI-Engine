@@ -103,69 +103,69 @@ async function showHibernatorModal() {
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);';
 
     const box = document.createElement('div');
-    box.style.cssText = 'background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #3b82f6;border-radius:20px;padding:24px;width:95%;max-width:640px;max-height:90vh;overflow-y:auto;';
+    box.style.cssText = 'background:var(--bg-card);border:2px solid var(--border-color);border-radius:20px;padding:24px;width:95%;max-width:640px;max-height:90vh;overflow-y:auto;';
     
     box.innerHTML = `
-        <h3 style="color:#3b82f6;margin:0 0 5px;font-size:20px;text-align:center;">❄️ RAM Hibernator</h3>
-        <p style="color:#8b92b4;font-size:12px;text-align:center;margin-bottom:20px;">Manage auto-kill rules per app (Auto-Save Enabled)</p>
+        <h3 style="color:#ffffff;margin:0 0 5px;font-size:20px;text-align:center;">❄️ RAM Hibernator</h3>
+        <p style="color:#ffffff;font-size:12px;text-align:center;margin-bottom:20px;">Manage auto-kill rules per app (Auto-Save Enabled)</p>
         
-        <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;padding:14px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
             <div style="display:flex;align-items:center;gap:12px;flex:1;">
-                <div style="width:36px;height:36px;background:rgba(59,130,246,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <span style="color:#3b82f6;font-size:16px;"></span>
+                <div style="width:36px;height:36px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <span style="color:#ffffff;font-size:16px;"></span>
                 </div>
                 <div>
-                    <div style="color:#fff;font-size:13px;font-weight:600;">Auto Ram Cleaner</div>
-                    <div style="color:#8b92b4;font-size:11px;">Periodically clean ram & force-stop background apps</div>
+                    <div style="color:#ffffff;font-size:13px;font-weight:600;">Auto Ram Cleaner</div>
+                    <div style="color:#ffffff;font-size:11px;">Periodically clean ram & force-stop background apps</div>
                 </div>
             </div>
             <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
                 <input type="checkbox" id="enable-cleaner-toggle" style="opacity:0;width:0;height:0;">
-                <span id="toggle-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#4b5563;transition:.3s;border-radius:24px;">
-                    <span style="position:absolute;content:'';height:18px;width:18px;left:3px;bottom:3px;background-color:white;transition:.3s;border-radius:50%;"></span>
+                <span id="toggle-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:var(--border-color);transition:.3s;border-radius:24px;">
+                    <span style="position:absolute;content:'';height:18px;width:18px;left:3px;bottom:3px;background-color:#ffffff;transition:.3s;border-radius:50%;"></span>
                 </span>
             </label>
         </div>
 
         <div style="margin-bottom:25px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                <label style="color:#fff;font-size:13px;font-weight:600;">RAM usage Threshold to trigger hibernator</label>
-                <span id="threshold-value" style="color:#3b82f6;font-size:16px;font-weight:700;background:rgba(59,130,246,0.15);padding:4px 12px;border-radius:6px;">60%</span>
+                <label style="color:#ffffff;font-size:13px;font-weight:600;">RAM usage Threshold to trigger hibernator</label>
+                <span id="threshold-value" style="color:#ffffff;font-size:16px;font-weight:700;background:var(--bg-secondary);border:1px solid var(--border-color);padding:4px 12px;border-radius:6px;">60%</span>
             </div>
-            <input type="range" id="hib-threshold" min="30" max="90" value="60" step="5" style="width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;outline:none;-webkit-appearance:none;">
+            <input type="range" id="hib-threshold" min="30" max="90" value="60" step="5" style="width:100%;height:8px;background:var(--border-color);border-radius:4px;outline:none;-webkit-appearance:none;">
             <div style="display:flex;justify-content:space-between;margin-top:6px;">
-                <span style="color:#6b7280;font-size:10px;">30%</span>
-                <span style="color:#6b7280;font-size:10px;">60%</span>
-                <span style="color:#6b7280;font-size:10px;">90%</span>
+                <span style="color:#ffffff;font-size:10px;">30%</span>
+                <span style="color:#ffffff;font-size:10px;">60%</span>
+                <span style="color:#ffffff;font-size:10px;">90%</span>
             </div>
         </div>
 
         <div style="margin-bottom:15px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
                 <div style="display:flex;align-items:center;gap:10px;">
-                    <label style="color:#fff;font-size:13px;font-weight:600;">Installed Apps</label>
-                    <span id="app-count" style="color:#8b92b4;font-size:11px;"></span>
+                    <label style="color:#ffffff;font-size:13px;font-weight:600;">Installed Apps</label>
+                    <span id="app-count" style="color:#ffffff;font-size:11px;"></span>
                 </div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    <button id="kill-all-now-btn" style="padding:6px 12px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">☠️ Kill All Now</button>
-                    <button id="bulk-force-btn" style="padding:6px 12px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">⚡ Add All to Force Kill</button>
-                    <button id="bulk-never-btn" style="padding:6px 12px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">🛡️ Protect All</button>
-                    <button id="clear-all-btn" style="padding:6px 12px;background:rgba(107,114,128,0.3);color:#fff;border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;white-space:nowrap;">Clear Lists</button>
+                    <button id="kill-all-now-btn" style="padding:6px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);color:#ffffff;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">☠️ Kill All Now</button>
+                    <button id="bulk-force-btn" style="padding:6px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);color:#ffffff;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">⚡ Add All to Force Kill</button>
+                    <button id="bulk-never-btn" style="padding:6px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);color:#ffffff;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:4px;white-space:nowrap;">🛡️ Protect All</button>
+                    <button id="clear-all-btn" style="padding:6px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);color:#ffffff;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;white-space:nowrap;">Clear Lists</button>
                 </div>
             </div>
-            <input type="text" id="hib-pkg-search" placeholder="🔍 Search apps..." style="width:100%;padding:10px;background:rgba(0,0,0,0.3);border:1px solid #4b5563;border-radius:10px;color:#fff;font-size:12px;outline:none;margin-bottom:10px;">
+            <input type="text" id="hib-pkg-search" placeholder="🔍 Search apps..." style="width:100%;padding:10px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;color:#ffffff;font-size:12px;outline:none;margin-bottom:10px;">
             <div id="hib-pkg-list" style="max-height:380px;overflow-y:auto;">
-                <div style="padding:20px;color:#8b92b4;text-align:center;font-size:12px;">
+                <div style="padding:20px;color:#ffffff;text-align:center;font-size:12px;">
                     <div style="margin-bottom:8px;">⏳ Loading apps...</div>
                     <div style="font-size:11px;">Please wait</div>
                 </div>
             </div>
         </div>
 
-        <div id="hib-status" style="text-align:center;color:#fbbf24;font-size:12px;margin-bottom:15px;min-height:18px;"></div>
+        <div id="hib-status" style="text-align:center;color:#ffffff;font-size:12px;margin-bottom:15px;min-height:18px;"></div>
         
         <div style="display:flex;gap:10px;">
-            <button id="hib-close-btn" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;transition:all 0.2s;">Close</button>
+            <button id="hib-close-btn" style="flex:1;padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);color:#ffffff;border-radius:10px;font-size:13px;cursor:pointer;transition:all 0.2s;">Close</button>
         </div>
     `;
 
@@ -189,7 +189,7 @@ async function showHibernatorModal() {
                 const statusEl = document.getElementById('hib-status');
                 if (statusEl) {
                     statusEl.textContent = '✅ Threshold saved';
-                    statusEl.style.color = '#10b981';
+                    statusEl.style.color = '#ffffff';
                     setTimeout(() => { statusEl.textContent = ''; }, 1500);
                 }
             } catch (e) { console.error(e); }
@@ -201,10 +201,10 @@ async function showHibernatorModal() {
 
     function updateToggleVisual() {
         if (toggle.checked) {
-            toggleSlider.style.backgroundColor = '#3b82f6';
+            toggleSlider.style.backgroundColor = 'var(--accent-blue)';
             toggleSlider.querySelector('span').style.transform = 'translateX(20px)';
         } else {
-            toggleSlider.style.backgroundColor = '#4b5563';
+            toggleSlider.style.backgroundColor = 'var(--border-color)';
             toggleSlider.querySelector('span').style.transform = 'translateX(0)';
         }
     }
@@ -216,7 +216,7 @@ async function showHibernatorModal() {
             
             const statusEl = document.getElementById('hib-status');
             statusEl.textContent = `✅ Auto RAM Cleaner ${this.checked ? 'Enabled' : 'Disabled'}`;
-            statusEl.style.color = '#10b981';
+            statusEl.style.color = '#ffffff';
             setTimeout(() => { statusEl.textContent = ''; }, 2000);
         } catch (e) { console.error(e); }
         updateToggleVisual();
@@ -240,7 +240,7 @@ async function loadCleanerToggle() {
         toggle.checked = exists.trim() === "yes";
         const toggleSlider = document.getElementById('toggle-slider');
         if (toggle.checked) {
-            toggleSlider.style.backgroundColor = '#3b82f6';
+            toggleSlider.style.backgroundColor = 'var(--accent-blue)';
             toggleSlider.querySelector('span').style.transform = 'translateX(20px)';
         }
     } catch (e) { console.error('Failed to load toggle state:', e); }
@@ -267,7 +267,7 @@ async function loadPackages() {
         appCountEl.textContent = `${installedPackages.length} apps`;
     } catch (e) {
         console.error('Load error:', e);
-        listEl.innerHTML = '<div style="padding:10px;color:#ef4444;text-align:center;font-size:12px;">Failed to load apps</div>';
+        listEl.innerHTML = '<div style="padding:10px;color:#ffffff;text-align:center;font-size:12px;">Failed to load apps</div>';
         appCountEl.textContent = 'Error';
     }
 }
@@ -299,66 +299,66 @@ async function showAppDetails(pkg) {
 
     let statusBadge = '';
     if (isCritical) {
-        statusBadge = '<span style="color:#f59e0b;font-size:11px;font-weight:700;padding:4px 10px;background:rgba(245,158,11,0.2);border-radius:4px;">CRITICAL - LOCKED</span>';
+        statusBadge = '<span style="color:#ffffff;font-size:11px;font-weight:700;padding:4px 10px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;">CRITICAL - LOCKED</span>';
     } else if (inForceKill) {
-        statusBadge = '<span style="color:#ef4444;font-size:11px;font-weight:700;padding:4px 10px;background:rgba(239,68,68,0.2);border-radius:4px;">IN FORCE KILL LIST</span>';
+        statusBadge = '<span style="color:#ffffff;font-size:11px;font-weight:700;padding:4px 10px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;">IN FORCE KILL LIST</span>';
     } else if (inNeverKill) {
-        statusBadge = '<span style="color:#10b981;font-size:11px;font-weight:700;padding:4px 10px;background:rgba(16,185,129,0.2);border-radius:4px;">PROTECTED</span>';
+        statusBadge = '<span style="color:#ffffff;font-size:11px;font-weight:700;padding:4px 10px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;">PROTECTED</span>';
     } else {
-        statusBadge = '<span style="color:#6b7280;font-size:11px;font-weight:600;padding:4px 10px;background:rgba(107,114,128,0.15);border-radius:4px;">INACTIVE</span>';
+        statusBadge = '<span style="color:#ffffff;font-size:11px;font-weight:600;padding:4px 10px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;">INACTIVE</span>';
     }
 
     let runningStatus = '';
     if (runningInfo.isRunning) {
         runningStatus = `
-            <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:10px;padding:15px;margin-bottom:15px;">
+            <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:15px;margin-bottom:15px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                    <div style="width:10px;height:10px;background:#ef4444;border-radius:50%;animation:pulse 2s infinite;"></div>
-                    <span style="color:#ef4444;font-size:13px;font-weight:700;">● RUNNING</span>
+                    <div style="width:10px;height:10px;background:#ffffff;border-radius:50%;animation:pulse 2s infinite;"></div>
+                    <span style="color:#ffffff;font-size:13px;font-weight:700;">● RUNNING</span>
                 </div>
-                <div style="color:#fff;font-size:12px;margin-bottom:8px;">PID: <span style="color:#fca5a5;font-family:monospace;">${runningInfo.pid}</span></div>
-                <div style="color:#fff;font-size:12px;margin-bottom:12px;">Processes: <span style="color:#fca5a5;">${runningInfo.processCount}</span></div>
-                ${runningInfo.memInfo ? `<div style="background:rgba(0,0,0,0.3);border-radius:6px;padding:8px;margin-bottom:12px;"><pre style="color:#8b92b4;font-size:10px;margin:0;font-family:monospace;">${runningInfo.memInfo}</pre></div>` : ''}
-                <button id="force-stop-btn" style="width:100%;padding:10px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">☠️ Force Stop Now</button>
+                <div style="color:#ffffff;font-size:12px;margin-bottom:8px;">PID: <span style="color:#ffffff;font-family:monospace;">${runningInfo.pid}</span></div>
+                <div style="color:#ffffff;font-size:12px;margin-bottom:12px;">Processes: <span style="color:#ffffff;">${runningInfo.processCount}</span></div>
+                ${runningInfo.memInfo ? `<div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;padding:8px;margin-bottom:12px;"><pre style="color:#ffffff;font-size:10px;margin:0;font-family:monospace;">${runningInfo.memInfo}</pre></div>` : ''}
+                <button id="force-stop-btn" style="width:100%;padding:10px;background:var(--bg-secondary);border:1px solid var(--border-color);color:#ffffff;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">☠️ Force Stop Now</button>
             </div>
         `;
     } else {
         runningStatus = `
-            <div style="background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:10px;padding:15px;margin-bottom:15px;">
+            <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:15px;margin-bottom:15px;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:10px;height:10px;background:#10b981;border-radius:50%;"></div>
-                    <span style="color:#10b981;font-size:13px;font-weight:700;">● NOT RUNNING</span>
+                    <div style="width:10px;height:10px;background:#ffffff;border-radius:50%;"></div>
+                    <span style="color:#ffffff;font-size:13px;font-weight:700;">● NOT RUNNING</span>
                 </div>
-                <div style="color:#8b92b4;font-size:11px;margin-top:8px;">App is currently stopped</div>
+                <div style="color:#ffffff;font-size:11px;margin-top:8px;">App is currently stopped</div>
             </div>
         `;
     }
 
     detailModal.innerHTML = `
-        <div style="background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #3b82f6;border-radius:20px;padding:24px;width:95%;max-width:450px;position:relative;">
-            <button id="detail-close-btn" style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.1);border:none;border-radius:50%;width:32px;height:32px;color:#fff;cursor:pointer;font-size:16px;">✕</button>
+        <div style="background:var(--bg-card);border:2px solid var(--border-color);border-radius:20px;padding:24px;width:95%;max-width:450px;position:relative;">
+            <button id="detail-close-btn" style="position:absolute;top:12px;right:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:50%;width:32px;height:32px;color:#ffffff;cursor:pointer;font-size:16px;">✕</button>
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px;">
                 <img src="ksu://icon/${pkg}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:56px;height:56px;border-radius:12px;object-fit:cover;">
-                <div style="display:none;width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:bold;">${getAppName(pkg).charAt(0).toUpperCase()}</div>
+                <div style="display:none;width:56px;height:56px;border-radius:12px;background:var(--bg-secondary);border:1px solid var(--border-color);align-items:center;justify-content:center;color:#ffffff;font-size:24px;font-weight:bold;">${getAppName(pkg).charAt(0).toUpperCase()}</div>
                 <div style="flex:1;min-width:0;">
-                    <div style="color:#fff;font-size:16px;font-weight:700;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${getAppName(pkg)}</div>
-                    <div style="color:#8b92b4;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;">${pkg}</div>
+                    <div style="color:#ffffff;font-size:16px;font-weight:700;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${getAppName(pkg)}</div>
+                    <div style="color:#ffffff;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;">${pkg}</div>
                 </div>
             </div>
             ${statusBadge}
             <div style="margin-top:15px;">
-                <div style="color:#fff;font-size:13px;font-weight:600;margin-bottom:10px;">Status</div>
+                <div style="color:#ffffff;font-size:13px;font-weight:600;margin-bottom:10px;">Status</div>
                 ${runningStatus}
             </div>
             <div style="display:flex;gap:8px;margin-top:15px;">
                 ${!isCritical ? `
-                    <button id="modal-force-btn" data-action="force" style="flex:1;padding:10px;background:${inForceKill ? '#ef4444' : 'rgba(239,68,68,0.15)'};color:${inForceKill ? '#fff' : '#fca5a5'};border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;">
+                    <button id="modal-force-btn" data-action="force" style="flex:1;padding:10px;background:var(--bg-secondary);border:1px solid var(--border-color);color:#ffffff;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;">
                         ${inForceKill ? '✓ Remove from Force Kill' : '⚡ Add to Force Kill'}
                     </button>
-                    <button id="modal-never-btn" data-action="never" style="flex:1;padding:10px;background:${inNeverKill ? '#10b981' : 'rgba(16,185,129,0.15)'};color:${inNeverKill ? '#fff' : '#6ee7b7'};border:none;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;">
+                    <button id="modal-never-btn" data-action="never" style="flex:1;padding:10px;background:var(--bg-secondary);border:1px solid var(--border-color);color:#ffffff;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;">
                         ${inNeverKill ? '✓ Remove Protection' : '🛡️ Protect'}
                     </button>
-                ` : '<div style="flex:1;text-align:center;color:#6b7280;font-size:11px;">Cannot modify critical app</div>'}
+                ` : '<div style="flex:1;text-align:center;color:#ffffff;font-size:11px;">Cannot modify critical app</div>'}
             </div>
         </div>
     `;
@@ -395,15 +395,15 @@ async function showAppDetails(pkg) {
                 const check = await getAppRunningInfo(pkg);
                 if (!check.isRunning) {
                     btn.innerHTML = '✅ Stopped Successfully';
-                    btn.style.background = '#10b981';
+                    btn.style.background = 'var(--bg-secondary)';
                     setTimeout(() => detailModal.remove(), 800);
                 } else {
                     btn.innerHTML = '⚠️ Still Running';
-                    btn.style.background = '#f59e0b';
+                    btn.style.background = 'var(--bg-secondary)';
                 }
             } catch (e) {
                 btn.innerHTML = '❌ Failed';
-                btn.style.background = '#ef4444';
+                btn.style.background = 'var(--bg-secondary)';
             }
         };
     }
@@ -412,7 +412,7 @@ async function showAppDetails(pkg) {
 function renderPackages(pkgs) {
     const listEl = document.getElementById('hib-pkg-list');
     if (pkgs.length === 0) {
-        listEl.innerHTML = '<div style="padding:20px;color:#8b92b4;text-align:center;font-size:12px;">No matching packages found</div>';
+        listEl.innerHTML = '<div style="padding:20px;color:#ffffff;text-align:center;font-size:12px;">No matching packages found</div>';
         return;
     }
 
@@ -424,43 +424,43 @@ function renderPackages(pkgs) {
         const firstLetter = appName.charAt(0).toUpperCase();
 
         let statusHtml = '';
-        let forceBtnStyle = 'background:rgba(239,68,68,0.15);color:#fca5a5;';
-        let neverBtnStyle = 'background:rgba(16,185,129,0.15);color:#6ee7b7;';
+        let forceBtnStyle = 'background:var(--bg-secondary);border:1px solid var(--border-color);color:#ffffff;';
+        let neverBtnStyle = 'background:var(--bg-secondary);border:1px solid var(--border-color);color:#ffffff;';
         let forceBtnText = '⚡ Force Kill';
         let neverBtnText = '🛡️ Never Kill';
         let forceDisabled = isCritical ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : '';
         let neverDisabled = isCritical ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : '';
 
         if (isCritical) {
-            statusHtml = '<span style="color:#f59e0b;font-size:10px;font-weight:700;padding:3px 8px;background:rgba(245,158,11,0.2);border-radius:4px;">CRITICAL</span>';
+            statusHtml = '<span style="color:#ffffff;font-size:10px;font-weight:700;padding:3px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;">CRITICAL</span>';
             forceBtnText = '🔒 Locked';
             neverBtnText = '🔒 Locked';
         } else if (inForceKill) {
-            statusHtml = '<span style="color:#ef4444;font-size:10px;font-weight:700;padding:3px 8px;background:rgba(239,68,68,0.2);border-radius:4px;">ACTIVE</span>';
-            forceBtnStyle = 'background:#ef4444;color:#fff;';
+            statusHtml = '<span style="color:#ffffff;font-size:10px;font-weight:700;padding:3px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;">ACTIVE</span>';
+            forceBtnStyle = 'background:var(--accent-blue);border:1px solid var(--border-color);color:#ffffff;';
             forceBtnText = '✓ Active';
         } else if (inNeverKill) {
-            statusHtml = '<span style="color:#10b981;font-size:10px;font-weight:700;padding:3px 8px;background:rgba(16,185,129,0.2);border-radius:4px;">PROTECTED</span>';
-            neverBtnStyle = 'background:#10b981;color:#fff;';
+            statusHtml = '<span style="color:#ffffff;font-size:10px;font-weight:700;padding:3px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;">PROTECTED</span>';
+            neverBtnStyle = 'background:var(--accent-blue);border:1px solid var(--border-color);color:#ffffff;';
             neverBtnText = '✓ Protected';
         } else {
-            statusHtml = '<span style="color:#6b7280;font-size:10px;font-weight:600;padding:3px 8px;background:rgba(107,114,128,0.15);border-radius:4px;">INACTIVE</span>';
+            statusHtml = '<span style="color:#ffffff;font-size:10px;font-weight:600;padding:3px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:4px;">INACTIVE</span>';
         }
 
         return `
-            <div class="app-item" data-pkg="${pkg}" style="display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:8px;background:rgba(255,255,255,0.05);border-radius:12px;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                <img src="ksu://icon/${pkg}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;background:rgba(0,0,0,0.2);">
-                <div style="display:none;width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#2563eb);align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:bold;flex-shrink:0;">${firstLetter}</div>
+            <div class="app-item" data-pkg="${pkg}" style="display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;transition:all 0.2s;cursor:pointer;" onmouseover="this.style.background='var(--bg-card)'" onmouseout="this.style.background='var(--bg-secondary)'">
+                <img src="ksu://icon/${pkg}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;background:var(--bg-card);">
+                <div style="display:none;width:44px;height:44px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border-color);align-items:center;justify-content:center;color:#ffffff;font-size:18px;font-weight:bold;flex-shrink:0;">${firstLetter}</div>
                 <div style="flex:1;min-width:0;">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
-                        <span style="color:#fff;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${appName}</span>
+                        <span style="color:#ffffff;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${appName}</span>
                         ${statusHtml}
                     </div>
-                    <div style="color:#8b92b4;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pkg}</div>
+                    <div style="color:#ffffff;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pkg}</div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
-                    <button data-pkg="${pkg}" data-action="force" class="toggle-btn" ${forceDisabled} style="${forceBtnStyle}padding:6px 10px;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap;transition:all 0.2s;min-width:85px;">${forceBtnText}</button>
-                    <button data-pkg="${pkg}" data-action="never" class="toggle-btn" ${neverDisabled} style="${neverBtnStyle}padding:6px 10px;border:none;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap;transition:all 0.2s;min-width:85px;">${neverBtnText}</button>
+                    <button data-pkg="${pkg}" data-action="force" class="toggle-btn" ${forceDisabled} style="${forceBtnStyle}padding:6px 10px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap;transition:all 0.2s;min-width:85px;">${forceBtnText}</button>
+                    <button data-pkg="${pkg}" data-action="never" class="toggle-btn" ${neverDisabled} style="${neverBtnStyle}padding:6px 10px;border-radius:6px;font-size:10px;cursor:pointer;font-weight:600;white-space:nowrap;transition:all 0.2s;min-width:85px;">${neverBtnText}</button>
                 </div>
             </div>
         `;
@@ -535,7 +535,7 @@ async function killAllRunningNow() {
 
     if (runningApps.length === 0) {
         statusEl.textContent = 'ℹ️ No apps from Force Kill list are currently running';
-        statusEl.style.color = '#6b7280';
+        statusEl.style.color = '#ffffff';
         setTimeout(() => { statusEl.textContent = ''; }, 2500);
         return;
     }
@@ -545,7 +545,7 @@ async function killAllRunningNow() {
     btn.disabled = true;
     btn.innerHTML = '☠️ Killing...';
     statusEl.textContent = `⏳ Killing ${runningApps.length} apps...`;
-    statusEl.style.color = '#fbbf24';
+    statusEl.style.color = '#ffffff';
 
     let killedCount = 0;
     for (const pkg of runningApps) {
@@ -560,7 +560,7 @@ async function killAllRunningNow() {
     btn.disabled = false;
     btn.innerHTML = '☠️ Kill All Now';
     statusEl.textContent = `✅ Successfully killed ${killedCount}/${runningApps.length} apps`;
-    statusEl.style.color = '#10b981';
+    statusEl.style.color = '#ffffff';
     setTimeout(() => { statusEl.textContent = ''; }, 3000);
 
     const q = document.getElementById('hib-pkg-search').value.toLowerCase().trim();
@@ -574,14 +574,14 @@ async function bulkAddToForceKill() {
 
     if (nonCritical.length === 0) {
         statusEl.textContent = 'ℹ️ All eligible apps already in Force Kill list';
-        statusEl.style.color = '#6b7280';
+        statusEl.style.color = '#ffffff';
         return;
     }
 
     if (!confirm(`Add ${nonCritical.length} apps to Force Kill list?\n\nCritical system apps will be excluded automatically.`)) return;
 
     statusEl.textContent = `⏳ Adding ${nonCritical.length} apps to Force Kill...`;
-    statusEl.style.color = '#fbbf24';
+    statusEl.style.color = '#ffffff';
 
     nonCritical.forEach(pkg => {
         if (!forceKillList.includes(pkg)) {
@@ -595,7 +595,7 @@ async function bulkAddToForceKill() {
     autoSaveLists(); // Auto-save
     
     statusEl.textContent = `✅ Added ${nonCritical.length} apps to Force Kill list`;
-    statusEl.style.color = '#10b981';
+    statusEl.style.color = '#ffffff';
     setTimeout(() => { statusEl.textContent = ''; }, 2500);
 }
 
@@ -605,14 +605,14 @@ async function bulkAddToNeverKill() {
 
     if (nonCritical.length === 0) {
         statusEl.textContent = '🛡️ All eligible apps already protected';
-        statusEl.style.color = '#6b7280';
+        statusEl.style.color = '#ffffff';
         return;
     }
 
     if (!confirm(`Protect ${nonCritical.length} apps from being killed?\n\nCritical system apps are always protected.`)) return;
 
     statusEl.textContent = `⏳ Protecting ${nonCritical.length} apps...`;
-    statusEl.style.color = '#fbbf24';
+    statusEl.style.color = '#ffffff';
 
     nonCritical.forEach(pkg => {
         if (!neverKillList.includes(pkg)) {
@@ -626,7 +626,7 @@ async function bulkAddToNeverKill() {
     autoSaveLists(); // Auto-save
     
     statusEl.textContent = `✅ Protected ${nonCritical.length} apps`;
-    statusEl.style.color = '#10b981';
+    statusEl.style.color = '#ffffff';
     setTimeout(() => { statusEl.textContent = ''; }, 2500);
 }
 
@@ -640,14 +640,14 @@ function clearAllLists() {
     
     const statusEl = document.getElementById('hib-status');
     statusEl.textContent = '✅ All lists cleared';
-    statusEl.style.color = '#10b981';
+    statusEl.style.color = '#ffffff';
     setTimeout(() => { statusEl.textContent = ''; }, 2000);
 }
 
 async function loadConfigs() {
     const statusEl = document.getElementById('hib-status');
     statusEl.textContent = 'Loading configs...';
-    statusEl.style.color = '#fbbf24';
+    statusEl.style.color = '#ffffff';
     try {
         await execFn(`mkdir -p ${CONFIG_DIR}`);
         const threshold = (await execFn(`cat ${THRESHOLD_FILE} 2>/dev/null`)).trim();
@@ -662,11 +662,11 @@ async function loadConfigs() {
         neverKillList = neverKill ? neverKill.split('\n').map(l => l.trim()).filter(l => l) : [];
 
         statusEl.textContent = '✅ Configs loaded';
-        statusEl.style.color = '#10b981';
+        statusEl.style.color = '#ffffff';
         setTimeout(() => { statusEl.textContent = ''; }, 2000);
     } catch (e) {
         statusEl.textContent = '❌ Failed to load configs';
-        statusEl.style.color = '#ef4444';
+        statusEl.style.color = '#ffffff';
     }
 }
 

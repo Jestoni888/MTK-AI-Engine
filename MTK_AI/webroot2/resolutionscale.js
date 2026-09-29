@@ -1,4 +1,4 @@
-// resolutionscale.js - Resolution Scaling Manager (FIXED)
+// resolutionscale.js - Resolution Scaling Manager (Themed)
 (function() {
     'use strict';
 
@@ -47,16 +47,18 @@
                     if (key === 'scale') currentScale = parseInt(value);
                     else if (key === 'texture') currentTexture = parseFloat(value);
                 });
-            }        } catch (e) {
+            }
+        } catch (e) {
             console.warn('Failed to load resolution config:', e);
         }
         updateDisplay();
     }
 
     function updateDisplay() {
-        const valEl = document.querySelector('#resolution-scale-item .setting-value');
+        const valEl = document.querySelector('#resolution-scale-item .setting-value') || document.getElementById('resolution-scale-val');
         if (valEl) {
             valEl.innerHTML = `${currentScale}% <i class="fas fa-chevron-right"></i>`;
+            valEl.style.color = 'var(--accent-green)';
         }
     }
 
@@ -74,44 +76,51 @@
         const existing = document.getElementById('resolution-modal');
         if (existing) existing.remove();
 
+        // Modal Backdrop
         const modal = document.createElement('div');
         modal.id = 'resolution-modal';
         modal.style.cssText = `
-            position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 10000;
             display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(4px); animation: fadeIn 0.2s ease;
         `;
 
+        // Modal Content Box
         const box = document.createElement('div');
         box.style.cssText = `
-            background: linear-gradient(135deg, #1a1f3a, #2d3561);
-            border: 2px solid #2ecc71;
-            border-radius: 20px;
-            padding: 24px; width: 95%; max-width: 450px;
-            box-shadow: 0 0 40px rgba(46, 204, 113, 0.2);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px; width: 90%; max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            animation: slideUp 0.3s ease;
         `;
 
         // Header
         const header = document.createElement('div');
         header.style.cssText = 'text-align: center; margin-bottom: 20px;';
         header.innerHTML = `
-            <h3 style="color: #2ecc71; margin: 0; font-size: 20px;">📐 Resolution & Texture</h3>
-            <p style="color: #8b92b4; font-size: 12px; margin: 5px 0 0;">Adjust render resolution & texture quality</p>        `;
+            <h3 style="color: #ffffff; margin: 0; font-size: 18px; font-weight: 600;">📐 Resolution & Texture</h3>
+            <p style="color: var(--text-secondary); font-size: 12px; margin: 5px 0 0;">Adjust render resolution & texture quality</p>
+        `;
+        box.appendChild(header);
 
-        // Resolution Slider
+        // Resolution Slider Section
         const resSection = createSection('🖥️ Render Resolution');
         const resSlider = createSlider(currentScale, 50, 100, 5, (val) => {
             currentScale = val;
-            resSection.querySelector('.slider-value').textContent = val + '%';
+            const valSpan = resSection.querySelector('.slider-value');
+            if (valSpan) valSpan.textContent = val + '%';
         });
         resSection.appendChild(resSlider);
         box.appendChild(resSection);
 
-        // Texture Slider
+        // Texture Quality Slider Section
         const texSection = createSection('🎨 Texture Quality');
         const texSlider = createSlider(currentTexture, 0.5, 2.0, 0.1, (val) => {
             currentTexture = val;
-            texSection.querySelector('.slider-value').textContent = val.toFixed(1) + 'x';
+            const valSpan = texSection.querySelector('.slider-value');
+            if (valSpan) valSpan.textContent = val.toFixed(1) + 'x';
         });
         texSection.appendChild(texSlider);
         box.appendChild(texSection);
@@ -120,12 +129,15 @@
         const applyBtn = document.createElement('button');
         applyBtn.textContent = '💾 Apply Changes';
         applyBtn.style.cssText = `
-            width: 100%; padding: 14px; margin-top: 20px;
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
-            color: #fff; border: none; border-radius: 12px;
-            font-size: 14px; font-weight: 700; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+            width: 100%; padding: 14px; margin-top: 15px;
+            background: var(--accent-blue);
+            color: #ffffff; border: none; border-radius: 12px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s ease;
         `;
+        applyBtn.onmouseenter = () => { applyBtn.style.opacity = '0.9'; };
+        applyBtn.onmouseleave = () => { applyBtn.style.opacity = '1'; };
+        
         applyBtn.onclick = async () => {
             applyBtn.disabled = true;
             applyBtn.textContent = '⏳ Applying...';
@@ -142,28 +154,45 @@
         const cancelBtn = document.createElement('button');
         cancelBtn.textContent = 'Cancel';
         cancelBtn.style.cssText = `
-            width: 100%; padding: 12px; margin-top: 10px;
-            background: rgba(255,255,255,0.1); color: #fff;
-            border: none; border-radius: 10px; font-size: 13px;
-            cursor: pointer;        `;
+            width: 100%; padding: 14px; margin-top: 10px;
+            background: var(--bg-secondary); color: #ffffff;
+            border: 1px solid var(--border-color); border-radius: 12px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s ease;
+        `;
+        cancelBtn.onmouseenter = () => { cancelBtn.style.background = 'var(--bg-primary)'; };
+        cancelBtn.onmouseleave = () => { cancelBtn.style.background = 'var(--bg-secondary)'; };
         cancelBtn.onclick = () => modal.remove();
         box.appendChild(cancelBtn);
 
         modal.appendChild(box);
+        
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        `;
+        document.head.appendChild(style);
         document.body.appendChild(modal);
         modal.onclick = e => { if (e.target === modal) modal.remove(); };
     }
 
     function createSection(title) {
         const section = document.createElement('div');
-        section.style.cssText = 'margin-bottom: 16px;';
-        section.innerHTML = `<div style="color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 8px;">${title} <span class="slider-value" style="color: #8b92b4; font-weight: 400;"></span></div>`;
+        section.style.cssText = 'margin-bottom: 16px; background: var(--bg-secondary); padding: 12px; border-radius: 12px; border: 1px solid var(--border-color);';
+        section.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="color: #ffffff; font-size: 13px; font-weight: 600;">${title}</span>
+                <span class="slider-value" style="color: var(--accent-green); font-weight: 600; font-size: 13px;">${title.includes('Resolution') ? currentScale + '%' : currentTexture.toFixed(1) + 'x'}</span>
+            </div>
+        `;
         return section;
     }
 
     function createSlider(value, min, max, step, onChange) {
         const container = document.createElement('div');
-        container.style.cssText = 'padding: 8px 0;';
+        container.style.cssText = 'padding: 4px 0;';
         
         const slider = document.createElement('input');
         slider.type = 'range';
@@ -172,8 +201,8 @@
         slider.step = step;
         slider.value = value;
         slider.style.cssText = `
-            width: 100%; height: 6px; background: rgba(255,255,255,0.2);
-            border-radius: 3px; outline: none; -webkit-appearance: none;
+            width: 100%; height: 6px; background: var(--border-color);
+            border-radius: 3px; outline: none; -webkit-appearance: none; cursor: pointer;
         `;
         slider.oninput = (e) => onChange(parseFloat(e.target.value));
         
@@ -194,7 +223,8 @@
             await execFn(`su -c "wm density ${targetDensity}"`);
             
             // 4. Show success message
-            if (window.showStatus) {                window.showStatus(`✅ Resolution: ${currentScale}% (${targetDensity}dpi) | Tex: ${currentTexture}x`, '#2ecc71');
+            if (window.showStatus) {
+                window.showStatus(`✅ Resolution: ${currentScale}% (${targetDensity}dpi) | Tex: ${currentTexture}x`, 'var(--accent-green)');
             }
             
             console.log(`Applied resolution: ${currentScale}% (density: ${targetDensity})`);
@@ -202,7 +232,7 @@
         } catch (e) {
             console.error('Apply failed:', e);
             if (window.showStatus) {
-                window.showStatus('❌ Failed to apply. Root required.', '#FF453A');
+                window.showStatus('❌ Failed to apply. Root required.', 'var(--accent-red, #FF453A)');
             }
             alert('Failed to apply resolution. Make sure you have root access.');
         }

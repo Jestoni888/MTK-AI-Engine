@@ -90,36 +90,37 @@
 
         const box = document.createElement('div');
         box.style.cssText = `
-            background: linear-gradient(135deg, #1a1f3a, #2d3561);
-            border: 2px solid #22c55e;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
             border-radius: 20px;
             padding: 24px; width: 95%; max-width: 450px;
-            box-shadow: 0 0 40px rgba(34, 197, 94, 0.2);
+            box-shadow: 0 0 40px var(--border-color);
             max-height: 90vh; overflow-y: auto;
         `;
 
-        box.innerHTML = `            <h3 style="color: #22c55e; margin: 0 0 5px; font-size: 20px; text-align: center;">🔋 GMS Doze Manager</h3>
-            <p style="color: #8b92b4; font-size: 12px; text-align: center; margin-bottom: 20px;">Disable Google Play Services to save battery & RAM</p>
+        box.innerHTML = `            
+            <h3 style="color: #fff; margin: 0 0 5px; font-size: 20px; text-align: center;"><span style="color: var(--accent-green);">🔋</span> GMS Doze Manager</h3>
+            <p style="color: #fff; font-size: 12px; text-align: center; margin-bottom: 20px; opacity: 0.8;">Disable Google Play Services to save battery & RAM</p>
 
-            <div id="gms-scan-status" style="text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; min-height: 40px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                <span style="color: #FF9F0A;">🔍 Checking GMS status...</span>
+            <div id="gms-scan-status" style="text-align: center; font-size: 12px; color: #fff; margin-bottom: 15px; min-height: 40px; padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
+                <span style="color: var(--accent-orange);">🔍 Checking GMS status...</span>
             </div>
 
             <div id="gms-list" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 15px; max-height: 180px; overflow-y: auto; padding-right: 4px;">
             </div>
 
-            <div style="background: rgba(239,68,68,0.1); color: #fca5a5; padding: 10px; border-radius: 8px; font-size: 11px; text-align: center; margin-bottom: 15px;">
-                <i class="fas fa-exclamation-triangle"></i> Disabling GMS breaks Play Store, push notifications, location services & backups.
+            <div style="background: rgba(231, 76, 60, 0.1); color: #fff; padding: 10px; border: 1px solid var(--accent-red); border-radius: 8px; font-size: 11px; text-align: center; margin-bottom: 15px;">
+                <i class="fas fa-exclamation-triangle" style="color: var(--accent-red);"></i> Disabling GMS breaks Play Store, push notifications, location services & backups.
             </div>
 
-            <button id="gms-cpulimit-btn" style="width: 100%; padding: 12px; background: ${isCpuLimitEnabled ? 'linear-gradient(135deg, #22c55e, #16a34a)' : 'rgba(255,255,255,0.1)'}; color: #fff; border: none; border-radius: 10px; font-size: 13px; cursor: pointer; margin-bottom: 10px;">
+            <button id="gms-cpulimit-btn" style="width: 100%; padding: 12px; background: ${isCpuLimitEnabled ? 'var(--accent-green)' : 'var(--bg-secondary)'}; color: #fff; border: 1px solid var(--border-color); border-radius: 10px; font-size: 13px; cursor: pointer; margin-bottom: 10px;">
                 ⚡ ${isCpuLimitEnabled ? 'CPU Limit: 1% (ON)' : 'Limit GMS CPU to 1% (OFF)'}
             </button>
 
-            <button id="gms-toggle-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">
+            <button id="gms-toggle-btn" style="width: 100%; padding: 14px; background: var(--accent-green); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">
                 🔄 ${isGmsEnabled ? 'Disable GMS' : 'Enable GMS'}
             </button>
-            <button id="gms-cancel-btn" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 10px; font-size: 13px; cursor: pointer;">Cancel</button>
+            <button id="gms-cancel-btn" style="width: 100%; padding: 12px; background: var(--bg-secondary); color: #fff; border: 1px solid var(--border-color); border-radius: 10px; font-size: 13px; cursor: pointer;">Cancel</button>
         `;
 
         modal.appendChild(box);        
@@ -158,7 +159,7 @@
             }
 
             if (foundCount === 0) {
-                statusEl.innerHTML = '<span style="color: #666;">GMS not detected on this device.</span>';
+                statusEl.innerHTML = '<span style="color: #fff;">GMS not detected on this device.</span>';
                 listEl.style.display = 'none';
                 return;
             }
@@ -170,11 +171,12 @@
 
             detectedGms.forEach(g => {
                 const item = document.createElement('div');
-                item.style.cssText = 'background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;';
+                item.style.cssText = 'background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;';
                 item.innerHTML = `
                     <div style="flex:1; min-width:0;">
                         <div style="color: #fff; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${g.pkg}</div>
-                        <div style="color: ${g.isDisabled ? '#FF453A' : '#32D74B'}; font-size: 11px; margin-top: 2px;">                            ${g.isDisabled ? '❌ Disabled' : '✅ Enabled'}
+                        <div style="color: ${g.isDisabled ? 'var(--accent-red)' : 'var(--accent-green)'}; font-size: 11px; margin-top: 2px;">                            
+                            ${g.isDisabled ? '❌ Disabled' : '✅ Enabled'}
                         </div>
                     </div>
                 `;
@@ -185,25 +187,26 @@
             if (toggleBtn) {
                 toggleBtn.textContent = isGmsEnabled ? '⚠️ Disable GMS' : '✅ Enable GMS';
                 toggleBtn.style.background = isGmsEnabled 
-                    ? 'linear-gradient(135deg, #ef4444, #b91c1c)' 
-                    : 'linear-gradient(135deg, #22c55e, #16a34a)';
+                    ? 'var(--accent-red)' 
+                    : 'var(--accent-green)';
             }
 
         } catch (e) {
             console.error('GMSDoze: Scan failed:', e);
-            statusEl.innerHTML = `<span style="color: #FF453A;">❌ Error: ${e.message}</span>`;
+            statusEl.innerHTML = `<span style="color: var(--accent-red);">❌ Error: ${e.message}</span>`;
         }
     }
 
     async function toggleGMS() {
-        const toggleBtn = document.getElementById('gms-toggle-btn');        const statusEl = document.getElementById('gms-scan-status');
+        const toggleBtn = document.getElementById('gms-toggle-btn');        
+        const statusEl = document.getElementById('gms-scan-status');
         
         if (!toggleBtn || !statusEl) return;
 
         toggleBtn.disabled = true;
         toggleBtn.textContent = '⏳ Applying...';
         statusEl.style.display = 'block';
-        statusEl.innerHTML = '<span style="color: #FF9F0A;">🔄 Updating GMS state...</span>';
+        statusEl.innerHTML = '<span style="color: var(--accent-orange);">🔄 Updating GMS state...</span>';
 
         try {
             const targetDisabled = isGmsEnabled;
@@ -222,9 +225,9 @@
             isGmsEnabled = !targetDisabled;
             await saveConfig();
 
-            statusEl.innerHTML = `<span style="color: #32D74B;">✅ ${successPkgs.length}/${detectedGms.length} packages ${targetDisabled ? 'disabled' : 'enabled'}</span>`;            
+            statusEl.innerHTML = `<span style="color: var(--accent-green);">✅ ${successPkgs.length}/${detectedGms.length} packages ${targetDisabled ? 'disabled' : 'enabled'}</span>`;            
             if (window.showStatus) {
-                window.showStatus(`✅ GMS: ${targetDisabled ? 'Disabled' : 'Enabled'}`, isGmsEnabled ? '#22c55e' : '#ef4444');
+                window.showStatus(`✅ GMS: ${targetDisabled ? 'Disabled' : 'Enabled'}`, isGmsEnabled ? 'var(--accent-green)' : 'var(--accent-red)');
             }
 
             setTimeout(() => {
@@ -234,7 +237,7 @@
 
         } catch (e) {
             console.error('GMSDoze: Toggle failed:', e);
-            statusEl.innerHTML = `<span style="color: #FF453A;">❌ Error: ${e.message}</span>`;
+            statusEl.innerHTML = `<span style="color: var(--accent-red);">❌ Error: ${e.message}</span>`;
             toggleBtn.disabled = false;
             toggleBtn.textContent = isGmsEnabled ? '⚠️ Disable GMS' : '✅ Enable GMS';
         }
@@ -258,68 +261,67 @@
                 
                 // Start cpulimit for each detected GMS package in the background
                 for (const pkg of pkgsToLimit) {
-    try {
-        // 1. Get UID (needed for netpolicy)
-        const uidResult = await execFn(`su -c "dumpsys package ${pkg} | grep -m 1 'userId='"`);
-        const uid = uidResult.stdout ? uidResult.stdout.trim().split('=')[1] : null;
+                    try {
+                        // 1. Get UID (needed for netpolicy)
+                        const uidResult = await execFn(`su -c "dumpsys package ${pkg} | grep -m 1 'userId='"`);
+                        const uid = uidResult.stdout ? uidResult.stdout.trim().split('=')[1] : null;
 
-        // 2. Apply PERSISTENT restrictions FIRST (these survive restarts)
-        await execFn(`su -c "nohup ${CPULIMIT_PATH} -e ${pkg} -l 1 >/dev/null 2>&1 &"`);
-        await execFn(`su -c "cmd appops set ${pkg} RUN_IN_BACKGROUND ignore"`);
-        await execFn(`su -c "cmd appops set ${pkg} RUN_ANY_IN_BACKGROUND ignore"`);
-        await execFn(`su -c "cmd appops set ${pkg} WAKEUP ignore"`);
-        await execFn(`su -c "cmd appops set ${pkg} START_FOREGROUND ignore"`);
-        await execFn(`su -c "cmd appops set ${pkg} WAKE_LOCK ignore"`);
-        await execFn(`su -c "cmd app_hibernation set-state ${pkg} true"`);
-        await execFn(`su -c "am set-standby-bucket ${pkg} restricted"`);
-        await execFn(`su -c "am set-inactive ${pkg} true"`);
-        await execFn(`su -c "cmd deviceidle whitelist -${pkg}"`);
-        
-        if (uid) {
-            await execFn(`su -c "cmd netpolicy add restrict-background-blacklist ${uid}"`);
-        }
+                        // 2. Apply PERSISTENT restrictions FIRST (these survive restarts)
+                        await execFn(`su -c "nohup ${CPULIMIT_PATH} -e ${pkg} -l 1 >/dev/null 2>&1 &"`);
+                        await execFn(`su -c "cmd appops set ${pkg} RUN_IN_BACKGROUND ignore"`);
+                        await execFn(`su -c "cmd appops set ${pkg} RUN_ANY_IN_BACKGROUND ignore"`);
+                        await execFn(`su -c "cmd appops set ${pkg} WAKEUP ignore"`);
+                        await execFn(`su -c "cmd appops set ${pkg} START_FOREGROUND ignore"`);
+                        await execFn(`su -c "cmd appops set ${pkg} WAKE_LOCK ignore"`);
+                        await execFn(`su -c "cmd app_hibernation set-state ${pkg} true"`);
+                        await execFn(`su -c "am set-standby-bucket ${pkg} restricted"`);
+                        await execFn(`su -c "am set-inactive ${pkg} true"`);
+                        await execFn(`su -c "cmd deviceidle whitelist -${pkg}"`);
+                        
+                        if (uid) {
+                            await execFn(`su -c "cmd netpolicy add restrict-background-blacklist ${uid}"`);
+                        }
 
-        // 3. NOW force-stop (app will restart with restrictions already in place)
-        await execFn(`su -c "am force-stop ${pkg}"`);
+                        // 3. NOW force-stop (app will restart with restrictions already in place)
+                        await execFn(`su -c "am force-stop ${pkg}"`);
 
-        // 4. Optional: Monitor for restart and apply process-level limits to NEW PID
-        // Wait a moment for potential auto-restart
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const newPidResult = await execFn(`su -c "pidof ${pkg}"`);
-        const newPid = newPidResult.stdout ? newPidResult.stdout.trim().split(' ')[0] : null;
-        
-        if (newPid && /^\d+$/.test(newPid)) {
-            // Apply process-level limits to the NEW PID
-            await execFn(`su -c "echo 999 > /proc/${newPid}/oom_score_adj"`);
-            await execFn(`su -c "renice 19 -p ${newPid}"`);
-            await execFn(`su -c "echo ${newPid} > /dev/cpuset/background/cgroup.procs"`);
-        }
+                        // 4. Optional: Monitor for restart and apply process-level limits to NEW PID
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        
+                        const newPidResult = await execFn(`su -c "pidof ${pkg}"`);
+                        const newPid = newPidResult.stdout ? newPidResult.stdout.trim().split(' ')[0] : null;
+                        
+                        if (newPid && /^\d+$/.test(newPid)) {
+                            // Apply process-level limits to the NEW PID
+                            await execFn(`su -c "echo 999 > /proc/${newPid}/oom_score_adj"`);
+                            await execFn(`su -c "renice 19 -p ${newPid}"`);
+                            await execFn(`su -c "echo ${newPid} > /dev/cpuset/background/cgroup.procs"`);
+                        }
 
-    } catch (error) {
-        console.error(`Failed to limit ${pkg}:`, error);
-    }
-}
+                    } catch (error) {
+                        console.error(`Failed to limit ${pkg}:`, error);
+                    }
+                }
                 
-                btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                btn.style.background = 'var(--accent-green)';
                 btn.textContent = '⚡ CPU Limit: 1% (ON)';
             } else {
                 // Kill cpulimit processes
                 await execFn(`su -c "pkill -f 'MTK_AI/lib/cpulimit' 2>/dev/null || killall cpulimit 2>/dev/null"`);
-                btn.style.background = 'rgba(255,255,255,0.1)';
+                btn.style.background = 'var(--bg-secondary)';
                 btn.textContent = '⚡ Limit GMS CPU to 1% (OFF)';
             }
             
             await saveConfig();
             
             if (window.showStatus) {
-                window.showStatus(`✅ GMS CPU Limit: ${isCpuLimitEnabled ? 'Enabled' : 'Disabled'}`, isCpuLimitEnabled ? '#22c55e' : '#ef4444');
+                window.showStatus(`✅ GMS CPU Limit: ${isCpuLimitEnabled ? 'Enabled' : 'Disabled'}`, isCpuLimitEnabled ? 'var(--accent-green)' : 'var(--accent-red)');
             }
         } catch (e) {
             console.error('GMSDoze: CPU Limit toggle failed:', e);
             isCpuLimitEnabled = !isCpuLimitEnabled; // revert on failure
             if (window.showStatus) {
-                window.showStatus(`❌ CPU Limit Failed: ${e.message}`, '#ef4444');
+                window.showStatus(`❌ CPU Limit Failed: ${e.message}`, 'var(--accent-red)');
             }
         } finally {
             btn.disabled = false;

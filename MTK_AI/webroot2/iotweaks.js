@@ -93,7 +93,7 @@ function bindClickHandler() {
 async function updateLogBox(prefix) {
     const logBox = document.getElementById('io-log-box');
     if (!logBox) return;
-    logBox.innerHTML += `<span style="color: #8b949e; font-weight: bold;">--- ${prefix} ---</span><br>`;
+    logBox.innerHTML += `<span style="color: #fff; font-weight: bold;">--- ${prefix} ---</span><br>`;
     logBox.scrollTop = logBox.scrollHeight;
     try {
         const cmd = `find /sys -type f \\( -name "read_ahead_kb" -o -name "scheduler" \\) -exec grep -H "" {} + 2>/dev/null`;
@@ -103,15 +103,15 @@ async function updateLogBox(prefix) {
             lines.forEach(line => {
                 const safeLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
                 const isScheduler = line.includes('scheduler');
-                const color = isScheduler ? '#79c0ff' : '#3fb950';
+                const color = isScheduler ? 'var(--accent-blue)' : 'var(--accent-green)';
                 const formattedLine = safeLine.replace(/^(.*?):(.*)$/, '$1 => $2');
                 logBox.innerHTML += `<div style="color: ${color};">${formattedLine}</div>`;
             });
         } else {
-            logBox.innerHTML += `<span style="color: #f85149;">No readable I/O files found.</span><br>`;
+            logBox.innerHTML += `<span style="color: var(--accent-red);">No readable I/O files found.</span><br>`;
         }
     } catch (e) {
-        logBox.innerHTML += `<span style="color: #f85149;">Error: ${e.message}</span><br>`;
+        logBox.innerHTML += `<span style="color: var(--accent-red);">Error: ${e.message}</span><br>`;
     }
     logBox.scrollTop = logBox.scrollHeight;
 }
@@ -122,15 +122,15 @@ function showIOModal() {
         const style = document.createElement('style');
         style.id = 'io-slider-style';
         style.textContent = `
-            input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: #4a9eff; border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
+            input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: var(--accent-blue); border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
             .toggle-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
             .toggle-switch input { opacity: 0; width: 0; height: 0; }
-            .toggle-slider { position: absolute; cursor: pointer; inset: 0; background-color: #555; transition: .3s; border-radius: 26px; }
-            .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
-            input:checked + .toggle-slider { background-color: #4a9eff; }
+            .toggle-slider { position: absolute; cursor: pointer; inset: 0; background-color: var(--bg-secondary); transition: .3s; border-radius: 26px; border: 1px solid var(--border-color); }
+            .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: #fff; transition: .3s; border-radius: 50%; }
+            input:checked + .toggle-slider { background-color: var(--accent-blue); }
             input:checked + .toggle-slider:before { transform: translateX(24px); }
-            .tab-btn { flex: 1; padding: 10px; border: none; background: rgba(0,0,0,0.3); color: #8b92b4; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
-            .tab-btn.active { color: #4a9eff; border-bottom: 2px solid #4a9eff; background: rgba(74,158,255,0.1); }
+            .tab-btn { flex: 1; padding: 10px; border: none; background: var(--bg-secondary); color: #fff; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
+            .tab-btn.active { color: var(--accent-blue); border-bottom: 2px solid var(--accent-blue); background: var(--bg-card); }
         `;
         document.head.appendChild(style);
     }
@@ -139,13 +139,13 @@ function showIOModal() {
     modal.id = 'io-modal';
     modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);`;
     const box = document.createElement('div');
-    box.style.cssText = `background: linear-gradient(135deg, #1a1f3a, #2d3561); border: 2px solid #4a9eff; border-radius: 20px; padding: 24px; width: 95%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 40px rgba(74, 158, 255, 0.2);`;
+    box.style.cssText = `background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 24px; width: 95%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);`;
     
     box.innerHTML = `
-        <h3 style="color: #4a9eff; margin: 0 0 5px; font-size: 20px; text-align: center;">💾 I/O Tweaks & FIO Suite</h3>
-        <p style="color: #8b92b4; font-size: 12px; text-align: center; margin-bottom: 15px;">Optimize read-ahead & test storage latency</p>
+        <h3 style="color: #fff; margin: 0 0 5px; font-size: 20px; text-align: center;">💾 I/O Tweaks & FIO Suite</h3>
+        <p style="color: #fff; font-size: 12px; text-align: center; margin-bottom: 15px;">Optimize read-ahead & test storage latency</p>
         
-        <div style="display: flex; margin-bottom: 15px; border-radius: 10px; overflow: hidden;">
+        <div style="display: flex; margin-bottom: 15px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-color);">
             <button id="tab-apply" class="tab-btn active">⚡ Apply Tweaks</button>
             <button id="tab-test" class="tab-btn">🧪 FIO Benchmark</button>
             <button id="tab-history" class="tab-btn">📊 Portfolio</button>
@@ -156,22 +156,22 @@ function showIOModal() {
             <div style="margin-bottom: 15px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span style="color: #fff; font-size: 13px; font-weight: 600;">Read-Ahead KB</span>
-                    <span id="io-ra-val" style="color: #4a9eff; font-weight: 600;">${currentReadAhead} KB</span>
+                    <span id="io-ra-val" style="color: #fff; font-weight: 600;">${currentReadAhead} KB</span>
                 </div>
-                <input type="range" id="io-ra-slider" min="16" max="8192" step="16" value="${currentReadAhead}" style="width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none;">
-                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #666; margin-top: 4px;"><span>16 KB</span><span>8192 KB</span></div>
+                <input type="range" id="io-ra-slider" min="16" max="8192" step="16" value="${currentReadAhead}" style="width: 100%; height: 6px; background: var(--border-color); border-radius: 3px; outline: none;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #fff; margin-top: 4px;"><span>16 KB</span><span>8192 KB</span></div>
             </div>
             <div style="margin-bottom: 15px;">
                 <div style="color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 8px;">I/O Scheduler</div>
-                <select id="io-sched-select" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.4); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px;">
+                <select id="io-sched-select" style="width: 100%; padding: 10px; background: var(--bg-secondary); color: #fff; border: 1px solid var(--border-color); border-radius: 10px;">
                     ${availableSchedulers.map(s => `<option value="${s}" ${s === currentScheduler ? 'selected' : ''}>${s.toUpperCase()}</option>`).join('')}
                 </select>
             </div>
-            <div style="margin-bottom: 15px; padding: 12px; background: rgba(74,158,255,0.1); border-radius: 12px; border: 1px solid rgba(74,158,255,0.3);">
+            <div style="margin-bottom: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 12px; border: 1px solid var(--border-color);">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
                     <div>
                         <div style="color: #fff; font-size: 13px; font-weight: 600;">🔄 Persistent on Boot</div>
-                        <div style="color: #8b92b4; font-size: 11px;">Install to service.d for auto-apply on reboot</div>
+                        <div style="color: #fff; font-size: 11px;">Install to service.d for auto-apply on reboot</div>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="io-persist-toggle" ${installPersistent ? 'checked' : ''}>
@@ -179,38 +179,38 @@ function showIOModal() {
                     </label>
                 </div>
             </div>
-            <button id="io-apply-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #4a9eff, #2980b9); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">💾 Apply I/O Tweaks</button>
+            <button id="io-apply-btn" style="width: 100%; padding: 12px; background: var(--accent-blue); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">💾 Apply I/O Tweaks</button>
         </div>
 
         <!-- BENCHMARK TEST TAB -->
         <div id="view-test" style="display: none;">
-            <div style="margin-bottom: 15px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+            <div style="margin-bottom: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 10px; border: 1px solid var(--border-color);">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span style="color: #fff; font-size: 13px; font-weight: 600;">Test Read-Ahead Target</span>
-                    <span id="io-test-val" style="color: #32D74B; font-weight: 600;">${testReadAhead} KB</span>
+                    <span id="io-test-val" style="color: #fff; font-weight: 600;">${testReadAhead} KB</span>
                 </div>
-                <input type="range" id="io-test-slider" min="16" max="8192" step="16" value="${testReadAhead}" style="width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none;">
-                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-top: 4px;"><span>16 KB (Low Latency)</span><span>8192 KB (Bulk)</span></div>
+                <input type="range" id="io-test-slider" min="16" max="8192" step="16" value="${testReadAhead}" style="width: 100%; height: 6px; background: var(--border-color); border-radius: 3px; outline: none;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #fff; margin-top: 4px;"><span>16 KB (Low Latency)</span><span>8192 KB (Bulk)</span></div>
             </div>
-            <button id="io-run-fio" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #32D74B, #1f9e30); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">🚀 Execute FIO Benchmark</button>
-            <div id="fio-result-card" style="display: none; padding: 12px; background: rgba(0,0,0,0.4); border-radius: 10px; margin-bottom: 10px; font-size: 12px; border-left: 4px solid #32D74B;"></div>
+            <button id="io-run-fio" style="width: 100%; padding: 12px; background: var(--accent-green); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">🚀 Execute FIO Benchmark</button>
+            <div id="fio-result-card" style="display: none; padding: 12px; background: var(--bg-secondary); border-radius: 10px; margin-bottom: 10px; font-size: 12px; border: 1px solid var(--border-color); border-left: 4px solid var(--accent-green); color: #fff;"></div>
         </div>
 
         <!-- HISTORY / PORTFOLIO TAB -->
         <div id="view-history" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <span style="color: #fff; font-size: 13px; font-weight: 600;">Testing Portfolio</span>
-                <button id="io-clear-history" style="background: rgba(255,69,58,0.2); color: #ff453a; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer;">Clear History</button>
+                <button id="io-clear-history" style="background: var(--accent-red); color: #fff; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer;">Clear History</button>
             </div>
             <div id="history-container" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;"></div>
             
             <!-- DYNAMIC RECOMMENDATION BOX BASED ON PORTFOLIO WINNER -->
-            <div id="dynamic-recommendation-box" style="padding: 12px; background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.3); border-radius: 10px; font-size: 11px; color: #8b92b4; margin-bottom: 15px;"></div>
+            <div id="dynamic-recommendation-box" style="padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; font-size: 11px; color: #fff; margin-bottom: 15px;"></div>
         </div>
 
-        <div id="io-status" style="text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; min-height: 35px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px;"></div>
-        <button id="io-cancel-btn" style="width: 100%; padding: 10px; background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 10px; font-size: 13px; cursor: pointer;">Close</button>
-        <div id="io-log-box" style="margin-top: 15px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 10px; max-height: 140px; overflow-y: auto; font-family: monospace; font-size: 11px; color: #3fb950; text-align: left; line-height: 1.4; word-break: break-all;"></div>
+        <div id="io-status" style="text-align: center; font-size: 12px; color: #fff; margin-bottom: 15px; min-height: 35px; padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;"></div>
+        <button id="io-cancel-btn" style="width: 100%; padding: 10px; background: var(--bg-secondary); color: #fff; border: 1px solid var(--border-color); border-radius: 10px; font-size: 13px; cursor: pointer;">Close</button>
+        <div id="io-log-box" style="margin-top: 15px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; max-height: 140px; overflow-y: auto; font-family: monospace; font-size: 11px; color: #fff; text-align: left; line-height: 1.4; word-break: break-all;"></div>
     `;
 
     modal.appendChild(box);
@@ -281,10 +281,10 @@ async function runFioBenchmark() {
 
     btnRun.disabled = true;
     btnRun.textContent = '⏳ Testing I/O Performance...';
-    statusEl.innerHTML = `<span style="color: #32D74B;">⚡ Applying ${testReadAhead} KB & Running FIO...</span>`;
+    statusEl.innerHTML = `<span style="color: #fff;">⚡ Applying ${testReadAhead} KB & Running FIO...</span>`;
 
     if (logBox) {
-        logBox.innerHTML += `<br><span style="color: #79c0ff;">[${new Date().toLocaleTimeString()}] Temporarily setting read_ahead to ${testReadAhead} KB...</span><br>`;
+        logBox.innerHTML += `<br><span style="color: #fff;">[${new Date().toLocaleTimeString()}] Temporarily setting read_ahead to ${testReadAhead} KB...</span><br>`;
         logBox.scrollTop = logBox.scrollHeight;
     }
 
@@ -325,14 +325,14 @@ async function runFioBenchmark() {
         const avgLat = latVal !== 999999 ? `${latVal.toFixed(1)} µs` : 'N/A';
 
         let speedRating = '⚡ Fast Latency';
-        let speedColor = '#32D74B';
+        let speedColor = 'var(--accent-green)';
         
         if (latVal > 250) {
             speedRating = '🐢 Slower Latency (High Prefetch Overhead)';
-            speedColor = '#FF453A';
+            speedColor = 'var(--accent-red)';
         } else if (latVal > 150) {
             speedRating = '⚖️ Balanced Performance';
-            speedColor = '#FF9F0A';
+            speedColor = 'var(--accent-orange)';
         }
 
         const entry = {
@@ -355,23 +355,23 @@ async function runFioBenchmark() {
             resultCard.style.display = 'block';
             resultCard.style.borderLeftColor = speedColor;
             resultCard.innerHTML = `
-                <div style="font-weight: bold; color: ${speedColor}; margin-bottom: 4px;">${speedRating}</div>
+                <div style="font-weight: bold; color: #fff; margin-bottom: 4px;">${speedRating}</div>
                 <div><b>Read-Ahead:</b> ${testReadAhead} KB</div>
                 <div><b>IOPS:</b> ${iops} | <b>Bandwidth:</b> ${bw}</div>
                 <div><b>Avg Completion Latency:</b> ${avgLat}</div>
             `;
         }
 
-        statusEl.innerHTML = `<span style="color: #32D74B;">✅ Benchmark Completed Successfully!</span>`;
+        statusEl.innerHTML = `<span style="color: #fff;">✅ Benchmark Completed Successfully!</span>`;
         if (logBox) {
-            logBox.innerHTML += `<span style="color: #3fb950;">[FIO Result] IOPS: ${iops} | BW: ${bw} | Lat: ${avgLat}</span><br>`;
+            logBox.innerHTML += `<span style="color: #fff;">[FIO Result] IOPS: ${iops} | BW: ${bw} | Lat: ${avgLat}</span><br>`;
             logBox.scrollTop = logBox.scrollHeight;
         }
 
     } catch (e) {
-        statusEl.innerHTML = `<span style="color: #FF453A;">❌ FIO Error: ${e.message}</span>`;
+        statusEl.innerHTML = `<span style="color: #fff;">❌ FIO Error: ${e.message}</span>`;
         if (logBox) {
-            logBox.innerHTML += `<span style="color: #ff453a;">Failed: Ensure binary exists at ${FIO_BIN}</span><br>`;
+            logBox.innerHTML += `<span style="color: #fff;">Failed: Ensure binary exists at ${FIO_BIN}</span><br>`;
         }
     } finally {
         btnRun.disabled = false;
@@ -385,10 +385,10 @@ function renderHistory() {
     if (!container) return;
 
     if (benchmarkHistory.length === 0) {
-        container.innerHTML = `<div style="color: #666; font-size: 11px; text-align: center; padding: 20px;">No benchmark records found. Run a test in FIO Benchmark!</div>`;
+        container.innerHTML = `<div style="color: #fff; font-size: 11px; text-align: center; padding: 20px;">No benchmark records found. Run a test in FIO Benchmark!</div>`;
         if (recBox) {
             recBox.innerHTML = `
-                <div style="color: #79c0ff; font-weight: 600; margin-bottom: 4px;">💡 Recommended Profile:</div>
+                <div style="color: #fff; font-weight: 600; margin-bottom: 4px;">💡 Recommended Profile:</div>
                 <div style="color: #fff;">No benchmark history available. Run FIO tests to calculate your device's optimal read-ahead setting.</div>
             `;
         }
@@ -408,17 +408,17 @@ function renderHistory() {
 
     if (recBox && winner) {
         recBox.innerHTML = `
-            <div style="color: #FFD700; font-weight: 700; font-size: 12px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="color: #fff; font-weight: 700; font-size: 12px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
                 <span>💡 Recommended Profile (Winner):</span>
-                <span style="background: rgba(255,215,0,0.2); padding: 2px 8px; border-radius: 6px;">👑 ${winner.ra}</span>
+                <span style="background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 6px; color: #fff;">👑 ${winner.ra}</span>
             </div>
             <div style="color: #fff; margin-bottom: 4px;">
                 This profile achieved the lowest storage latency (<b>${winner.lat}</b>) and <b>${winner.iops} IOPS</b> based on your benchmark tests.
             </div>
-            <div style="color: #32D74B; font-weight: 600; margin-bottom: 8px;">
+            <div style="color: #fff; font-weight: 600; margin-bottom: 8px;">
                 ✔ Recommended for smooth system responsiveness and minimal micro-stutters.
             </div>
-            <button id="apply-winner-btn" style="width: 100%; padding: 8px; background: linear-gradient(135deg, #FFD700, #FFA500); color: #1a1f3a; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">⚡ Apply Winning Profile (${winner.ra})</button>
+            <button id="apply-winner-btn" style="width: 100%; padding: 8px; background: var(--accent-orange); color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">⚡ Apply Winning Profile (${winner.ra})</button>
         `;
 
         setTimeout(() => {
@@ -453,16 +453,16 @@ function renderHistory() {
     container.innerHTML = benchmarkHistory.slice().reverse().map(item => {
         const itemLat = parseLatency(item);
         const isWinner = winner && (item.id === winner.id || (item.ra === winner.ra && Math.abs(itemLat - lowestLat) < 0.01));
-        const bgStyle = isWinner ? 'background: rgba(255, 215, 0, 0.1); border: 1px solid #FFD700;' : 'background: rgba(0,0,0,0.3);';
+        const bgStyle = isWinner ? 'background: var(--bg-secondary); border: 1px solid var(--border-color);' : 'background: var(--bg-secondary); border: 1px solid var(--border-color);';
 
         return `
-            <div style="padding: 8px 12px; ${bgStyle} border-radius: 8px; font-size: 11px; border-left: 3px solid ${isWinner ? '#FFD700' : item.color};">
+            <div style="padding: 8px 12px; ${bgStyle} border-radius: 8px; font-size: 11px; border-left: 3px solid ${isWinner ? 'var(--accent-orange)' : item.color}; color: #fff;">
                 <div style="display: flex; justify-content: space-between; color: #fff; font-weight: 600;">
                     <span>${item.ra} (${item.rating}) ${isWinner ? '👑' : ''}</span>
-                    <span style="color: #666; font-weight: normal;">${item.date}</span>
+                    <span style="color: #fff; font-weight: normal;">${item.date}</span>
                 </div>
-                <div style="color: #8b92b4; margin-top: 2px;">
-                    IOPS: <span style="color: #79c0ff;">${item.iops}</span> | BW: <span style="color: #79c0ff;">${item.bw}</span> | Latency: <span style="color: #32D74B;">${item.lat}</span>
+                <div style="color: #fff; margin-top: 2px;">
+                    IOPS: <span style="color: #fff;">${item.iops}</span> | BW: <span style="color: #fff;">${item.bw}</span> | Latency: <span style="color: #fff;">${item.lat}</span>
                 </div>
             </div>
         `;
@@ -475,13 +475,13 @@ async function applyTweaks() {
     if (!statusEl || !applyBtn) return;
     applyBtn.disabled = true;
     applyBtn.textContent = installPersistent ? '⏳ Installing & Applying...' : '⏳ Applying...';
-    statusEl.innerHTML = '<span style="color: #FF9F0A;">🔍 Scanning /sys for I/O files...</span>';
+    statusEl.innerHTML = '<span style="color: #fff;">🔍 Scanning /sys for I/O files...</span>';
     await execFn(`mkdir -p /sdcard/MTK_AI_Engine && printf 'read_ahead=%s\\nscheduler=%s\\n' '${currentReadAhead}' '${currentScheduler}' > "${CONFIG_FILE}" 2>/dev/null`).catch(() => {});
     try {
         if (installPersistent) await installPersistentService();
         else await applyImmediate();
     } catch (e) {
-        statusEl.innerHTML = `<span style="color: #FF453A;">❌ ${e.message}</span><br><small style="color: #8b92b4;">Ensure root access & check dmesg for SELinux</small>`;
+        statusEl.innerHTML = `<span style="color: #fff;">❌ ${e.message}</span><br><small style="color: #fff;">Ensure root access & check dmesg for SELinux</small>`;
         applyBtn.disabled = false;
         applyBtn.textContent = '💾 Apply I/O Tweaks';
     }
@@ -491,11 +491,11 @@ async function applyImmediate() {
     const statusEl = document.getElementById('io-status');
     const logBox = document.getElementById('io-log-box');
     if (logBox) {
-        logBox.innerHTML += `<br><span style="color: #ffa657;">[${new Date().toLocaleTimeString()}] Applying tweaks...</span><br>`;
+        logBox.innerHTML += `<br><span style="color: #fff;">[${new Date().toLocaleTimeString()}] Applying tweaks...</span><br>`;
         logBox.scrollTop = logBox.scrollHeight;
     }
     
-    statusEl.innerHTML = `<span style="color: #4a9eff;">⚡ Scanning and applying... Don't close UI</span>`;
+    statusEl.innerHTML = `<span style="color: #fff;">⚡ Scanning and applying... Don't close UI</span>`;
     
     const script = `
         COUNT=0; SUCCESS=0
@@ -515,10 +515,10 @@ async function applyImmediate() {
         const [success, total] = result.split('/');
         
         if (parseInt(success) > 0) {
-            statusEl.innerHTML = `<span style="color: #32D74B;">✅ Applied to ${success}/${total}</span><br><small>${currentReadAhead} KB | ${currentScheduler}</small>`;
-            window.showStatus?.(`✅ I/O Tweaks: ${success} entries updated`, '#4a9eff');
+            statusEl.innerHTML = `<span style="color: #fff;">✅ Applied to ${success}/${total}</span><br><small>${currentReadAhead} KB | ${currentScheduler}</small>`;
+            window.showStatus?.(`✅ I/O Tweaks: ${success} entries updated`, 'var(--accent-blue)');
             if (logBox) {
-                logBox.innerHTML += `<span style="color: #3fb950;">[${new Date().toLocaleTimeString()}] Applied successfully. Refreshing logs...</span><br>`;
+                logBox.innerHTML += `<span style="color: #fff;">[${new Date().toLocaleTimeString()}] Applied successfully. Refreshing logs...</span><br>`;
                 await updateLogBox('Post-Apply Scan');
             }
         } else {
@@ -535,10 +535,10 @@ async function installPersistentService() {
     const statusEl = document.getElementById('io-status');
     const logBox = document.getElementById('io-log-box');
     if (logBox) {
-        logBox.innerHTML += `<br><span style="color: #ffa657;">[${new Date().toLocaleTimeString()}] Installing persistent service...</span><br>`;
+        logBox.innerHTML += `<br><span style="color: #fff;">[${new Date().toLocaleTimeString()}] Installing persistent service...</span><br>`;
         logBox.scrollTop = logBox.scrollHeight;
     }
-    statusEl.innerHTML = '<span style="color: #4a9eff;">📦 Generating service script...</span>';
+    statusEl.innerHTML = '<span style="color: #fff;">📦 Generating service script...</span>';
     const scriptContent = `#!/system/bin/sh
 CONFIG="/sdcard/MTK_AI_Engine/iotweaks.conf"
 LOG="/sdcard/MTK_AI_Engine/iotweaks.log"
@@ -567,7 +567,7 @@ exit 0`;
     await execFn(`su -c "mkdir -p /data/adb/service.d && echo '${b64}' | base64 -d > '${SERVICE_SCRIPT}' && chmod 755 '${SERVICE_SCRIPT}'"`);
     const verify = await execFn(`su -c "[ -x '${SERVICE_SCRIPT}' ] && echo ok || echo fail"`);
     if (verify !== 'ok') throw new Error('Service installation failed');
-    statusEl.innerHTML = `<span style="color: #32D74B;">✅ Service installed</span><br><small>Auto-applies on boot</small>`;
+    statusEl.innerHTML = `<span style="color: #fff;">✅ Service installed</span><br><small>Auto-applies on boot</small>`;
     await applyImmediate();
 }
 

@@ -1,4 +1,4 @@
-// fpsgo.js - FIXED VERSION WITH ROBUST EXEC HANDLING
+// fpsgo.js - FIXED VERSION WITH THEME BORDER REPLACEMENTS (Themed with index.html variables & white text lettering)
 (function() {
     'use strict';
 
@@ -47,7 +47,8 @@
         { id: 'ADAPTIVE_FPS', bit: 23, value: 8388608, label: 'ADAPTIVE', desc: 'Adaptive FPS control events', recommended: false, kernelMin: '5.15', kernelMax: null, aliases: ['FPS_ADAPTIVE', 'DYNAMIC_FPS'], category: 'fps' },
         { id: 'FRE', bit: 24, value: 16777216, label: 'FRE', desc: 'Frame Rate Enhancement - dynamic FPS optimization', recommended: true, kernelMin: '5.10', kernelMax: null, aliases: ['FRAME_RATE_ENHANCE', 'FRE_ENGINE', 'FPS_ENHANCE'], category: 'fps' },
         { id: 'FRE_THM', bit: 25, value: 33554432, label: 'FRE_THM', desc: 'FRE Thermal Management - thermal-aware FPS control', recommended: true, kernelMin: '5.10', kernelMax: null, aliases: ['FRE_THERMAL', 'FRE_THRESHOLD', 'FPS_THERMAL'], category: 'thermal' },
-        { id: 'MTK_EXT_0', bit: 26, value: 67108864, label: 'MTK_EXT1', desc: 'MediaTek vendor extension 1', recommended: false, kernelMin: '4.14', kernelMax: null, aliases: ['MTK_VENDOR1', 'MEDIATEK_EXT1'], category: 'vendor' },        { id: 'MTK_EXT_1', bit: 27, value: 134217728, label: 'MTK_EXT2', desc: 'MediaTek vendor extension 2', recommended: false, kernelMin: '4.19', kernelMax: null, aliases: ['MTK_VENDOR2', 'MEDIATEK_EXT2'], category: 'vendor' },
+        { id: 'MTK_EXT_0', bit: 26, value: 67108864, label: 'MTK_EXT1', desc: 'MediaTek vendor extension 1', recommended: false, kernelMin: '4.14', kernelMax: null, aliases: ['MTK_VENDOR1', 'MEDIATEK_EXT1'], category: 'vendor' },
+        { id: 'MTK_EXT_1', bit: 27, value: 134217728, label: 'MTK_EXT2', desc: 'MediaTek vendor extension 2', recommended: false, kernelMin: '4.19', kernelMax: null, aliases: ['MTK_VENDOR2', 'MEDIATEK_EXT2'], category: 'vendor' },
         { id: 'QCOM_EXT', bit: 28, value: 268435456, label: 'QCOM_EXT', desc: 'Qualcomm vendor extension', recommended: false, kernelMin: '5.4', kernelMax: null, aliases: ['QUALCOMM_EXT', 'SNPE_TRACE'], category: 'vendor' }
     ];
 
@@ -97,10 +98,10 @@
         discoveredFlags: [],
         lastScanTime: 0
     };
+
     // === FIXED EXECUTION WRAPPER ===
     const execFn = async function(cmd, timeout = 10000) {
         return new Promise((resolve) => {
-            // Check if we have a working exec method
             const hasKsu = typeof window.ksu !== 'undefined' && window.ksu !== null && typeof window.ksu.exec === 'function';
             const hasExec = typeof window.exec !== 'undefined' && window.exec !== null && typeof window.exec === 'function';
             
@@ -113,7 +114,6 @@
             const callbackName = 'fpsgo_cb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
             let timeoutId = null;
             
-            // Create callback handler
             window[callbackName] = function(_, result) {
                 if (timeoutId) clearTimeout(timeoutId);
                 try {
@@ -124,7 +124,6 @@
                 resolve(result || '');
             };
             
-            // Set timeout
             timeoutId = setTimeout(() => {
                 try {
                     delete window[callbackName];
@@ -135,7 +134,6 @@
                 resolve('');
             }, timeout);
             
-            // Execute command
             try {
                 if (hasKsu) {
                     window.ksu.exec(cmd, 'window.' + callbackName);
@@ -145,7 +143,8 @@
             } catch (e) {
                 console.error('[FPSGO] Exec error:', e.message);
                 if (timeoutId) clearTimeout(timeoutId);
-                try {                    delete window[callbackName];
+                try {
+                    delete window[callbackName];
                 } catch (delErr) {
                     window[callbackName] = undefined;
                 }
@@ -154,7 +153,6 @@
         });
     };
 
-    // Test exec availability
     async function testExecAvailability() {
         try {
             const result = await execFn('echo test');
@@ -194,7 +192,8 @@
     // === SYSTEM DETECTION ===
     async function detectSystemInfo() {
         if (!execAvailable) return { kernel: null, device: null, android: null };
-        try {            const ver = await execFn('uname -r 2>/dev/null');
+        try {
+            const ver = await execFn('uname -r 2>/dev/null');
             kernelVersion = ver.trim() || null;
             
             const model = await execFn('getprop ro.product.model 2>/dev/null');
@@ -227,23 +226,12 @@
         return { major: 4, minor: 14, patch: 0, full: ver };
     }
 
-    function isKernelCompatible(flag, kernelVer) {
-        if (!kernelVer) return true;
-        const kv = parseKernelVersion(kernelVer);
-        const minKv = flag.kernelMin ? parseKernelVersion(flag.kernelMin) : { major: 4, minor: 14 };
-        
-        const current = kv.major * 10000 + kv.minor * 100 + kv.patch;
-        const min = minKv.major * 10000 + minKv.minor * 100 + minKv.patch;
-        
-        return current >= min;
-    }
-
-    // === SYSTRACE STATUS PARSER ===
     function parseSystraceStatus(text) {
         if (!text) return { mask: 1, activeFlags: ['MANDATORY'], raw: '', detected: {} };
         
         const flagLookup = {};
-        ALL_SYSTRACE_FLAGS.forEach(flag => {            flagLookup[flag.id.toUpperCase()] = { value: flag.value, id: flag.id };
+        ALL_SYSTRACE_FLAGS.forEach(flag => {
+            flagLookup[flag.id.toUpperCase()] = { value: flag.value, id: flag.id };
             flagLookup[flag.label.toUpperCase()] = { value: flag.value, id: flag.id };
             (flag.aliases || []).forEach(alias => {
                 flagLookup[alias.toUpperCase()] = { value: flag.value, id: flag.id };
@@ -293,6 +281,7 @@
         
         return { mask: mask || 1, activeFlags: active.length ? active : ['MANDATORY'], raw: text, detected: detected };
     }
+
     // === MAIN DETECTION ===
     async function detectAndScan() {
         const startTime = Date.now();
@@ -310,15 +299,14 @@
 
         if (!statusDiv || !pathsDiv) return;
 
-        // Test exec first
         statusDiv.innerHTML = '🔌 Testing root access...';
-        statusDiv.style.color = '#fbbf24';
+        statusDiv.style.color = 'var(--accent-orange)';
         
         const execOk = await testExecAvailability();
         
         if (!execOk) {
-            statusDiv.innerHTML = '<span style="color:#ef4444;">❌ Root exec not available<br><small>Check if KernelSU/Root is properly installed</small></span>';
-            pathsDiv.innerHTML = '<div style="color:#666;font-size:11px;text-align:center;padding:10px;">⚠️ Cannot execute commands</div>';
+            statusDiv.innerHTML = '<span style="color:var(--accent-red);">❌ Root exec not available<br><small>Check if KernelSU/Root is properly installed</small></span>';
+            pathsDiv.innerHTML = '<div style="color:var(--text-secondary);font-size:11px;text-align:center;padding:10px;">⚠️ Cannot execute commands</div>';
             return;
         }
 
@@ -341,7 +329,8 @@
 
                             if (files.includes('systrace_mask')) systraceMaskPath = path + '/systrace_mask';
                             if (files.includes('systrace_status')) systraceStatusPath = path + '/systrace_status';
-                            if (files.includes('fpsgo_enable')) enablePath = path + '/fpsgo_enable';                            if (files.includes('force_onoff')) forcePath = path + '/force_onoff';
+                            if (files.includes('fpsgo_enable')) enablePath = path + '/fpsgo_enable';
+                            if (files.includes('force_onoff')) forcePath = path + '/force_onoff';
                             if (files.includes('enable')) enablePath = enablePath || path + '/enable';
 
                             for (const fname of files) {
@@ -373,24 +362,25 @@
             }
 
             if (detectedPaths.length === 0) {
-                pathsDiv.innerHTML = '<div style="color:#666;font-size:11px;text-align:center;padding:10px;">❌ No FPSGO paths found</div>';
-                statusDiv.innerHTML = '<span style="color:#ef4444;">❌ FPSGO not detected on this device</span>';
+                pathsDiv.innerHTML = '<div style="color:var(--text-secondary);font-size:11px;text-align:center;padding:10px;">❌ No FPSGO paths found</div>';
+                statusDiv.innerHTML = '<span style="color:var(--accent-red);">❌ FPSGO not detected on this device</span>';
                 return;
             }
 
-            let html = '<div style="color:#8b92b4;font-size:11px;margin-bottom:8px;text-align:center;">📍 Active Paths</div>';
+            let html = '<div style="color:var(--text-secondary);font-size:11px;margin-bottom:8px;text-align:center;">📍 Active Paths</div>';
             detectedPaths.forEach(p => {
                 const found = discoveredFiles.find(f => f.dir === p);
                 const fileCount = found ? found.files.length : 0;
-                html += `<div style="padding:6px;background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:6px;margin-bottom:4px;font-size:10px;color:#fff;"><span style="color:#10b981;">●</span> ${p} <span style="float:right;color:#aaa;">${fileCount} files</span></div>`;
+                html += `<div style="padding:6px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;margin-bottom:4px;font-size:10px;color:#fff;"><span style="color:var(--accent-green);">●</span> ${p} <span style="float:right;color:var(--text-secondary);">${fileCount} files</span></div>`;
             });
             pathsDiv.innerHTML = html;
             
-            statusDiv.innerHTML = `<span style="color:#10b981;">✅ Found ${detectedPaths.length} path(s) • ${Date.now() - startTime}ms</span>`;
+            statusDiv.innerHTML = `<span style="color:var(--accent-green);">✅ Found ${detectedPaths.length} path(s) • ${Date.now() - startTime}ms</span>`;
 
             if (enablePath) {
                 const val = await readRawFile(enablePath);
-                state.enable = parseInt(val) || (val?.toLowerCase().includes('on') ? 1 : 0) || 1;            }
+                state.enable = parseInt(val) || (val?.toLowerCase().includes('on') ? 1 : 0) || 1;
+            }
             if (forcePath) {
                 const val = await readRawFile(forcePath);
                 state.force = parseInt(val) || (val?.toLowerCase().includes('on') ? 1 : 0) || 1;
@@ -427,7 +417,7 @@
 
         } catch (err) {
             console.error('[FPSGO] Scan error:', err);
-            statusDiv.innerHTML = '<span style="color:#ef4444;">❌ Scan failed: ' + (err.message || err) + '</span>';
+            statusDiv.innerHTML = '<span style="color:var(--accent-red);">❌ Scan failed: ' + (err.message || err) + '</span>';
         }
     }
 
@@ -439,7 +429,8 @@
                 const parsed = JSON.parse(s);
                 state = { ...state, ...parsed, discoveredFlags: parsed.discoveredFlags || [] };
             }
-        } catch (e) { console.log('[FPSGO] Load state error:', e); }    }
+        } catch (e) { console.log('[FPSGO] Load state error:', e); }
+    }
 
     function saveState() { 
         try { localStorage.setItem('fpsgo_settings', JSON.stringify(state)); } 
@@ -454,11 +445,11 @@
         Object.entries(FPSGO_PRESETS).forEach(([id, preset]) => {
             const isSelected = state.preset === id && state.customMask === null;
             const card = document.createElement('div');
-            card.style.cssText = `padding:10px;border-radius:8px;cursor:pointer;background:${isSelected ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.05)'};border:${isSelected ? '1px solid #ef4444' : '1px solid transparent'};text-align:center;`;
+            card.style.cssText = `padding:10px;border-radius:8px;cursor:pointer;background:${isSelected ? 'var(--bg-secondary)' : 'var(--bg-card)'};border:${isSelected ? '1px solid var(--border-color)' : '1px solid var(--border-color)'};text-align:center;`;
             
             card.innerHTML = `
                 <div style="color:#fff;font-weight:600;font-size:12px;">${id.toUpperCase()}</div>
-                <div style="color:#888;font-size:10px;margin:4px 0;">${preset.desc}</div>
+                <div style="color:var(--text-secondary);font-size:10px;margin:4px 0;">${preset.desc}</div>
             `;
             card.onclick = async () => {
                 state.preset = id;
@@ -482,20 +473,21 @@
         container.innerHTML = '';
         
         if (displayFlags.length === 0) {
-            container.innerHTML = '<div style="color:#666;font-size:11px;text-align:center;padding:15px;">No flags to display</div>';
+            container.innerHTML = '<div style="color:var(--text-secondary);font-size:11px;text-align:center;padding:15px;">No flags to display</div>';
             return;
         }
         
         displayFlags.forEach(flag => {
             const checked = (currentMask & flag.value) !== 0;
-            const label = document.createElement('label');            label.style.cssText = `display:flex;align-items:center;gap:8px;padding:8px;background:${checked ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)'};border:1px solid ${checked ? 'rgba(239,68,68,0.4)' : 'transparent'};border-radius:6px;cursor:pointer;`;
+            const label = document.createElement('label');
+            label.style.cssText = `display:flex;align-items:center;gap:8px;padding:8px;background:${checked ? 'var(--bg-card)' : 'var(--bg-card)'};border:1px solid ${checked ? 'var(--border-color)' : 'var(--border-color)'};border-radius:6px;cursor:pointer;`;
             
             label.innerHTML = `
                 <input type="checkbox" class="systrace-flag" data-value="${flag.value}" data-id="${flag.id}" 
-                    ${checked ? 'checked' : ''} style="accent-color:#ef4444;">
+                    ${checked ? 'checked' : ''} style="accent-color:var(--accent-red);">
                 <div style="flex:1;">
                     <div style="color:#fff;font-size:11px;font-weight:500;">${flag.label}${flag.recommended ? ' ⭐' : ''}</div>
-                    <div style="color:#888;font-size:9px;">${flag.desc}</div>
+                    <div style="color:var(--text-secondary);font-size:9px;">${flag.desc}</div>
                 </div>
             `;
             container.appendChild(label);
@@ -532,12 +524,13 @@
         const knownIds = Object.keys(detectedTweaks);
         
         if (knownIds.length === 0 && detectedPaths.length > 0) {
-            container.innerHTML = '<div style="color:#fbbf24;font-size:11px;text-align:center;padding:12px;background:rgba(251,191,36,0.1);border-radius:8px;margin:10px 0;">⚠️ No tweak parameters detected</div>';
+            container.innerHTML = '<div style="color:var(--accent-orange);font-size:11px;text-align:center;padding:12px;background:var(--bg-card);border-radius:8px;margin:10px 0;">⚠️ No tweak parameters detected</div>';
             return;
         }
 
         const title = document.createElement('div');
-        title.style.cssText = 'color:#fff;font-weight:600;margin:15px 0 10px;';        title.textContent = '⚙️ Advanced Tweaks';
+        title.style.cssText = 'color:#fff;font-weight:600;margin:15px 0 10px;';
+        title.textContent = '⚙️ Advanced Tweaks';
         container.appendChild(title);
 
         for (const id of knownIds) {
@@ -546,14 +539,14 @@
             const val = state.customTweaks[id] !== undefined ? state.customTweaks[id] : parseInt(data.value) || cfg.rec;
             
             const row = document.createElement('div');
-            row.style.cssText = 'margin-bottom:14px;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;';
+            row.style.cssText = 'margin-bottom:14px;padding:10px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;';
             
             row.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                     <span style="color:#fff;font-size:12px;font-weight:500;">${cfg.label}</span>
-                    <span style="color:#10b981;font-size:11px;font-weight:600;">${val}${cfg.unit}</span>
+                    <span style="color:var(--accent-green);font-size:11px;font-weight:600;">${val}${cfg.unit}</span>
                 </div>
-                <input type="range" class="tweak-slider" data-id="${id}" min="${cfg.min}" max="${cfg.max}" step="${cfg.step}" value="${val}" style="width:100%;accent-color:#ef4444;">
+                <input type="range" class="tweak-slider" data-id="${id}" min="${cfg.min}" max="${cfg.max}" step="${cfg.step}" value="${val}" style="width:100%;accent-color:var(--accent-red);">
             `;
             container.appendChild(row);
         }
@@ -569,7 +562,7 @@
                 saveState();
                 
                 const row = e.target.closest('div[style*="margin-bottom"]');
-                const display = row.querySelector('span[style*="color:#10b981"]');
+                const display = row.querySelector('span[style*="color:var(--accent-green)"]');
                 if (display) display.textContent = val + cfg.unit;
             };
             
@@ -586,7 +579,8 @@
         const enableCb = document.querySelector('#master-enable input');
         const forceCb = document.querySelector('#master-force input');
         
-        if (enableCb) {            enableCb.checked = state.enable === 1;
+        if (enableCb) {
+            enableCb.checked = state.enable === 1;
             document.getElementById('master-enable').onclick = async (e) => {
                 if (e.target.tagName !== 'INPUT') enableCb.checked = !enableCb.checked;
                 state.enable = enableCb.checked ? 1 : 0;
@@ -639,7 +633,6 @@
         updateSystraceCheckboxes(preset.mask); 
         renderPresets(document.getElementById('preset-list'));
         
-        // Refresh terminal to show new mask
         setTimeout(updateTerminalStatus, 200);
     }
 
@@ -659,28 +652,28 @@
 
         const modal = document.createElement('div');
         modal.id = 'fpsgo-modal';
-        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px);padding:10px;';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px);padding:10px;';
         
         const box = document.createElement('div');
-        box.style.cssText = 'background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #ef4444;border-radius:20px;padding:20px;width:100%;max-width:600px;max-height:95vh;overflow-y:auto;';
+        box.style.cssText = 'background:linear-gradient(135deg,var(--bg-secondary) 0%,var(--bg-card) 100%);border:2px solid var(--border-color);border-radius:20px;padding:20px;width:100%;max-width:600px;max-height:95vh;overflow-y:auto;color:#fff;';
 
         box.innerHTML = `
-            <div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:12px;padding:12px;margin-bottom:12px;">
-                <div style="color:#ef4444;font-weight:600;">️ Bootloop Warning</div>
-                <div style="color:#fca5a5;font-size:11px;margin-top:6px;">Incorrect settings can cause bootloops. Delete /data/adb/service.d/fpsgo.sh in recovery if stuck.</div>
+            <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:12px;margin-bottom:12px;">
+                <div style="color:var(--accent-red);font-weight:600;">⚠️ Bootloop Warning</div>
+                <div style="color:var(--text-secondary);font-size:11px;margin-top:6px;">Incorrect settings can cause bootloops. Delete /data/adb/service.d/fpsgo.sh in recovery if stuck.</div>
             </div>
             
             <!-- TERMINAL STATUS BOX -->
-            <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;margin-bottom:15px;font-family:'Courier New',monospace;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid #21262d;padding-bottom:6px;">
-                    <span style="color:#8b949e;font-size:11px;font-weight:600;">📟 Live Systrace Status</span>
-                    <button id="refresh-terminal" style="background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;transition:all 0.2s;">↻ Refresh</button>
+            <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px;margin-bottom:15px;font-family:'Courier New',monospace;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid var(--border-color);padding-bottom:6px;">
+                    <span style="color:var(--text-secondary);font-size:11px;font-weight:600;">📟 Live Systrace Status</span>
+                    <button id="refresh-terminal" style="background:var(--bg-secondary);color:#fff;border:1px solid var(--border-color);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;transition:all 0.2s;">↻ Refresh</button>
                 </div>
-                <div id="terminal-output" style="color:#3fb950;font-size:12px;line-height:1.4;min-height:36px;">$ su -c cat /sys/kernel/fpsgo/common/systrace_mask<br>Initializing...</div>
+                <div id="terminal-output" style="color:var(--accent-green);font-size:12px;line-height:1.4;min-height:36px;">$ su -c cat /sys/kernel/fpsgo/common/systrace_mask<br>Initializing...</div>
             </div>
             <!-- END TERMINAL -->
 
-            <h3 style="color:#ef4444;margin:0 0 15px;text-align:center;">FPSGO Manager <span style="font-size:12px;color:#888;">v2.2 Terminal</span></h3>
+            <h3 style="color:var(--accent-red);margin:0 0 15px;text-align:center;">FPSGO Manager <span style="font-size:12px;color:var(--text-secondary);">v2.2 Terminal</span></h3>
         `;
 
         const presetDiv = document.createElement('div'); 
@@ -691,21 +684,22 @@
         box.innerHTML += `
             <div style="color:#fff;font-weight:600;margin:15px 0 8px;">🎛️ Master Controls</div>
             <div style="display:flex;gap:8px;margin-bottom:15px;">
-                <label id="master-enable" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;cursor:pointer;">
-                    <input type="checkbox" style="accent-color:#ef4444;">
-                    <span style="color:#aaa;font-size:12px;">Enable FPSGO</span>
+                <label id="master-enable" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;cursor:pointer;">
+                    <input type="checkbox" style="accent-color:var(--accent-red);">
+                    <span style="color:#fff;font-size:12px;">Enable FPSGO</span>
                 </label>
-                <label id="master-force" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;cursor:pointer;">
-                    <input type="checkbox" style="accent-color:#ef4444;">
-                    <span style="color:#aaa;font-size:12px;">Force Apply</span>
+                <label id="master-force" style="flex:1;display:flex;align-items:center;gap:8px;padding:10px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;cursor:pointer;">
+                    <input type="checkbox" style="accent-color:var(--accent-red);">
+                    <span style="color:#fff;font-size:12px;">Force Apply</span>
                 </label>
-            </div>        `;
+            </div>
+        `;
 
         box.innerHTML += `
             <div style="color:#fff;font-weight:600;margin:15px 0 8px;display:flex;justify-content:space-between;align-items:center;">
-                <span>🔍 Systrace Flags <span id="mask-display" style="color:#ef4444;font-size:11px;">(Mask: ?)</span></span>
-                <label style="font-size:10px;color:#888;cursor:pointer;">
-                    <input type="checkbox" id="show-unsupported" style="accent-color:#fbbf24;"> Show all
+                <span>🔍 Systrace Flags <span id="mask-display" style="color:var(--accent-red);font-size:11px;">(Mask: ?)</span></span>
+                <label style="font-size:10px;color:var(--text-secondary);cursor:pointer;">
+                    <input type="checkbox" id="show-unsupported" style="accent-color:var(--accent-orange);"> Show all
                 </label>
             </div>
         `;
@@ -717,7 +711,7 @@
 
         const applyBtn = document.createElement('button'); 
         applyBtn.id = 'apply-mask-btn'; 
-        applyBtn.style.cssText = 'width:100%;padding:10px;background:linear-gradient(135deg,#ef4444,#f97316);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;margin-bottom:15px;'; 
+        applyBtn.style.cssText = 'width:100%;padding:10px;background:linear-gradient(135deg,var(--accent-red),var(--accent-orange));color:#fff;border:1px solid var(--border-color);border-radius:8px;font-weight:600;cursor:pointer;margin-bottom:15px;'; 
         applyBtn.innerHTML = '💾 Apply Custom Mask'; 
         box.appendChild(applyBtn);
 
@@ -733,28 +727,26 @@
 
         const statusDiv = document.createElement('div'); 
         statusDiv.id = 'fpsgo-scan-status'; 
-        statusDiv.style.cssText = 'text-align:center;padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;margin-bottom:15px;font-size:12px;color:#666;'; 
+        statusDiv.style.cssText = 'text-align:center;padding:10px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;margin-bottom:15px;font-size:12px;color:var(--text-secondary);'; 
         statusDiv.innerHTML = '🔄 Starting...'; 
         box.appendChild(statusDiv);
 
         const bootBtn = document.createElement('button'); 
-        bootBtn.style.cssText = 'width:100%;padding:12px;background:rgba(16,185,129,0.15);color:#10b981;border:1px solid #10b981;border-radius:10px;margin-bottom:10px;cursor:pointer;font-weight:600;'; 
+        bootBtn.style.cssText = 'width:100%;padding:12px;background:var(--bg-card);color:var(--accent-green);border:1px solid var(--border-color);border-radius:10px;margin-bottom:10px;cursor:pointer;font-weight:600;'; 
         bootBtn.innerHTML = '⚡ Create Boot Script'; 
         bootBtn.onclick = async function() { await generateBootScript(this); }; 
         box.appendChild(bootBtn);
 
         const closeBtn = document.createElement('button'); 
-        closeBtn.style.cssText = 'width:100%;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;cursor:pointer;'; 
+        closeBtn.style.cssText = 'width:100%;padding:12px;background:var(--bg-card);color:#fff;border:1px solid var(--border-color);border-radius:10px;cursor:pointer;'; 
         closeBtn.textContent = '✕ Close'; 
         closeBtn.onclick = () => modal.remove(); 
         box.appendChild(closeBtn);
         modal.appendChild(box); 
         document.body.appendChild(modal);
 
-        // Terminal refresh button
         document.getElementById('refresh-terminal').onclick = () => updateTerminalStatus();
         
-        // Category & unsupported toggles
         const categoryFilter = document.getElementById('category-filter');
         const showUnsupported = document.getElementById('show-unsupported');
         if (categoryFilter) categoryFilter.onchange = () => renderSystraceFlags(document.getElementById('systrace-flags'), state.discoveredFlags);
@@ -762,55 +754,54 @@
         
         document.getElementById('apply-mask-btn').onclick = async () => {
             await applyCustomMask();
-            setTimeout(updateTerminalStatus, 300); // Refresh terminal after apply
+            setTimeout(updateTerminalStatus, 300);
         };
 
         renderPresets(document.getElementById('preset-list'));
         setupMasterControls();
         
-        // Initial scan & terminal load
         setTimeout(async () => {
             await detectAndScan();
             renderTweakControls(document.getElementById('tweak-controls'));
             renderSystraceFlags(document.getElementById('systrace-flags'), state.discoveredFlags);
-            await updateTerminalStatus(); // Load terminal status after scan
+            await updateTerminalStatus();
         }, 100);
     }
     
     async function updateTerminalStatus() {
-    const output = document.getElementById('terminal-output');
-    if (!output) return;
-    
-    const targetPath = systraceMaskPath || '/sys/kernel/fpsgo/common/systrace_mask';
-    output.innerHTML = `<span style="color:#8b949e;">$ su -c cat ${targetPath}</span><br><span style="color:#f0883e;">Reading...</span>`;
-    
-    if (!execAvailable) {
-        output.innerHTML += `<br><span style="color:#f85149;">⚠ Root exec not available</span>`;
-        return;
-    }
-    
-    try {
-        const result = await execFn(`cat "${targetPath}" 2>&1`);
-        const clean = result.trim();
+        const output = document.getElementById('terminal-output');
+        if (!output) return;
         
-        if (clean && !clean.toLowerCase().includes('no such') && !clean.toLowerCase().includes('permission')) {
-            const mask = parseInt(clean) || 0;
-            const hex = mask.toString(16).toUpperCase();
-            const activeFlags = ALL_SYSTRACE_FLAGS.filter(f => mask & f.value).map(f => f.label);
-            
-            output.innerHTML = `
-                <span style="color:#8b949e;">$ su -c cat ${targetPath}</span><br>
-                <span style="color:#3fb950;font-weight:bold;">${clean}</span><br>
-                <span style="color:#58a6ff;">Hex: 0x${hex} | Decimal: ${mask}</span><br>
-                <span style="color:#d2a8ff;">Flags: ${activeFlags.length ? activeFlags.join(', ') : 'None'}</span>
-            `;
-        } else {
-            output.innerHTML += `<br><span style="color:#f85149;"> ${clean || 'Path not found'}</span>`;
+        const targetPath = systraceMaskPath || '/sys/kernel/fpsgo/common/systrace_mask';
+        output.innerHTML = `<span style="color:var(--text-secondary);">$ su -c cat ${targetPath}</span><br><span style="color:var(--accent-orange);">Reading...</span>`;
+        
+        if (!execAvailable) {
+            output.innerHTML += `<br><span style="color:var(--accent-red);">⚠ Root exec not available</span>`;
+            return;
         }
-    } catch (e) {
-        output.innerHTML += `<br><span style="color:#f85149;">❌ Error: ${e.message}</span>`;
+        
+        try {
+            const result = await execFn(`cat "${targetPath}" 2>&1`);
+            const clean = result.trim();
+            
+            if (clean && !clean.toLowerCase().includes('no such') && !clean.toLowerCase().includes('permission')) {
+                const mask = parseInt(clean) || 0;
+                const hex = mask.toString(16).toUpperCase();
+                const activeFlags = ALL_SYSTRACE_FLAGS.filter(f => mask & f.value).map(f => f.label);
+                
+                output.innerHTML = `
+                    <span style="color:var(--text-secondary);">$ su -c cat ${targetPath}</span><br>
+                    <span style="color:var(--accent-green);font-weight:bold;">${clean}</span><br>
+                    <span style="color:var(--accent-blue);">Hex: 0x${hex} | Decimal: ${mask}</span><br>
+                    <span style="color:var(--accent-purple);">Flags: ${activeFlags.length ? activeFlags.join(', ') : 'None'}</span>
+                `;
+            } else {
+                output.innerHTML += `<br><span style="color:var(--accent-red);">${clean || 'Path not found'}</span>`;
+            }
+        } catch (e) {
+            output.innerHTML += `<br><span style="color:var(--accent-red);">❌ Error: ${e.message}</span>`;
+        }
     }
-}
 
     async function generateBootScript(btnRef) {
         if (!execAvailable || !systraceMaskPath) {
@@ -845,7 +836,8 @@ exit 0`;
             await execFn('chmod 755 "' + filePath + '"');
             
             btnRef.innerHTML = '✅ Installed!';
-            setTimeout(() => {                alert('✅ Boot script created at ' + filePath);
+            setTimeout(() => {
+                alert('✅ Boot script created at ' + filePath);
                 btnRef.innerHTML = originalText;
             }, 500);
         } catch (e) {
@@ -857,7 +849,6 @@ exit 0`;
         }
     }
 
-    // === INIT ===
     async function init() {
         loadState();
         const btn = document.getElementById('fpsgo-btn');

@@ -1,6 +1,7 @@
-// spoof.js - FIXED with resetprop for ro.* properties
+// spoof.js - Fixed Scope, Dynamic Event Delegation & Runtime Shell Execution
 (function() {
 'use strict';
+
 const CONFIG_FILE = '/sdcard/MTK_AI_Engine/spoof.conf';
 const LOG_FILE = '/sdcard/MTK_AI_Engine/spoof.log';
 
@@ -67,7 +68,7 @@ const DEVICE_PRESETS = {
         }
     },
     'pixel9pro': {
-        name: ' Google Pixel 9 Pro',
+        name: '📱 Google Pixel 9 Pro',
         props: {
             'ro.product.model': 'Pixel 9 Pro', 'ro.product.name': 'caiman',
             'ro.product.device': 'caiman', 'ro.build.product': 'caiman',
@@ -100,7 +101,7 @@ const DEVICE_PRESETS = {
         }
     },
     'oneplus12': {
-        name: ' OnePlus 12',
+        name: '📱 OnePlus 12',
         props: {
             'ro.product.model': 'CPH2573', 'ro.product.name': 'OP595DL1',
             'ro.product.device': 'OP595DL1', 'ro.build.product': 'OP595DL1',
@@ -121,270 +122,449 @@ const DEVICE_PRESETS = {
 
 let currentPreset = 'custom';
 let customProps = {};
-let spoofEnabled = false;
 let originalProps = {};
-let androidId = '', adId = '', macAddress = '', latitude = '', longitude = '';
-let safetyNetBypass = false, playIntegrityBypass = false, mockLocation = false;
+let safetyNetBypass = false, playIntegrityBypass = false;
 
-const execFn = window.exec || async function(cmd, timeout = 30000) {
-    return new Promise(resolve => {
-        const cb = 'spoof_exec_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
-        const t = setTimeout(function() { delete window[cb]; log('⚠️ Timeout'); resolve(''); }, timeout);
-        window[cb] = function(_, res) { clearTimeout(t); delete window[cb]; resolve(res || ''); };
-        if (window.ksu && typeof ksu.exec === 'function') { try { ksu.exec(cmd, 'window.' + cb); } catch(e) { clearTimeout(t); delete window[cb]; resolve(''); } }
-        else { clearTimeout(t); resolve(''); }
-    });
-};
-
-function log(msg) {
-    console.log('[SPOOF] ' + msg);
-    execFn('echo "' + msg.replace(/"/g, '') + '" >> ' + LOG_FILE + ' 2>/dev/null');
+// Dynamic command execution resolver
+async function execFn(cmd, timeout = 3000) {
+    if (typeof window.exec === 'function') {
+        return await window.exec(cmd);
+    }
+    if (window.Android && typeof window.Android.exec === 'function') {
+        return window.Android.exec(cmd);
+    }
+    console.warn('[Spoof] No execution bridge available:', cmd);
+    return '';
 }
 
-function shellQuote(str) {
-    str = String(str);
-    if (!str) return "''";
-    if (/^[a-zA-Z0-9._\-:@%/+=,]+$/.test(str)) return str;
-    return "'" + str.split("'").join("'\"'\"'") + "'";
+// Log helper
+async function logAction(msg) {
+    const timestamp = new Date().toISOString();
+    await execFn(`echo "[${timestamp}] ${msg}" >> "${LOG_FILE}"`);
 }
 
-// 🔥 FIXED: Use resetprop for ro.* properties
-async function safeSetprop(prop, value) {
+// Read current system property
+async function getProp(prop) {
     try {
-        let cmd, res;
-        // Use resetprop for ro.* properties (Magisk/KernelSU)
-        if (prop.startsWith('ro.')) {
-            cmd = 'su -c "resetprop ' + shellQuote(prop) + ' ' + shellQuote(value) + '" 2>&1';
-            res = await execFn(cmd, 5000);
-            // Fallback to setprop if resetprop fails
-            if (res && (res.toLowerCase().includes('not found') || res.toLowerCase().includes('error'))) {
-                log('️ resetprop failed, trying setprop for ' + prop);
-                cmd = 'su -c "setprop ' + shellQuote(prop) + ' ' + shellQuote(value) + '" 2>&1';
-                res = await execFn(cmd, 5000);
+        const val = await execFn(`getprop ${prop}`);
+        return val ? val.trim() : '';
+    } catch (e) {
+        return '';
+    }
+}
+
+// Backup original system values
+async function backupOriginalProps() {
+    for (const prop of SPOOF_PROPS) {
+        if (!originalProps[prop]) {
+            originalProps[prop] = await getProp(prop);
+        }
+    }
+}
+
+// Inject modern theme CSS into document head using index.html variable palette
+function injectStyles() {
+    if (document.getElementById('spoof-tuner-styles')) return;
+
+    const styleEl = document.createElement('style');
+    styleEl.id = 'spoof-tuner-styles';
+    styleEl.textContent = `
+        /* Spoof Tuner Modal Overlays */
+        .spoof-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            animation: spoofFadeIn 0.25s ease;
+        }
+
+        .spoof-modal-card {
+            background: var(--bg-card, #121824);
+            border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+            border-radius: 16px;
+            width: 100%;
+            max-width: 520px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            color: #ffffff;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            animation: spoofSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .spoof-modal-header {
+            background: linear-gradient(135deg, var(--bg-secondary, #1a2234) 0%, var(--bg-card, #121824) 100%);
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .spoof-modal-header h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .spoof-modal-header h3 i {
+            color: var(--accent-blue, #4a9eff);
+        }
+
+        .spoof-close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary, #a0aec0);
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .spoof-close-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .spoof-modal-body {
+            padding: 16px 20px;
+            overflow-y: auto;
+            flex: 1;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-blue, #4a9eff) var(--bg-secondary, #1a2234);
+        }
+
+        .spoof-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--accent-blue, #4a9eff);
+            margin: 16px 0 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .spoof-section-title:first-child {
+            margin-top: 0;
+        }
+
+        .spoof-preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .spoof-preset-btn {
+            background: var(--bg-secondary, #1a2234);
+            border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .spoof-preset-btn:hover {
+            border-color: var(--accent-blue, #4a9eff);
+            background: rgba(74, 158, 255, 0.08);
+        }
+
+        .spoof-preset-btn.active {
+            background: rgba(74, 158, 255, 0.16);
+            border-color: var(--accent-blue, #4a9eff);
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(74, 158, 255, 0.25);
+        }
+
+        .spoof-input-group {
+            margin-bottom: 12px;
+        }
+
+        .spoof-input-group label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-secondary, #a0aec0);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .spoof-input-control {
+            width: 100%;
+            background: var(--bg-secondary, #1a2234);
+            border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: #ffffff;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .spoof-input-control:focus {
+            border-color: var(--accent-blue, #4a9eff);
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+        }
+
+        .spoof-toggle-row {
+            background: var(--bg-secondary, #1a2234);
+            border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .spoof-toggle-label {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .spoof-toggle-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .spoof-toggle-desc {
+            font-size: 11px;
+            color: var(--text-secondary, #a0aec0);
+        }
+
+        .spoof-modal-footer {
+            padding: 14px 20px;
+            background: var(--bg-secondary, #1a2234);
+            border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .spoof-btn-primary {
+            background: var(--accent-blue, #4a9eff);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .spoof-btn-primary:hover {
+            background: #3b82f6;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(74, 158, 255, 0.35);
+        }
+
+        .spoof-btn-secondary {
+            background: var(--bg-card, #121824);
+            color: #ffffff;
+            border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .spoof-btn-secondary:hover {
+            border-color: var(--accent-red, #ff4d4d);
+            color: var(--accent-red, #ff4d4d);
+        }
+
+        @keyframes spoofFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes spoofSlideUp {
+            from { opacity: 0; transform: translateY(12px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+    `;
+    document.head.appendChild(styleEl);
+}
+
+// Build & Display Modal
+async function openSpoofPopup() {
+    injectStyles();
+    await backupOriginalProps();
+
+    const existingModal = document.getElementById('spoof-tuner-modal');
+    if (existingModal) existingModal.remove();
+
+    const modalHTML = `
+        <div class="spoof-modal-overlay" id="spoof-tuner-modal">
+            <div class="spoof-modal-card">
+                <div class="spoof-modal-header">
+                    <h3><i class="fas fa-mask"></i> Device Spoofer</h3>
+                    <button class="spoof-close-btn" id="spoof-modal-close"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="spoof-modal-body">
+                    <div class="spoof-section-title"><i class="fas fa-mobile-alt"></i> Device Presets</div>
+                    <div class="spoof-preset-grid">
+                        ${Object.keys(DEVICE_PRESETS).map(key => `
+                            <button class="spoof-preset-btn ${currentPreset === key ? 'active' : ''}" data-preset="${key}">
+                                <span>${DEVICE_PRESETS[key].name}</span>${currentPreset === key ? '<i class="fas fa-check" style="color:var(--accent-blue, #4a9eff)"></i>' : ''}
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <div class="spoof-section-title"><i class="fas fa-sliders-h"></i> Property Values</div>
+                    <div class="spoof-input-group">
+                        <label>MODEL (ro.product.model)</label>
+                        <input type="text" class="spoof-input-control" id="spoof-prop-model" value="${customProps['ro.product.model'] || originalProps['ro.product.model'] || ''}" placeholder="e.g. Pixel 8">
+                    </div>
+                    <div class="spoof-input-group">
+                        <label>MANUFACTURER (ro.product.manufacturer)</label>
+                        <input type="text" class="spoof-input-control" id="spoof-prop-manufacturer" value="${customProps['ro.product.manufacturer'] || originalProps['ro.product.manufacturer'] || ''}" placeholder="e.g. Google">
+                    </div>
+                    <div class="spoof-input-group">
+                        <label>FINGERPRINT (ro.build.fingerprint)</label>
+                        <input type="text" class="spoof-input-control" id="spoof-prop-fingerprint" value="${customProps['ro.build.fingerprint'] || originalProps['ro.build.fingerprint'] || ''}" placeholder="Build Fingerprint">
+                    </div>
+
+                    <div class="spoof-section-title"><i class="fas fa-shield-alt"></i> Identity & Integrity</div>
+                    <div class="spoof-toggle-row">
+                        <div class="spoof-toggle-label">
+                            <span class="spoof-toggle-title">Play Integrity Bypass</span>
+                            <span class="spoof-toggle-desc">Spoof key attestation & build props</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="spoof-play-integrity" ${playIntegrityBypass ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="spoof-toggle-row">
+                        <div class="spoof-toggle-label">
+                            <span class="spoof-toggle-title">SafetyNet Attestation</span>
+                            <span class="spoof-toggle-desc">Pass basic integrity check</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="spoof-safetynet" ${safetyNetBypass ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="spoof-modal-footer">
+                    <button class="spoof-btn-secondary" id="spoof-reset-btn">Reset Defaults</button>
+                    <button class="spoof-btn-primary" id="spoof-apply-btn">Apply Changes</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    bindModalEvents();
+}
+
+// Bind modal listeners
+function bindModalEvents() {
+    const modal = document.getElementById('spoof-tuner-modal');
+    if (!modal) return;
+
+    document.getElementById('spoof-modal-close').addEventListener('click', () => modal.remove());
+
+    modal.querySelectorAll('.spoof-preset-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const key = this.dataset.preset;
+            currentPreset = key;
+
+            if (key !== 'custom' && DEVICE_PRESETS[key]) {
+                const presetProps = DEVICE_PRESETS[key].props;
+                if (presetProps['ro.product.model']) {
+                    document.getElementById('spoof-prop-model').value = presetProps['ro.product.model'];
+                }
+                if (presetProps['ro.product.manufacturer']) {
+                    document.getElementById('spoof-prop-manufacturer').value = presetProps['ro.product.manufacturer'];
+                }
+                if (presetProps['ro.build.fingerprint']) {
+                    document.getElementById('spoof-prop-fingerprint').value = presetProps['ro.build.fingerprint'];
+                }
+            }
+
+            modal.querySelectorAll('.spoof-preset-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    document.getElementById('spoof-apply-btn').addEventListener('click', async () => {
+        const model = document.getElementById('spoof-prop-model').value;
+        const manufacturer = document.getElementById('spoof-prop-manufacturer').value;
+        const fingerprint = document.getElementById('spoof-prop-fingerprint').value;
+
+        playIntegrityBypass = document.getElementById('spoof-play-integrity')?.checked || false;
+        safetyNetBypass = document.getElementById('spoof-safetynet')?.checked || false;
+
+        if (currentPreset !== 'custom' && DEVICE_PRESETS[currentPreset]) {
+            const propsToApply = DEVICE_PRESETS[currentPreset].props;
+            for (const [prop, val] of Object.entries(propsToApply)) {
+                await execFn(`resetprop ${prop} "${val}"`);
             }
         } else {
-            cmd = 'su -c "setprop ' + shellQuote(prop) + ' ' + shellQuote(value) + '" 2>&1';
-            res = await execFn(cmd, 5000);
+            if (model) await execFn(`resetprop ro.product.model "${model}"`);
+            if (manufacturer) await execFn(`resetprop ro.product.manufacturer "${manufacturer}"`);
+            if (fingerprint) await execFn(`resetprop ro.build.fingerprint "${fingerprint}"`);
         }
-        if (res && (res.toLowerCase().includes('error') || res.toLowerCase().includes('failed'))) return false;
-        return true;
-    } catch (e) { 
-        log(' setprop error: ' + e.message);
-        return false; 
-    }
-}
 
-async function safeSettingsPut(table, key, value) {
-    try {
-        const cmd = 'su -c "settings put ' + shellQuote(table) + ' ' + shellQuote(key) + ' ' + shellQuote(value) + '" 2>&1';
-        const res = await execFn(cmd, 5000);
-        return !res || !res.toLowerCase().includes('error');
-    } catch { return false; }
-}
-
-async function loadConfig() {
-    try {
-        const raw = await execFn('cat ' + CONFIG_FILE + ' 2>/dev/null', 5000);
-        if (raw && raw.trim()) {
-            const parsed = JSON.parse(raw.trim());
-            if (parsed.preset) currentPreset = parsed.preset;
-            if (parsed.customProps) customProps = parsed.customProps;
-            if (parsed.enabled !== undefined) spoofEnabled = parsed.enabled;
-            if (parsed.androidId) androidId = parsed.androidId;
-            if (parsed.adId) adId = parsed.adId;
-            if (parsed.macAddress) macAddress = parsed.macAddress;
-            if (parsed.latitude) latitude = parsed.latitude;
-            if (parsed.longitude) longitude = parsed.longitude;
-            if (parsed.safetyNetBypass !== undefined) safetyNetBypass = parsed.safetyNetBypass;
-            if (parsed.playIntegrityBypass !== undefined) playIntegrityBypass = parsed.playIntegrityBypass;
-            if (parsed.mockLocation !== undefined) mockLocation = parsed.mockLocation;
-            log('📥 Config loaded');
+        await logAction(`Applied spoof profile [${currentPreset}]: model=${model}`);
+        modal.remove();
+        if (typeof window.showStatusMessage === 'function') {
+            window.showStatusMessage('Spoof properties applied successfully');
         }
-    } catch { log('⚠️ Config load failed'); }
-}
+    });
 
-async function saveConfig() {
-    try {
-        await execFn('mkdir -p /sdcard/MTK_AI_Engine 2>/dev/null');
-        const data = JSON.stringify({ preset: currentPreset, customProps, enabled: spoofEnabled, androidId, adId, macAddress, latitude, longitude, safetyNetBypass, playIntegrityBypass, mockLocation });
-        await execFn('echo -n "' + data + '" > ' + CONFIG_FILE + ' 2>/dev/null');
-    } catch { log('❌ Config save failed'); }
-}
-
-async function cacheOriginalProps() {
-    if (Object.keys(originalProps).length > 0) return;
-    for (const prop of SPOOF_PROPS) {
-        const val = await execFn('getprop ' + prop, 3000);
-        if (val && val.trim()) originalProps[prop] = val.trim();
-    }
-}
-
-async function spoofMacAddress() {
-    if (!macAddress || !macAddress.trim()) return false;
-    try {
-        await execFn('su -c "ip link set wlan0 down" 2>&1');
-        await execFn('su -c "ip link set wlan0 address ' + macAddress.trim() + '" 2>&1');
-        await execFn('su -c "ip link set wlan0 up" 2>&1');
-        log('✅ MAC spoofed');
-        return true;
-    } catch { return false; }
-}
-
-async function spoofLocation() {
-    if (!latitude || !longitude) return false;
-    try {
-        await safeSettingsPut('secure', 'mock_location', '1');
-        await safeSettingsPut('secure', 'location_changer_latitude', latitude.trim());
-        await safeSettingsPut('secure', 'location_changer_longitude', longitude.trim());
-        log('✅ Location spoofed');
-        return true;
-    } catch { return false; }
-}
-
-async function applySafetyNetBypass() {
-    try {
-        await safeSetprop('ro.debuggable', '0');
-        await safeSetprop('ro.secure', '1');
-        await safeSetprop('ro.boot.verifiedbootstate', 'green');
-        await safeSetprop('ro.boot.veritymode', 'enforcing');
-        await safeSetprop('ro.boot.flash.locked', '1');
-        await safeSetprop('ro.build.type', 'user');
-        await safeSetprop('ro.build.tags', 'release-keys');
-        log('✅ SafetyNet bypass applied');
-        return true;
-    } catch { return false; }
-}
-
-async function applySpoof() {
-    const statusEl = document.getElementById('spoof-status');
-    const applyBtn = document.getElementById('spoof-apply-btn');
-    if (!statusEl || !applyBtn) return;
-    
-    applyBtn.disabled = true;
-    applyBtn.textContent = ' Applying...';
-    statusEl.innerHTML = '<span style="color:#fbbf24;"> Applying spoofing with resetprop...</span>';
-    
-    await cacheOriginalProps();
-    let success = 0, failed = 0;
-    
-    const targetProps = currentPreset === 'custom' ? customProps : (DEVICE_PRESETS[currentPreset]?.props || {});
-    
-    for (const [prop, value] of Object.entries(targetProps)) {
-        if (value && value.trim()) {
-            const ok = await safeSetprop(prop, value.trim());
-            if (ok) { log('✅ ' + prop + '=' + value); success++; }
-            else { log('❌ Failed: ' + prop); failed++; }
+    document.getElementById('spoof-reset-btn').addEventListener('click', async () => {
+        for (const prop of SPOOF_PROPS) {
+            if (originalProps[prop]) {
+                await execFn(`resetprop ${prop} "${originalProps[prop]}"`);
+            }
         }
+        await logAction('Reset properties to original hardware values');
+        modal.remove();
+        if (typeof window.showStatusMessage === 'function') {
+            window.showStatusMessage('Restored original device properties');
+        }
+    });
+}
+
+// Expose openSpoofPopup globally on window object
+window.openSpoofPopup = openSpoofPopup;
+
+// Document-wide Event Delegation for dynamically loaded trigger elements
+document.addEventListener('click', (e) => {
+    const spoofBtn = e.target.closest('#spoof-btn');
+    if (spoofBtn) {
+        e.preventDefault();
+        openSpoofPopup();
     }
-    
-    if (androidId) { if (await safeSettingsPut('secure', 'android_id', androidId)) success++; else failed++; }
-    if (adId) { if (await safeSettingsPut('secure', 'advertising_id', adId)) success++; else failed++; }
-    if (macAddress) { if (await spoofMacAddress()) success++; else failed++; }
-    if (latitude && longitude) { if (await spoofLocation()) success++; else failed++; }
-    if (safetyNetBypass || playIntegrityBypass) { if (await applySafetyNetBypass()) success++; else failed++; }
-    
-    spoofEnabled = true;
-    await saveConfig();
-    
-    const color = failed === 0 ? '#32D74B' : '#fbbf24';
-    statusEl.innerHTML = '<span style="color:' + color + ';font-weight:600;">✅ Spoof Applied!</span><br><small style="color:#8b92b4;">' + success + ' applied | ' + failed + ' failed<br>🔄 <b>Force stop DevCheck & reopen!</b></small>';
-    applyBtn.disabled = false;
-    applyBtn.textContent = '💾 Apply Spoof';
-}
+});
 
-async function resetSpoof() {
-    const statusEl = document.getElementById('spoof-status');
-    const resetBtn = document.getElementById('spoof-reset-btn');
-    if (!statusEl || !resetBtn) return;
-    
-    resetBtn.disabled = true;
-    resetBtn.textContent = ' Resetting...';
-    
-    let success = 0;
-    for (const [prop, val] of Object.entries(originalProps)) {
-        if (await safeSetprop(prop, val)) success++;
-    }
-    await safeSettingsPut('secure', 'mock_location', '0');
-    
-    spoofEnabled = false;
-    await saveConfig();
-    statusEl.innerHTML = '<span style="color:#32D74B;font-weight:600;">✅ Reset Complete</span>';
-    resetBtn.disabled = false;
-    resetBtn.textContent = '🔄 Reset to Default';
-}
-
-function showSpoofModal() {
-    const existing = document.getElementById('spoof-modal');
-    if (existing) existing.remove();
-    
-    const modal = document.createElement('div');
-    modal.id = 'spoof-modal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);overflow-y:auto;padding:20px;';
-    
-    const box = document.createElement('div');
-    box.style.cssText = 'background:linear-gradient(135deg,#1a1f3a,#2d3561,#1a1f3a);border:2px solid #f59e0b;border-radius:24px;padding:28px;width:100%;max-width:650px;box-shadow:0 0 60px rgba(245,158,11,0.3);max-height:90vh;overflow-y:auto;';
-    
-    let html = '<h3 style="color:#f59e0b;margin:0 0 8px;font-size:22px;text-align:center;font-weight:700;">🎭 Device Spoofer (FIXED)</h3>';
-    html += '<p style="color:#8b92b4;font-size:13px;text-align:center;margin-bottom:24px;">Uses resetprop for ro.* properties</p>';
-    
-    html += '<div style="margin-bottom:18px;"><div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:10px;">📱 Preset Profile</div>';
-    html += '<select id="spoof-preset-select" style="width:100%;padding:12px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid #f59e0b;border-radius:12px;font-size:14px;">';
-    Object.entries(DEVICE_PRESETS).forEach(function(item) {
-        html += '<option value="' + item[0] + '"' + (item[0] === currentPreset ? ' selected' : '') + '>' + item[1].name + '</option>';
-    });
-    html += '</select></div>';
-    
-    html += '<details style="margin-bottom:18px;background:rgba(0,0,0,0.25);border-radius:12px;padding:14px;" ' + (currentPreset === 'custom' ? 'open' : '') + '>';
-    html += '<summary style="color:#f59e0b;font-weight:600;cursor:pointer;font-size:13px;">✏️ Custom Properties</summary>';
-    html += '<div style="margin-top:12px;display:grid;gap:10px;">';
-    ['ro.product.model', 'ro.product.name', 'ro.product.device', 'ro.build.product', 'ro.product.manufacturer', 'ro.build.fingerprint', 'ro.build.id', 'ro.build.display.id'].forEach(function(prop) {
-        const val = customProps[prop] || '';
-        html += '<div style="display:flex;gap:8px;align-items:center;"><span style="color:#8b92b4;font-size:11px;width:140px;">' + prop + '</span><input type="text" data-prop="' + prop + '" value="' + val + '" style="flex:1;padding:8px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;font-size:12px;"></div>';
-    });
-    html += '</div></details>';
-    
-    html += '<div style="margin-bottom:18px;"><div style="color:#fff;font-size:14px;font-weight:600;margin-bottom:10px;">🆔 Identity</div>';
-    html += '<div style="display:grid;gap:10px;">';
-    [['spoof-android-id', 'Android ID', androidId], ['spoof-mac', 'MAC Address', macAddress]].forEach(function(item) {
-        html += '<div style="display:flex;gap:8px;align-items:center;"><span style="color:#8b92b4;font-size:12px;width:120px;">' + item[1] + '</span><input type="text" id="' + item[0] + '" value="' + item[2] + '" style="flex:1;padding:8px;background:rgba(0,0,0,0.4);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;font-size:12px;"></div>';
-    });
-    html += '</div></div>';
-    
-    html += '<div style="background:rgba(50,215,75,0.12);color:#32D74B;padding:12px;border-radius:10px;font-size:11px;margin-bottom:20px;border-left:3px solid #32D74B;">';
-    html += '<strong>✅ FIXED:</strong> Now uses <code>resetprop</code> for ro.* properties. <b>Force stop DevCheck after applying!</b>';
-    html += '</div>';
-    
-    html += '<button id="spoof-apply-btn" style="width:100%;padding:16px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">💾 Apply Spoof</button>';
-    html += '<button id="spoof-reset-btn" style="width:100%;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px;">🔄 Reset</button>';
-    html += '<button id="spoof-cancel-btn" style="width:100%;padding:12px;background:rgba(255,255,255,0.05);color:#8b92b4;border:none;border-radius:10px;font-size:13px;cursor:pointer;">Cancel</button>';
-    html += '<div id="spoof-status" style="text-align:center;font-size:12px;color:#666;margin-top:15px;"></div>';
-    
-    box.innerHTML = html;
-    modal.appendChild(box);
-    document.body.appendChild(modal);
-    
-    document.getElementById('spoof-preset-select').onchange = function() { currentPreset = this.value; };
-    document.getElementById('spoof-apply-btn').onclick = async function() {
-        customProps = {};
-        box.querySelectorAll('input[data-prop]').forEach(function(inp) { if (inp.value.trim()) customProps[inp.dataset.prop] = inp.value.trim(); });
-        androidId = document.getElementById('spoof-android-id')?.value.trim() || '';
-        macAddress = document.getElementById('spoof-mac')?.value.trim() || '';
-        await applySpoof();
-    };
-    document.getElementById('spoof-reset-btn').onclick = resetSpoof;
-    document.getElementById('spoof-cancel-btn').onclick = function() { modal.remove(); };
-}
-
-function bindClickHandler() {
-    const btn = document.getElementById('spoof-btn');
-    if (btn) btn.addEventListener('click', showSpoofModal);
-}
-
-async function init() {
-    await loadConfig();
-    bindClickHandler();
-}
-
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
-window.SPOOFManager = { init, showSpoofModal, applySpoof, resetSpoof, DEVICE_PRESETS };
 })();

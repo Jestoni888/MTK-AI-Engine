@@ -130,24 +130,24 @@ function showFreezeModal() {
     modal.id = 'freeze-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);';
     const box = document.createElement('div');
-    box.style.cssText = 'background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #06b6d4;border-radius:20px;padding:24px;width:95%;max-width:500px;box-shadow:0 0 40px rgba(6,182,212,0.2);';
+    box.style.cssText = 'background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:24px;width:95%;max-width:500px;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
     box.innerHTML = `
-        <h3 style="color:#06b6d4;margin:0 0 5px;font-size:20px;text-align:center;">❄️ App Freeze Manager</h3>
-        <p style="color:#8b92b4;font-size:12px;text-align:center;margin-bottom:20px;">Freeze/unfreeze all apps (User + System)</p>
+        <h3 style="color:#fff;margin:0 0 5px;font-size:20px;text-align:center;">❄️ App Freeze Manager</h3>
+        <p style="color:#fff;font-size:12px;text-align:center;margin-bottom:20px;">Freeze/unfreeze all apps (User + System)</p>
         <div style="display:flex;gap:8px;margin-bottom:15px;">
-            <input type="text" id="freeze-search" placeholder="🔍 Search apps..." style="flex:1;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid #06b6d4;border-radius:8px;color:#fff;font-size:12px;">
-            <button id="freeze-refresh-btn" style="padding:10px 16px;background:rgba(6,182,212,0.3);color:#fff;border:1px solid #06b6d4;border-radius:8px;font-size:12px;cursor:pointer;">🔄</button>
+            <input type="text" id="freeze-search" placeholder="🔍 Search apps..." style="flex:1;padding:10px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;color:#fff;font-size:12px;">
+            <button id="freeze-refresh-btn" style="padding:10px 16px;background:var(--bg-secondary);color:#fff;border:1px solid var(--border-color);border-radius:8px;font-size:12px;cursor:pointer;">🔄</button>
         </div>
-        <div id="freeze-scan-status" style="text-align:center;font-size:12px;color:#666;margin-bottom:15px;min-height:40px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;">
-            <span style="color:#06b6d4;"> Loading...</span>
+        <div id="freeze-scan-status" style="text-align:center;font-size:12px;color:#fff;margin-bottom:15px;min-height:40px;padding:8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;">
+            <span style="color:#fff;">Loading...</span>
         </div>
         <div id="freeze-list" style="display:none;flex-direction:column;gap:8px;margin-bottom:15px;max-height:350px;overflow-y:auto;padding-right:4px;"></div>
-        <div style="background:rgba(6,182,212,0.1);color:#7dd3fc;padding:10px;border-radius:8px;font-size:11px;text-align:center;margin-bottom:15px;">
-            <i class="fas fa-info-circle"></i> Path: <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">${FROZEN_DIR}</code>
+        <div style="background:var(--bg-secondary);color:#fff;border:1px solid var(--border-color);padding:10px;border-radius:8px;font-size:11px;text-align:center;margin-bottom:15px;">
+            <i class="fas fa-info-circle"></i> Path: <code style="background:var(--bg-primary);color:#fff;padding:2px 6px;border-radius:4px;">${FROZEN_DIR}</code>
         </div>
         <div style="display:flex;gap:10px;">
-            <button id="freeze-thaw-all" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:1px solid #06b6d4;border-radius:10px;font-size:13px;cursor:pointer;">Thaw All</button>
-            <button id="freeze-cancel-btn" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;">Close</button>
+            <button id="freeze-thaw-all" style="flex:1;padding:12px;background:var(--bg-secondary);color:#fff;border:1px solid var(--border-color);border-radius:10px;font-size:13px;cursor:pointer;">Thaw All</button>
+            <button id="freeze-cancel-btn" style="flex:1;padding:12px;background:var(--bg-secondary);color:#fff;border:1px solid var(--border-color);border-radius:10px;font-size:13px;cursor:pointer;">Close</button>
         </div>
     `;
     modal.appendChild(box);
@@ -189,16 +189,15 @@ function updateAppRowUI(pkg, isNowFrozen) {
     const appEl = document.getElementById(`app-${pkg}`);
     if (!appEl) return;
     
-    const statusColor = isNowFrozen ? '#06b6d4' : '#ef4444';
     const statusText = isNowFrozen ? '❄️ Frozen' : '🔓 Active';
-    const btnBg = isNowFrozen ? '#06b6d4' : '#ef4444';
+    const btnBg = 'var(--accent-blue)';
     const btnText = isNowFrozen ? 'Thaw' : 'Freeze';
 
     const infoDiv = appEl.querySelector('div[style*="flex:1"]');
     if (infoDiv) {
         const statusLabel = infoDiv.querySelector('div:nth-child(2)');
         if (statusLabel) {
-            statusLabel.style.color = statusColor;
+            statusLabel.style.color = '#fff';
             statusLabel.textContent = statusText;
         }
     }
@@ -227,7 +226,7 @@ async function scanApps() {
         const allPkgs = await getAllPackages();
         
         if (!allPkgs.length) {
-            statusEl.innerHTML = '<span style="color:#666;">No apps found.</span>';
+            statusEl.innerHTML = '<span style="color:#fff;">No apps found.</span>';
             listEl.style.display = 'none';
             return;
         }
@@ -242,8 +241,6 @@ async function scanApps() {
         // ✅ OPTIMIZED: Check freeze status in bulk (2 shell commands total)
         statusEl.textContent = `⚡ Checking freeze status...`;
         const { frozenSet, thawedSet } = await getFrozenAndThawedPackages();
-
-        const colors = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
         
         for (const pkg of allPkgs) {
             const isSystem = system.has(pkg);
@@ -260,29 +257,26 @@ async function scanApps() {
 
         for (const app of detectedApps) {
             const { pkg, label: appName, isFrozen, isSystem } = app;
-            const colorIdx = pkg.charCodeAt(0) % colors.length;
-            const color = colors[colorIdx];
             const firstLetter = appName.charAt(0).toUpperCase();
-            const statusColor = isFrozen ? '#06b6d4' : '#ef4444';
             const statusText = isFrozen ? '❄️ Frozen' : ' Active';
-            const btnBg = isFrozen ? '#06b6d4' : '#ef4444';
+            const btnBg = 'var(--accent-blue)';
             const btnText = isFrozen ? 'Thaw' : 'Freeze';
 
             const appEl = document.createElement('div');
             appEl.id = `app-${pkg}`;
-            appEl.style.cssText = 'background:rgba(0,0,0,0.3);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;';
+            appEl.style.cssText = 'background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;';
             
             appEl.innerHTML = `
                 <div style="position:relative;width:48px;height:48px;flex-shrink:0;">
-                    <img src="ksu://icon/${pkg}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:48px;height:48px;border-radius:12px;object-fit:cover;background:#2c2c2e;">
-                    <div style="display:none;width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,${color},${color}aa);align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:bold;box-shadow:0 4px 12px rgba(0,0,0,0.3);">${firstLetter}</div>
+                    <img src="ksu://icon/${pkg}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:48px;height:48px;border-radius:12px;object-fit:cover;background:var(--bg-primary);">
+                    <div style="display:none;width:48px;height:48px;border-radius:12px;background:var(--accent-blue);align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:bold;box-shadow:0 4px 12px rgba(0,0,0,0.3);">${firstLetter}</div>
                 </div>
                 <div style="flex:1;min-width:0;">
                     <div style="color:#fff;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${appName}</div>
-                    <div style="color:${statusColor};font-size:11px;margin-top:2px;">${statusText}</div>
-                    <div style="color:#555;font-size:10px;font-family:monospace;margin-top:1px;">${pkg}${isSystem ? ' (System)' : ''}</div>
+                    <div style="color:#fff;font-size:11px;margin-top:2px;">${statusText}</div>
+                    <div style="color:#fff;font-size:10px;font-family:monospace;margin-top:1px;">${pkg}${isSystem ? ' (System)' : ''}</div>
                 </div>
-                <button class="freeze-app-toggle" data-pkg="${pkg}" data-frozen="${isFrozen ? '1' : '0'}" style="background:${btnBg};color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;min-width:70px;">${btnText}</button>
+                <button class="freeze-app-toggle" data-pkg="${pkg}" data-frozen="${isFrozen ? '1' : '0'}" style="background:${btnBg};color:#fff;border:1px solid var(--border-color);padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;min-width:70px;">${btnText}</button>
             `;
             listEl.appendChild(appEl);
         }
@@ -319,7 +313,7 @@ async function scanApps() {
         });
     } catch (e) {
         console.error('Scan failed:', e);
-        statusEl.innerHTML = `<span style="color:#FF453A;"> Error: ${e.message}</span>`;
+        statusEl.innerHTML = `<span style="color:#fff;">Error: ${e.message}</span>`;
     }
 }
 
@@ -327,7 +321,7 @@ function filterApps(query) {
     const listEl = document.getElementById('freeze-list');
     if (!listEl) return;
     const q = query.toLowerCase().trim();
-    const items = listEl.querySelectorAll('div[id^="app-"]'); // Select by ID pattern instead
+    const items = listEl.querySelectorAll('div[id^="app-"]');
     items.forEach(item => {
         const nameEl = item.querySelector('div[style*="color:#fff"]');
         const pkgEl = item.querySelector('div[style*="font-family:monospace"]');
@@ -341,7 +335,7 @@ async function toggleAllApps(freeze) {
     const statusEl = document.getElementById('freeze-scan-status');
     if (!statusEl) return;
     statusEl.style.display = 'block';
-    statusEl.innerHTML = `<span style="color:#06b6d4;"> ${freeze ? 'Freezing' : 'Thawing'}...</span>`;
+    statusEl.innerHTML = `<span style="color:#fff;">${freeze ? 'Freezing' : 'Thawing'}...</span>`;
     try {
         await execFn(`mkdir -p ${FROZEN_DIR} ${THAW_DIR}`);
         for (const app of detectedApps) {
@@ -355,10 +349,10 @@ async function toggleAllApps(freeze) {
             updateAppRowUI(app.pkg, freeze);
         }
         await saveConfig();
-        statusEl.innerHTML = `<span style="color:#32D74B;">✅ Done</span>`;
+        statusEl.innerHTML = `<span style="color:#fff;">✅ Done</span>`;
         setTimeout(() => { statusEl.style.display = 'none'; }, 1500);
     } catch (e) {
-        statusEl.innerHTML = `<span style="color:#FF453A;">❌ Error</span>`;
+        statusEl.innerHTML = `<span style="color:#fff;">❌ Error</span>`;
     }
 }
 

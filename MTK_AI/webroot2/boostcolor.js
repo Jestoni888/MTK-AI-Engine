@@ -1,7 +1,5 @@
 // boostcolor.js - Advanced Color Boost Manager with SurfaceFlinger Matrix (Transaction 1015)
-// ✅ Professional Enterprise UI + Pop-up Preset Selector + Custom Presets
-// ✅ Combined Saturation & Matrix into a single "Color & Matrix Tuning" group
-// ✅ Removed Sharpness, Color Temperature, Base Tint Color picker, and AMOLED toggle
+// ✅ Professional Enterprise UI + Pop-up Preset Selector + Custom Presets (Themed)
 (function() {
 'use strict';
 const CONFIG_FILE = '/sdcard/MTK_AI_Engine/boost_color_config.txt';
@@ -56,7 +54,7 @@ const ALL_PRESETS = [
     {name:'Cool Boost (Specific Boost)', color:'#4ECDC4', sat:1.2, matrix:[0.95,0,0,0,0,1.0,0,0,0,0,1.15,0,0,0,0,1]}
 ];
 
-// Safe exec wrapper
+// Safe exec wrapper[span_3](start_span)[span_3](end_span)
 const execFn = window.exec || async function(cmd, timeout = 3000) {
     return new Promise(resolve => {
         const cb = `boost_exec_${Date.now()}_${Math.random().toString(36).substring(2)}`;
@@ -67,13 +65,13 @@ const execFn = window.exec || async function(cmd, timeout = 3000) {
     });
 };
 
-// Debounced auto-apply
+// Debounced auto-apply[span_4](start_span)[span_4](end_span)
 function debouncedApply(delay = 150) {
     if (applyTimeout) clearTimeout(applyTimeout);
     applyTimeout = setTimeout(async () => { await applyBoost(); }, delay);
 }
 
-// 🔍 MTK Color & Matrix Property Detection
+// 🔍 MTK Color & Matrix Property Detection[span_5](start_span)[span_5](end_span)
 async function detectSystemColorProps(forUI = false) {
     try {
         const props = await execFn(`su -c "getprop | grep -iE 'color|saturation|gamma|vivid|hdr|display|sf|surfaceflinger|mtk|matrix'" 2>/dev/null`);
@@ -108,14 +106,18 @@ async function detectSystemColorProps(forUI = false) {
     } catch(e) { console.warn('Color prop detection failed:',e); return forUI ? {propList:[],detected:{}} : {}; }
 }
 
-// 🔷 Matrix UI & State Management
+// 🔷 Matrix UI & State Management[span_6](start_span)[span_6](end_span)
 function updateMatrixStatus() {
     const el = document.getElementById('matrix-status'); if (!el) return;
     if (currentMatrix && Array.isArray(currentMatrix)) {
         const id = [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
         const chg = currentMatrix.some((v,i)=>v!==(id[i]||0));
-        el.textContent = `Active: ${currentMatrix.length}-float matrix${chg?' (modified)':''}`; el.style.color = chg?'#38bdf8':'#64748b';
-    } else { el.textContent='Using default identity matrix'; el.style.color='#64748b'; }
+        el.textContent = `Active: ${currentMatrix.length}-float matrix${chg?' (modified)':''}`; 
+        el.style.color = chg ? 'var(--accent-blue)' : 'var(--text-secondary)';
+    } else { 
+        el.textContent = 'Using default identity matrix'; 
+        el.style.color = 'var(--text-secondary)'; 
+    }
 }
 
 function refreshMatrixUI() {
@@ -131,7 +133,7 @@ function refreshMatrixUI() {
     updateMatrixStatus();
 }
 
-// ✅ Update preset button text to show selected preset name
+// ✅ Update preset button text to show selected preset name[span_7](start_span)[span_7](end_span)
 function updatePresetButtonText() {
     const modal = document.getElementById('boost-modal');
     if (!modal) return;
@@ -142,7 +144,7 @@ function updatePresetButtonText() {
     }
 }
 
-// 🔄 ROBUST UI SYNC
+// 🔄 ROBUST UI SYNC[span_8](start_span)[span_8](end_span)
 function syncAllUI() {
     const modal = document.getElementById('boost-modal'); if (!modal) return;
     const ss = document.getElementById('sat-slider'), sv = document.getElementById('sat-val');
@@ -162,7 +164,7 @@ function syncAllUI() {
     updateDisplay();
 }
 
-// 💾 Load Custom Presets from JSON file
+// 💾 Load Custom Presets from JSON file[span_9](start_span)[span_9](end_span)
 async function loadCustomPresets() {
     try {
         const content = await execFn(`cat ${CUSTOM_PRESETS_FILE} 2>/dev/null`);
@@ -176,7 +178,7 @@ async function loadCustomPresets() {
     }
 }
 
-// Save Custom Presets to JSON file
+// Save Custom Presets to JSON file[span_10](start_span)[span_10](end_span)
 async function saveCustomPresets() {
     try {
         await execFn(`mkdir -p /sdcard/MTK_AI_Engine`);
@@ -187,26 +189,48 @@ async function saveCustomPresets() {
     }
 }
 
-// 💾 Show Save Preset Dialog
+// 💾 Show Save Preset Dialog (Themed)[span_11](start_span)[span_11](end_span)
 function showSavePresetDialog() {
     const existing = document.getElementById('save-preset-dialog');
     if (existing) existing.remove();
     const overlay = document.createElement('div'); overlay.id = 'save-preset-dialog';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(5,7,11,0.8);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);';
+    
     const dialog = document.createElement('div');
-    dialog.style.cssText = 'background:#121620;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;width:90%;max-width:360px;box-shadow:0 24px 48px rgba(0,0,0,0.6);';
-    dialog.innerHTML = `<div style="margin-bottom:18px;"> <h4 style="color:#f8fafc;margin:0 0 4px;font-size:16px;font-weight:600;letter-spacing:-0.2px;">Save Custom Preset</h4> <p style="color:#64748b;font-size:12px;margin:0;">Store current configuration parameters</p> </div> <div style="margin-bottom:20px;"> <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:6px;font-weight:500;">Preset Identifier</label> <input type="text" id="preset-name-input" placeholder="e.g., Cinematic Dark" maxlength="20" style="width:100%;padding:10px 14px;background:#0a0d14;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:13px;outline:none;box-sizing:border-box;transition:border-color 0.2s;"> </div> <div style="display:flex;gap:10px;"> <button id="cancel-save-btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.04);color:#94a3b8;border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;">Cancel</button> <button id="confirm-save-btn" style="flex:1;padding:10px;background:#38bdf8;color:#0a0d14;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(56,189,248,0.3);">Save Preset</button> </div>`;
+    dialog.style.cssText = `
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 24px; width: 90%; max-width: 360px;
+        box-shadow: 0 24px 48px rgba(0,0,0,0.6);
+    `;
+    dialog.innerHTML = `
+        <div style="margin-bottom:18px;">
+            <h4 style="color:var(--text-primary);margin:0 0 4px;font-size:16px;font-weight:600;letter-spacing:-0.2px;">Save Custom Preset</h4>
+            <p style="color:var(--text-secondary);font-size:12px;margin:0;">Store current configuration parameters</p>
+        </div>
+        <div style="margin-bottom:20px;">
+            <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;font-weight:500;">Preset Identifier</label>
+            <input type="text" id="preset-name-input" placeholder="e.g., Cinematic Dark" maxlength="20" style="width:100%;padding:10px 14px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:13px;outline:none;box-sizing:border-box;transition:border-color 0.2s;">
+        </div>
+        <div style="display:flex;gap:10px;">
+            <button id="cancel-save-btn" style="flex:1;padding:10px;background:var(--bg-secondary);color:var(--text-secondary);border:1px solid var(--border-color);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;">Cancel</button>
+            <button id="confirm-save-btn" style="flex:1;padding:10px;background:var(--accent-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 8px rgba(74, 158, 255, 0.3);">Save Preset</button>
+        </div>
+    `;
     overlay.appendChild(dialog);
     document.body.appendChild(overlay);
     overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+    
     const input = dialog.querySelector('#preset-name-input');
     input.focus();
-    input.onfocus = () => input.style.borderColor = '#38bdf8';
-    input.onblur = () => input.style.borderColor = 'rgba(255,255,255,0.1)';
+    input.onfocus = () => input.style.borderColor = 'var(--accent-blue)';
+    input.onblur = () => input.style.borderColor = 'var(--border-color)';
+    
     dialog.querySelector('#cancel-save-btn').onclick = () => overlay.remove();
     dialog.querySelector('#confirm-save-btn').onclick = () => {
         const name = input.value.trim();
-        if (!name) { input.style.borderColor = '#ef4444'; input.placeholder = 'Name required!'; return; }
+        if (!name) { input.style.borderColor = '#FF453A'; input.placeholder = 'Name required!'; return; }
         const exists = customPresets.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
         if (exists !== -1) {
             if (!confirm(`"${name}" already exists. Overwrite?`)) return;
@@ -222,23 +246,30 @@ function showSavePresetDialog() {
     input.onkeydown = e => { if (e.key === 'Enter') dialog.querySelector('#confirm-save-btn').click(); };
 }
 
-// Render Custom Presets Grid (Inside Popup)
+// Render Custom Presets Grid (Inside Popup)[span_12](start_span)[span_12](end_span)
 function renderCustomPresetsPopup() {
     const container = document.getElementById('custom-presets-container-popup');
     if (!container) return;
     container.innerHTML = '';
     if (customPresets.length === 0) {
-        container.innerHTML = '<div style="color:#64748b;font-size:12px;padding:14px;text-align:center;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.06);border-radius:10px;">No custom profiles configured.</div>';
+        container.innerHTML = '<div style="color:var(--text-secondary);font-size:12px;padding:14px;text-align:center;background:var(--bg-secondary);border:1px dashed var(--border-color);border-radius:10px;">No custom profiles configured.</div>';
         return;
     }
     const grid = document.createElement('div');
     grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:8px;';
     customPresets.forEach((p, idx) => {
         const btn = document.createElement('div');
-        btn.style.cssText = `position:relative;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;cursor:pointer;transition:all 0.15s;`;
-        btn.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"> <div style="width:8px;height:8px;border-radius:50%;background:${p.color};box-shadow:0 0 6px ${p.color};"></div> <div style="font-size:12px;font-weight:600;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${p.name}</div> </div> <div style="font-size:10px;color:#64748b;">S:${p.sat}${p.matrix?' • Matrix':''}</div> <button class="delete-preset-btn" data-idx="${idx}" style="position:absolute;top:8px;right:8px;background:transparent;color:#64748b;border:none;width:18px;height:18px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color 0.2s;">×</button>`;
-        btn.onmouseenter = () => { btn.style.background = 'rgba(255,255,255,0.06)'; btn.style.borderColor = 'rgba(255,255,255,0.15)'; };
-        btn.onmouseleave = () => { btn.style.background = 'rgba(255,255,255,0.03)'; btn.style.borderColor = 'rgba(255,255,255,0.08)'; };
+        btn.style.cssText = `position:relative;padding:10px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;cursor:pointer;transition:all 0.15s;`;
+        btn.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+                <div style="width:8px;height:8px;border-radius:50%;background:${p.color};box-shadow:0 0 6px ${p.color};"></div>
+                <div style="font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${p.name}</div>
+            </div>
+            <div style="font-size:10px;color:var(--text-secondary);">S:${p.sat}${p.matrix?' • Matrix':''}</div>
+            <button class="delete-preset-btn" data-idx="${idx}" style="position:absolute;top:8px;right:8px;background:transparent;color:var(--text-secondary);border:none;width:18px;height:18px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color 0.2s;">×</button>
+        `;
+        btn.onmouseenter = () => { btn.style.background = 'var(--bg-card)'; btn.style.borderColor = 'var(--accent-blue)'; };
+        btn.onmouseleave = () => { btn.style.background = 'var(--bg-secondary)'; btn.style.borderColor = 'var(--border-color)'; };
         btn.onclick = (e) => {
             if (e.target.classList.contains('delete-preset-btn')) return;
             currentColor = p.color; currentSaturation = p.sat; 
@@ -252,8 +283,8 @@ function renderCustomPresetsPopup() {
     });
     container.appendChild(grid);
     container.querySelectorAll('.delete-preset-btn').forEach(btn => {
-        btn.onmouseenter = () => btn.style.color = '#ef4444';
-        btn.onmouseleave = () => btn.style.color = '#64748b';
+        btn.onmouseenter = () => btn.style.color = '#FF453A';
+        btn.onmouseleave = () => btn.style.color = 'var(--text-secondary)';
         btn.onclick = (e) => {
             e.stopPropagation();
             const idx = parseInt(btn.dataset.idx);
@@ -262,19 +293,19 @@ function renderCustomPresetsPopup() {
                 customPresets.splice(idx, 1);
                 saveCustomPresets();
                 renderCustomPresetsPopup();
-                if (window.showStatus) window.showStatus(`Deleted "${name}"`, '#ef4444');
+                if (window.showStatus) window.showStatus(`Deleted "${name}"`, '#FF453A');
             }
         };
     });
 }
 
-// 🎨 Preset Pop-up Selector
+// 🎨 Preset Pop-up Selector (Themed)[span_13](start_span)[span_13](end_span)
 function showPresetPopup() {
     const existing = document.getElementById('preset-popup');
     if (existing) existing.remove();
     const overlay = document.createElement('div');
     overlay.id = 'preset-popup';
-    overlay.style.cssText = 'position:absolute;inset:0;background:#0d111a;z-index:20;display:flex;flex-direction:column;border-radius:20px;overflow:hidden;animation:slideIn 0.2s cubic-bezier(0.16,1,0.3,1);';
+    overlay.style.cssText = 'position:absolute;inset:0;background:var(--bg-card);z-index:20;display:flex;flex-direction:column;border-radius:20px;overflow:hidden;animation:slideIn 0.2s cubic-bezier(0.16,1,0.3,1);';
     if (!document.getElementById('preset-popup-style')) {
         const style = document.createElement('style');
         style.id = 'preset-popup-style';
@@ -282,40 +313,58 @@ function showPresetPopup() {
         document.head.appendChild(style);
     }
     const header = document.createElement('div');
-    header.style.cssText = 'padding:18px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.06);background:#121620;';
-    header.innerHTML = `<div> <h3 style="color:#f8fafc;margin:0;font-size:15px;font-weight:600;letter-spacing:-0.2px;">Display Profiles</h3> <p style="color:#64748b;font-size:11px;margin:2px 0 0;">Select a calibrated matrix preset</p> </div> <button id="close-preset-popup" style="background:rgba(255,255,255,0.06);border:none;color:#94a3b8;width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;">✕</button>`;
+    header.style.cssText = 'padding:18px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-color);background:var(--bg-secondary);';
+    header.innerHTML = `
+        <div>
+            <h3 style="color:var(--text-primary);margin:0;font-size:15px;font-weight:600;letter-spacing:-0.2px;">Display Profiles</h3>
+            <p style="color:var(--text-secondary);font-size:11px;margin:2px 0 0;">Select a calibrated matrix preset</p>
+        </div>
+        <button id="close-preset-popup" style="background:var(--bg-card);border:1px solid var(--border-color);color:var(--text-secondary);width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;">✕</button>
+    `;
     overlay.appendChild(header);
+    
     const content = document.createElement('div');
     content.style.cssText = 'flex:1;overflow-y:auto;padding:16px 20px;';
+    
     const saveBtn = document.createElement('button');
     saveBtn.textContent = '+ Save Current as Profile';
-    saveBtn.style.cssText = 'width:100%;padding:11px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);color:#38bdf8;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;transition:all 0.2s;';
-    saveBtn.onmouseenter = () => saveBtn.style.background = 'rgba(56,189,248,0.18)';
-    saveBtn.onmouseleave = () => saveBtn.style.background = 'rgba(56,189,248,0.1)';
+    saveBtn.style.cssText = 'width:100%;padding:11px;background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--accent-blue);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:16px;transition:all 0.2s;';
+    saveBtn.onmouseenter = () => saveBtn.style.borderColor = 'var(--accent-blue)';
+    saveBtn.onmouseleave = () => saveBtn.style.borderColor = 'var(--border-color)';
     saveBtn.onclick = showSavePresetDialog;
     content.appendChild(saveBtn);
+    
     const customLabel = document.createElement('div');
-    customLabel.style.cssText = 'color:#64748b;font-size:11px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;';
+    customLabel.style.cssText = 'color:var(--text-secondary);font-size:11px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;';
     customLabel.textContent = 'User Presets';
     content.appendChild(customLabel);
+    
     const customContainer = document.createElement('div');
     customContainer.id = 'custom-presets-container-popup';
     customContainer.style.cssText = 'margin-bottom:20px;';
     content.appendChild(customContainer);
+    
     const builtinLabel = document.createElement('div');
-    builtinLabel.style.cssText = 'color:#64748b;font-size:11px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;';
+    builtinLabel.style.cssText = 'color:var(--text-secondary);font-size:11px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;';
     builtinLabel.textContent = 'System Presets Library';
     content.appendChild(builtinLabel);
+    
     const presetGrid = document.createElement('div');
     presetGrid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:8px;';
-    ALL_PRESETS.forEach(p=>{
+    ALL_PRESETS.forEach(p => {
         const btn = document.createElement('button');
-        btn.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"> <div style="width:8px;height:8px;border-radius:50%;background:${p.color};box-shadow:0 0 6px ${p.color};"></div> <div style="font-size:12px;font-weight:600;color:#f8fafc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:left;">${p.name}</div> </div> <div style="font-size:10px;color:#64748b;text-align:left;">S:${p.sat}${p.matrix?' • Matrix':''}</div>`;
-        btn.style.cssText = `padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;cursor:pointer;transition:all 0.15s;`;
-        btn.onmouseenter = ()=>{btn.style.background='rgba(255,255,255,0.05)';btn.style.borderColor='rgba(255,255,255,0.12)';};
-        btn.onmouseleave = ()=>{btn.style.background='rgba(255,255,255,0.02)';btn.style.borderColor='rgba(255,255,255,0.06)';};
-        btn.onclick = ()=>{
-            currentColor=p.color; currentSaturation=p.sat; currentMatrix=p.matrix?[...p.matrix]:null;
+        btn.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+                <div style="width:8px;height:8px;border-radius:50%;background:${p.color};box-shadow:0 0 6px ${p.color};"></div>
+                <div style="font-size:12px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:left;">${p.name}</div>
+            </div>
+            <div style="font-size:10px;color:var(--text-secondary);text-align:left;">S:${p.sat}${p.matrix?' • Matrix':''}</div>
+        `;
+        btn.style.cssText = 'padding:10px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;cursor:pointer;transition:all 0.15s;';
+        btn.onmouseenter = () => { btn.style.background = 'var(--bg-card)'; btn.style.borderColor = 'var(--accent-blue)'; };
+        btn.onmouseleave = () => { btn.style.background = 'var(--bg-secondary)'; btn.style.borderColor = 'var(--border-color)'; };
+        btn.onclick = () => {
+            currentColor = p.color; currentSaturation = p.sat; currentMatrix = p.matrix?[...p.matrix]:null;
             currentPresetName = p.name;
             syncAllUI(); debouncedApply(50);
             if (window.showStatus) window.showStatus(`✅ Preset: ${p.name}`, p.color);
@@ -325,121 +374,117 @@ function showPresetPopup() {
     });
     content.appendChild(presetGrid);
     overlay.appendChild(content);
+    
     const box = document.getElementById('boost-modal-box');
     box.appendChild(overlay);
+    
     const closeBtn = header.querySelector('#close-preset-popup');
     closeBtn.onclick = () => overlay.remove();
-    closeBtn.onmouseenter = () => closeBtn.style.background = 'rgba(255,255,255,0.1)';
-    closeBtn.onmouseleave = () => closeBtn.style.background = 'rgba(255,255,255,0.06)';
     setTimeout(() => renderCustomPresetsPopup(), 50);
 }
 
-// 🎨 Professional UI Helpers
+// 🎨 Professional UI Helpers (Themed)[span_14](start_span)[span_14](end_span)
 function createSectionCard(title) {
     const el = document.createElement('div');
     el.style.cssText = 'margin-bottom:14px;';
     const header = document.createElement('div');
-    header.style.cssText = 'color:#94a3b8;font-size:11px;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;';
+    header.style.cssText = 'color:var(--text-secondary);font-size:11px;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;';
     header.textContent = title;
     el.appendChild(header);
     const content = document.createElement('div');
-    content.style.cssText = 'background:#121620;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:14px;';
+    content.style.cssText = 'background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;padding:14px;';
     el.appendChild(content);
     return { el, content };
 }
 
-function createSliderRow(label, sliderId, valId, initialVal, min, max, step, onChange) {
-    const row = document.createElement('div');
-    row.style.cssText = 'margin-bottom:12px;';
-    const header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;';
-    header.innerHTML = `<span style="color:#e2e8f0;font-size:12px;font-weight:500;">${label}</span><span id="${valId}" style="color:#64748b;font-size:11px;font-weight:600;background:rgba(255,255,255,0.04);padding:2px 6px;border-radius:4px;">${onChange(initialVal)}</span>`;
-    row.appendChild(header);
-    const slider = document.createElement('input');
-    slider.id = sliderId;
-    slider.className = 'boost-slider';
-    slider.type = 'range';
-    slider.min = min;
-    slider.max = max;
-    slider.step = step;
-    slider.value = initialVal;
-    slider.style.cssText = 'width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
-    slider.style.setProperty('--thumb-color', currentColor);
-    slider.oninput = (e) => {
-        const val = parseFloat(e.target.value);
-        const text = onChange(val);
-        document.getElementById(valId).textContent = text;
-        currentPresetName = null;
-        updatePresetButtonText();
-        debouncedApply(100);
-    };
-    row.appendChild(slider);
-    return row;
-}
-
-// 🔷 Modified Matrix Section (Integrates into the combined card)
+// 🔷 Modified Matrix Section[span_15](start_span)[span_15](end_span)
 function createMatrixSection() {
     const section = document.createElement('div');
     section.id = 'matrix-section-container';
-    section.style.cssText = 'margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.04);';
+    section.style.cssText = 'margin-top:16px; padding-top:16px; border-top:1px solid var(--border-color);';
     
     const header = document.createElement('div');
     header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;';
-    header.innerHTML = `<span style="color:#e2e8f0;font-size:12px;font-weight:500;">Transformation Matrix</span>
-                        <button id="matrix-reset-btn" style="padding:4px 8px;font-size:10px;background:rgba(255,255,255,0.04);color:#94a3b8;border:1px solid rgba(255,255,255,0.08);border-radius:6px;cursor:pointer;transition:all 0.2s;">Reset</button>`;
+    header.innerHTML = `
+        <span style="color:var(--text-primary);font-size:12px;font-weight:500;">Transformation Matrix</span>
+        <button id="matrix-reset-btn" style="padding:4px 8px;font-size:10px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;transition:all 0.2s;">Reset</button>
+    `;
     section.appendChild(header);
     
-    const statusDiv = document.createElement('div'); statusDiv.id='matrix-status'; statusDiv.style.cssText='font-size:11px;color:#64748b;margin-bottom:12px;padding:8px 10px;background:#0a0d14;border-radius:8px;border:1px solid rgba(255,255,255,0.04);';
+    const statusDiv = document.createElement('div'); 
+    statusDiv.id = 'matrix-status'; 
+    statusDiv.style.cssText = 'font-size:11px;color:var(--text-secondary);margin-bottom:12px;padding:8px 10px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border-color);';
     section.appendChild(statusDiv);
     
-    const rgbSection = document.createElement('div'); rgbSection.style.cssText='margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.04);';
-    rgbSection.innerHTML = '<div style="color:#64748b;font-size:10px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">RGB Diagonal Scaling</div>';
-    [{label:'Red Gain (m00)',idx:0,color:'#f87171',sid:'gain-slider-0',vid:'gain-val-0'},{label:'Green Gain (m11)',idx:5,color:'#4ade80',sid:'gain-slider-5',vid:'gain-val-5'},{label:'Blue Gain (m22)',idx:10,color:'#60a5fa',sid:'gain-slider-10',vid:'gain-val-10'}].forEach(g=>{
-        const row=document.createElement('div'); row.style.cssText='margin-bottom:10px;';
-        const hr=document.createElement('div'); hr.style.cssText='display:flex;justify-content:space-between;margin-bottom:4px;';
-        const iv=(currentMatrix&&currentMatrix[g.idx]!==undefined)?currentMatrix[g.idx]:1.0;
-        hr.innerHTML=`<span style="color:#cbd5e1;font-size:11px;">${g.label}</span><span id="${g.vid}" style="color:${g.color};font-size:11px;font-weight:600;">${iv.toFixed(2)}</span>`;
+    const rgbSection = document.createElement('div'); 
+    rgbSection.style.cssText = 'margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border-color);';
+    rgbSection.innerHTML = '<div style="color:var(--text-secondary);font-size:10px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">RGB Diagonal Scaling</div>';
+    
+    [{label:'Red Gain (m00)',idx:0,color:'#f87171',sid:'gain-slider-0',vid:'gain-val-0'},{label:'Green Gain (m11)',idx:5,color:'#4ade80',sid:'gain-slider-5',vid:'gain-val-5'},{label:'Blue Gain (m22)',idx:10,color:'#60a5fa',sid:'gain-slider-10',vid:'gain-val-10'}].forEach(g => {
+        const row = document.createElement('div'); row.style.cssText = 'margin-bottom:10px;';
+        const hr = document.createElement('div'); hr.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:4px;';
+        const iv = (currentMatrix && currentMatrix[g.idx] !== undefined) ? currentMatrix[g.idx] : 1.0;
+        hr.innerHTML = `<span style="color:var(--text-primary);font-size:11px;">${g.label}</span><span id="${g.vid}" style="color:${g.color};font-size:11px;font-weight:600;">${iv.toFixed(2)}</span>`;
         row.appendChild(hr);
-        const sl=document.createElement('input'); sl.type='range';sl.min=0.5;sl.max=2.0;sl.step=0.05;sl.id=g.sid;sl.value=iv;
+        
+        const sl = document.createElement('input'); sl.type = 'range'; sl.min = 0.5; sl.max = 2.0; sl.step = 0.05; sl.id = g.sid; sl.value = iv;
         sl.className = 'boost-slider';
-        sl.style.cssText='width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
+        sl.style.cssText = 'width:100%;height:4px;background:var(--border-color);border-radius:2px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
         sl.style.setProperty('--thumb-color', g.color);
-        sl.oninput=(e)=>{if(!currentMatrix||!Array.isArray(currentMatrix))currentMatrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];currentMatrix[g.idx]=parseFloat(e.target.value);document.getElementById(g.vid).textContent=currentMatrix[g.idx].toFixed(2);updateMatrixStatus();currentPresetName=null;updatePresetButtonText();debouncedApply(120);};
-        row.appendChild(sl); rgbSection.appendChild(row);
-    }); section.appendChild(rgbSection);
+        sl.oninput = (e) => {
+            if (!currentMatrix || !Array.isArray(currentMatrix)) currentMatrix = [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
+            currentMatrix[g.idx] = parseFloat(e.target.value);
+            document.getElementById(g.vid).textContent = currentMatrix[g.idx].toFixed(2);
+            updateMatrixStatus(); currentPresetName = null; updatePresetButtonText(); debouncedApply(120);
+        };
+        row.appendChild(sl); 
+        rgbSection.appendChild(row);
+    }); 
+    section.appendChild(rgbSection);
     
     const alphaSection = document.createElement('div');
-    alphaSection.innerHTML = '<div style="color:#64748b;font-size:10px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Color Offsets</div>';
-    [{label:'Red Offset (m30)',idx:12,color:'#f87171',sid:'offset-slider-12',vid:'offset-val-12'},{label:'Green Offset (m31)',idx:13,color:'#4ade80',sid:'offset-slider-13',vid:'offset-val-13'},{label:'Blue Offset (m32)',idx:14,color:'#60a5fa',sid:'offset-slider-14',vid:'offset-val-14'}].forEach(g=>{
-        const row=document.createElement('div'); row.style.cssText='margin-bottom:10px;';
+    alphaSection.innerHTML = '<div style="color:var(--text-secondary);font-size:10px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Color Offsets</div>';
+    
+    [{label:'Red Offset (m30)',idx:12,color:'#f87171',sid:'offset-slider-12',vid:'offset-val-12'},{label:'Green Offset (m31)',idx:13,color:'#4ade80',sid:'offset-slider-13',vid:'offset-val-13'},{label:'Blue Offset (m32)',idx:14,color:'#60a5fa',sid:'offset-slider-14',vid:'offset-val-14'}].forEach(g => {
+        const row = document.createElement('div'); row.style.cssText = 'margin-bottom:10px;';
         if (g.label.includes('Blue')) row.style.marginBottom = '0';
-        const hr=document.createElement('div'); hr.style.cssText='display:flex;justify-content:space-between;margin-bottom:4px;';
-        const iv=(currentMatrix&&currentMatrix[g.idx]!==undefined)?currentMatrix[g.idx]:0.0;
-        hr.innerHTML=`<span style="color:#cbd5e1;font-size:11px;">${g.label}</span><span id="${g.vid}" style="color:${g.color};font-size:11px;font-weight:600;">${iv.toFixed(2)}</span>`;
+        const hr = document.createElement('div'); hr.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:4px;';
+        const iv = (currentMatrix && currentMatrix[g.idx] !== undefined) ? currentMatrix[g.idx] : 0.0;
+        hr.innerHTML = `<span style="color:var(--text-primary);font-size:11px;">${g.label}</span><span id="${g.vid}" style="color:${g.color};font-size:11px;font-weight:600;">${iv.toFixed(2)}</span>`;
         row.appendChild(hr);
-        const sl=document.createElement('input'); sl.type='range';sl.min=-0.5;sl.max=0.5;sl.step=0.02;sl.id=g.sid;sl.value=iv;
+        
+        const sl = document.createElement('input'); sl.type = 'range'; sl.min = -0.5; sl.max = 0.5; sl.step = 0.02; sl.id = g.sid; sl.value = iv;
         sl.className = 'boost-slider';
-        sl.style.cssText='width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
+        sl.style.cssText = 'width:100%;height:4px;background:var(--border-color);border-radius:2px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
         sl.style.setProperty('--thumb-color', g.color);
-        sl.oninput=(e)=>{if(!currentMatrix||!Array.isArray(currentMatrix))currentMatrix=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];currentMatrix[g.idx]=parseFloat(e.target.value);document.getElementById(g.vid).textContent=currentMatrix[g.idx].toFixed(2);updateMatrixStatus();currentPresetName=null;updatePresetButtonText();debouncedApply(120);};
-        row.appendChild(sl); alphaSection.appendChild(row);
-    }); section.appendChild(alphaSection);
+        sl.oninput = (e) => {
+            if (!currentMatrix || !Array.isArray(currentMatrix)) currentMatrix = [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
+            currentMatrix[g.idx] = parseFloat(e.target.value);
+            document.getElementById(g.vid).textContent = currentMatrix[g.idx].toFixed(2);
+            updateMatrixStatus(); currentPresetName = null; updatePresetButtonText(); debouncedApply(120);
+        };
+        row.appendChild(sl); 
+        alphaSection.appendChild(row);
+    }); 
+    section.appendChild(alphaSection);
     
     const resetBtn = header.querySelector('#matrix-reset-btn');
-    resetBtn.onclick=()=>{currentMatrix=null;refreshMatrixUI();currentPresetName=null;updatePresetButtonText();if(window.showStatus)window.showStatus('Matrix reset to default','#64748b');debouncedApply(50);};
-    resetBtn.onmouseenter=()=>{resetBtn.style.background='rgba(255,255,255,0.08)'; resetBtn.style.color='#f8fafc';};
-    resetBtn.onmouseleave=()=>{resetBtn.style.background='rgba(255,255,255,0.04)'; resetBtn.style.color='#94a3b8';};
+    resetBtn.onclick = () => { currentMatrix = null; refreshMatrixUI(); currentPresetName = null; updatePresetButtonText(); if(window.showStatus)window.showStatus('Matrix reset to default','var(--text-secondary)'); debouncedApply(50); };
     
-    setTimeout(()=>refreshMatrixUI(),0); 
+    setTimeout(() => refreshMatrixUI(), 0); 
     return section;
 }
 
-// ⚙️ Config & Init
+// ⚙️ Config & Init[span_16](start_span)[span_16](end_span)
 async function init() {
     if (!document.getElementById('boost-slider-styles')) {
         const style = document.createElement('style');
         style.id = 'boost-slider-styles';
-        style.textContent = `.boost-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; background: var(--thumb-color, #38bdf8); border-radius: 50%; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.4); transition: transform 0.1s ease; } .boost-slider::-webkit-slider-thumb:active { transform: scale(1.25); } .boost-slider::-moz-range-thumb { width: 14px; height: 14px; background: var(--thumb-color, #38bdf8); border-radius: 50%; cursor: pointer; border: none; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }`;
+        style.textContent = `
+            .boost-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; background: var(--thumb-color, var(--accent-blue)); border-radius: 50%; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.4); transition: transform 0.1s ease; } 
+            .boost-slider::-webkit-slider-thumb:active { transform: scale(1.25); } 
+            .boost-slider::-moz-range-thumb { width: 14px; height: 14px; background: var(--thumb-color, var(--accent-blue)); border-radius: 50%; cursor: pointer; border: none; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+        `;
         document.head.appendChild(style);
     }
     await loadSavedConfig(); 
@@ -452,66 +497,74 @@ async function loadSavedConfig() {
         await detectSystemColorProps(true);
         const cfg = await execFn(`cat ${CONFIG_FILE} 2>/dev/null`);
         if (cfg.trim()) {
-            cfg.trim().split('\n').forEach(line=>{
-                const[k,v]=line.split('=');
-                if(k==='color' && v)currentColor=v;
-                else if(k==='saturation' && v)currentSaturation=parseFloat(v);
-                else if(k==='matrix' && v && v!=='default'){
-                    const n=v.split(/[\s,;]+/).filter(x=>x.trim()!=='').map(x=>parseFloat(x)).filter(x=>!isNaN(x));
-                    if(n.length >=16)currentMatrix=n.slice(0,20);
+            cfg.trim().split('\n').forEach(line => {
+                const [k, v] = line.split('=');
+                if (k === 'color' && v) currentColor = v;
+                else if (k === 'saturation' && v) currentSaturation = parseFloat(v);
+                else if (k === 'matrix' && v && v !== 'default') {
+                    const n = v.split(/[\s,;]+/).filter(x => x.trim() !== '').map(x => parseFloat(x)).filter(x => !isNaN(x));
+                    if (n.length >= 16) currentMatrix = n.slice(0, 20);
                 }
             });
-        } else if (detectedPropsCache.detected && Object.keys(detectedPropsCache.detected).length >0) {
-            const d=detectedPropsCache.detected;
-            if(d.color)currentColor=d.color;
-            if(d.saturation)currentSaturation=d.saturation;
-            if(d.colorMatrix)currentMatrix=d.colorMatrix;
+        } else if (detectedPropsCache.detected && Object.keys(detectedPropsCache.detected).length > 0) {
+            const d = detectedPropsCache.detected;
+            if (d.color) currentColor = d.color;
+            if (d.saturation) currentSaturation = d.saturation;
+            if (d.colorMatrix) currentMatrix = d.colorMatrix;
         }
-    } catch(e){console.warn('Failed to load boost config:',e);} updateDisplay();
+    } catch(e) { console.warn('Failed to load boost config:', e); } 
+    updateDisplay();
 }
 
 async function saveConfig() {
     try { 
-        let ms=''; 
-        if(currentMatrix&&Array.isArray(currentMatrix)&&currentMatrix.length)ms=`\nmatrix=${currentMatrix.join(' ')}`;
-        const cfg=`color=${currentColor}\nsaturation=${currentSaturation}${ms}`;
+        let ms = ''; 
+        if (currentMatrix && Array.isArray(currentMatrix) && currentMatrix.length) ms = `\nmatrix=${currentMatrix.join(' ')}`;
+        const cfg = `color=${currentColor}\nsaturation=${currentSaturation}${ms}`;
         await execFn(`mkdir -p /sdcard/MTK_AI_Engine && echo '${cfg}' > ${CONFIG_FILE}`);
-    } catch(e){console.error('Failed to save config:',e);}
+    } catch(e) { console.error('Failed to save config:', e); }
 }
 
 function updateDisplay() {
     const el = document.querySelector('#boost-color-item .setting-value');
     if (el) { 
-        const mb=(currentMatrix&&Array.isArray(currentMatrix))?`<span style="font-size:9px;background:#38bdf8;color:#0a0d14;padding:1px 5px;border-radius:3px;margin-left:4px;font-weight:600;">MATRIX</span>`:'';
-        el.innerHTML=`${currentColor}${mb} <i class="fas fa-chevron-right"></i>`; 
-        el.style.color=currentColor; 
+        const mb = (currentMatrix && Array.isArray(currentMatrix)) ? `<span style="font-size:9px;background:var(--accent-blue);color:#fff;padding:1px 5px;border-radius:3px;margin-left:4px;font-weight:600;">MATRIX</span>` : '';
+        el.innerHTML = `${currentColor}${mb} <i class="fas fa-chevron-right"></i>`; 
+        el.style.color = currentColor; 
     }
 }
 
 function bindClickHandler() { 
-    const it=document.getElementById('boost-color-item'); 
-    if(!it)return; 
-    it.style.cursor='pointer'; 
-    it.addEventListener('click',()=>showBoostModal()); 
+    const it = document.getElementById('boost-color-item'); 
+    if(!it) return; 
+    it.style.cursor = 'pointer'; 
+    it.addEventListener('click', () => showBoostModal()); 
 }
 
-// 🎨 Professional Modal Builder
+// 🎨 Professional Modal Builder (Themed)[span_17](start_span)[span_17](end_span)
 function showBoostModal() {
-    const ex = document.getElementById('boost-modal'); if(ex)ex.remove();
-    const modal = document.createElement('div'); modal.id='boost-modal';
-    modal.style.cssText='position:fixed;inset:0;background:rgba(5,7,11,0.8);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;';
-    const box = document.createElement('div'); box.id='boost-modal-box';
-    box.style.cssText=`background:#0d111a;border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:0;width:92%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,0.7);max-height:88vh;overflow:hidden;display:flex;flex-direction:column;position:relative;`;
+    const ex = document.getElementById('boost-modal'); if (ex) ex.remove();
+    const modal = document.createElement('div'); modal.id = 'boost-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;';
+    
+    const box = document.createElement('div'); box.id = 'boost-modal-box';
+    box.style.cssText = `
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 20px; padding: 0; width: 92%; max-width: 420px;
+        box-shadow: 0 24px 64px rgba(0,0,0,0.7); max-height: 88vh; overflow: hidden;
+        display: flex; flex-direction: column; position: relative;
+    `;
     
     // Header
     const hdr = document.createElement('div');
-    hdr.style.cssText='padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.06);background:#121620;';
-    hdr.innerHTML=`<h3 style="color:#f8fafc;margin:0;font-size:16px;font-weight:600;letter-spacing:-0.2px;">Color & Display Enhancement</h3><p style="color:#64748b;font-size:11px;margin:2px 0 0;">SurfaceFlinger Pipeline Engine</p>`;
+    hdr.style.cssText = 'padding:18px 20px 14px;border-bottom:1px solid var(--border-color);background:var(--bg-secondary);';
+    hdr.innerHTML = `<h3 style="color:var(--text-primary);margin:0;font-size:16px;font-weight:600;letter-spacing:-0.2px;">Color & Display Enhancement</h3><p style="color:var(--text-secondary);font-size:11px;margin:2px 0 0;">SurfaceFlinger Pipeline Engine</p>`;
     box.appendChild(hdr);
     
     // Scrollable Content
     const content = document.createElement('div');
-    content.style.cssText='flex:1;overflow-y:auto;padding:16px 20px;';
+    content.style.cssText = 'flex:1;overflow-y:auto;padding:16px 20px;';
     
     // 1. Presets Button (Pop-up)
     const presetCard = createSectionCard('Profile Presets');
@@ -519,42 +572,68 @@ function showBoostModal() {
     presetBtn.id = 'preset-select-btn';
     const displayName = currentPresetName || 'Select Preset';
     presetBtn.innerHTML = `<span style="font-weight:500;">${displayName}</span> <span style="opacity:0.4;font-size:12px;">›</span>`;
-    presetBtn.style.cssText = 'width:100%;padding:10px 12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);color:#f8fafc;border-radius:8px;font-size:13px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;';
-    presetBtn.onmouseenter = () => presetBtn.style.background = 'rgba(255,255,255,0.06)';
-    presetBtn.onmouseleave = () => presetBtn.style.background = 'rgba(255,255,255,0.03)';
+    presetBtn.style.cssText = 'width:100%;padding:10px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;font-size:13px;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;';
+    presetBtn.onmouseenter = () => presetBtn.style.borderColor = 'var(--accent-blue)';
+    presetBtn.onmouseleave = () => presetBtn.style.borderColor = 'var(--border-color)';
     presetBtn.onclick = showPresetPopup;
     presetCard.content.appendChild(presetBtn);
     content.appendChild(presetCard.el);
     
     // 2. Combined Color & Matrix Tuning
     const tuneCard = createSectionCard('Color & Matrix Tuning');
-    tuneCard.content.appendChild(createSliderRow('Saturation Multiplier', 'sat-slider', 'sat-val', currentSaturation, 0.5, 2.5, 0.1, (v) => { currentSaturation = v; return v.toFixed(1)+'x'; }));
+    
+    // Saturation slider row inside tune card
+    const satRow = document.createElement('div');
+    satRow.style.cssText = 'margin-bottom:12px;';
+    satRow.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="color:var(--text-primary);font-size:12px;font-weight:500;">Saturation Multiplier</span>
+            <span id="sat-val" style="color:var(--text-secondary);font-size:11px;font-weight:600;background:var(--bg-card);padding:2px 6px;border-radius:4px;border:1px solid var(--border-color);">${currentSaturation.toFixed(1)}x</span>
+        </div>
+    `;
+    const satSlider = document.createElement('input');
+    satSlider.id = 'sat-slider';
+    satSlider.className = 'boost-slider';
+    satSlider.type = 'range'; satSlider.min = 0.5; satSlider.max = 2.5; satSlider.step = 0.1; satSlider.value = currentSaturation;
+    satSlider.style.cssText = 'width:100%;height:4px;background:var(--border-color);border-radius:2px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;';
+    satSlider.oninput = (e) => {
+        currentSaturation = parseFloat(e.target.value);
+        document.getElementById('sat-val').textContent = currentSaturation.toFixed(1) + 'x';
+        currentPresetName = null;
+        updatePresetButtonText();
+        debouncedApply(100);
+    };
+    satRow.appendChild(satSlider);
+    tuneCard.content.appendChild(satRow);
+    
     tuneCard.content.appendChild(createMatrixSection());
     content.appendChild(tuneCard.el);
-    
     box.appendChild(content);
     
     // Footer
     const footer = document.createElement('div');
-    footer.style.cssText = 'padding:14px 20px;border-top:1px solid rgba(255,255,255,0.06);background:#121620;display:flex;gap:10px;';
-    const ab = document.createElement('button'); ab.textContent='Make Persistent';
-    ab.style.cssText=`flex:1;padding:10px;background:linear-gradient(135deg,${currentColor},${currentColor}bb);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px ${currentColor}33;transition:all 0.2s;`;
-    ab.onclick=async()=>{
+    footer.style.cssText = 'padding:14px 20px;border-top:1px solid var(--border-color);background:var(--bg-secondary);display:flex;gap:10px;';
+    
+    const ab = document.createElement('button'); ab.textContent = 'Make Persistent';
+    ab.style.cssText = `flex:1;padding:10px;background:var(--accent-blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(74,158,255,0.3);transition:all 0.2s;`;
+    ab.onclick = async () => {
         const success = await createBootScript();
         if (success && window.showStatus) window.showStatus('✅ Boot script installed', currentColor);
     };
     footer.appendChild(ab);
-    const cb = document.createElement('button'); cb.textContent='Dismiss';
-    cb.style.cssText='flex:1;padding:10px;background:rgba(255,255,255,0.04);color:#94a3b8;border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;';
-    cb.onclick=()=>modal.remove(); 
+    
+    const cb = document.createElement('button'); cb.textContent = 'Dismiss';
+    cb.style.cssText = 'flex:1;padding:10px;background:var(--bg-card);color:var(--text-secondary);border:1px solid var(--border-color);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;';
+    cb.onclick = () => modal.remove(); 
     footer.appendChild(cb);
+    
     box.appendChild(footer);
     modal.appendChild(box); 
     document.body.appendChild(modal);
-    modal.onclick=e=>{if(e.target===modal)modal.remove();};
+    modal.onclick = e => { if (e.target === modal) modal.remove(); };
 }
 
-// 🚀 Apply Boost
+// 🚀 Apply Boost[span_18](start_span)[span_18](end_span)
 async function applyBoost() {
     try {
         let TINT = 1037, SATU = 1022, MAT = 1015;
@@ -587,13 +666,13 @@ async function applyBoost() {
         updateDisplay();
     } catch(e) {
         console.error('Boost apply failed:', e);
-        if(window.showStatus) window.showStatus('❌ Color Boost Failed', '#ef4444');
+        if(window.showStatus) window.showStatus('❌ Color Boost Failed', '#FF453A');
     }
 }
 
 async function debugColorProps(){
-    const r=await execFn(`su -c "getprop | grep -iE 'color|saturation|gamma|vivid|hdr|display|sf|surfaceflinger|mtk|matrix'"`);
-    console.log('[MTK Color Debug]',r);
+    const r = await execFn(`su -c "getprop | grep -iE 'color|saturation|gamma|vivid|hdr|display|sf|surfaceflinger|mtk|matrix'"`);
+    console.log('[MTK Color Debug]', r);
     return r;
 }
 
@@ -618,7 +697,7 @@ async function createBootScript() {
             'if [ -z "$CONFIG" ]; then echo "❌ Config not found" >> "$LOG"; exit 0; fi',
             '',
             'get_val() {',
-            '    grep "^${1}=" "$CONFIG" 2>/dev/null | head -n 1 | cut -d\'=\' -f2- | sed \'s/\\r$//\' | sed \'s/^[[:space:]]*//;s/[[:space:]]*$//\'',
+            '    grep "^${1}=" "$CONFIG" 2>/dev/null | head -n 1 | cut -d\'=\' -f2- | sed \'s/\\r$//\' \vert{} sed \'s/^[[:space:]]*//;s/[[:space:]]*$//\'',
             '}',
             '',
             'COLOR=$(get_val "color")',
@@ -634,7 +713,7 @@ async function createBootScript() {
             'esac',
             '',
             'safe_float() {',
-            '    echo "$1" | grep -qE \'^-?[0-9]+\\.?[0-9]*$\' && echo "$1" || echo ""',
+            '    echo "$1" \vert{} grep -qE \'^-?[0-9]+\\.?[0-9]*$\' && echo "$1" || echo ""',
             '}',
             'apply_sf() {',
             '    timeout 3 service call SurfaceFlinger "$@" >> "$LOG" 2>&1 || true',
@@ -649,7 +728,7 @@ async function createBootScript() {
             '    CLEAN="${COLOR#\\#}"',
             '    if [ "${#CLEAN}" -eq 6 ]; then',
             '        R=$(printf "%d" "0x$(echo "$CLEAN" | cut -c1-2)" 2>/dev/null || echo 0)',
-            '        G=$(printf "%d" "0x$(echo "$CLEAN" | cut -c3-4)" 2>/dev/null || echo 0)',
+            '        G=$(printf "%d" "0x$(echo "$CLEans" | cut -c3-4)" 2>/dev/null || echo 0)',
             '        B=$(printf "%d" "0x$(echo "$CLEAN" | cut -c5-6)" 2>/dev/null || echo 0)',
             '        RF=$(awk -v r="$R" \'BEGIN{printf "%.2f", r/255}\')',
             '        GF=$(awk -v g="$G" \'BEGIN{printf "%.2f", g/255}\')',
@@ -662,8 +741,7 @@ async function createBootScript() {
             '    CNT=0; CMD="service call SurfaceFlinger $MAT i32 1"',
             '    for v in $MATRIX; do',
             '        VAL=$(safe_float "$v"); [ -z "$VAL" ] && VAL="0.0"',
-            '        CMD="$CMD f $VAL"; CNT=$((CNT + 1))',
-            '        [ $CNT -ge 16 ] && break',
+            '        CMD="$CMD f$VAL"; CNT=$((CNT + 1))',             '        [$CNT -ge 16 ] && break',
             '    done',
             '    eval "$CMD" >> "$LOG" 2>&1 || true',
             'fi',

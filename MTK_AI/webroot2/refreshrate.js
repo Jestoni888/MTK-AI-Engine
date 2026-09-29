@@ -88,7 +88,7 @@ function updateDisplay(modeId) {
     
     // Update the value display with the selected mode
     valEl.innerHTML = `${text} <i class="fas fa-chevron-right"></i>`;
-    valEl.style.color = '#32D74B';
+    valEl.style.color = 'var(--accent-green)';
 }
 
 function bindClickHandler() {
@@ -121,7 +121,7 @@ function showModeSelector() {
     // Create modal content box
     const box = document.createElement('div');
     box.style.cssText = `
-        background: #1a1f3a; border: 1px solid #2a3152; border-radius: 16px;
+        background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;
         padding: 24px; width: 90%; max-width: 400px; 
         box-shadow: 0 10px 40px rgba(0,0,0,0.5); animation: slideUp 0.3s ease;
     `;
@@ -129,13 +129,13 @@ function showModeSelector() {
     // Title
     const title = document.createElement('h3');
     title.textContent = '🔄 Select Refresh Rate';
-    title.style.cssText = 'color: #fff; margin: 0 0 16px; font-size: 18px; font-weight: 600; text-align: center;';
+    title.style.cssText = 'color: #ffffff; margin: 0 0 16px; font-size: 18px; font-weight: 600; text-align: center;';
 
     // Current info
     const info = document.createElement('div');
-    info.style.cssText = 'color: #8b92b4; font-size: 13px; margin-bottom: 20px; text-align: center;';
+    info.style.cssText = 'color: var(--text-secondary); font-size: 13px; margin-bottom: 20px; text-align: center;';
     const currentLabel = availableModes.find(m => m.id === currentMode)?.label || 'Auto';
-    info.innerHTML = `<strong>Current:</strong> <span style="color: #32D74B">${currentLabel}</span>`;
+    info.innerHTML = `<strong>Current:</strong> <span style="color: var(--accent-green);">${currentLabel}</span>`;
 
     // Mode buttons grid
     const grid = document.createElement('div');
@@ -147,9 +147,9 @@ function showModeSelector() {
         btn.textContent = mode.label;
         btn.style.cssText = `
             padding: 14px 12px; 
-            background: ${isCurrent ? 'linear-gradient(135deg, #9b59b6, #8e44ad)' : '#151b2d'};
-            color: ${isCurrent ? '#fff' : '#e0e0e0'};
-            border: ${isCurrent ? '2px solid #9b59b6' : '1px solid #2a3152'};
+            background: ${isCurrent ? 'var(--accent-blue)' : 'var(--bg-secondary)'};
+            color: #ffffff;
+            border: ${isCurrent ? '2px solid var(--accent-blue)' : '1px solid var(--border-color)'};
             border-radius: 12px; font-size: 13px; font-weight: ${isCurrent ? '700' : '500'};
             cursor: pointer; transition: all 0.2s ease;
         `;            
@@ -157,14 +157,14 @@ function showModeSelector() {
         // Hover effects
         btn.onmouseenter = () => { 
             if (!isCurrent) {
-                btn.style.background = '#252b45';
-                btn.style.borderColor = '#4a9eff';
+                btn.style.background = 'var(--bg-primary)';
+                btn.style.borderColor = 'var(--accent-blue)';
             }
         };
         btn.onmouseleave = () => { 
             if (!isCurrent) {
-                btn.style.background = '#151b2d';
-                btn.style.borderColor = '#2a3152';
+                btn.style.background = 'var(--bg-secondary)';
+                btn.style.borderColor = 'var(--border-color)';
             }
         };
 
@@ -177,8 +177,8 @@ function showModeSelector() {
     const closeBtn = document.createElement('button');
     closeBtn.textContent = 'Cancel';
     closeBtn.style.cssText = `
-        width: 100%; padding: 14px; background: #2a3152; color: #fff;
-        border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer;
+        width: 100%; padding: 14px; background: var(--bg-secondary); color: #ffffff;
+        border: 1px solid var(--border-color); border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer;
     `;
     closeBtn.onclick = () => modal.remove();
 
@@ -217,7 +217,7 @@ async function applyRefreshMode(modeId) {
         // 4. Show status feedback if available
         if (typeof showStatus === 'function') {
             const label = availableModes.find(m => m.id === modeId)?.label || (modeId === '-1' ? 'Auto' : `${modeId} Hz`);
-            showStatus(`✅ Refresh Rate: ${label}`, '#32D74B');
+            showStatus(`✅ Refresh Rate: ${label}`, 'var(--accent-green)');
         }
     } catch (e) {
         console.error('Failed to apply refresh mode:', e);
@@ -225,7 +225,7 @@ async function applyRefreshMode(modeId) {
         currentMode = modeId;
         updateDisplay(modeId);
         if (typeof showStatus === 'function') {
-            showStatus('⚠️ Applied (verify in logs)', '#FF9F0A');
+            showStatus('⚠️ Applied (verify in logs)', 'var(--accent-orange)');
         } else {
             alert('Applied with warnings. Check logs if issues occur.');
         }

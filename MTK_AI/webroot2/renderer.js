@@ -1,4 +1,4 @@
-// renderer.js - Simplified 3-Option Renderer
+// renderer.js - Simplified 3-Option Renderer (Themed)
 (function() {
 'use strict';
 
@@ -54,7 +54,7 @@ async function applyRenderer(rendererId) {
 
     try {
         // Apply the renderer property
-        const result = await execFn(`setprop debug.hwui.renderer "${opt.value}"`);
+        await execFn(`setprop debug.hwui.renderer "${opt.value}"`);
         console.log(`[Renderer] Applied: ${opt.value}`);
 
         // Save to config file
@@ -107,6 +107,7 @@ function updateMainButton() {
     const opt = RENDERER_OPTIONS.find(o => o.id === state.global);
     const icon = opt?.safe ? '✅' : '⚠️';
     val.innerHTML = `${icon} ${opt ? opt.label : 'SkiaGL'} <i class="fas fa-chevron-right"></i>`;
+    val.style.color = 'var(--accent-green)';
 }
 
 // === MODAL UI ===
@@ -117,29 +118,29 @@ function createModal() {
     modalOverlay.id = 'renderer-modal-overlay';
     Object.assign(modalOverlay.style, {
         position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
-        background: 'rgba(0,0,0,0.85)', zIndex: '9999', display: 'flex',
-        alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)',
+        background: 'rgba(0,0,0,0.75)', zIndex: '9999', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)',
         opacity: '0', transition: 'opacity 0.3s ease'
     });
 
     const modal = document.createElement('div');
     Object.assign(modal.style, {
-        background: 'linear-gradient(135deg, #1a1f3a, #2d3561)', borderRadius: '20px',
-        width: '95%', maxWidth: '450px', maxHeight: '80vh', overflow: 'hidden',
-        display: 'flex', flexDirection: 'column', boxShadow: '0 0 40px rgba(139, 92, 246, 0.2)',
-        border: '2px solid rgba(139, 92, 246, 0.5)'
+        background: 'var(--bg-card)', borderRadius: '16px',
+        width: '90%', maxWidth: '400px', maxHeight: '80vh', overflow: 'hidden',
+        display: 'flex', flexDirection: 'column', boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+        border: '1px solid var(--border-color)'
     });
 
     const header = document.createElement('div');
     header.innerHTML = `
-        <h3 style="margin:0; color:#8b5cf6; font-weight:600; font-size:18px;">Renderer Selection</h3>
-        <button id="close-renderer-modal" style="background:none; border:none; color:#888; font-size:20px; cursor:pointer; padding:5px;">
+        <h3 style="margin:0; color:#ffffff; font-weight:600; font-size:18px;">🔄 Renderer Selection</h3>
+        <button id="close-renderer-modal" style="background:none; border:none; color:var(--text-secondary); font-size:18px; cursor:pointer; padding:5px;">
             <i class="fas fa-times"></i>
         </button>
     `;
     Object.assign(header.style, {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)'
+        padding: '20px', borderBottom: '1px solid var(--border-color)'
     });
 
     const content = document.createElement('div');
@@ -170,17 +171,17 @@ async function renderMainView(container) {
 
     // Info box
     const infoBox = document.createElement('div');
-    infoBox.style.cssText = 'background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.3); border-radius:10px; padding:12px; margin-bottom:15px; font-size:12px; color:#aaa;';
+    infoBox.style.cssText = 'background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; padding:12px; margin-bottom:15px; font-size:12px; color:var(--text-secondary);';
     infoBox.innerHTML = `
-        <strong>📝 Config File:</strong> ${CONFIG.storagePath}/${CONFIG.configFile}<br>
-        <strong>💡 Tip:</strong> SkiaGL is recommended for most devices
+        <strong style="color:#ffffff;">📝 Config File:</strong> ${CONFIG.storagePath}/${CONFIG.configFile}<br>
+        <strong style="color:#ffffff;">💡 Tip:</strong> SkiaGL is recommended for most devices
     `;
     container.appendChild(infoBox);
 
     // Status display
     const statusEl = document.createElement('div');
     statusEl.id = 'apply-status';
-    statusEl.style.cssText = 'margin-bottom:15px; font-size:12px; color:#888; display:none;';
+    statusEl.style.cssText = 'margin-bottom:15px; font-size:12px; color:var(--text-secondary); display:none; text-align:center;';
     container.appendChild(statusEl);
 
     // Renderer options
@@ -188,43 +189,57 @@ async function renderMainView(container) {
         const item = document.createElement('div');
         const isSelected = state.global === opt.id;
         const badge = opt.safe 
-            ? '<span style="background:#32D74B; color:#000; padding:2px 8px; border-radius:10px; font-size:10px; margin-left:8px;">SAFE</span>'
-            : '<span style="background:#f59e0b; color:#000; padding:2px 8px; border-radius:10px; font-size:10px; margin-left:8px;">TEST</span>';
+            ? '<span style="background:var(--accent-green); color:#000; padding:2px 8px; border-radius:10px; font-size:10px; margin-left:8px; font-weight:600;">SAFE</span>'
+            : '<span style="background:var(--accent-orange); color:#000; padding:2px 8px; border-radius:10px; font-size:10px; margin-left:8px; font-weight:600;">TEST</span>';
 
         Object.assign(item.style, {
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '15px', borderRadius: '12px', marginBottom: '10px', cursor: 'pointer',
-            background: isSelected ? 'rgba(139, 92, 246, 0.2)' : 'rgba(255,255,255,0.05)',
-            border: isSelected ? '1px solid rgba(139, 92, 246, 0.5)' : '1px solid transparent',
+            padding: '14px 12px', borderRadius: '12px', marginBottom: '10px', cursor: 'pointer',
+            background: isSelected ? 'var(--accent-blue)' : 'var(--bg-secondary)',
+            border: isSelected ? '2px solid var(--accent-blue)' : '1px solid var(--border-color)',
             transition: 'all 0.2s ease'
         });
 
         item.innerHTML = `
             <div style="flex:1;">
-                <div style="color:#fff; font-weight:500; margin-bottom:3px;">
+                <div style="color:#ffffff; font-weight:${isSelected ? '700' : '500'}; margin-bottom:3px; font-size:13px;">
                     ${opt.label}${badge}
                 </div>
-                <div style="color:#888; font-size:12px;">${opt.desc}</div>
+                <div style="color:var(--text-secondary); font-size:12px;">${opt.desc}</div>
             </div>
-            <div style="color:${isSelected ? '#8b5cf6' : '#444'};">
+            <div style="color:${isSelected ? '#ffffff' : 'var(--text-secondary)'}; font-size:16px; margin-left: 10px;">
                 <i class="fas ${isSelected ? 'fa-check-circle' : 'fa-circle'}"></i>
             </div>
         `;
 
+        // Hover effects matching theme style
+        item.onmouseenter = () => {
+            if (!isSelected) {
+                item.style.background = 'var(--bg-primary)';
+                item.style.borderColor = 'var(--accent-blue)';
+            }
+        };
+        item.onmouseleave = () => {
+            if (!isSelected) {
+                item.style.background = 'var(--bg-secondary)';
+                item.style.borderColor = 'var(--border-color)';
+            }
+        };
+
         item.addEventListener('click', async () => {
             // Show applying status
             statusEl.style.display = 'block';
-            statusEl.innerHTML = `<span style="color:#8b5cf6;">🔄 Applying ${opt.label}...</span>`;
+            statusEl.innerHTML = `<span style="color:var(--accent-blue);">🔄 Applying ${opt.label}...</span>`;
 
             // Apply renderer
             const success = await applyRenderer(opt.id);
             
             if (success) {
-                statusEl.innerHTML = `<span style="color:#32D74B;">✅ Applied: ${opt.value}</span><br>
-                    <small style="color:#888;"><i>Reboot recommended for full effect</i></small>`;
-                renderMainView(container); // Refresh to show selection
+                statusEl.innerHTML = `<span style="color:var(--accent-green);">✅ Applied: ${opt.value}</span><br>
+                    <small style="color:var(--text-secondary);"><i>Reboot recommended for full effect</i></small>`;
+                setTimeout(() => renderMainView(container), 400); // Refresh list
             } else {
-                statusEl.innerHTML = `<span style="color:#FF453A;">❌ Failed to apply</span>`;
+                statusEl.innerHTML = `<span style="color:var(--accent-red, #FF453A);">❌ Failed to apply</span>`;
             }
         });
 
@@ -233,15 +248,19 @@ async function renderMainView(container) {
 
     // Reset button
     const resetBtn = document.createElement('button');
-    resetBtn.style.cssText = 'width:100%; padding:10px; margin-top:10px; background:rgba(239,68,68,0.2); color:#fca5a5; border:1px solid rgba(239,68,68,0.4); border-radius:10px; font-size:12px; cursor:pointer;';
+    resetBtn.style.cssText = 'width:100%; padding:14px; margin-top:10px; background:var(--bg-secondary); color:#ffffff; border:1px solid var(--border-color); border-radius:12px; font-size:13px; font-weight:600; cursor:pointer;';
     resetBtn.innerHTML = '🔄 Reset to Default (Clear Config)';
+    
+    resetBtn.onmouseenter = () => { resetBtn.style.background = 'var(--bg-primary);'; };
+    resetBtn.onmouseleave = () => { resetBtn.style.background = 'var(--bg-secondary);'; };
+
     resetBtn.addEventListener('click', async () => {
         await execFn(`rm -f ${CONFIG.storagePath}/${CONFIG.configFile}`);
         await execFn(`setprop debug.hwui.renderer ""`);
         state.global = 'skiagl';
         saveState();
         statusEl.style.display = 'block';
-        statusEl.innerHTML = `<span style="color:#32D74B;">✅ Reset to system default</span>`;
+        statusEl.innerHTML = `<span style="color:var(--accent-green);">✅ Reset to system default</span>`;
         setTimeout(() => renderMainView(container), 500);
     });
     container.appendChild(resetBtn);
@@ -263,12 +282,13 @@ function init() {
     loadState();
     updateMainButton();
 
+    btn.style.cursor = 'pointer';
     btn.addEventListener('click', async () => {
         const container = createModal();
         await renderMainView(container);
     });
 
-    console.log('[Renderer] Initialized - Simplified 3-Option Mode');
+    console.log('[Renderer] Initialized - Themed 3-Option Mode');
 }
 
 if (document.readyState === 'loading') {

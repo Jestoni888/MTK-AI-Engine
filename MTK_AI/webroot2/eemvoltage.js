@@ -1,5 +1,5 @@
 // eemvoltage.js - EEM Voltage Offset Manager (Dual Profile: Normal & Gaming)
-// Updated: Fixed profile switching bug using robust ID-based DOM updates
+// Updated with index.html theming and white text lettering
 (function() {
     'use strict';
 
@@ -47,7 +47,8 @@
                 if (result?.trim() === 'exists') {
                     availablePaths.push(path);
                 }
-            } catch (e) {                console.warn(`Could not check path ${path.path}:`, e);
+            } catch (e) {
+                console.warn(`Could not check path ${path.path}:`, e);
             }
         }
     }
@@ -96,7 +97,8 @@
             const signN = avgN > 0 ? '+' : '';
             const signG = avgG > 0 ? '+' : '';
             valEl.innerHTML = `N: ${signN}${avgN} | G: ${signG}${avgG} <i class="fas fa-chevron-right"></i>`;
-        } else if (valEl) {            valEl.innerHTML = `N/A <i class="fas fa-chevron-right"></i>`;
+        } else if (valEl) {
+            valEl.innerHTML = `N/A <i class="fas fa-chevron-right"></i>`;
         }
     }
 
@@ -128,24 +130,25 @@
 
         const box = document.createElement('div');
         box.style.cssText = `
-            background: linear-gradient(135deg, #1a1f3a, #2d3561);
-            border: 2px solid #FF9F0A;
-            border-radius: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
             padding: 24px; width: 95%; max-width: 450px;
-            box-shadow: 0 0 40px rgba(255, 159, 10, 0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
             text-align: center;
         `;
 
         box.innerHTML = `
-            <h3 style="color: #FF9F0A; margin: 0 0 15px;">⚠️ EEM Not Available</h3>
-            <p style="color: #8b92b4; font-size: 14px; line-height: 1.5;">
+            <h3 style="color: #fff; margin: 0 0 15px;">⚠️ EEM Not Available</h3>
+            <p style="color: #fff; font-size: 14px; line-height: 1.5;">
                 No EEM control paths were found on this device.
             </p>
             <button id="eem-close-btn" style="
                 margin-top: 15px; padding: 10px 30px;
-                background: rgba(255,159,10,0.2); color: #FF9F0A;
-                border: 1px solid #FF9F0A; border-radius: 10px;
-                font-size: 13px; cursor: pointer;            ">OK</button>
+                background: var(--bg-secondary); color: #fff;
+                border: 1px solid var(--border-color); border-radius: 10px;
+                font-size: 13px; cursor: pointer;
+            ">OK</button>
         `;
 
         modal.appendChild(box);
@@ -154,7 +157,6 @@
         modal.onclick = e => { if (e.target === modal) modal.remove(); };
     }
 
-    // Robust UI updater using IDs
     function updateProfileUI(profile) {
         const normalBtn = document.getElementById('profile-normal-btn');
         const gamingBtn = document.getElementById('profile-gaming-btn');
@@ -163,15 +165,15 @@
 
         if (normalBtn && gamingBtn) {
             if (profile === 'normal') {
-                normalBtn.style.background = '#FF9F0A';
-                normalBtn.style.color = '#000';
+                normalBtn.style.background = 'var(--accent-blue)';
+                normalBtn.style.color = '#fff';
                 gamingBtn.style.background = 'transparent';
-                gamingBtn.style.color = '#8b92b4';
+                gamingBtn.style.color = '#fff';
             } else {
-                gamingBtn.style.background = '#FF9F0A';
-                gamingBtn.style.color = '#000';
+                gamingBtn.style.background = 'var(--accent-blue)';
+                gamingBtn.style.color = '#fff';
                 normalBtn.style.background = 'transparent';
-                normalBtn.style.color = '#8b92b4';
+                normalBtn.style.color = '#fff';
             }
         }
 
@@ -204,31 +206,31 @@
 
         const box = document.createElement('div');
         box.style.cssText = `
-            background: linear-gradient(135deg, #1a1f3a, #2d3561);
-            border: 2px solid #FF9F0A;
-            border-radius: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
             padding: 24px; width: 95%; max-width: 500px;
-            box-shadow: 0 0 40px rgba(255, 159, 10, 0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
             max-height: 85vh; overflow-y: auto;
         `;
 
         const header = document.createElement('div');
         header.style.cssText = 'text-align: center; margin-bottom: 15px;';
         header.innerHTML = `
-            <h3 style="color: #FF9F0A; margin: 0; font-size: 20px;">⚡ EEM Voltage Offsets</h3>
-            <p style="color: #8b92b4; font-size: 12px; margin: 5px 0 0;">
+            <h3 style="color: #fff; margin: 0; font-size: 20px;">⚡ EEM Voltage Offsets</h3>
+            <p style="color: #fff; font-size: 12px; margin: 5px 0 0;">
                 ${availablePaths.length} of ${EEM_PATHS.length} domains available
             </p>
         `;
         box.appendChild(header);
 
         const profileSelector = document.createElement('div');
-        profileSelector.style.cssText = 'display: flex; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 4px; margin-bottom: 20px;';
+        profileSelector.style.cssText = 'display: flex; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 4px; margin-bottom: 20px;';
         
         const normalBtn = document.createElement('button');
         normalBtn.id = 'profile-normal-btn';
         normalBtn.textContent = '🏠 Normal Mode';
-        normalBtn.style.cssText = `flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: ${currentProfile === 'normal' ? '#FF9F0A' : 'transparent'}; color: ${currentProfile === 'normal' ? '#000' : '#8b92b4'};`;
+        normalBtn.style.cssText = `flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: ${currentProfile === 'normal' ? 'var(--accent-blue)' : 'transparent'}; color: #fff;`;
         normalBtn.onclick = () => {
             currentProfile = 'normal';
             updateProfileUI('normal');
@@ -237,23 +239,24 @@
         const gamingBtn = document.createElement('button');
         gamingBtn.id = 'profile-gaming-btn';
         gamingBtn.textContent = '🎮 Gaming Mode';
-        gamingBtn.style.cssText = `flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: ${currentProfile === 'gaming' ? '#FF9F0A' : 'transparent'}; color: ${currentProfile === 'gaming' ? '#000' : '#8b92b4'};`;
+        gamingBtn.style.cssText = `flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: ${currentProfile === 'gaming' ? 'var(--accent-blue)' : 'transparent'}; color: #fff;`;
         gamingBtn.onclick = () => {
             currentProfile = 'gaming';
             updateProfileUI('gaming');
         };
 
-        profileSelector.append(normalBtn, gamingBtn);        box.appendChild(profileSelector);
+        profileSelector.append(normalBtn, gamingBtn);
+        box.appendChild(profileSelector);
 
         availablePaths.forEach(path => {
             const sliderSection = document.createElement('div');
-            sliderSection.style.cssText = 'margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);';
+            sliderSection.style.cssText = 'margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--border-color);';
             
             const labelRow = document.createElement('div');
             labelRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;';
             labelRow.innerHTML = `
                 <span style="color: #fff; font-size: 13px; font-weight: 600;">${path.name}</span>
-                <span id="eem-val-${path.id}" style="color: #FF9F0A; font-size: 16px; font-weight: 700;">${formatOffset(currentOffsets[currentProfile][path.id])}</span>
+                <span id="eem-val-${path.id}" style="color: #fff; font-size: 16px; font-weight: 700;">${formatOffset(currentOffsets[currentProfile][path.id])}</span>
             `;
             
             const slider = document.createElement('input');
@@ -264,7 +267,7 @@
             slider.value = currentOffsets[currentProfile][path.id];
             slider.id = `eem-slider-${path.id}`;
             slider.style.cssText = `
-                width: 100%; height: 6px; background: rgba(255,255,255,0.2);
+                width: 100%; height: 6px; background: var(--border-color);
                 border-radius: 3px; outline: none; -webkit-appearance: none;
             `;
             slider.oninput = (e) => {
@@ -281,7 +284,7 @@
         style.textContent = `
             input[type=range]::-webkit-slider-thumb {
                 -webkit-appearance: none; width: 20px; height: 20px; 
-                background: #FF9F0A; border-radius: 50%; cursor: pointer;
+                background: var(--accent-blue); border-radius: 50%; cursor: pointer;
                 border: 2px solid #fff;
             }
         `;
@@ -289,17 +292,18 @@
 
         const infoBox = document.createElement('div');
         infoBox.style.cssText = `
-            background: rgba(255,159,10,0.1); border: 1px solid rgba(255,159,10,0.3);
-            border-radius: 10px; padding: 12px; margin: 15px 0; font-size: 11px; color: #FF9F0A;
+            background: var(--bg-secondary); border: 1px solid var(--border-color);
+            border-radius: 10px; padding: 12px; margin: 15px 0; font-size: 11px; color: #fff;
         `;
-        infoBox.innerHTML = `            <strong>💡 Tip:</strong> Values are saved per profile to sdcard.<br>
+        infoBox.innerHTML = `
+            <strong>💡 Tip:</strong> Values are saved per profile to sdcard.<br>
             Negative = undervolt (cooler), Positive = overvolt (more stable)
         `;
         box.appendChild(infoBox);
 
         const statusEl = document.createElement('div');
         statusEl.id = 'eem-status';
-        statusEl.style.cssText = 'text-align: center; font-size: 13px; color: #666; margin-bottom: 16px; min-height: 20px;';
+        statusEl.style.cssText = 'text-align: center; font-size: 13px; color: #fff; margin-bottom: 16px; min-height: 20px;';
         statusEl.textContent = 'Status: Ready';
         box.appendChild(statusEl);
 
@@ -308,10 +312,10 @@
         applyBtn.textContent = `💾 Apply ${currentProfile === 'gaming' ? 'Gaming' : 'Normal'} Profile`;
         applyBtn.style.cssText = `
             width: 100%; padding: 14px; margin-bottom: 10px;
-            background: linear-gradient(135deg, #FF9F0A, #e68a00);
+            background: var(--accent-blue);
             color: #fff; border: none; border-radius: 12px;
             font-size: 14px; font-weight: 700; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 159, 10, 0.4);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         `;
         applyBtn.onclick = async () => {
             await applyAllOffsets(statusEl, applyBtn);
@@ -323,8 +327,8 @@
         resetBtn.textContent = `🔄 Reset ${currentProfile === 'gaming' ? 'Gaming' : 'Normal'} to 0 mV`;
         resetBtn.style.cssText = `
             width: 100%; padding: 12px; margin-bottom: 10px;
-            background: rgba(255,255,255,0.1); color: #fff;
-            border: 1px solid rgba(255,255,255,0.2); border-radius: 10px;
+            background: var(--bg-secondary); color: #fff;
+            border: 1px solid var(--border-color); border-radius: 10px;
             font-size: 13px; cursor: pointer;
         `;
         resetBtn.onclick = async () => {
@@ -341,9 +345,10 @@
 
         const cancelBtn = document.createElement('button');
         cancelBtn.textContent = 'Cancel';
-        cancelBtn.style.cssText = `            width: 100%; padding: 12px;
-            background: rgba(255,255,255,0.1); color: #fff;
-            border: none; border-radius: 10px; font-size: 13px; cursor: pointer;
+        cancelBtn.style.cssText = `
+            width: 100%; padding: 12px;
+            background: var(--bg-secondary); color: #fff;
+            border: 1px solid var(--border-color); border-radius: 10px; font-size: 13px; cursor: pointer;
         `;
         cancelBtn.onclick = () => modal.remove();
         box.appendChild(cancelBtn);
@@ -365,7 +370,7 @@
         }
         if (statusEl) {
             statusEl.textContent = `Writing to EEM nodes (${currentProfile} profile)...`;
-            statusEl.style.color = '#FF9F0A';
+            statusEl.style.color = '#fff';
         }
 
         try {
@@ -385,16 +390,17 @@
             if (statusEl) {
                 if (successCount === availablePaths.length) {
                     statusEl.textContent = `✅ ${currentProfile === 'gaming' ? 'Gaming' : 'Normal'} profile applied!`;
-                    statusEl.style.color = '#32D74B';
+                    statusEl.style.color = '#fff';
                 } else {
                     statusEl.textContent = `⚠️ ${successCount}/${availablePaths.length} applied (check root)`;
-                    statusEl.style.color = '#FF9F0A';
+                    statusEl.style.color = '#fff';
                 }
-            }            if (window.showStatus) {
+            }
+            if (window.showStatus) {
                 const msg = successCount === availablePaths.length 
                     ? `✅ EEM offsets applied (${currentProfile})` 
                     : `⚠️ Partial apply: ${successCount}/${availablePaths.length}`;
-                window.showStatus(msg, successCount === availablePaths.length ? '#32D74B' : '#FF9F0A');
+                window.showStatus(msg, successCount === availablePaths.length ? 'var(--accent-green)' : 'var(--accent-orange)');
             }
             
             if (successCount === availablePaths.length) {
@@ -407,14 +413,14 @@
             console.error('EEM apply failed:', e);
             if (statusEl) {
                 statusEl.textContent = '❌ Failed. Check root.';
-                statusEl.style.color = '#FF453A';
+                statusEl.style.color = '#fff';
             }
             if (applyBtn) {
                 applyBtn.disabled = false;
                 applyBtn.textContent = `💾 Apply ${currentProfile === 'gaming' ? 'Gaming' : 'Normal'} Profile`;
             }
             if (window.showStatus) {
-                window.showStatus('❌ EEM apply failed', '#FF453A');
+                window.showStatus('❌ EEM apply failed', 'var(--accent-red)');
             }
         }
     }

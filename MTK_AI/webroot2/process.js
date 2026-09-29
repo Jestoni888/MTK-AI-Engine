@@ -96,7 +96,7 @@ function updateCardDisplay() {
     const apps = allProcesses.filter(p => !p.isSystem).length;
     el.textContent = `${total} total • ${apps} apps`;
     el.style.fontSize = '11px';
-    el.style.color = '#8b92b4';
+    el.style.color = '#fff';
 }
 
 function showProcessModal() {
@@ -108,14 +108,14 @@ function showProcessModal() {
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);';
     
     const box = document.createElement('div');
-    box.style.cssText = 'background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #f97316;border-radius:20px;padding:24px;width:95%;max-width:520px;';
+    box.style.cssText = 'background:linear-gradient(135deg,var(--bg-secondary),var(--bg-card));border:2px solid var(--border-color);border-radius:20px;padding:24px;width:95%;max-width:520px;';
     
     box.innerHTML = `
-        <h3 style="color:#f97316;margin:0 0 5px;font-size:20px;text-align:center;">⚙️ Process Manager</h3>
-        <p style="color:#8b92b4;font-size:12px;text-align:center;margin-bottom:15px;">Monitor & kill running processes</p>
+        <h3 style="color:#fff;margin:0 0 5px;font-size:20px;text-align:center;">⚙️ Process Manager</h3>
+        <p style="color:#fff;font-size:12px;text-align:center;margin-bottom:15px;">Monitor & kill running processes</p>
         <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <input type="text" id="process-search" placeholder="🔍 Search process name..." style="flex:1;padding:10px;background:rgba(0,0,0,0.3);border:1px solid #4b5563;border-radius:10px;color:#fff;font-size:12px;outline:none;">
-            <select id="process-sort" style="padding:10px;background:rgba(0,0,0,0.3);border:1px solid #4b5563;border-radius:10px;color:#fff;font-size:12px;cursor:pointer;">
+            <input type="text" id="process-search" placeholder="🔍 Search process name..." style="flex:1;padding:10px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;color:#fff;font-size:12px;outline:none;">
+            <select id="process-sort" style="padding:10px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;color:#fff;font-size:12px;cursor:pointer;">
                 <option value="cpu">By CPU</option>
                 <option value="memory">By Memory</option>
                 <option value="power">By Power</option>
@@ -125,27 +125,27 @@ function showProcessModal() {
         
         <!-- Category List -->
         <div id="category-list" style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:4px;scrollbar-width:none;">
-            <button class="cat-btn active" data-cat="all" style="padding:6px 12px;background:rgba(249,115,22,0.2);border:1px solid #f97316;border-radius:15px;color:#f97316;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">All</button>
-            <button class="cat-btn" data-cat="apps" style="padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #4b5563;border-radius:15px;color:#8b92b4;font-size:11px;cursor:pointer;white-space:nowrap;">Apps</button>
-            <button class="cat-btn" data-cat="system" style="padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #4b5563;border-radius:15px;color:#8b92b4;font-size:11px;cursor:pointer;white-space:nowrap;">System</button>
-            <button class="cat-btn" data-cat="highcpu" style="padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #4b5563;border-radius:15px;color:#8b92b4;font-size:11px;cursor:pointer;white-space:nowrap;">High CPU</button>
-            <button class="cat-btn" data-cat="highmem" style="padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #4b5563;border-radius:15px;color:#8b92b4;font-size:11px;cursor:pointer;white-space:nowrap;">High RAM</button>
-            <button class="cat-btn" data-cat="root" style="padding:6px 12px;background:rgba(255,255,255,0.05);border:1px solid #4b5563;border-radius:15px;color:#8b92b4;font-size:11px;cursor:pointer;white-space:nowrap;">Root</button>
+            <button class="cat-btn active" data-cat="all" style="padding:6px 12px;background:rgba(255,255,255,0.15);border:1px solid var(--border-color);border-radius:15px;color:#fff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">All</button>
+            <button class="cat-btn" data-cat="apps" style="padding:6px 12px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:15px;color:#fff;font-size:11px;cursor:pointer;white-space:nowrap;">Apps</button>
+            <button class="cat-btn" data-cat="system" style="padding:6px 12px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:15px;color:#fff;font-size:11px;cursor:pointer;white-space:nowrap;">System</button>
+            <button class="cat-btn" data-cat="highcpu" style="padding:6px 12px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:15px;color:#fff;font-size:11px;cursor:pointer;white-space:nowrap;">High CPU</button>
+            <button class="cat-btn" data-cat="highmem" style="padding:6px 12px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:15px;color:#fff;font-size:11px;cursor:pointer;white-space:nowrap;">High RAM</button>
+            <button class="cat-btn" data-cat="root" style="padding:6px 12px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:15px;color:#fff;font-size:11px;cursor:pointer;white-space:nowrap;">Root</button>
         </div>
 
-        <div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:8px;margin-bottom:12px;">
-            <div style="color:#fca5a5;font-size:10px;text-align:center;">
+        <div style="background:rgba(231,76,60,0.1);border:1px solid var(--accent-red);border-radius:8px;padding:8px;margin-bottom:12px;">
+            <div style="color:#fff;font-size:10px;text-align:center;">
                 ⚠️ <strong>WARNING:</strong> Killing system processes may cause instability or bootloop. Use with caution!
             </div>
         </div>
         
         <div id="process-list" style="max-height:400px;overflow-y:auto;margin-bottom:15px;">
-            <div style="text-align:center;color:#666;padding:20px;">Loading processes...</div>
+            <div style="text-align:center;color:#fff;padding:20px;">Loading processes...</div>
         </div>
         
         <div style="display:flex;gap:10px;">
-            <button id="process-refresh-btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:12px;cursor:pointer;">🔄 Refresh</button>
-            <button id="process-cancel-btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:12px;cursor:pointer;">Close</button>
+            <button id="process-refresh-btn" style="flex:1;padding:10px;background:var(--bg-card);color:#fff;border:1px solid var(--border-color);border-radius:10px;font-size:12px;cursor:pointer;">🔄 Refresh</button>
+            <button id="process-cancel-btn" style="flex:1;padding:10px;background:var(--bg-card);color:#fff;border:1px solid var(--border-color);border-radius:10px;font-size:12px;cursor:pointer;">Close</button>
         </div>
     `;
     
@@ -196,23 +196,23 @@ function renderProcessList() {
     });
     
     if (filtered.length === 0) {
-        container.innerHTML = `<div style="text-align:center;color:#666;padding:20px;">${searchTerm ? ' No processes match your search' : 'No processes found'}</div>`;
+        container.innerHTML = `<div style="text-align:center;color:#fff;padding:20px;">${searchTerm ? ' No processes match your search' : 'No processes found'}</div>`;
         return;
     }
     
     container.innerHTML = filtered.map(p => `
-        <div class="process-item" data-pid="${p.pid}" style="background:rgba(0,0,0,0.2);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(249,115,22,0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.2)'">
+        <div class="process-item" data-pid="${p.pid}" style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--border-color)'" onmouseout="this.style.borderColor='var(--border-color)'">
             <div style="flex:1;min-width:0;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
                     <span style="color:#fff;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;">${p.appName}</span>
-                    ${p.isSystem ? '<span style="font-size:9px;background:rgba(239,68,68,0.2);color:#ef4444;padding:2px 6px;border-radius:4px;">SYS</span>' : '<span style="font-size:9px;background:rgba(59,130,246,0.2);color:#3b82f6;padding:2px 6px;border-radius:4px;">APP</span>'}
+                    ${p.isSystem ? '<span style="font-size:9px;background:rgba(231,76,60,0.2);color:var(--accent-red);padding:2px 6px;border-radius:4px;">SYS</span>' : '<span style="font-size:9px;background:rgba(74,158,255,0.2);color:var(--accent-blue);padding:2px 6px;border-radius:4px;">APP</span>'}
                 </div>
-                <div style="color:#666;font-size:10px;overflow:hidden;text-overflow:ellipsis;">${p.packageName || p.cmd.split(' ')[0]}</div>
+                <div style="color:#fff;font-size:10px;overflow:hidden;text-overflow:ellipsis;">${p.packageName || p.cmd.split(' ')[0]}</div>
             </div>
             <div style="text-align:right;min-width:100px;">
-                <div style="color:#f97316;font-size:12px;font-weight:600;">${p.cpu.toFixed(1)}%</div>
-                <div style="color:#8b92b4;font-size:10px;">${formatBytes(p.rss)}</div>
-                <div style="color:#fbbf24;font-size:10px;font-weight:600;">⚡ ${p.estimatedMA} mA</div>
+                <div style="color:#fff;font-size:12px;font-weight:600;">${p.cpu.toFixed(1)}%</div>
+                <div style="color:#fff;font-size:10px;">${formatBytes(p.rss)}</div>
+                <div style="color:#fff;font-size:10px;font-weight:600;">⚡ ${p.estimatedMA} mA</div>
             </div>
         </div>
     `).join('');
@@ -238,15 +238,15 @@ function bindModalEvents(modal) {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.cat-btn').forEach(b => {
                 b.classList.remove('active');
-                b.style.background = 'rgba(255,255,255,0.05)';
-                b.style.borderColor = '#4b5563';
-                b.style.color = '#8b92b4';
+                b.style.background = 'var(--bg-card)';
+                b.style.borderColor = 'var(--border-color)';
+                b.style.color = '#fff';
                 b.style.fontWeight = 'normal';
             });
             btn.classList.add('active');
-            btn.style.background = 'rgba(249,115,22,0.2)';
-            btn.style.borderColor = '#f97316';
-            btn.style.color = '#f97316';
+            btn.style.background = 'rgba(255,255,255,0.15)';
+            btn.style.borderColor = 'var(--border-color)';
+            btn.style.color = '#fff';
             btn.style.fontWeight = '600';
             renderProcessList();
         });
@@ -277,46 +277,46 @@ async function showProcessDetails(pid) {
         const cgroup = await execFn(`cat /proc/${pid}/cgroup 2>/dev/null | head -5`);
         
         additionalInfo = `
-            <div style="background:rgba(0,0,0,0.3);border-radius:8px;padding:12px;margin-bottom:15px;">
-                <div style="color:#8b92b4;font-size:11px;margin-bottom:8px;">📊 Extended Info</div>
+            <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:12px;margin-bottom:15px;">
+                <div style="color:#fff;font-size:11px;margin-bottom:8px;">📊 Extended Info</div>
                 <div style="color:#fff;font-size:11px;line-height:1.6;">
                     ${procInfo ? procInfo.split('\n').filter(l => l.trim()).map(l => `<div>${l}</div>`).join('') : ''}
                     <div style="margin-top:8px;"><strong>CMD:</strong> ${cmdline || 'N/A'}</div>
                     <div><strong>OOM Score:</strong> ${oomScore || 'N/A'}</div>
                     <div><strong>OOM Adj:</strong> ${oomScoreAdj || 'N/A'}</div>
-                    ${cgroup ? `<div style="margin-top:8px;"><strong>CGroup:</strong><br><span style="color:#666;font-size:10px;">${cgroup.replace(/\n/g, '<br>')}</span></div>` : ''}
+                    ${cgroup ? `<div style="margin-top:8px;"><strong>CGroup:</strong><br><span style="color:#fff;font-size:10px;">${cgroup.replace(/\n/g, '<br>')}</span></div>` : ''}
                 </div>
             </div>
         `;
     } catch (e) {
-        additionalInfo = '<div style="color:#666;font-size:11px;">Additional details unavailable</div>';
+        additionalInfo = '<div style="color:#fff;font-size:11px;">Additional details unavailable</div>';
     }
     
     const killButtonHtml = `
-        <button id="kill-btn" style="flex:1;padding:12px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">
+        <button id="kill-btn" style="flex:1;padding:12px;background:linear-gradient(135deg,var(--accent-red),#c0392b);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">
             ☠️ KILL Process
         </button>
     `;
     
     detailModal.innerHTML = `
-        <div style="background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #f97316;border-radius:20px;padding:24px;width:95%;max-width:520px;margin:auto;">
-            <h3 style="color:#f97316;margin:0 0 15px;font-size:18px;text-align:center;">📱 Process Details</h3>
-            <div style="background:rgba(0,0,0,0.3);border-radius:12px;padding:15px;margin-bottom:15px;">
+        <div style="background:linear-gradient(135deg,var(--bg-secondary),var(--bg-card));border:2px solid var(--border-color);border-radius:20px;padding:24px;width:95%;max-width:520px;margin:auto;">
+            <h3 style="color:#fff;margin:0 0 15px;font-size:18px;text-align:center;">📱 Process Details</h3>
+            <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;padding:15px;margin-bottom:15px;">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;">
-                    <div><span style="color:#8b92b4;">PID:</span> <span style="color:#fff;font-weight:600;">${process.pid}</span></div>
-                    <div><span style="color:#8b92b4;">PPID:</span> <span style="color:#fff;">${process.ppid}</span></div>
-                    <div><span style="color:#8b92b4;">User:</span> <span style="color:#fff;">${process.user}</span></div>
-                    <div><span style="color:#8b92b4;">State:</span> <span style="color:#fff;">Running</span></div>
-                    <div><span style="color:#8b92b4;">CPU:</span> <span style="color:#f97316;font-weight:600;">${process.cpu.toFixed(1)}%</span></div>
-                    <div><span style="color:#8b92b4;">Memory:</span> <span style="color:#3b82f6;font-weight:600;">${formatBytes(process.rss)}</span></div>
-                    <div><span style="color:#8b92b4;">Power:</span> <span style="color:#fbbf24;font-weight:600;"> ${process.estimatedMA} mA</span></div>
-                    <div style="grid-column:1/-1;"><span style="color:#8b92b4;">Command:</span> <span style="color:#fff;font-size:10px;word-break:break-all;">${process.cmd}</span></div>
+                    <div><span style="color:#fff;">PID:</span> <span style="color:#fff;font-weight:600;">${process.pid}</span></div>
+                    <div><span style="color:#fff;">PPID:</span> <span style="color:#fff;">${process.ppid}</span></div>
+                    <div><span style="color:#fff;">User:</span> <span style="color:#fff;">${process.user}</span></div>
+                    <div><span style="color:#fff;">State:</span> <span style="color:#fff;">Running</span></div>
+                    <div><span style="color:#fff;">CPU:</span> <span style="color:#fff;font-weight:600;">${process.cpu.toFixed(1)}%</span></div>
+                    <div><span style="color:#fff;">Memory:</span> <span style="color:#fff;font-weight:600;">${formatBytes(process.rss)}</span></div>
+                    <div><span style="color:#fff;">Power:</span> <span style="color:#fff;font-weight:600;">⚡ ${process.estimatedMA} mA</span></div>
+                    <div style="grid-column:1/-1;"><span style="color:#fff;">Command:</span> <span style="color:#fff;font-size:10px;word-break:break-all;">${process.cmd}</span></div>
                 </div>
             </div>
             ${additionalInfo}
             <div style="display:flex;gap:10px;">
                 ${killButtonHtml}
-                <button id="detail-close-btn" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;">Close</button>
+                <button id="detail-close-btn" style="flex:1;padding:12px;background:var(--bg-card);color:#fff;border:1px solid var(--border-color);border-radius:10px;font-size:13px;cursor:pointer;">Close</button>
             </div>
         </div>
     `;
@@ -354,7 +354,7 @@ async function killProcess(pid, detailModal) {
         if (!verify.trim()) {
             alert(`✅ Process ${pid} killed successfully!`);
         } else {
-            alert(`️ Process ${pid} may still be running (protected)`);
+            alert(`⚠️ Process ${pid} may still be running (protected)`);
         }
         
         detailModal.remove();

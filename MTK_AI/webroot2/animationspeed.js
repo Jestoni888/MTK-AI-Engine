@@ -47,7 +47,8 @@
                 // Fallback to config files if settings read fails
                 try {
                     const saved = await execFn(`cat ${CONFIG_DIR}/${s.key} 2>/dev/null`);
-                    if (saved.trim()) currentValues[s.id] = saved.trim();                } catch (e2) {}
+                    if (saved.trim()) currentValues[s.id] = saved.trim();
+                } catch (e2) {}
             }
         }
         updateCardDisplay();
@@ -82,12 +83,13 @@
         `;
 
         const box = document.createElement('div');
+        // Uses theme CSS variables to match index.html styling natively
         box.style.cssText = `
-            background: linear-gradient(135deg, #1a1f3a, #2d3561);
-            border: 2px solid #FF453A;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 24px; width: 95%; max-width: 450px;
-            box-shadow: 0 0 40px rgba(255, 69, 58, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             max-height: 90vh; overflow-y: auto;
         `;
 
@@ -95,8 +97,10 @@
         const header = document.createElement('div');
         header.style.cssText = 'text-align: center; margin-bottom: 20px;';
         header.innerHTML = `
-            <h3 style="color: #FF453A; margin: 0; font-size: 20px;">⏱️ Animation Speed</h3>
-            <p style="color: #8b92b4; font-size: 12px; margin: 5px 0 0;">System UI transition multipliers</p>        `;
+            <h3 style="color: var(--text-primary); margin: 0; font-size: 20px;">⏱️ Animation Speed</h3>
+            <p style="color: var(--text-secondary); font-size: 12px; margin: 5px 0 0;">System UI transition multipliers</p>
+        `;
+        box.appendChild(header);
 
         // Build dropdowns
         SETTINGS.forEach(s => {
@@ -106,21 +110,23 @@
             const labelRow = document.createElement('div');
             labelRow.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 6px;';
             labelRow.innerHTML = `
-                <span style="color: #fff; font-size: 13px; font-weight: 600;">${s.label}</span>
-                <span style="color: #8b92b4; font-size: 11px;">${s.desc}</span>
+                <span style="color: var(--text-primary); font-size: 13px; font-weight: 600;">${s.label}</span>
+                <span style="color: var(--text-secondary); font-size: 11px;">${s.desc}</span>
             `;
             
             const select = document.createElement('select');
             select.id = s.id;
             select.style.cssText = `
-                width: 100%; padding: 10px; background: rgba(0,0,0,0.4); color: #fff;
-                border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; font-size: 13px;
+                width: 100%; padding: 10px; background: var(--bg-secondary); color: var(--text-primary);
+                border: 1px solid var(--border-color); border-radius: 10px; font-size: 13px; outline: none;
             `;
             
             OPTIONS.forEach(opt => {
                 const option = document.createElement('option');
                 option.value = opt.val;
                 option.textContent = opt.label;
+                option.style.background = 'var(--bg-secondary)';
+                option.style.color = 'var(--text-primary)';
                 if (opt.val === currentValues[s.id]) option.selected = true;
                 select.appendChild(option);
             });
@@ -135,23 +141,25 @@
         applyBtn.textContent = '💾 Apply Animation Settings';
         applyBtn.style.cssText = `
             width: 100%; padding: 14px; margin-top: 10px;
-            background: linear-gradient(135deg, #FF453A, #d63031);
+            background: var(--accent-blue);
             color: #fff; border: none; border-radius: 12px;
             font-size: 14px; font-weight: 700; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 69, 58, 0.4);
+            box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
+            transition: opacity 0.2s;
         `;
         applyBtn.onclick = async () => {
             await applySettings();
             modal.remove();
         };
         box.appendChild(applyBtn);
+
         // Cancel Button
         const cancelBtn = document.createElement('button');
         cancelBtn.textContent = 'Cancel';
         cancelBtn.style.cssText = `
             width: 100%; padding: 12px; margin-top: 10px;
-            background: rgba(255,255,255,0.1); color: #fff;
-            border: none; border-radius: 10px; font-size: 13px; cursor: pointer;
+            background: var(--bg-secondary); color: var(--text-secondary);
+            border: 1px solid var(--border-color); border-radius: 10px; font-size: 13px; cursor: pointer;
         `;
         cancelBtn.onclick = () => modal.remove();
         box.appendChild(cancelBtn);
@@ -190,11 +198,12 @@
         } catch (e) {
             console.error('Animation apply failed:', e);
             if (window.showStatus) {
-                window.showStatus('❌ Failed to apply. Check root.', '#FF453A');
+                window.swStatus('❌ Failed to apply. Check root.', '#FF453A');
             } else {
                 alert('Failed to apply settings. Ensure root access.');
             }
-        }    }
+        }
+    }
 
     // Initialize
     if (document.readyState === 'loading') {

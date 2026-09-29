@@ -111,8 +111,8 @@
         const valEl = document.querySelector('#zram-manager-item .setting-value');
         if (valEl) {
             valEl.innerHTML = currentZramMB === 0 
-                ? `Disabled <i class="fas fa-chevron-right"></i>` 
-                : `${currentZramMB} MB (${currentAlgo.toUpperCase()}) <i class="fas fa-chevron-right"></i>`;
+                ? `<span style="color: #ffffff;">Disabled <i class="fas fa-chevron-right"></i></span>` 
+                : `<span style="color: #ffffff;">${currentZramMB} MB (${currentAlgo.toUpperCase()}) <i class="fas fa-chevron-right"></i></span>`;
         }
     }
 
@@ -130,11 +130,11 @@
             const style = document.createElement('style');
             style.id = 'zram-modal-style';
             style.textContent = `
-                input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: #007AFF; border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
-                .zram-tab-btn { flex: 1; padding: 10px; border: none; background: rgba(0,0,0,0.3); color: #8b92b4; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; font-size: 12px; }
-                .zram-tab-btn.active { color: #007AFF; border-bottom: 2px solid #007AFF; background: rgba(0,122,255,0.1); }
-                .algo-pill { padding: 6px 12px; border-radius: 6px; background: rgba(255,255,255,0.08); color: #8b92b4; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
-                .algo-pill.active { background: rgba(0,122,255,0.2); color: #007AFF; border-color: #007AFF; }
+                input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: var(--accent-blue); border-radius: 50%; cursor: pointer; border: 2px solid #ffffff; }
+                .zram-tab-btn { flex: 1; padding: 10px; border: none; background: var(--bg-secondary); color: #ffffff; opacity: 0.6; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; font-size: 12px; transition: all 0.2s; }
+                .zram-tab-btn.active { color: #ffffff; opacity: 1; border-bottom: 2px solid var(--accent-blue); background: var(--bg-card); font-weight: 700; }
+                .algo-pill { padding: 6px 12px; border-radius: 6px; background: var(--bg-secondary); color: #ffffff; opacity: 0.7; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--border-color); transition: all 0.2s; }
+                .algo-pill.active { background: var(--accent-blue); color: #ffffff; opacity: 1; border-color: var(--accent-blue); }
             `;
             document.head.appendChild(style);
         }
@@ -143,24 +143,24 @@
         modal.id = 'zram-modal';
         modal.style.cssText = `
             position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000;
-            display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);
+            display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px);
         `;
 
         const box = document.createElement('div');
         box.style.cssText = `
-            background: linear-gradient(135deg, #1a1f3a, #2d3561); border: 2px solid #007AFF;
+            background: var(--bg-card); border: 1px solid var(--border-color);
             border-radius: 20px; padding: 24px; width: 95%; max-width: 500px; max-height: 90vh;
-            overflow-y: auto; box-shadow: 0 0 40px rgba(0,122,255,0.2);
+            overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.6); color: #ffffff;
         `;
 
         let algoIndex = availableSystemAlgos.indexOf(currentAlgo);
         if (algoIndex === -1) algoIndex = 0;
 
         box.innerHTML = `
-            <h3 style="color: #007AFF; margin: 0 0 4px; font-size: 20px; text-align: center;">🗄️ ZRAM Suite & Manager</h3>
-            <p style="color: #8b92b4; font-size: 12px; text-align: center; margin-bottom: 15px;">Physical RAM: ${(physicalRamMB/1024).toFixed(1)} GB</p>
+            <h3 style="color: #ffffff; margin: 0 0 4px; font-size: 20px; text-align: center; font-weight: 700;">🗄️ ZRAM Suite & Manager</h3>
+            <p style="color: #ffffff; opacity: 0.75; font-size: 12px; text-align: center; margin-bottom: 15px;">Physical RAM: ${(physicalRamMB/1024).toFixed(1)} GB</p>
 
-            <div style="display: flex; margin-bottom: 15px; border-radius: 10px; overflow: hidden;">
+            <div style="display: flex; margin-bottom: 15px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border-color); background: var(--bg-secondary);">
                 <button id="zram-tab-apply" class="zram-tab-btn active">⚡ Config</button>
                 <button id="zram-tab-test" class="zram-tab-btn">🧪 FIO Benchmark</button>
                 <button id="zram-tab-history" class="zram-tab-btn">📊 Portfolio</button>
@@ -169,20 +169,20 @@
             <!-- CONFIG / APPLY TAB -->
             <div id="zram-view-apply">
                 <div style="margin-bottom: 14px;">
-                    <div style="display: flex; justify-content: space-between; color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; color: #ffffff; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
                         <span>💾 ZRAM Size</span>
-                        <span id="zram-size-val" style="color: #007AFF;">${currentZramMB === 0 ? 'Disabled' : `${currentZramMB} MB`}</span>
+                        <span id="zram-size-val" style="color: #ffffff; font-weight: 700;">${currentZramMB === 0 ? 'Disabled' : `${currentZramMB} MB`}</span>
                     </div>
-                    <input type="range" id="zram-size-slider" min="0" max="${Math.min(20480, physicalRamMB * 4)}" step="128" value="${currentZramMB}" style="width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none;">
-                    <div id="zram-warning" style="font-size: 11px; color: #FFCC00; margin-top: 4px; min-height: 16px;"></div>
+                    <input type="range" id="zram-size-slider" min="0" max="${Math.min(20480, physicalRamMB * 4)}" step="128" value="${currentZramMB}" style="width: 100%; height: 6px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 3px; outline: none;">
+                    <div id="zram-warning" style="font-size: 11px; color: #ffffff; margin-top: 4px; min-height: 16px;"></div>
                 </div>
 
                 <div style="margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; color: #ffffff; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
                         <span>⚙️ Compression Algorithm</span>
-                        <span id="zram-algo-val" style="color: #32D74B; font-weight: 700;">${currentAlgo.toUpperCase()}</span>
+                        <span id="zram-algo-val" style="color: #ffffff; font-weight: 700;">${currentAlgo.toUpperCase()}</span>
                     </div>
-                    <input type="range" id="zram-algo-slider" min="0" max="${availableSystemAlgos.length - 1}" step="1" value="${algoIndex}" style="width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none; margin-bottom: 10px;">
+                    <input type="range" id="zram-algo-slider" min="0" max="${availableSystemAlgos.length - 1}" step="1" value="${algoIndex}" style="width: 100%; height: 6px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 3px; outline: none; margin-bottom: 10px;">
                     
                     <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="zram-algo-pills">
                         ${availableSystemAlgos.map((a, idx) => `
@@ -194,12 +194,12 @@
                 </div>
 
                 <div style="margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; color: #ffffff; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
                         <span>🔄 Swappiness Value</span>
-                        <span id="zram-swap-val" style="color: #007AFF; font-weight: 700;">${currentSwappiness}</span>
+                        <span id="zram-swap-val" style="color: #ffffff; font-weight: 700;">${currentSwappiness}</span>
                     </div>
-                    <input type="range" id="zram-swap-slider" min="0" max="200" step="1" value="${currentSwappiness}" style="width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none;">
-                    <div style="display: flex; justify-content: space-between; color: #666; font-size: 10px; margin-top: 4px;">
+                    <input type="range" id="zram-swap-slider" min="0" max="200" step="1" value="${currentSwappiness}" style="width: 100%; height: 6px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 3px; outline: none;">
+                    <div style="display: flex; justify-content: space-between; color: #ffffff; opacity: 0.6; font-size: 10px; margin-top: 4px;">
                         <span>0 (Low Swap)</span>
                         <span>60 (Default)</span>
                         <span>100 (Balanced)</span>
@@ -207,53 +207,53 @@
                     </div>
                 </div>
 
-                <div id="zram-stats-box" style="background: rgba(0,0,0,0.4); padding: 12px; border-radius: 10px; margin-bottom: 14px; text-align: center; font-size: 12px; color: #8b92b4;">
+                <div id="zram-stats-box" style="background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 12px; border-radius: 10px; margin-bottom: 14px; text-align: center; font-size: 12px; color: #ffffff;">
                     Loading live stats...
                 </div>
 
-                <button id="zram-apply-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #007AFF, #0056b3); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 8px;">💾 Apply & Save Config</button>
-                <button id="zram-disable-btn" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #FF453A, #b30000); color: #fff; border: none; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;">🚫 Disable ZRAM</button>
+                <button id="zram-apply-btn" style="width: 100%; padding: 12px; background: var(--accent-blue); color: #ffffff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 8px;">💾 Apply & Save Config</button>
+                <button id="zram-disable-btn" style="width: 100%; padding: 10px; background: var(--accent-red); color: #ffffff; border: none; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;">🚫 Disable ZRAM</button>
             </div>
 
             <!-- FIO BENCHMARK TAB -->
             <div id="zram-view-test" style="display: none;">
-                <div style="margin-bottom: 14px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                <div style="margin-bottom: 14px; padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                        <span style="color: #fff; font-size: 13px; font-weight: 600;">Test Payload Size</span>
-                        <span id="zram-test-size-val" style="color: #32D74B; font-weight: 600;">${testZramMB} MB</span>
+                        <span style="color: #ffffff; font-size: 13px; font-weight: 600;">Test Payload Size</span>
+                        <span id="zram-test-size-val" style="color: #ffffff; font-weight: 700;">${testZramMB} MB</span>
                     </div>
-                    <input type="range" id="zram-test-size-slider" min="128" max="2048" step="128" value="${testZramMB}" style="width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none;">
+                    <input type="range" id="zram-test-size-slider" min="128" max="2048" step="128" value="${testZramMB}" style="width: 100%; height: 6px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 3px; outline: none;">
                     
                     <div style="display: flex; justify-content: space-between; margin: 12px 0 6px;">
-                        <span style="color: #fff; font-size: 13px; font-weight: 600;">Compressibility Target</span>
-                        <span id="zram-test-comp-val" style="color: #32D74B; font-weight: 600;">${testCompressPct}%</span>
+                        <span style="color: #ffffff; font-size: 13px; font-weight: 600;">Compressibility Target</span>
+                        <span id="zram-test-comp-val" style="color: #ffffff; font-weight: 700;">${testCompressPct}%</span>
                     </div>
-                    <input type="range" id="zram-test-comp-slider" min="10" max="90" step="5" value="${testCompressPct}" style="width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none;">
+                    <input type="range" id="zram-test-comp-slider" min="10" max="90" step="5" value="${testCompressPct}" style="width: 100%; height: 6px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 3px; outline: none;">
 
                     <div style="display: flex; justify-content: space-between; margin: 12px 0 6px;">
-                        <span style="color: #fff; font-size: 13px; font-weight: 600;">Runtime Duration</span>
-                        <span id="zram-test-time-val" style="color: #32D74B; font-weight: 600;">${testRuntimeSec}s</span>
+                        <span style="color: #ffffff; font-size: 13px; font-weight: 600;">Runtime Duration</span>
+                        <span id="zram-test-time-val" style="color: #ffffff; font-weight: 700;">${testRuntimeSec}s</span>
                     </div>
-                    <input type="range" id="zram-test-time-slider" min="5" max="30" step="5" value="${testRuntimeSec}" style="width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; outline: none;">
+                    <input type="range" id="zram-test-time-slider" min="5" max="30" step="5" value="${testRuntimeSec}" style="width: 100%; height: 6px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 3px; outline: none;">
                 </div>
 
-                <button id="zram-run-fio" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #32D74B, #1f9e30); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">🚀 Run ZRAM Memory Benchmark</button>
-                <div id="zram-fio-result-card" style="display: none; padding: 12px; background: rgba(0,0,0,0.4); border-radius: 10px; margin-bottom: 10px; font-size: 12px; border-left: 4px solid #32D74B;"></div>
+                <button id="zram-run-fio" style="width: 100%; padding: 12px; background: var(--accent-green); color: #ffffff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">🚀 Run ZRAM Memory Benchmark</button>
+                <div id="zram-fio-result-card" style="display: none; padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 10px; font-size: 12px; border-left: 4px solid var(--accent-green); color: #ffffff;"></div>
             </div>
 
             <!-- PORTFOLIO TAB -->
             <div id="zram-view-history" style="display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <span style="color: #fff; font-size: 13px; font-weight: 600;">ZRAM Testing Portfolio</span>
-                    <button id="zram-clear-history" style="background: rgba(255,69,58,0.2); color: #ff453a; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer;">Clear History</button>
+                    <span style="color: #ffffff; font-size: 13px; font-weight: 600;">ZRAM Testing Portfolio</span>
+                    <button id="zram-clear-history" style="background: var(--accent-red); color: #ffffff; border: none; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">Clear History</button>
                 </div>
                 <div id="zram-history-container" style="max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
-                <div id="zram-recommendation-box" style="padding: 12px; background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.3); border-radius: 10px; font-size: 11px; color: #8b92b4; margin-bottom: 15px;"></div>
+                <div id="zram-recommendation-box" style="padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; font-size: 11px; color: #ffffff; margin-bottom: 15px;"></div>
             </div>
 
-            <div id="zram-action-status" style="text-align: center; font-size: 12px; color: #8b92b4; margin: 10px 0; min-height: 20px;"></div>
-            <button id="zram-close-btn" style="width: 100%; padding: 10px; background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 10px; font-size: 13px; cursor: pointer;">Close</button>
-            <div id="zram-log-box" style="margin-top: 12px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 8px; max-height: 100px; overflow-y: auto; font-family: monospace; font-size: 10px; color: #3fb950; text-align: left; line-height: 1.4; word-break: break-all;"></div>
+            <div id="zram-action-status" style="text-align: center; font-size: 12px; color: #ffffff; margin: 10px 0; min-height: 20px;"></div>
+            <button id="zram-close-btn" style="width: 100%; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); color: #ffffff; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;">Close</button>
+            <div id="zram-log-box" style="margin-top: 12px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; max-height: 100px; overflow-y: auto; font-family: monospace; font-size: 10px; color: #ffffff; text-align: left; line-height: 1.4; word-break: break-all;"></div>
         `;
 
         modal.appendChild(box);
@@ -340,13 +340,13 @@
         
         if (mb === 0) {
             warnEl.innerHTML = `ℹ️ ZRAM will be disabled. System relies solely on physical RAM.`;
-            warnEl.style.display = 'block'; warnEl.style.color = '#8b92b4';
+            warnEl.style.display = 'block'; warnEl.style.color = '#ffffff';
         } else if (mb > physicalRamMB) {
             warnEl.innerHTML = `⚠️ zRAM (${(mb/1024).toFixed(1)} GB) exceeds physical RAM. May cause thrashing.`;
-            warnEl.style.display = 'block'; warnEl.style.color = '#FFCC00';
+            warnEl.style.display = 'block'; warnEl.style.color = '#ffffff';
         } else if (mb > 0.75 * physicalRamMB && mb > 8192) {
             warnEl.innerHTML = `💡 Large allocation. Ensure sufficient free RAM.`;
-            warnEl.style.display = 'block'; warnEl.style.color = '#FFCC00';
+            warnEl.style.display = 'block'; warnEl.style.color = '#ffffff';
         }
     }
 
@@ -371,7 +371,7 @@
 
         btnRun.disabled = true;
         btnRun.textContent = `⏳ Running ${testRuntimeSec}s Stress Test...`;
-        if (statusEl) statusEl.innerHTML = `<span style="color: #32D74B;">⚡ Testing ZRAM (${currentAlgo.toUpperCase()}) for ${testRuntimeSec}s...</span>`;
+        if (statusEl) statusEl.innerHTML = `<span style="color: #ffffff;">⚡ Testing ZRAM (${currentAlgo.toUpperCase()}) for ${testRuntimeSec}s...</span>`;
 
         const swapCheck = await execFn("grep '/zram' /proc/swaps | awk '{print $1}'", 3000);
         const zramDev = swapCheck.trim() || "/dev/block/zram0";
@@ -379,7 +379,7 @@
         const fioCmd = `${FIO_BIN} --name=zram_test --filename=${zramDev} --rw=randread --bs=4k --ioengine=psync --iodepth=1 --size=${testZramMB}M --runtime=${testRuntimeSec} --time_based=1 --zero_buffers=0`;
 
         if (logBox) {
-            logBox.innerHTML += `<br><span style="color: #79c0ff;">[${new Date().toLocaleTimeString()}] Executing: ${fioCmd}</span><br>`;
+            logBox.innerHTML += `<br><span style="color: #ffffff;">[${new Date().toLocaleTimeString()}] Executing: ${fioCmd}</span><br>`;
             logBox.scrollTop = logBox.scrollHeight;
         }
 
@@ -414,14 +414,11 @@
             const avgLat = latVal !== 999999 ? `${latVal.toFixed(1)} µs` : 'N/A';
 
             let speedRating = '⚡ High Throughput Memory';
-            let speedColor = '#32D74B';
             
             if (latVal > 150) {
                 speedRating = '🐢 Slower Compression Speed';
-                speedColor = '#FF453A';
             } else if (latVal > 60) {
                 speedRating = '⚖️ Moderate Swap Overhead';
-                speedColor = '#FF9F0A';
             }
 
             const entry = {
@@ -435,7 +432,7 @@
                 rawLat: Number(latVal),
                 lat: avgLat,
                 rating: speedRating,
-                color: speedColor
+                color: '#ffffff'
             };
 
             benchmarkHistory.push(entry);
@@ -443,24 +440,24 @@
 
             if (resultCard) {
                 resultCard.style.display = 'block';
-                resultCard.style.borderLeftColor = speedColor;
+                resultCard.style.borderLeftColor = 'var(--accent-green)';
                 resultCard.innerHTML = `
-                    <div style="font-weight: bold; color: ${speedColor}; margin-bottom: 4px;">${speedRating}</div>
-                    <div><b>Algo:</b> ${currentAlgo.toUpperCase()} | <b>Duration:</b> ${testRuntimeSec}s</div>
-                    <div><b>IOPS:</b> ${iops} | <b>Bandwidth:</b> ${bw}</div>
-                    <div><b>Avg Latency:</b> ${avgLat}</div>
+                    <div style="font-weight: bold; color: #ffffff; margin-bottom: 4px;">${speedRating}</div>
+                    <div style="color: #ffffff;"><b>Algo:</b> ${currentAlgo.toUpperCase()} | <b>Duration:</b> ${testRuntimeSec}s</div>
+                    <div style="color: #ffffff;"><b>IOPS:</b> ${iops} | <b>Bandwidth:</b> ${bw}</div>
+                    <div style="color: #ffffff;"><b>Avg Latency:</b> ${avgLat}</div>
                 `;
             }
 
-            if (statusEl) statusEl.innerHTML = `<span style="color: #32D74B;">✅ ZRAM Benchmark Completed (${testRuntimeSec}s)!</span>`;
+            if (statusEl) statusEl.innerHTML = `<span style="color: #ffffff;">✅ ZRAM Benchmark Completed (${testRuntimeSec}s)!</span>`;
             if (logBox) {
-                logBox.innerHTML += `<span style="color: #3fb950;">[FIO Output] IOPS: ${iops} | BW: ${bw} | Lat: ${avgLat}</span><br>`;
+                logBox.innerHTML += `<span style="color: #ffffff;">[FIO Output] IOPS: ${iops} | BW: ${bw} | Lat: ${avgLat}</span><br>`;
                 logBox.scrollTop = logBox.scrollHeight;
             }
 
         } catch (e) {
-            if (statusEl) statusEl.innerHTML = `<span style="color: #FF453A;">❌ Benchmark Failed</span>`;
-            if (logBox) logBox.innerHTML += `<span style="color: #ff453a;">Log: ${e.message}</span><br>`;
+            if (statusEl) statusEl.innerHTML = `<span style="color: #ffffff;">❌ Benchmark Failed</span>`;
+            if (logBox) logBox.innerHTML += `<span style="color: #ffffff;">Log: ${e.message}</span><br>`;
         } finally {
             btnRun.disabled = false;
             btnRun.textContent = '🚀 Run ZRAM Memory Benchmark';
@@ -473,11 +470,11 @@
         if (!container) return;
 
         if (benchmarkHistory.length === 0) {
-            container.innerHTML = `<div style="color: #666; font-size: 11px; text-align: center; padding: 20px;">No benchmark records found. Run a test in FIO Benchmark!</div>`;
+            container.innerHTML = `<div style="color: #ffffff; opacity: 0.6; font-size: 11px; text-align: center; padding: 20px;">No benchmark records found. Run a test in FIO Benchmark!</div>`;
             if (recBox) {
                 recBox.innerHTML = `
-                    <div style="color: #007AFF; font-weight: 600; margin-bottom: 4px;">💡 Recommended Profile:</div>
-                    <div style="color: #fff;">No benchmark history available. Run FIO tests to find the best algorithm and size for your device.</div>
+                    <div style="color: #ffffff; font-weight: 700; margin-bottom: 4px;">💡 Recommended Profile:</div>
+                    <div style="color: #ffffff;">No benchmark history available. Run FIO tests to find the best algorithm and size for your device.</div>
                 `;
             }
             return;
@@ -497,17 +494,17 @@
         if (recBox && winner) {
             const numericSize = parseInt(winner.size) || currentZramMB;
             recBox.innerHTML = `
-                <div style="color: #FFD700; font-weight: 700; font-size: 12px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="color: #ffffff; font-weight: 700; font-size: 12px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
                     <span>💡 Recommended Profile (Winner):</span>
-                    <span style="background: rgba(255,215,0,0.2); padding: 2px 8px; border-radius: 6px;">👑 ${winner.algo} (${winner.size})</span>
+                    <span style="background: var(--bg-primary); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border-color);">👑 ${winner.algo} (${winner.size})</span>
                 </div>
-                <div style="color: #fff; margin-bottom: 4px;">
+                <div style="color: #ffffff; margin-bottom: 4px;">
                     Achieved lowest swap latency (<b>${winner.lat}</b>) and <b>${winner.bw}</b> throughput.
                 </div>
-                <div style="color: #32D74B; font-weight: 600; margin-bottom: 8px;">
+                <div style="color: #ffffff; font-weight: 600; margin-bottom: 8px;">
                     ✔ Optimal settings for minimal memory paging lag under high multitasking load.
                 </div>
-                <button id="zram-apply-winner-btn" style="width: 100%; padding: 8px; background: linear-gradient(135deg, #FFD700, #ffa500); color: #000; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 11px;">⚡ Apply Winner Config (${winner.algo} - ${winner.size})</button>
+                <button id="zram-apply-winner-btn" style="width: 100%; padding: 8px; background: var(--accent-orange); color: #ffffff; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 11px;">⚡ Apply Winner Config (${winner.algo} - ${winner.size})</button>
             `;
 
             setTimeout(() => {
@@ -558,16 +555,16 @@
         container.innerHTML = benchmarkHistory.slice().reverse().map(item => {
             const itemLat = parseLatency(item);
             const isWinner = winner && (item.id === winner.id || (item.algo === winner.algo && item.size === winner.size && Math.abs(itemLat - lowestLat) < 0.01));
-            const bgStyle = isWinner ? 'background: rgba(255, 215, 0, 0.1); border: 1px solid #FFD700;' : 'background: rgba(0,0,0,0.3);';
+            const bgStyle = isWinner ? 'background: var(--bg-card); border: 1px solid var(--accent-blue);' : 'background: var(--bg-secondary); border: 1px solid var(--border-color);';
             
             return `
-                <div style="padding: 8px 12px; ${bgStyle} border-radius: 8px; font-size: 11px; border-left: 3px solid ${isWinner ? '#FFD700' : item.color};">
-                    <div style="display: flex; justify-content: space-between; color: #fff; font-weight: 600;">
+                <div style="padding: 8px 12px; ${bgStyle} border-radius: 8px; font-size: 11px; border-left: 3px solid var(--accent-blue);">
+                    <div style="display: flex; justify-content: space-between; color: #ffffff; font-weight: 600;">
                         <span>${item.algo} (${item.size}) ${isWinner ? '👑' : ''}</span>
-                        <span style="color: #666; font-weight: normal;">${item.date}</span>
+                        <span style="color: #ffffff; opacity: 0.5; font-weight: normal;">${item.date}</span>
                     </div>
-                    <div style="color: #8b92b4; margin-top: 2px;">
-                        IOPS: <span style="color: #007AFF;">${item.iops}</span> | BW: <span style="color: #007AFF;">${item.bw}</span> | Latency: <span style="color: #32D74B;">${item.lat}</span>
+                    <div style="color: #ffffff; opacity: 0.8; margin-top: 2px;">
+                        IOPS: <span style="color: #ffffff; font-weight: 700;">${item.iops}</span> | BW: <span style="color: #ffffff; font-weight: 700;">${item.bw}</span> | Latency: <span style="color: #ffffff; font-weight: 700;">${item.lat}</span>
                     </div>
                 </div>
             `;
@@ -673,7 +670,7 @@ exit 0`;
             currentAlgo = algo;
             updateCardDisplay();
             
-            if (statsBox) statsBox.innerHTML = '<span style="color:#32D74B">✅ Applied & Boot Script Installed!</span>';
+            if (statsBox) statsBox.innerHTML = '<span style="color:#ffffff">✅ Applied & Boot Script Installed!</span>';
 
             if (applyBtn) { 
                 applyBtn.disabled = false; 
@@ -681,7 +678,7 @@ exit 0`;
             }
         } catch (e) {
             console.error('ZRAM apply failed:', e);
-            if (statsBox) statsBox.innerHTML = '<span style="color:#FF453A">❌ Failed. Check root/logs.</span>';
+            if (statsBox) statsBox.innerHTML = '<span style="color:#ffffff">❌ Failed. Check root/logs.</span>';
             if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = '💾 Apply & Save Config'; }
         }
     }
@@ -714,10 +711,10 @@ exit 0`;
             currentZramMB = 0;
             updateCardDisplay();
 
-            if (statsBox) statsBox.innerHTML = '<span style="color:#FF453A">🚫 ZRAM Disabled & Bootscript Updated</span>';
+            if (statsBox) statsBox.innerHTML = '<span style="color:#ffffff">🚫 ZRAM Disabled & Bootscript Updated</span>';
         } catch (e) {
             console.error('ZRAM disable failed:', e);
-            if (statsBox) statsBox.innerHTML = '<span style="color:#FF453A">❌ Failed to disable.</span>';
+            if (statsBox) statsBox.innerHTML = '<span style="color:#ffffff">❌ Failed to disable.</span>';
         }
     }
 
@@ -738,9 +735,9 @@ exit 0`;
                     const parts = mmStat.trim().split(/\s+/);
                     const usedMB = (parseInt(parts[1]) / 1024 / 1024).toFixed(2);
                     const totalGB = (parseInt(disksize) / 1024 / 1024 / 1024).toFixed(2);
-                    statsEl.innerHTML = `<span style="color:#32D74B">● ACTIVE</span> | ${usedMB} MB used / ${totalGB} GB total`;                
+                    statsEl.innerHTML = `<span style="color:#ffffff; font-weight:700;">● ACTIVE</span> | ${usedMB} MB used / ${totalGB} GB total`;                
                 } else {
-                    statsEl.innerHTML = `<span style="color:#FF453A">● INACTIVE</span> | ZRAM is disabled`;
+                    statsEl.innerHTML = `<span style="color:#ffffff; font-weight:700;">● INACTIVE</span> | ZRAM is disabled`;
                 }
             } catch (e) {
                 statsEl.textContent = 'Stats unavailable';

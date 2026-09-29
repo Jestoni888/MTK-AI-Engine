@@ -234,19 +234,19 @@ function renderTunablesModal() {
     tunablesModalElement.addEventListener('click', (e) => { if (e.target === tunablesModalElement) closeTunablesModal(); });
     
     const modalContent = document.createElement('div');
-    modalContent.style.cssText = `background:linear-gradient(135deg,#121418,#1a1f3a);border:2px solid #AF52DE;border-radius:16px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(175,82,222,0.4);color:#fff;`;
+    modalContent.style.cssText = `background:linear-gradient(135deg,var(--bg-secondary),var(--bg-card));border:2px solid var(--accent-purple);border-radius:16px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(155,89,182,0.4);color:var(--text-primary);`;
     
     const header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:2px solid #2a3152;position:sticky;top:0;background:linear-gradient(135deg,#121418,#1a1f3a);z-index:10;border-radius:16px 16px 0 0;flex-wrap:wrap;gap:10px;';
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:2px solid var(--border-color);position:sticky;top:0;background:linear-gradient(135deg,var(--bg-secondary),var(--bg-card));z-index:10;border-radius:16px 16px 0 0;flex-wrap:wrap;gap:10px;';
     header.innerHTML = `
         <div> 
-            <div style="color:#AF52DE;font-size:18px;font-weight:700;">⚙️ Governor Tunables</div> 
-            <div style="color:#8b92b4;font-size:12px;margin-top:2px;" id="tunables-modal-gov-name">Current: ${currentGovernor}</div> 
+            <div style="color:var(--accent-purple);font-size:18px;font-weight:700;">⚙️ Governor Tunables</div> 
+            <div style="color:var(--text-secondary);font-size:12px;margin-top:2px;" id="tunables-modal-gov-name">Current: ${currentGovernor}</div> 
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button id="refresh-tunables-btn" style="background:#2a3152;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;font-weight:600;">🔄 Refresh</button>
-            <button id="generate-script-btn" style="background:linear-gradient(135deg,#AF52DE,#8B5CF6);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;font-weight:600;box-shadow:0 4px 10px rgba(175,82,222,0.3);">💾 Save Script</button>
-            <button id="tunables-close-btn" style="width:32px;height:32px;border-radius:50%;border:none;background:#2a3152;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+            <button id="refresh-tunables-btn" style="background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;font-weight:600;">🔄 Refresh</button>
+            <button id="generate-script-btn" style="background:linear-gradient(135deg,var(--accent-purple),var(--accent-blue));color:var(--text-primary);border:none;border-radius:8px;padding:8px 12px;font-size:12px;cursor:pointer;font-weight:600;box-shadow:0 4px 10px rgba(155,89,182,0.3);">💾 Save Script</button>
+            <button id="tunables-close-btn" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-primary);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
         </div>`;
     modalContent.appendChild(header);
     
@@ -329,14 +329,14 @@ async function generateTunablesScript() {
         const verify = await execFn("su -c 'test -f \"" + scriptPath + "\" && echo OK || echo FAIL'", 100);
         if (verify && verify.trim() === 'OK') {
             if (btn) { btn.textContent = 'Saved!'; btn.style.opacity = '1'; setTimeout(function() { btn.textContent = 'Save Script'; }, 2000); }
-            if (window.showStatus) window.showStatus('Script saved: ' + scriptPath, '#32D74B');
+            if (window.showStatus) window.showStatus('Script saved: ' + scriptPath, 'var(--accent-green)');
         } else {
             throw new Error('File verification failed');
         }
     } catch (e) {
         console.error('Script generation failed:', e);
         if (btn) { btn.textContent = 'Failed'; btn.style.opacity = '1'; setTimeout(function() { btn.textContent = 'Save Script'; }, 2000); }
-        if (window.showStatus) window.showStatus('Script generation failed: ' + e.message, '#FF453A');
+        if (window.showStatus) window.showStatus('Script generation failed: ' + e.message, 'var(--accent-red)');
     }
 }
 
@@ -349,23 +349,23 @@ function renderModal() {
     modalElement.addEventListener('click', (e) => { if (e.target === modalElement) closeModal(); });
     
     const modalContent = document.createElement('div');
-    modalContent.style.cssText = `background:linear-gradient(135deg,#121418,#1a1f3a);border:2px solid #4a9eff;border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(74,158,255,0.4);color:#fff;`;
+    modalContent.style.cssText = `background:linear-gradient(135deg,var(--bg-secondary),var(--bg-card));border:2px solid var(--border-color);border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);color:var(--text-primary);`;
     
     const header = document.createElement('div');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:2px solid #2a3152;position:sticky;top:0;background:linear-gradient(135deg,#121418,#1a1f3a);z-index:10;border-radius:16px 16px 0 0;';
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:2px solid var(--border-color);position:sticky;top:0;background:linear-gradient(135deg,var(--bg-secondary),var(--bg-card));z-index:10;border-radius:16px 16px 0 0;';
     header.innerHTML = `
         <div style="display:flex;align-items:center;gap:10px;">
-            <button id="open-tunables-btn" style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(175,82,222,0.12);border:1px solid rgba(175,82,222,0.35);border-radius:10px;color:#D8A8FF;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s ease;font-family:system-ui,sans-serif;letter-spacing:0.2px;" onmouseover="this.style.background='rgba(175,82,222,0.22)';this.style.borderColor='rgba(175,82,222,0.55)';this.style.color='#E8C8FF';" onmouseout="this.style.background='rgba(175,82,222,0.12)';this.style.borderColor='rgba(175,82,222,0.35)';this.style.color='#D8A8FF';">
+            <button id="open-tunables-btn" style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(155,89,182,0.12);border:1px solid rgba(155,89,182,0.35);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s ease;font-family:system-ui,sans-serif;letter-spacing:0.2px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 Tunables
             </button>
         </div>
         <div style="display:flex;align-items:center;gap:12px;">
-            <div style="background:#0a0c10;padding:6px 14px;border-radius:8px;border:1px solid #4a9eff;">
-                <span style="color:#8b92b4;font-size:11px;">Governor: </span>
-                <span id="panel-gov-name" style="color:#32D74B;font-weight:700;font-size:13px;">${currentGovernor}</span>
+            <div style="background:var(--bg-primary);padding:6px 14px;border-radius:8px;border:1px solid var(--border-color);">
+                <span style="color:var(--text-secondary);font-size:11px;">Governor: </span>
+                <span id="panel-gov-name" style="color:var(--accent-green);font-weight:700;font-size:13px;">${currentGovernor}</span>
             </div>
-            <button id="modal-close-btn" style="width:32px;height:32px;border-radius:50%;border:none;background:#2a3152;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+            <button id="modal-close-btn" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-primary);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
         </div>`;
     modalContent.appendChild(header);
     
@@ -374,8 +374,8 @@ function renderModal() {
     
     // Protection toggle
     const protectionRow = document.createElement('div');
-    protectionRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding:12px 16px;background:#0a0c10;border-radius:10px;border:1px solid #2a3152;';
-    protectionRow.innerHTML = `<div><div style="color:#fff;font-size:14px;font-weight:600;">Lock Frequencies</div><div style="color:#8b92b4;font-size:11px;margin-top:2px;">Prevent system overrides</div></div>`;
+    protectionRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding:12px 16px;background:var(--bg-primary);border-radius:10px;border:1px solid var(--border-color);';
+    protectionRow.innerHTML = `<div><div style="color:var(--text-primary);font-size:14px;font-weight:600;">Lock Frequencies</div><div style="color:var(--text-secondary);font-size:11px;margin-top:2px;">Prevent system overrides</div></div>`;
     
     const toggleContainer = document.createElement('label');
     toggleContainer.style.cssText = 'position:relative;display:inline-block;width:52px;height:28px;cursor:pointer;';
@@ -384,9 +384,9 @@ function renderModal() {
     toggleInput.checked = protectionEnabled;
     toggleInput.style.cssText = 'opacity:0;width:0;height:0;';
     const toggleSlider = document.createElement('span');
-    toggleSlider.style.cssText = `position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:${protectionEnabled?'#32D74B':'#2a3152'};border-radius:28px;transition:0.3s;`;
+    toggleSlider.style.cssText = `position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:${protectionEnabled?'var(--accent-green)':'var(--border-color)'};border-radius:28px;transition:0.3s;`;
     const toggleKnob = document.createElement('span');
-    toggleKnob.style.cssText = `position:absolute;height:22px;width:22px;left:${protectionEnabled?'27px':'3px'};bottom:3px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 2px 4px rgba(0,0,0,0.3);`;
+    toggleKnob.style.cssText = `position:absolute;height:22px;width:22px;left:${protectionEnabled?'27px':'3px'};bottom:3px;background:var(--text-primary);border-radius:50%;transition:0.3s;box-shadow:0 2px 4px rgba(0,0,0,0.3);`;
     
     toggleContainer.appendChild(toggleInput);
     toggleContainer.appendChild(toggleSlider);
@@ -396,9 +396,9 @@ function renderModal() {
     
     toggleInput.addEventListener('change', (e) => {
         protectionEnabled = e.target.checked;
-        toggleSlider.style.background = protectionEnabled ? '#32D74B' : '#2a3152';
+        toggleSlider.style.background = protectionEnabled ? 'var(--accent-green)' : 'var(--border-color)';
         toggleKnob.style.left = protectionEnabled ? '27px' : '3px';
-        if (window.showStatus) window.showStatus(protectionEnabled ? 'Protection: ENABLED' : 'Protection: DISABLED', protectionEnabled ? '#32D74B' : '#FF9F0A');
+        if (window.showStatus) window.showStatus(protectionEnabled ? 'Protection: ENABLED' : 'Protection: DISABLED', protectionEnabled ? 'var(--accent-green)' : 'var(--accent-orange)');
         const statusEl = document.getElementById('status-global');
         if (statusEl) statusEl.textContent = protectionEnabled ? '🔒 Will lock after apply' : '✏️ Editable';
     });
@@ -428,18 +428,18 @@ function calcFreqFromPercent(percent, cpuinfoMax, cpuinfoMin) {
 
 function createGlobalSlider() {
     const card = document.createElement('div');
-    card.style.cssText = 'background:#0a0c10;border:1px solid #2a3152;border-radius:12px;padding:16px;';
-    card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="color:#4a9eff;font-size:16px;font-weight:700;">️ On-Screen Profile</div><div style="color:#8b92b4;font-size:11px;margin-top:2px;">Active CPU Max Limit</div></div><div style="text-align:right;"><div style="color:#32D74B;font-size:15px;font-weight:700;font-family:monospace;" id="cur-freq-global">-- MHz</div><div style="color:#8b92b4;font-size:10px;">Current Avg</div></div></div>`;
+    card.style.cssText = 'background:var(--bg-primary);border:1px solid var(--border-color);border-radius:12px;padding:16px;';
+    card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><div><div style="color:var(--accent-blue);font-size:16px;font-weight:700;">️ On-Screen Profile</div><div style="color:var(--text-secondary);font-size:11px;margin-top:2px;">Active CPU Max Limit</div></div><div style="text-align:right;"><div style="color:var(--accent-green);font-size:15px;font-weight:700;font-family:monospace;" id="cur-freq-global">-- MHz</div><div style="color:var(--text-secondary);font-size:10px;">Current Avg</div></div></div>`;
     
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'margin:15px 0;';
     const valueDisplay = document.createElement('div');
     valueDisplay.id = 'val-global';
-    valueDisplay.style.cssText = 'text-align:center;color:#fff;font-size:16px;font-weight:700;font-family:monospace;margin-bottom:16px;padding:8px;background:#1a1f3a;border-radius:8px;';
+    valueDisplay.style.cssText = 'text-align:center;color:var(--text-primary);font-size:16px;font-weight:700;font-family:monospace;margin-bottom:16px;padding:8px;background:var(--bg-card);border-radius:8px;';
     wrapper.appendChild(valueDisplay);
     
     const maxLabel = document.createElement('div');
-    maxLabel.style.cssText = 'color:#32D74B;font-size:12px;font-weight:600;margin-bottom:8px;';
+    maxLabel.style.cssText = 'color:var(--accent-green);font-size:12px;font-weight:600;margin-bottom:8px;';
     maxLabel.textContent = '📈 MAX Frequency Limit (%)';
     wrapper.appendChild(maxLabel);
     
@@ -448,34 +448,34 @@ function createGlobalSlider() {
     maxSlider.id = 'slider-max-global';
     maxSlider.min = 25; maxSlider.max = 100; maxSlider.step = 1;
     maxSlider.value = globalMaxPercent;
-    maxSlider.style.cssText = 'width:100%;height:6px;background:linear-gradient(to right,#2a3152 50%,#32D74B 50%);border-radius:3px;outline:none;-webkit-appearance:none;';
+    maxSlider.style.cssText = 'width:100%;height:6px;background:linear-gradient(to right,var(--border-color) 50%,var(--accent-green) 50%);border-radius:3px;outline:none;-webkit-appearance:none;';
     maxSlider.addEventListener('input', () => {
         let val = parseInt(maxSlider.value);
         globalMaxPercent = val;
         updateGlobalValueDisplay(valueDisplay);
-        updateSliderFill(maxSlider, 25, 100, val, '#32D74B');
+        updateSliderFill(maxSlider, 25, 100, val, 'var(--accent-green)');
         debouncedApplyGlobal(maxSlider);
     });
     
     updateGlobalValueDisplay(valueDisplay);
-    updateSliderFill(maxSlider, 25, 100, globalMaxPercent, '#32D74B');
+    updateSliderFill(maxSlider, 25, 100, globalMaxPercent, 'var(--accent-green)');
     wrapper.appendChild(maxSlider);
     
     const infoText = document.createElement('div');
-    infoText.style.cssText = 'text-align:center;color:#8b92b4;font-size:11px;margin-top:8px;padding:6px;background:#1a1f3a;border-radius:6px;';
-    infoText.innerHTML = `Allowed Range: <span style="color:#fff;font-weight:600;">25%</span> - <span style="color:#fff;font-weight:600;">100%</span>`;
+    infoText.style.cssText = 'text-align:center;color:var(--text-secondary);font-size:11px;margin-top:8px;padding:6px;background:var(--bg-card);border-radius:6px;';
+    infoText.innerHTML = `Allowed Range: <span style="color:var(--text-primary);font-weight:600;">25%</span> - <span style="color:var(--text-primary);font-weight:600;">100%</span>`;
     wrapper.appendChild(infoText);
     card.appendChild(wrapper);
     
     const changeBtn = document.createElement('button');
     changeBtn.textContent = '🔄 Change Active Governor';
-    changeBtn.style.cssText = 'width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#4a9eff,#2a75ff);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;';
+    changeBtn.style.cssText = 'width:100%;margin-top:12px;padding:12px;background:var(--bg-card);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;';
     changeBtn.addEventListener('click', (e) => { e.stopPropagation(); showGovernorSelector(); });
     card.appendChild(changeBtn);
     
     const statusRow = document.createElement('div');
     statusRow.id = 'status-global';
-    statusRow.style.cssText = 'text-align:center;color:#8b92b4;font-size:11px;margin-top:12px;min-height:16px;font-weight:600;';
+    statusRow.style.cssText = 'text-align:center;color:var(--text-secondary);font-size:11px;margin-top:12px;min-height:16px;font-weight:600;';
     statusRow.textContent = protectionEnabled ? '🔒 Will lock after apply' : '✏️ Editable';
     card.appendChild(statusRow);
     
@@ -491,7 +491,7 @@ function updateGlobalValueDisplay(el) {
 function updateSliderFill(slider, minBound, maxBound, value, color) {
     const range = maxBound - minBound;
     const pct = range > 0 ? ((value - minBound) / range) * 100 : 0;
-    slider.style.background = `linear-gradient(to right, ${color} ${pct}%, #2a3152 ${pct}%)`;
+    slider.style.background = `linear-gradient(to right, ${color} ${pct}%, var(--border-color) ${pct}%)`;
 }
 
 function debouncedApplyGlobal(sliderElement) {
@@ -522,25 +522,25 @@ async function applyGlobalLimit(sliderElement) {
         
         const statusEl = document.getElementById('status-global');
         if (statusEl) {
-            if (protectionEnabled && successCount > 0) { statusEl.textContent = `🔒 Locked MAX: ${globalMaxPercent}%`; statusEl.style.color = '#32D74B'; }
-            else if (successCount > 0) { statusEl.textContent = `✅ Applied MAX: ${globalMaxPercent}%`; statusEl.style.color = '#32D74B'; }
-            else { statusEl.textContent = '❌ Failed'; statusEl.style.color = '#FF453A'; }
+            if (protectionEnabled && successCount > 0) { statusEl.textContent = `🔒 Locked MAX: ${globalMaxPercent}%`; statusEl.style.color = 'var(--accent-green)'; }
+            else if (successCount > 0) { statusEl.textContent = `✅ Applied MAX: ${globalMaxPercent}%`; statusEl.style.color = 'var(--accent-green)'; }
+            else { statusEl.textContent = '❌ Failed'; statusEl.style.color = 'var(--accent-red)'; }
         }
-        if (successCount > 0 && window.showStatus) window.showStatus(`Global MAX: ${globalMaxPercent}%`, '#32D74B');
+        if (successCount > 0 && window.showStatus) window.showStatus(`Global MAX: ${globalMaxPercent}%`, 'var(--accent-green)');
     } catch (e) { 
         console.error('Apply error:', e); 
-        if (window.showStatus) window.showStatus('Error applying', '#FF453A'); 
+        if (window.showStatus) window.showStatus('Error applying', 'var(--accent-red)'); 
     }
     if (sliderElement) sliderElement.style.opacity = '1';
 }
 
 function createOffscreenCard() {
     const card = document.createElement('div');
-    card.style.cssText = 'background:#0a0c10;border:1px solid #2a3152;border-radius:12px;padding:16px;margin-top:16px;';
+    card.style.cssText = 'background:var(--bg-primary);border:1px solid var(--border-color);border-radius:12px;padding:16px;margin-top:16px;';
     
     const headerRow = document.createElement('div');
     headerRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;';
-    headerRow.innerHTML = `<div><div style="color:#FF9F0A;font-size:16px;font-weight:700;">🌙 Off-Screen Profile</div><div style="color:#8b92b4;font-size:11px;margin-top:2px;">Auto-apply when display is off</div></div>`;
+    headerRow.innerHTML = `<div><div style="color:var(--accent-orange);font-size:16px;font-weight:700;">🌙 Off-Screen Profile</div><div style="color:var(--text-secondary);font-size:11px;margin-top:2px;">Auto-apply when display is off</div></div>`;
     
     const toggleContainer = document.createElement('label');
     toggleContainer.style.cssText = 'position:relative;display:inline-block;width:52px;height:28px;cursor:pointer;';
@@ -549,9 +549,9 @@ function createOffscreenCard() {
     toggleInput.checked = offscreenEnabled;
     toggleInput.style.cssText = 'opacity:0;width:0;height:0;';
     const toggleSlider = document.createElement('span');
-    toggleSlider.style.cssText = `position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:${offscreenEnabled?'#FF9F0A':'#2a3152'};border-radius:28px;transition:0.3s;`;
+    toggleSlider.style.cssText = `position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:${offscreenEnabled?'var(--accent-orange)':'var(--border-color)'};border-radius:28px;transition:0.3s;`;
     const toggleKnob = document.createElement('span');
-    toggleKnob.style.cssText = `position:absolute;height:22px;width:22px;left:${offscreenEnabled?'27px':'3px'};bottom:3px;background:#fff;border-radius:50%;transition:0.3s;box-shadow:0 2px 4px rgba(0,0,0,0.3);`;
+    toggleKnob.style.cssText = `position:absolute;height:22px;width:22px;left:${offscreenEnabled?'27px':'3px'};bottom:3px;background:var(--text-primary);border-radius:50%;transition:0.3s;box-shadow:0 2px 4px rgba(0,0,0,0.3);`;
     
     toggleContainer.appendChild(toggleInput);
     toggleContainer.appendChild(toggleSlider);
@@ -560,10 +560,10 @@ function createOffscreenCard() {
     
     toggleInput.addEventListener('change', (e) => {
         offscreenEnabled = e.target.checked;
-        toggleSlider.style.background = offscreenEnabled ? '#FF9F0A' : '#2a3152';
+        toggleSlider.style.background = offscreenEnabled ? 'var(--accent-orange)' : 'var(--border-color)';
         toggleKnob.style.left = offscreenEnabled ? '27px' : '3px';
         saveOffscreenSettings();
-        if (window.showStatus) window.showStatus(`Off-Screen: ${offscreenEnabled ? 'ON' : 'OFF'}`, offscreenEnabled ? '#FF9F0A' : '#8b92b4');
+        if (window.showStatus) window.showStatus(`Off-Screen: ${offscreenEnabled ? 'ON' : 'OFF'}`, offscreenEnabled ? 'var(--accent-orange)' : 'var(--text-secondary)');
     });
     card.appendChild(headerRow);
     
@@ -574,13 +574,13 @@ function createOffscreenCard() {
     const freqWrapper = document.createElement('div');
     freqWrapper.style.cssText = 'margin-bottom:16px;';
     const freqLabel = document.createElement('div');
-    freqLabel.style.cssText = 'color:#FF9F0A;font-size:12px;font-weight:600;margin-bottom:8px;';
+    freqLabel.style.cssText = 'color:var(--accent-orange);font-size:12px;font-weight:600;margin-bottom:8px;';
     freqLabel.textContent = '📉 Off-Screen Max Frequency (%)';
     freqWrapper.appendChild(freqLabel);
     
     const freqValue = document.createElement('div');
     freqValue.id = 'val-offscreen-freq';
-    freqValue.style.cssText = 'text-align:center;color:#fff;font-size:14px;font-weight:700;font-family:monospace;margin-bottom:10px;padding:6px;background:#1a1f3a;border-radius:8px;';
+    freqValue.style.cssText = 'text-align:center;color:var(--text-primary);font-size:14px;font-weight:700;font-family:monospace;margin-bottom:10px;padding:6px;background:var(--bg-card);border-radius:8px;';
     freqWrapper.appendChild(freqValue);
     
     const freqSlider = document.createElement('input');
@@ -588,30 +588,30 @@ function createOffscreenCard() {
     freqSlider.id = 'slider-offscreen-freq';
     freqSlider.min = 25; freqSlider.max = 100; freqSlider.step = 1;
     freqSlider.value = offscreenFreqPercent;
-    freqSlider.style.cssText = 'width:100%;height:6px;background:linear-gradient(to right,#2a3152 50%,#FF9F0A 50%);border-radius:3px;outline:none;-webkit-appearance:none;';
+    freqSlider.style.cssText = 'width:100%;height:6px;background:linear-gradient(to right,var(--border-color) 50%,var(--accent-orange) 50%);border-radius:3px;outline:none;-webkit-appearance:none;';
     freqSlider.addEventListener('input', () => {
         let val = parseInt(freqSlider.value);
         offscreenFreqPercent = val;
         updateOffscreenFreqDisplay(freqValue);
-        updateSliderFill(freqSlider, 25, 100, val, '#FF9F0A');
+        updateSliderFill(freqSlider, 25, 100, val, 'var(--accent-orange)');
         debouncedSaveOffscreen();
     });
     
     updateOffscreenFreqDisplay(freqValue);
-    updateSliderFill(freqSlider, 25, 100, offscreenFreqPercent, '#FF9F0A');
+    updateSliderFill(freqSlider, 25, 100, offscreenFreqPercent, 'var(--accent-orange)');
     freqWrapper.appendChild(freqSlider);
     content.appendChild(freqWrapper);
     
     const govWrapper = document.createElement('div');
     govWrapper.style.cssText = 'margin-bottom:16px;';
     const govLabel = document.createElement('div');
-    govLabel.style.cssText = 'color:#FF9F0A;font-size:12px;font-weight:600;margin-bottom:8px;';
+    govLabel.style.cssText = 'color:var(--accent-orange);font-size:12px;font-weight:600;margin-bottom:8px;';
     govLabel.textContent = '⚙️ Off-Screen Governor';
     govWrapper.appendChild(govLabel);
     
     const govSelect = document.createElement('select');
     govSelect.id = 'select-offscreen-gov';
-    govSelect.style.cssText = 'width:100%;padding:10px;background:#1a1f3a;color:#fff;border:1px solid #2a3152;border-radius:8px;font-size:14px;font-weight:600;outline:none;cursor:pointer;';
+    govSelect.style.cssText = 'width:100%;padding:10px;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;font-size:14px;font-weight:600;outline:none;cursor:pointer;';
     availableGovernors.forEach(gov => {
         const opt = document.createElement('option');
         opt.value = gov;
@@ -624,8 +624,8 @@ function createOffscreenCard() {
     content.appendChild(govWrapper);
     
     const infoText = document.createElement('div');
-    infoText.style.cssText = 'text-align:center;color:#8b92b4;font-size:11px;margin-top:8px;padding:8px;background:#1a1f3a;border-radius:6px;';
-    infoText.innerHTML = `Config saved to <span style="color:#FF9F0A;font-weight:600;">/sdcard/MTK_AI_Engine/</span>`;
+    infoText.style.cssText = 'text-align:center;color:var(--text-secondary);font-size:11px;margin-top:8px;padding:8px;background:var(--bg-card);border-radius:6px;';
+    infoText.innerHTML = `Config saved to <span style="color:var(--accent-orange);font-weight:600;">/sdcard/MTK_AI_Engine/</span>`;
     content.appendChild(infoText);
     card.appendChild(content);
     
@@ -647,22 +647,19 @@ async function saveOffscreenSettings() {
     try {
         await unlockFilePermissions(OFFSCREEN_ENABLE_CONFIG);
         await writeWithBusybox(OFFSCREEN_ENABLE_CONFIG, offscreenEnabled ? '1' : '0');
-        // Removed lock for enable toggle
         
         await unlockFilePermissions(OFFSCREEN_FREQ_CONFIG);
         await writeWithBusybox(OFFSCREEN_FREQ_CONFIG, offscreenFreqPercent);
-        if (protectionEnabled) await lockFilePermissions(OFFSCREEN_FREQ_CONFIG); // Keep lock for frequency
+        if (protectionEnabled) await lockFilePermissions(OFFSCREEN_FREQ_CONFIG);
         
         await unlockFilePermissions(OFFSCREEN_GOV_CONFIG);
         await writeWithBusybox(OFFSCREEN_GOV_CONFIG, offscreenGovernor);
-        // Removed lock for governor config
         
         const contentEl = document.getElementById('offscreen-content');
         if (contentEl) { contentEl.style.opacity = offscreenEnabled ? '1' : '0.5'; contentEl.style.pointerEvents = offscreenEnabled ? 'auto' : 'none'; }
     } catch (e) { console.error('Save offscreen error:', e); }
 }
 
-// ✅ OPTIMIZED freq updates
 async function updateGlobalCurrentFrequency() {
     freqReadAbort = true;
     const myToken = Date.now();
@@ -676,7 +673,7 @@ async function updateGlobalCurrentFrequency() {
     const totalFreq = freqs.reduce((a, b) => a + b, 0);
     const avgFreq = freqs.length > 0 ? Math.round(totalFreq / freqs.length) : 0;
     const el = document.getElementById('cur-freq-global');
-    if (el && !freqReadAbort) { el.textContent = `${Math.round(avgFreq/1000)} MHz`; el.style.color = '#32D74B'; }
+    if (el && !freqReadAbort) { el.textContent = `${Math.round(avgFreq/1000)} MHz`; el.style.color = 'var(--accent-green)'; }
 }
 
 async function startFreqUpdates() {
@@ -711,7 +708,7 @@ async function applyGovernor(gov) {
     })();
     
     titleEl.textContent = 'Applying...';
-    statusEl.textContent = `Writing ${gov}...`; statusEl.style.color = '#FF9F0A';
+    statusEl.textContent = `Writing ${gov}...`; statusEl.style.color = 'var(--accent-orange)';
     
     try {
         await execFn(`su -c 'chmod 777 "${GOV_CONFIG}" 2>/dev/null'`, 100);
@@ -722,7 +719,6 @@ async function applyGovernor(gov) {
                 const govPath = `/sys/devices/system/cpu/cpufreq/${p.id}/scaling_governor`;
                 await execFn(`su -c 'chmod 777 "${govPath}" 2>/dev/null'`, 100);
                 await execFn(`su -c '${BUSYBOX} echo "${gov}" > "${govPath}"'`, 3000);
-                // Removed lock for governor sysfs file
             }
         }
         
@@ -730,7 +726,6 @@ async function applyGovernor(gov) {
             const govPath = `/sys/devices/system/cpu/cpu${i}/cpufreq/scaling_governor`;
             await execFn(`su -c 'chmod 777 "${govPath}" 2>/dev/null'`, 100);
             await execFn(`su -c '${BUSYBOX} echo "${gov}" > "${govPath}"'`, 3000);
-            // Removed lock for governor sysfs file
         }
         
         await new Promise(r => setTimeout(r, 500));
@@ -744,15 +739,15 @@ async function applyGovernor(gov) {
         if (govNameModalEl) govNameModalEl.textContent = `Current: ${currentGovernor}`;
         modifiedTunables = {};
         
-        if (window.showStatus) window.showStatus(`Governor → ${currentGovernor}`, '#32D74B');
+        if (window.showStatus) window.showStatus(`Governor → ${currentGovernor}`, 'var(--accent-green)');
         titleEl.textContent = '✅ Applied';
-        statusEl.textContent = `${currentGovernor} active`; statusEl.style.color = '#32D74B';
+        statusEl.textContent = `${currentGovernor} active`; statusEl.style.color = 'var(--accent-green)';
         
         setTimeout(() => modal.remove(), 100);
     } catch (e) {
         console.error('Governor apply failed:', e);
         titleEl.textContent = '❌ Failed';
-        statusEl.textContent = e.message || 'Check permissions'; statusEl.style.color = '#FF453A';
+        statusEl.textContent = e.message || 'Check permissions'; statusEl.style.color = 'var(--accent-red)';
         setTimeout(() => modal.remove(), 100);
     }
 }
@@ -766,15 +761,15 @@ function showGovernorSelector() {
     modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:10001;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);`;
     
     const box = document.createElement('div');
-    box.style.cssText = `background:linear-gradient(135deg,#1a1f3a,#151b2d);border:2px solid #4a9eff;border-radius:16px;padding:24px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(74,158,255,0.4);`;
-    box.innerHTML = `<h3 style="margin:0 0 16px;font-size:18px;font-weight:700;text-align:center;color:#fff;"> Select Active Governor</h3><div style="color:#8b92b4;font-size:13px;margin-bottom:20px;text-align:center;">Current: <span style="color:#32D74B;font-weight:700;">${currentGovernor}</span></div><div id="gov-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px;"></div><button id="gov-close" style="width:100%;padding:12px;background:#2a3152;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>`;
+    box.style.cssText = `background:linear-gradient(135deg,var(--bg-secondary),var(--bg-card));border:2px solid var(--border-color);border-radius:16px;padding:24px;width:90%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.5);`;
+    box.innerHTML = `<h3 style="margin:0 0 16px;font-size:18px;font-weight:700;text-align:center;color:var(--text-primary);"> Select Active Governor</h3><div style="color:var(--text-secondary);font-size:13px;margin-bottom:20px;text-align:center;">Current: <span style="color:var(--accent-green);font-weight:700;">${currentGovernor}</span></div><div id="gov-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px;"></div><button id="gov-close" style="width:100%;padding:12px;background:var(--border-color);color:var(--text-primary);border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>`;
     
     const grid = box.querySelector('#gov-grid');
     availableGovernors.forEach(gov => {
         const btn = document.createElement('button');
         const isCurrent = gov === currentGovernor;
         btn.textContent = gov.charAt(0).toUpperCase() + gov.slice(1);
-        btn.style.cssText = `padding:14px;background:${isCurrent?'linear-gradient(135deg,#32D74B,#2ecc71)':'#0f1419'};color:${isCurrent?'#fff':'#e0e0e0'};border:${isCurrent?'2px solid #32D74B':'1px solid #2a3152'};border-radius:10px;font-size:13px;font-weight:${isCurrent?'700':'600'};cursor:pointer;`;
+        btn.style.cssText = `padding:14px;background:${isCurrent?'var(--accent-green)':'var(--bg-primary)'};color:${isCurrent?'var(--text-primary)':'var(--text-primary)'};border:${isCurrent?'2px solid var(--accent-green)':'1px solid var(--border-color)'};border-radius:10px;font-size:13px;font-weight:${isCurrent?'700':'600'};cursor:pointer;`;
         btn.onclick = () => applyGovernor(gov);
         grid.appendChild(btn);
     });
@@ -816,12 +811,12 @@ async function loadAndRenderTunables() {
     if (!listEl) return;
     if (govNameEl) govNameEl.textContent = `Current: ${currentGovernor}`;
     
-    listEl.innerHTML = '<div style="text-align:center;color:#8b92b4;font-size:12px;padding:20px;">Loading...</div>';
+    listEl.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:12px;padding:20px;">Loading...</div>';
     const tunables = await loadGovernorTunables();
     listEl.innerHTML = '';
     
     if (tunables.length === 0) {
-        listEl.innerHTML = '<div style="text-align:center;color:#8b92b4;font-size:12px;padding:20px;">No tunables found for this governor.</div>';
+        listEl.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:12px;padding:20px;">No tunables found for this governor.</div>';
         return;
     }
     for (const t of tunables) { listEl.appendChild(createTunableRow(t)); }
@@ -829,11 +824,11 @@ async function loadAndRenderTunables() {
 
 function createTunableRow(tunable) {
     const row = document.createElement('div');
-    row.style.cssText = 'background:#1a1f3a;border-radius:8px;padding:12px;';
+    row.style.cssText = 'background:var(--bg-card);border-radius:8px;padding:12px;';
     const safeId = tunable.name.replace(/[^a-zA-Z0-9_]/g, '_');
     const isSingleNumeric = /^[\d]+$/.test(tunable.value.trim());
     
-    row.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="color:#fff;font-size:13px;font-weight:600;font-family:monospace;">${tunable.name}</div><div style="color:#AF52DE;font-size:12px;font-weight:700;font-family:monospace;" id="val-${safeId}">${tunable.value}</div></div>`;
+    row.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="color:var(--text-primary);font-size:13px;font-weight:600;font-family:monospace;">${tunable.name}</div><div style="color:var(--accent-purple);font-size:12px;font-weight:700;font-family:monospace;" id="val-${safeId}">${tunable.value}</div></div>`;
     
     if (isSingleNumeric) {
         const numVal = parseInt(tunable.value);
@@ -847,14 +842,14 @@ function createTunableRow(tunable) {
         slider.type = 'range';
         slider.min = minVal; slider.max = maxVal; slider.step = stepVal;
         slider.value = numVal;
-        slider.style.cssText = 'width:100%;height:6px;background:linear-gradient(to right,#2a3152 50%,#AF52DE 50%);border-radius:3px;outline:none;-webkit-appearance:none;';
+        slider.style.cssText = 'width:100%;height:6px;background:linear-gradient(to right,var(--border-color) 50%,var(--accent-purple) 50%);border-radius:3px;outline:none;-webkit-appearance:none;';
         slider.addEventListener('input', () => {
             const v = parseInt(slider.value);
             row.querySelector(`#val-${safeId}`).textContent = v;
-            updateSliderFill(slider, minVal, maxVal, v, '#AF52DE');
+            updateSliderFill(slider, minVal, maxVal, v, 'var(--accent-purple)');
             debouncedApplyTunable(tunable.path, v.toString());
         });
-        updateSliderFill(slider, minVal, maxVal, numVal, '#AF52DE');
+        updateSliderFill(slider, minVal, maxVal, numVal, 'var(--accent-purple)');
         sliderWrapper.appendChild(slider);
         row.appendChild(sliderWrapper);
     } else {
@@ -863,10 +858,10 @@ function createTunableRow(tunable) {
         const input = document.createElement('input');
         input.type = 'text';
         input.value = tunable.value;
-        input.style.cssText = 'flex:1;padding:8px;background:#0a0c10;color:#fff;border:1px solid #2a3152;border-radius:6px;font-size:12px;font-family:monospace;outline:none;';
+        input.style.cssText = 'flex:1;padding:8px;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:6px;font-size:12px;font-family:monospace;outline:none;';
         const applyBtn = document.createElement('button');
         applyBtn.textContent = 'Apply';
-        applyBtn.style.cssText = 'padding:8px 12px;background:#AF52DE;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;';
+        applyBtn.style.cssText = 'padding:8px 12px;background:var(--accent-purple);color:var(--text-primary);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;';
         applyBtn.addEventListener('click', () => { debouncedApplyTunable(tunable.path, input.value.trim()); });
         inputWrapper.appendChild(input);
         inputWrapper.appendChild(applyBtn);
@@ -875,7 +870,7 @@ function createTunableRow(tunable) {
     
     const status = document.createElement('div');
     status.id = `status-${safeId}`;
-    status.style.cssText = 'text-align:right;color:#8b92b4;font-size:10px;margin-top:6px;min-height:14px;';
+    status.style.cssText = 'text-align:right;color:var(--text-secondary);font-size:10px;margin-top:6px;min-height:14px;';
     row.appendChild(status);
     return row;
 }
@@ -890,25 +885,24 @@ async function applyTunable(path, value) {
     const safeId = fileName.replace(/[^a-zA-Z0-9_]/g, '_');
     const statusEl = document.getElementById(`status-${safeId}`);
     
-    if (statusEl) { statusEl.textContent = 'Applying...'; statusEl.style.color = '#FF9F0A'; }
+    if (statusEl) { statusEl.textContent = 'Applying...'; statusEl.style.color = 'var(--accent-orange)'; }
     try {
         await unlockFilePermissions(path);
         const success = await writeWithBusybox(path, value);
-        // Removed lock for tunable files
         
         if (statusEl) {
             if (success) {
                 modifiedTunables[path] = value;
                 statusEl.textContent = '✅ Applied';
-                statusEl.style.color = '#32D74B';
+                statusEl.style.color = 'var(--accent-green)';
             } else {
                 statusEl.textContent = '❌ Failed';
-                statusEl.style.color = '#FF453A';
+                statusEl.style.color = 'var(--accent-red)';
             }
         }
     } catch (e) {
         console.error('Apply tunable error:', e);
-        if (statusEl) { statusEl.textContent = '⚠️ Error'; statusEl.style.color = '#FF453A'; }
+        if (statusEl) { statusEl.textContent = '⚠️ Error'; statusEl.style.color = 'var(--accent-red)'; }
     }
 }
 

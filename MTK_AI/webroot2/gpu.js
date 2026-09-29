@@ -65,7 +65,7 @@ const CONFIG_DIR = '/sdcard/MTK_AI_Engine';
  // Show status message (integrates with main panel if available)
  function showStatus(msg, isError = false) {
      if (window.showStatus) {
-         window.showStatus(msg, isError ? '#ef4444' : '#10b981');
+         window.showStatus(msg, isError ? 'var(--accent-red)' : 'var(--accent-green)');
      } else {
          console.log(isError ? '❌' : '✅', msg);
      }
@@ -343,19 +343,19 @@ const CONFIG_DIR = '/sdcard/MTK_AI_Engine';
      `;
      const box = document.createElement('div');
      box.style.cssText = `
-         background: linear-gradient(145deg, #1e2342, #2a3059);
-         border: 1px solid rgba(255,69,58,0.4);
+         background: var(--bg-card);
+         border: 1px solid var(--border-color);
          border-radius: 18px;
          padding: 22px; width: 92%; max-width: 460px;
          box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
-         color: #fff; transform: translateY(0); transition: transform 0.2s ease;
+         color: var(--text-primary); transform: translateY(0); transition: transform 0.2s ease;
      `;
      // Header
      const header = document.createElement('div');
-     header.style.cssText = 'text-align: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.08);';
+     header.style.cssText = 'text-align: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border-color);';
      header.innerHTML = `
-         <h3 style="color: #FF453A; margin: 0 0 4px; font-size: 19px; font-weight: 600;">🎮 GPU Control</h3>
-         <p style="color: #7a82b0; font-size: 12px; margin: 0; opacity: 0.9;">
+         <h3 style="color: var(--text-primary); margin: 0 0 4px; font-size: 19px; font-weight: 600;">🎮 GPU Control</h3>
+         <p style="color: var(--text-secondary); font-size: 12px; margin: 0; opacity: 0.9;">
              ${gpuDriverType || 'Auto-detected'} • ${oppCount} OPPs • ${detectedMinFreq}–${detectedMaxFreq} MHz
          </p>
      `;
@@ -365,10 +365,10 @@ const CONFIG_DIR = '/sdcard/MTK_AI_Engine';
      govSection.style.cssText = 'margin-bottom: 18px;';
      govSection.innerHTML = `
          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-             <span style="color:#fff;font-size:14px;font-weight:500;">GPU Governor</span>
-             <span id="gpu-gov-val" style="color:#60a5fa;font-size:12px;font-weight:500;background:rgba(96,165,250,0.15);padding:3px 10px;border-radius:6px;">${currentGovernor}</span>
+             <span style="color:var(--text-primary);font-size:14px;font-weight:500;">GPU Governor</span>
+             <span id="gpu-gov-val" style="color:var(--accent-blue);font-size:12px;font-weight:500;background:rgba(74,158,255,0.15);padding:3px 10px;border-radius:6px;">${currentGovernor}</span>
          </div>
-         <select id="gpu-gov-select" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:#fff;font-size:13px;outline:none;transition:border-color 0.2s;">
+         <select id="gpu-gov-select" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-primary);font-size:13px;outline:none;transition:border-color 0.2s;">
              <option value="simple_ondemand">simple_ondemand (Balanced)</option>
              <option value="performance">performance (Max)</option>
              <option value="powersave">powersave (Efficient)</option>
@@ -380,24 +380,24 @@ const CONFIG_DIR = '/sdcard/MTK_AI_Engine';
      // Frequency Lock Toggle - Network Optimizer Style
 const lockSection = document.createElement('div');
 lockSection.style.cssText = 'margin-bottom: 16px;';
-lockSection.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:rgba(30,41,59,0.6);border:1px solid rgba(99,102,241,0.2);border-radius:16px;"> <div style="flex:1;"> <div style="color:#60a5fa;font-size:14px;font-weight:600;margin-bottom:4px;">Lock GPU Frequency</div> <div style="color:#94a3b8;font-size:12px;">Disable dynamic scaling for consistent performance</div> </div> <label class="gpu-switch" style="position:relative;display:inline-block;width:52px;height:28px;cursor:pointer;margin-left:16px;"> <input type="checkbox" id="gpu-lock-toggle" ${isFreqLocked ? 'checked' : ''} style="opacity:0;width:0;height:0;"> <span class="gpu-slider" style="position:absolute;top:0;left:0;right:0;bottom:0;background-color:#475569;transition:all 0.3s ease;border-radius:28px;"> <span class="gpu-knob" style="position:absolute;content:'';height:22px;width:22px;left:3px;top:3px;background-color:#fff;transition:all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.2);"></span> </span> </label> </div>`;
+lockSection.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:16px;"> <div style="flex:1;"> <div style="color:var(--accent-blue);font-size:14px;font-weight:600;margin-bottom:4px;">Lock GPU Frequency</div> <div style="color:var(--text-secondary);font-size:12px;">Disable dynamic scaling for consistent performance</div> </div> <label class="gpu-switch" style="position:relative;display:inline-block;width:52px;height:28px;cursor:pointer;margin-left:16px;"> <input type="checkbox" id="gpu-lock-toggle" ${isFreqLocked ? 'checked' : ''} style="opacity:0;width:0;height:0;"> <span class="gpu-slider" style="position:absolute;top:0;left:0;right:0;bottom:0;background-color:var(--border-color);transition:all 0.3s ease;border-radius:28px;"> <span class="gpu-knob" style="position:absolute;content:'';height:22px;width:22px;left:3px;top:3px;background-color:var(--text-primary);transition:all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,0.2);"></span> </span> </label> </div>`;
 box.appendChild(lockSection);
     // Frequency Slider Section
      const sliderSection = document.createElement('div');
      sliderSection.id = 'gpu-slider-section';
      sliderSection.style.cssText = `
-         margin-bottom:22px; padding:14px; background:rgba(255,255,255,0.04); 
+         margin-bottom:22px; padding:14px; background:var(--bg-secondary); 
          border-radius:12px; transition:opacity 0.2s ease, filter 0.2s ease;
          ${isFreqLocked ? '' : 'opacity:0.6;filter:blur(0.5px);'}
      `;
      const rangeLabels = document.createElement('div');
-     rangeLabels.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:10px;font-size:11px;color:#8b92b4;font-weight:500;';
+     rangeLabels.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:10px;font-size:11px;color:var(--text-secondary);font-weight:500;';
      rangeLabels.innerHTML = `<span>${detectedMinFreq} MHz</span><span>${detectedMaxFreq} MHz</span>`;
      const labelRow = document.createElement('div');
      labelRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;';
      labelRow.innerHTML = `
-         <span style="color:#fff;font-size:14px;font-weight:500;">Target Frequency</span>
-         <span id="gpu-freq-val" style="color:#FF453A;font-size:19px;font-weight:700;text-shadow:0 0 12px rgba(255,69,58,0.3);">${gpuFrequencyMap[currentOppIndex] || detectedMaxFreq} MHz</span>
+         <span style="color:var(--text-primary);font-size:14px;font-weight:500;">Target Frequency</span>
+         <span id="gpu-freq-val" style="color:var(--text-primary);font-size:19px;font-weight:700;text-shadow:0 0 12px rgba(74,158,255,0.3);">${gpuFrequencyMap[currentOppIndex] || detectedMaxFreq} MHz</span>
      `;
      const slider = document.createElement('input');
      slider.type = 'range';
@@ -407,7 +407,7 @@ box.appendChild(lockSection);
      slider.value = oppCount - 1 - currentOppIndex;
      slider.id = 'gpu-opp-slider';
      slider.style.cssText = `
-         width:100%;height:5px;background:linear-gradient(90deg,#374151,#4b5563);
+         width:100%;height:5px;background:var(--border-color);
          border-radius:3px;outline:none;-webkit-appearance:none;cursor:pointer;
      `;
      slider.oninput = (e) => {
@@ -419,19 +419,19 @@ box.appendChild(lockSection);
 const style = document.createElement('style');
 style.textContent = `
 .gpu-switch input:checked + .gpu-slider {
-background-color: #3b82f6;
+background-color: var(--accent-blue);
 }
 .gpu-switch input:checked + .gpu-slider .gpu-knob {
     transform: translateX(24px);
 }
 .gpu-switch input:focus + .gpu-slider {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.3);
 }
 .gpu-slider:hover {
-    background-color: #64748b;
+    background-color: var(--border-color);
 }
 .gpu-switch input:checked + .gpu-slider:hover {
-    background-color: #2563eb;
+    background-color: var(--accent-blue);
 }
 `;
 document.head.appendChild(style);
@@ -440,21 +440,21 @@ document.head.appendChild(style);
      // Info Box - Cleaner Design
      const infoBox = document.createElement('div');
      infoBox.style.cssText = `
-         background:rgba(255,69,58,0.08);border:1px solid rgba(255,69,58,0.25);
-         border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:12px;color:#fca5a5;
+         background:var(--bg-secondary);border:1px solid var(--border-color);
+         border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:12px;color:var(--text-secondary);
          line-height:1.4;
      `;
      infoBox.innerHTML = `
-         <strong style="color:#FF453A;">💡 Quick Tips:</strong><br>
-         • <b style="color:#fff;">Lock + High Freq:</b> Max gaming performance (↑ heat/battery)<br>
-         • <b style="color:#fff;">Lock + Low Freq:</b> Cooler operation, longer battery life<br>
-         • <b style="color:#fff;">Unlocked:</b> GPU scales dynamically based on workload ✅
+         <strong style="color:var(--text-primary);">💡 Quick Tips:</strong><br>
+         • <b style="color:var(--text-primary);">Lock + High Freq:</b> Max gaming performance (↑ heat/battery)<br>
+         • <b style="color:var(--text-primary);">Lock + Low Freq:</b> Cooler operation, longer battery life<br>
+         • <b style="color:var(--text-primary);">Unlocked:</b> GPU scales dynamically based on workload ✅
      `;
      box.appendChild(infoBox);
      // Status Text
      const statusEl = document.createElement('div');
      statusEl.id = 'gpu-status-msg';
-     statusEl.style.cssText = 'text-align:center;font-size:13px;color:#9ca3af;margin-bottom:14px;min-height:22px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);transition:all 0.2s ease;';
+     statusEl.style.cssText = 'text-align:center;font-size:13px;color:var(--text-secondary);margin-bottom:14px;min-height:22px;padding:10px;border-radius:10px;background:var(--bg-secondary);border:1px solid var(--border-color);transition:all 0.2s ease;';
      statusEl.textContent = 'Status: Ready to apply';        box.appendChild(statusEl);
      // Apply Button - CLEAN DESIGN WITH STATES
      const applyBtn = document.createElement('button');
@@ -462,19 +462,19 @@ document.head.appendChild(style);
      applyBtn.textContent = '💾 Apply GPU Settings';
      applyBtn.style.cssText = `
          width:100%;padding:13px;margin-bottom:10px;
-         background:linear-gradient(135deg,#FF453A,#dc2626);
-         color:#fff;border:none;border-radius:12px;
+         background:var(--accent-blue);
+         color:var(--text-primary);border:none;border-radius:12px;
          font-size:14px;font-weight:600;cursor:pointer;
-         box-shadow:0 4px 14px rgba(255,69,58,0.35);
+         box-shadow:0 4px 14px rgba(74,158,255,0.35);
          transition:all 0.2s ease; position: relative; overflow: hidden;
      `;
      applyBtn.onmouseenter = function() {
          this.style.transform = 'translateY(-1px)';
-         this.style.boxShadow = '0 6px 20px rgba(255,69,58,0.5)';
+         this.style.boxShadow = '0 6px 20px rgba(74,158,255,0.5)';
      };
      applyBtn.onmouseleave = function() {
          this.style.transform = 'translateY(0)';
-         this.style.boxShadow = '0 4px 14px rgba(255,69,58,0.35)';
+         this.style.boxShadow = '0 4px 14px rgba(74,158,255,0.35)';
      };
      applyBtn.onmousedown = function() {
          this.style.transform = 'translateY(1px)';
@@ -489,13 +489,13 @@ document.head.appendChild(style);
      const debugBtn = document.createElement('button');
      debugBtn.textContent = '🔍 Debug';
      debugBtn.style.cssText = `
-         padding:11px;background:rgba(255,255,255,0.08);color:#9ca3af;
-         border:1px solid rgba(255,255,255,0.12);border-radius:10px;
+         padding:11px;background:var(--bg-secondary);color:var(--text-secondary);
+         border:1px solid var(--border-color);border-radius:10px;
          font-size:12px;cursor:pointer;transition:all 0.2s ease;
      `;
      debugBtn.onmouseenter = function() {
-         this.style.background = 'rgba(255,255,255,0.12)';
-         this.style.color = '#fff';
+         this.style.background = 'var(--bg-primary)';
+         this.style.color = 'var(--text-primary)';
      };
      debugBtn.onclick = () => {
          alert(JSON.stringify({
@@ -509,13 +509,13 @@ document.head.appendChild(style);
      const cancelBtn = document.createElement('button');
      cancelBtn.textContent = 'Cancel';
      cancelBtn.style.cssText = `
-         padding:11px;background:rgba(255,255,255,0.08);color:#fff;
-         border:1px solid rgba(255,255,255,0.12);border-radius:10px;
+         padding:11px;background:var(--bg-secondary);color:var(--text-primary);
+         border:1px solid var(--border-color);border-radius:10px;
          font-size:13px;cursor:pointer;transition:all 0.2s ease;font-weight:500;
      `;
      cancelBtn.onmouseenter = function() {
-         this.style.background = 'rgba(239,68,68,0.2)';
-         this.style.borderColor = 'rgba(239,68,68,0.4)';
+         this.style.background = 'var(--bg-primary)';
+         this.style.borderColor = 'var(--accent-blue)';
      };
      cancelBtn.onclick = () => {
          modal.style.opacity = '0';
@@ -551,7 +551,7 @@ document.head.appendChild(style);
          const statusEl = document.getElementById('gpu-status-msg');
          if (statusEl) {
              statusEl.textContent = isFreqLocked ? '🔒 Locked mode selected' : '🔓 Dynamic scaling will be restored';
-             statusEl.style.color = isFreqLocked ? '#fbbf24' : '#60a5fa';
+             statusEl.style.color = isFreqLocked ? 'var(--text-primary)' : 'var(--accent-blue)';
          }
      });
      // Load available governors dynamically
@@ -582,8 +582,8 @@ document.head.appendChild(style);
      if (isApplying) {
          if (statusEl) {
              statusEl.textContent = '⏳ Already applying...';
-             statusEl.style.color = '#fbbf24';
-             statusEl.style.background = 'rgba(251,191,36,0.15)';
+             statusEl.style.color = 'var(--text-primary)';
+             statusEl.style.background = 'var(--bg-secondary)';
          }
          return;
      }
@@ -600,8 +600,8 @@ document.head.appendChild(style);
      }
      if (statusEl) {
          statusEl.textContent = `⏳ Applying ${targetFreq} MHz + ${selectedGov}...`;
-         statusEl.style.color = '#fbbf24';
-         statusEl.style.background = 'rgba(251,191,36,0.15)';
+         statusEl.style.color = 'var(--text-primary)';
+         statusEl.style.background = 'var(--bg-secondary)';
      }
      try {
          await execFn(`mkdir -p ${CONFIG_DIR}`);
@@ -622,8 +622,8 @@ document.head.appendChild(style);
          if (statusEl) {
              const lockText = isFreqLocked ? `🔒 ${targetFreq} MHz` : '🔓 Dynamic';
              statusEl.textContent = `✅ Applied: ${lockText} | ${selectedGov}`;
-             statusEl.style.color = '#34d399';
-             statusEl.style.background = 'rgba(52,211,153,0.15)';
+             statusEl.style.color = 'var(--text-primary)';
+             statusEl.style.background = 'var(--bg-secondary)';
          }
          showStatus(`✅ GPU: ${isFreqLocked ? targetFreq + ' MHz (locked)' : 'Dynamic scaling'} | ${selectedGov}`);
          // Close modal with animation
@@ -636,8 +636,8 @@ document.head.appendChild(style);
          console.error('GPU apply failed:', e);
          debugInfo.execError = e.message;            if (statusEl) {
              statusEl.textContent = `❌ Failed: ${e.message || 'Unknown error'}`;
-             statusEl.style.color = '#f87171';
-             statusEl.style.background = 'rgba(248,113,113,0.15)';
+             statusEl.style.color = 'var(--text-primary)';
+             statusEl.style.background = 'var(--bg-secondary)';
          }
          showStatus('❌ GPU apply failed', true);
      } finally {

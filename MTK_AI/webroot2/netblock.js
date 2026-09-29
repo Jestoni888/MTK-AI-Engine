@@ -320,26 +320,26 @@ function showNetBlockModal() {
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);';
     
     const box = document.createElement('div');
-    box.style.cssText = 'background:linear-gradient(135deg,#1a1f3a,#2d3561);border:2px solid #06b6d4;border-radius:20px;padding:24px;width:95%;max-width:500px;box-shadow:0 0 40px rgba(6,182,212,0.2);';
+    box.style.cssText = 'background:var(--bg-card);border:1px solid var(--border-color);border-radius:20px;padding:24px;width:95%;max-width:500px;box-shadow:0 0 40px rgba(0,0,0,0.4);';
     
     box.innerHTML = `
-        <h3 style="color:#06b6d4;margin:0 0 5px;font-size:20px;text-align:center;">🌐 App NetBlock Manager</h3>
-        <p style="color:#8b92b4;font-size:12px;text-align:center;margin-bottom:20px;">Block internet (Wi-Fi & Data) per app via root iptables</p>
+        <h3 style="color:#fff;margin:0 0 5px;font-size:20px;text-align:center;">🌐 App NetBlock Manager</h3>
+        <p style="color:#fff;font-size:12px;text-align:center;margin-bottom:20px;">Block internet (Wi-Fi & Data) per app via root iptables</p>
         <div style="display:flex;gap:8px;margin-bottom:15px;">
-            <input type="text" id="netblock-search" placeholder="🔍 Search apps..." style="flex:1;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid #06b6d4;border-radius:8px;color:#fff;font-size:12px;">
-            <button id="netblock-refresh-btn" style="padding:10px 16px;background:rgba(6,182,212,0.3);color:#fff;border:1px solid #06b6d4;border-radius:8px;font-size:12px;cursor:pointer;">🔄</button>
+            <input type="text" id="netblock-search" placeholder="🔍 Search apps..." style="flex:1;padding:10px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;color:#fff;font-size:12px;">
+            <button id="netblock-refresh-btn" style="padding:10px 16px;background:var(--bg-secondary);color:#fff;border:1px solid var(--border-color);border-radius:8px;font-size:12px;cursor:pointer;">🔄</button>
         </div>
-        <div id="netblock-scan-status" style="text-align:center;font-size:12px;color:#666;margin-bottom:15px;min-height:40px;padding:8px;background:rgba(0,0,0,0.2);border-radius:8px;">
-            <span style="color:#06b6d4;"> Loading...</span>
+        <div id="netblock-scan-status" style="text-align:center;font-size:12px;color:#fff;margin-bottom:15px;min-height:40px;padding:8px;background:var(--bg-secondary);border-radius:8px;border:1px solid var(--border-color);">
+            <span style="color:#fff;">Loading...</span>
         </div>
         <div id="netblock-list" style="display:none;flex-direction:column;gap:8px;margin-bottom:15px;max-height:350px;overflow-y:auto;padding-right:4px;"></div>
-        <div style="background:rgba(6,182,212,0.1);color:#7dd3fc;padding:10px;border-radius:8px;font-size:11px;text-align:center;margin-bottom:15px;">
-            <i class="fas fa-info-circle"></i> Engine: <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">${iptablesCmd}</code> | Boot: <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">service.d</code>
+        <div style="background:var(--bg-secondary);color:#fff;padding:10px;border-radius:8px;font-size:11px;text-align:center;margin-bottom:15px;border:1px solid var(--border-color);">
+            <i class="fas fa-info-circle"></i> Engine: <code style="background:var(--bg-primary);padding:2px 6px;border-radius:4px;color:#fff;">${iptablesCmd}</code> | Boot: <code style="background:var(--bg-primary);padding:2px 6px;border-radius:4px;color:#fff;">service.d</code>
         </div>
         <div style="display:flex;gap:8px;">
-            <button id="netblock-block-all" style="flex:1;padding:12px;background:rgba(239,68,68,0.2);color:#ef4444;border:1px solid #ef4444;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Block All</button>
-            <button id="netblock-unblock-all" style="flex:1;padding:12px;background:rgba(16,185,129,0.2);color:#10b981;border:1px solid #10b981;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Unblock All</button>
-            <button id="netblock-cancel-btn" style="flex:1;padding:12px;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;">Close</button>
+            <button id="netblock-block-all" style="flex:1;padding:12px;background:var(--bg-secondary);color:#fff;border:1px solid var(--border-color);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Block All</button>
+            <button id="netblock-unblock-all" style="flex:1;padding:12px;background:var(--bg-secondary);color:#fff;border:1px solid var(--border-color);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Unblock All</button>
+            <button id="netblock-cancel-btn" style="flex:1;padding:12px;background:var(--bg-secondary);color:#fff;border:1px solid var(--border-color);border-radius:10px;font-size:13px;cursor:pointer;">Close</button>
         </div>
     `;
     
@@ -369,9 +369,9 @@ function updateAppRowUI(pkg, isNowBlocked) {
     const appEl = document.getElementById(`app-${pkg}`);
     if (!appEl) return;
     
-    const statusColor = isNowBlocked ? '#ef4444' : '#10b981';
+    const statusColor = '#fff';
     const statusText = isNowBlocked ? '🚫 Blocked' : '🟢 Online';
-    const btnBg = isNowBlocked ? '#ef4444' : '#10b981';
+    const btnBg = 'var(--bg-secondary)';
     const btnText = isNowBlocked ? 'Unblock' : 'Block';
     
     const infoDiv = appEl.querySelector('div[style*="flex:1"]');
@@ -386,6 +386,7 @@ function updateAppRowUI(pkg, isNowBlocked) {
     const btn = appEl.querySelector('.netblock-app-toggle');
     if (btn) {
         btn.style.background = btnBg;
+        btn.style.borderColor = 'var(--border-color)';
         btn.textContent = btnText;
         btn.dataset.blocked = isNowBlocked ? '1' : '0';
         btn.disabled = false;
@@ -405,7 +406,7 @@ async function scanApps() {
         const allPkgs = await getAllPackages();
         
         if (!allPkgs.length) {
-            statusEl.innerHTML = '<span style="color:#666;">No apps found.</span>';
+            statusEl.innerHTML = '<span style="color:#fff;">No apps found.</span>';
             listEl.style.display = 'none';
             return;
         }
@@ -418,8 +419,6 @@ async function scanApps() {
         const { labels, system } = await enrichApps(allPkgs);
         
         statusEl.textContent = `⚡ Checking block status...`;
-        
-        const colors = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#14b8a6'];
         
         for (const pkg of allPkgs) {
             const isSystem = system.has(pkg);
@@ -435,29 +434,27 @@ async function scanApps() {
         
         for (const app of detectedApps) {
             const { pkg, label: appName, isBlocked, isSystem } = app;
-            const colorIdx = pkg.charCodeAt(0) % colors.length;
-            const color = colors[colorIdx];
             const firstLetter = appName.charAt(0).toUpperCase();
             
-            const statusColor = isBlocked ? '#ef4444' : '#10b981';
+            const statusColor = '#fff';
             const statusText = isBlocked ? '🚫 Blocked' : '🟢 Online';
-            const btnBg = isBlocked ? '#ef4444' : '#10b981';
+            const btnBg = 'var(--bg-secondary)';
             const btnText = isBlocked ? 'Unblock' : 'Block';
             
             const appEl = document.createElement('div');
             appEl.id = `app-${pkg}`;
-            appEl.style.cssText = 'background:rgba(0,0,0,0.3);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;';
+            appEl.style.cssText = 'background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:12px;display:flex;align-items:center;gap:12px;';
             appEl.innerHTML = `
                 <div style="position:relative;width:48px;height:48px;flex-shrink:0;">
-                    <img src="ksu://icon/${pkg}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:48px;height:48px;border-radius:12px;object-fit:cover;background:#2c2c2e;">
-                    <div style="display:none;width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,${color},${color}aa);align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:bold;box-shadow:0 4px 12px rgba(0,0,0,0.3);">${firstLetter}</div>
+                    <img src="ksu://icon/${pkg}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:48px;height:48px;border-radius:12px;object-fit:cover;background:var(--bg-card);">
+                    <div style="display:none;width:48px;height:48px;border-radius:12px;background:var(--bg-card);border:1px solid var(--border-color);align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:bold;box-shadow:0 4px 12px rgba(0,0,0,0.3);">${firstLetter}</div>
                 </div>
                 <div style="flex:1;min-width:0;">
                     <div style="color:#fff;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${appName}</div>
                     <div style="color:${statusColor};font-size:11px;margin-top:2px;">${statusText}</div>
-                    <div style="color:#555;font-size:10px;font-family:monospace;margin-top:1px;">${pkg}${isSystem ? ' (System)' : ''}</div>
+                    <div style="color:#fff;font-size:10px;font-family:monospace;margin-top:1px;">${pkg}${isSystem ? ' (System)' : ''}</div>
                 </div>
-                <button class="netblock-app-toggle" data-pkg="${pkg}" data-blocked="${isBlocked ? '1' : '0'}" style="background:${btnBg};color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;min-width:70px;">${btnText}</button>
+                <button class="netblock-app-toggle" data-pkg="${pkg}" data-blocked="${isBlocked ? '1' : '0'}" style="background:${btnBg};color:#fff;border:1px solid var(--border-color);padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;min-width:70px;">${btnText}</button>
             `;
             listEl.appendChild(appEl);
         }
@@ -501,7 +498,7 @@ async function scanApps() {
         });
     } catch (e) {
         console.error('Scan failed:', e);
-        statusEl.innerHTML = `<span style="color:#FF453A;"> Error: ${e.message}</span>`;
+        statusEl.innerHTML = `<span style="color:#fff;"> Error: ${e.message}</span>`;
     }
 }
 
@@ -524,7 +521,7 @@ async function toggleAllApps(block) {
     if (!statusEl) return;
     
     statusEl.style.display = 'block';
-    statusEl.innerHTML = `<span style="color:#06b6d4;">⏳ ${block ? 'Blocking all' : 'Unblocking all'} apps...</span>`;
+    statusEl.innerHTML = `<span style="color:#fff;">⏳ ${block ? 'Blocking all' : 'Unblocking all'} apps...</span>`;
     
     try {
         await ensureChain();
@@ -548,11 +545,11 @@ async function toggleAllApps(block) {
         }
         
         await saveConfig();
-        statusEl.innerHTML = `<span style="color:#10b981;">✅ Done</span>`;
+        statusEl.innerHTML = `<span style="color:#fff;">✅ Done</span>`;
         setTimeout(() => { statusEl.style.display = 'none'; }, 1500);
     } catch (e) {
         console.error('Toggle all failed:', e);
-        statusEl.innerHTML = `<span style="color:#ef4444;">❌ Error executing action</span>`;
+        statusEl.innerHTML = `<span style="color:#fff;">❌ Error executing action</span>`;
     }
 }
 

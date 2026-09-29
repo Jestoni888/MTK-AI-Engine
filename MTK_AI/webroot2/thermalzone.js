@@ -47,7 +47,8 @@
         btn.addEventListener('click', () => {
             console.log('ThermalZone: Button clicked');
             showThermalModal();
-        });    }
+        });
+    }
 
     function showThermalModal() {
         const existing = document.getElementById('thermal-modal');
@@ -63,40 +64,41 @@
 
         const box = document.createElement('div');
         box.style.cssText = `
-            background: linear-gradient(135deg, #1a1f3a, #2d3561);
-            border: 2px solid #f59e0b;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+            border: 1px solid var(--border-color);
             border-radius: 20px;
             padding: 24px; width: 95%; max-width: 450px;
-            box-shadow: 0 0 40px rgba(245, 158, 11, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         `;
 
         box.innerHTML = `
-            <h3 style="color: #f59e0b; margin: 0 0 5px; font-size: 20px; text-align: center;">🔥 Thermal Zone Manager</h3>
-            <p style="color: #8b92b4; font-size: 12px; text-align: center; margin-bottom: 20px;">Enable/disable thermal throttling zones</p>
+            <h3 style="color: #ffffff; margin: 0 0 5px; font-size: 20px; text-align: center;">🔥 Thermal Zone Manager</h3>
+            <p style="color: #ffffff; opacity: 0.8; font-size: 12px; text-align: center; margin-bottom: 20px;">Enable/disable thermal throttling zones</p>
 
-            <div id="thermal-scan-status" style="text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; min-height: 40px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-                <span style="color: #FF9F0A;">🔍 Scanning thermal zones...</span>
+            <div id="thermal-scan-status" style="text-align: center; font-size: 12px; color: #ffffff; margin-bottom: 15px; min-height: 40px; padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
+                <span style="color: var(--accent-orange);">🔍 Scanning thermal zones...</span>
             </div>
 
             <div id="thermal-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; max-height: 200px; overflow-y: auto; padding-right: 4px;">
                 <!-- Zones injected here -->
             </div>
 
-            <div style="background: rgba(245,158,11,0.1); color: #f59e0b; padding: 10px; border-radius: 8px; font-size: 11px; text-align: center; margin-bottom: 15px;">
-                <i class="fas fa-exclamation-triangle"></i> Disabling thermals may cause overheating. Use at your own risk.
+            <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); color: #ffffff; padding: 10px; border-radius: 8px; font-size: 11px; text-align: center; margin-bottom: 15px;">
+                <i class="fas fa-exclamation-triangle" style="color: var(--accent-orange);"></i> Disabling thermals may cause overheating. Use at your own risk.
             </div>
 
-            <button id="thermal-toggle-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">
+            <button id="thermal-toggle-btn" style="width: 100%; padding: 14px; background: var(--accent-orange); color: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">
                 ${thermalState === 'disabled' ? '✅ Enable All Thermals' : '⚠️ Disable All Thermals'}
             </button>
-            <button id="thermal-cancel-btn" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 10px; font-size: 13px; cursor: pointer;">Cancel</button>
+            <button id="thermal-cancel-btn" style="width: 100%; padding: 12px; background: var(--bg-secondary); color: #ffffff; border: 1px solid var(--border-color); border-radius: 10px; font-size: 13px; cursor: pointer;">Cancel</button>
         `;
 
         modal.appendChild(box);
         document.body.appendChild(modal);
         
         modal.onclick = e => { 
-            if (e.target === modal) modal.remove();        };
+            if (e.target === modal) modal.remove();
+        };
 
         // Scan zones after modal renders
         scanZones();
@@ -126,7 +128,7 @@
             const paths = pathsRaw.trim().split('\n').filter(p => p.trim());
 
             if (!paths.length) {
-                statusEl.innerHTML = '<span style="color: #666;">No thermal zones found on this device.</span>';
+                statusEl.innerHTML = '<span style="color: #ffffff;">No thermal zones found on this device.</span>';
                 listEl.style.display = 'none';
                 return;
             }
@@ -145,7 +147,8 @@
                     execFn(`cat ${path}/mode 2>/dev/null`),
                     execFn(`cat ${path}/temp 2>/dev/null`)
                 ]);
-                const type = (typeRaw || '').trim() || 'Unknown';                const mode = (modeRaw || '').trim().toLowerCase() || 'enabled';
+                const type = (typeRaw || '').trim() || 'Unknown';
+                const mode = (modeRaw || '').trim().toLowerCase() || 'enabled';
                 const tempVal = parseInt(tempRaw) || 0;
                 const temp = tempVal > 0 ? `${(tempVal / 1000).toFixed(1)}°C` : 'N/A';
 
@@ -153,13 +156,13 @@
 
                 const isDisabled = mode === 'disabled';
                 const zoneEl = document.createElement('div');
-                zoneEl.style.cssText = 'background: rgba(0,0,0,0.3); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;';
+                zoneEl.style.cssText = 'background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center;';
                 zoneEl.innerHTML = `
                     <div>
-                        <div style="color: #fff; font-size: 13px; font-weight: 600;">Zone ${id} <span style="color: #8b92b4; font-weight: 400; font-size: 11px;">(${type})</span></div>
-                        <div style="color: #666; font-size: 11px; margin-top: 2px;">Temp: ${temp} • State: <span style="color: ${isDisabled ? '#32D74B' : '#FF453A'}">${mode}</span></div>
+                        <div style="color: #ffffff; font-size: 13px; font-weight: 600;">Zone ${id} <span style="color: #ffffff; opacity: 0.7; font-weight: 400; font-size: 11px;">(${type})</span></div>
+                        <div style="color: #ffffff; font-size: 11px; margin-top: 2px;">Temp: ${temp} • State: <span style="color: ${isDisabled ? 'var(--accent-green)' : 'var(--accent-red)'}">${mode}</span></div>
                     </div>
-                    <button class="thermal-zone-toggle" data-id="${id}" data-mode="${mode}" style="background: ${isDisabled ? '#32D74B' : '#FF453A'}; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer;">
+                    <button class="thermal-zone-toggle" data-id="${id}" data-mode="${mode}" style="background: ${isDisabled ? 'var(--accent-green)' : 'var(--accent-red)'}; color: #ffffff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer;">
                         ${isDisabled ? 'Enable' : 'Disable'}
                     </button>
                 `;
@@ -178,7 +181,6 @@
                     
                     const zone = detectedZones.find(z => z.id === id);
                     if (zone) {
-                        // --- CHANGED: Added chmod 777 before writing ---
                         await execFn(`su -c "chmod 777 ${zone.path}/mode && echo ${newMode} > ${zone.path}/mode"`);
                         
                         // Refresh UI
@@ -189,25 +191,25 @@
 
         } catch (e) {
             console.error('ThermalZone: Scan failed:', e);
-            statusEl.innerHTML = `<span style="color: #FF453A;">❌ Scan error: ${e.message}</span>`;
+            statusEl.innerHTML = `<span style="color: var(--accent-red);">❌ Scan error: ${e.message}</span>`;
         }
     }
 
     async function toggleAllThermals() {
-        const toggleBtn = document.getElementById('thermal-toggle-btn');        const statusEl = document.getElementById('thermal-scan-status');        
+        const toggleBtn = document.getElementById('thermal-toggle-btn');
+        const statusEl = document.getElementById('thermal-scan-status');        
         if (!toggleBtn || !statusEl) return;
 
         toggleBtn.disabled = true;
         toggleBtn.textContent = '⏳ Applying...';
         statusEl.style.display = 'block';
-        statusEl.innerHTML = '<span style="color: #FF9F0A;">🔄 Updating all zones...</span>';
+        statusEl.innerHTML = '<span style="color: var(--accent-orange);">🔄 Updating all zones...</span>';
 
         try {
             const newMode = thermalState === 'disabled' ? 'enabled' : 'disabled';
             
             // Apply to all zones
             for (const zone of detectedZones) {
-                // --- CHANGED: Added chmod 777 before writing ---
                 await execFn(`su -c "chmod 777 ${zone.path}/mode && echo ${newMode} > ${zone.path}/mode"`);
             }
 
@@ -216,10 +218,10 @@
             await execFn(`mkdir -p /sdcard/MTK_AI_Engine && echo "state=${thermalState}" > ${CONFIG_FILE}`);
 
             // Show success
-            statusEl.innerHTML = `<span style="color: #32D74B;">✅ All zones ${newMode}</span>`;
+            statusEl.innerHTML = `<span style="color: var(--accent-green);">✅ All zones ${newMode}</span>`;
             
             if (window.showStatus) {
-                window.showStatus(`✅ Thermal zones: ${newMode}`, '#f59e0b');
+                window.showStatus(`✅ Thermal zones: ${newMode}`, 'var(--accent-orange)');
             }
 
             // Refresh modal after delay
@@ -230,7 +232,7 @@
 
         } catch (e) {
             console.error('ThermalZone: Toggle failed:', e);
-            statusEl.innerHTML = `<span style="color: #FF453A;">❌ Error: ${e.message}</span>`;
+            statusEl.innerHTML = `<span style="color: var(--accent-red);">❌ Error: ${e.message}</span>`;
             toggleBtn.disabled = false;
             toggleBtn.textContent = thermalState === 'disabled' ? '✅ Enable All Thermals' : '⚠️ Disable All Thermals';
         }
@@ -243,5 +245,6 @@
         init();
     }
 
-    // Expose for debugging    window.ThermalZoneManager = { init, showThermalModal, toggleAllThermals };
+    // Expose for debugging
+    window.ThermalZoneManager = { init, showThermalModal, toggleAllThermals };
 })();
