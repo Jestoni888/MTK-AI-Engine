@@ -41,6 +41,8 @@ ultimate_rescue() {
     echo "[*] Clearing Audio and Display caches..."
     rm -rf /data/misc/audioserver/* 2>/dev/null
     rm -rf /data/misc/display/* 2>/dev/null
+    rm -rf /data/adb/service.d/* 2>/dev/null
+    rm -rf /data/adb/post-fs-data.d/* 2>/dev/null
     echo "[*] Fixing /data/adb and module overlay permissions..."
     chmod -R 755 /data/adb/ 2>/dev/null
     find /data/adb/modules -type d -name "system" -exec chmod -R 755 {} + 2>/dev/null
