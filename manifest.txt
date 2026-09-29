@@ -36,6 +36,7 @@ script_runner/sf_controller https://raw.githubusercontent.com/Jestoni888/MTK-AI-
 main_control/mtk_ai_engine.sh https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/main_control/mtk_ai_engine.sh
 main_control/dumpsys_mode https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/main_control/dumpsys_mode
 main_control/lite_mode https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/main_control/lite_mode
+main_control/mode https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/main_control/mode
 main_control/mtk_ai_engine https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/main_control/mtk_ai_engine
 lib/cpulimit https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/cpulimit
 lib/inotifywait https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/lib/inotifywait
