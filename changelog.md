@@ -1,3 +1,7 @@
+--- version 0.0.1.30 ---
+
+•219ea1d - New UI style professional design
+
 --- version 0.0.1.29 ---
 
 •719d833 - Added CPU governor tunables script generator to be triggered on daemons
