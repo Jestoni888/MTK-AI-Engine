@@ -248,7 +248,7 @@ function showUpdateModal(data) {
                 <span id="update-progress-percent" style="color:var(--accent-blue);">0%</span>
             </div>
             <div style="width:100%;background:var(--bg-primary);height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--border-color);">
-                <div id="update-progress-bar" style="width:0%;height:100%;background:var(--accent-blue);transition:width 0.3s ease;"></div>
+                <div id="update-progress-bar" style="width:0%;height:100%;background:var(--accent-blue);transition:width 0.2s ease;"></div>
             </div>
         </div>
         <div style="display:flex;gap:12px;margin-top:20px;">
@@ -326,6 +326,7 @@ function closeModal() {
     if (overlay) overlay.remove();
 }
 
+// 🔄 High-frequency tracking of /sdcard/MTK_AI_Engine/.update_progress with automatic removal on completion
 async function pollUpdateProgress() {
     const progressContainer = document.getElementById('update-progress-container');
     const statusEl = document.getElementById('update-progress-status');
@@ -335,27 +336,50 @@ async function pollUpdateProgress() {
 
     if (!progressContainer) return;
 
+    // Polling every 300ms for fast and smooth UI updates
     const interval = setInterval(async () => {
         try {
-            const raw = await execCmd(`${BUSYBOX} cat "${PROGRESS_FILE}" 2>/dev/null`, 2000);
+            const raw = await execCmd(`${BUSYBOX} cat "${PROGRESS_FILE}" 2>/dev/null`, 1500);
             if (raw && raw.trim()) {
                 const text = raw.trim();
                 let pct = 0;
-                const match = text.match(/(\d+)%/);
-                if (match) pct = parseInt(match[1]);
+                
+                const match = text.match(/(\d+)/);
+                if (match) {
+                    pct = parseInt(match[1], 10);
+                    if (isNaN(pct)) pct = 0;
+                    if (pct > 100) pct = 100;
+                }
 
-                if (statusEl) statusEl.textContent = text;
+                if (statusEl) {
+                    if (pct < 100 && !text.includes('FAILED') && !text.includes('ERROR')) {
+                        statusEl.textContent = 'Downloading updates...';
+                    } else {
+                        statusEl.textContent = text;
+                    }
+                }
                 if (percentEl) percentEl.textContent = `${pct}%`;
                 if (barEl) barEl.style.width = `${pct}%`;
 
-                if (text.includes('SUCCESS') || text.includes('Complete') || pct >= 100) {
+                // Handle update complete condition
+                if (pct >= 100 || text.includes('SUCCESS') || text.includes('Complete')) {
                     clearInterval(interval);
                     if (statusEl) statusEl.textContent = 'Update Complete! Restarting UI...';
-                    if (barEl) barEl.style.background = 'var(--accent-green)';
+                    if (percentEl) percentEl.textContent = '100%';
+                    if (barEl) {
+                        barEl.style.width = '100%';
+                        barEl.style.background = 'var(--accent-green)';
+                    }
+
+                    // 🗑️ Delete .update_progress file from SD card after completion
+                    await execCmd(`${BUSYBOX} rm -f "${PROGRESS_FILE}"`, 2000);
+
                     setTimeout(() => {
                         window.location.reload();
                     }, 2000);
-                } else if (text.includes('FAILED') || text.includes('ERROR')) {
+                } 
+                // Handle update error/failure condition
+                else if (text.includes('FAILED') || text.includes('ERROR')) {
                     clearInterval(interval);
                     if (statusEl) statusEl.textContent = text;
                     if (barEl) barEl.style.background = 'var(--accent-red)';
@@ -364,10 +388,13 @@ async function pollUpdateProgress() {
                         updateBtn.style.opacity = '1';
                         updateBtn.innerHTML = '<i class="fas fa-redo"></i> Retry Update';
                     }
+
+                    // 🗑️ Delete .update_progress file from SD card on failure
+                    await execCmd(`${BUSYBOX} rm -f "${PROGRESS_FILE}"`, 2000);
                 }
             }
         } catch (e) { /* ignore */ }
-    }, 1000);
+    }, 300);
 }
 
 async function checkForUpdates(isManual = false) {
