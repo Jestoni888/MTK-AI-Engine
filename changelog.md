@@ -1,5 +1,7 @@
 --- version 0.0.1.30 ---
 
+•719d83r-1bf7f0d - Added banner
+
 •219ea1d - New Theme UI style professional design
 
 --- version 0.0.1.29 ---
