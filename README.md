@@ -87,7 +87,7 @@ Feel free to reach out for support, feedback, or updates through any of the foll
 <details>
 <summary>Click to expand/collapse sample screenshots</summary>
 
-![Sample Picture 1](IMAGE_URL_1)
+![Sample Picture 1](https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/main/screenshots/Screenshot_20260930-004404.jpg)
 ![Sample Picture 2](IMAGE_URL_2)
 ![Sample Picture 3](IMAGE_URL_3)
 ![Sample Picture 4](IMAGE_URL_4)
