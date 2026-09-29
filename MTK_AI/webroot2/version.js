@@ -645,7 +645,9 @@ async function showCommitHistoryModal(path) {
     modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10002; display: flex; align-items: center; justify-content: center; padding: 15px;`;
 
     const box = document.createElement('div');
-    box.style.cssText = `background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; width: 100%; max-width: 580px; height: 75vh; box-shadow: 0 8px 32px rgba(0,0,0,0.5); color: #ffffff; display: flex; flex-direction: column; gap: 12px;`;
+    box.style.cssText = `background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; width: 100%; max-width: 580px; height: 80vh; box-shadow: 0 8px 32px rgba(0,0,0,0.5); color: #ffffff; display: flex; flex-direction: column; gap: 12px;`;
+
+    const latestRawUrl = `https://raw.githubusercontent.com/${ghCurrentRepo}/main/${path}`;
 
     box.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
@@ -653,6 +655,17 @@ async function showCommitHistoryModal(path) {
                 <i class="fas fa-history" style="color: var(--accent-blue);"></i> History: ${path}
             </div>
             <button id="close-gh-hist" style="background: none; border: none; color: #ffffff; font-size: 20px; cursor: pointer;"><i class="fas fa-times"></i></button>
+        </div>
+
+        <!-- Latest / Main Branch Raw Link (No SHA) -->
+        <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--accent-orange); text-transform: uppercase;">Latest Raw Link (main branch)</div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <input type="text" readonly value="${latestRawUrl}" style="flex: 1; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; color: #ffffff; font-size: 11px; font-family: monospace; outline: none;" />
+                <button class="gh-copy-btn" data-url="${latestRawUrl}" style="background: var(--accent-orange); border: none; border-radius: 6px; color: #ffffff; padding: 5px 10px; font-size: 10px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+                    <i class="fas fa-copy"></i> Copy Main
+                </button>
+            </div>
         </div>
 
         <div id="gh-hist-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
@@ -680,19 +693,46 @@ async function showCommitHistoryModal(path) {
             const date = new Date(c.commit.author.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
             const msg = c.commit.message;
             const shortSha = c.sha.substring(0, 7);
+            const commitRawUrl = `https://raw.githubusercontent.com/${ghCurrentRepo}/${c.sha}/${path}`;
 
             html += `
-                <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;">
+                <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 11px; font-family: monospace; color: var(--accent-blue);">${shortSha}</span>
                         <span style="font-size: 11px; color: var(--text-secondary);">${date}</span>
                     </div>
                     <div style="font-size: 12px; color: #ffffff; font-weight: 600;">${msg}</div>
                     <div style="font-size: 11px; color: var(--text-secondary);">By ${author}</div>
+                    <div style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">
+                        <input type="text" readonly value="${commitRawUrl}" style="flex: 1; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; color: var(--text-secondary); font-size: 10px; font-family: monospace; outline: none;" />
+                        <button class="gh-copy-btn" data-url="${commitRawUrl}" style="background: var(--accent-blue); border: none; border-radius: 6px; color: #ffffff; padding: 4px 8px; font-size: 10px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+                            <i class="fas fa-copy"></i> Copy Commit Raw
+                        </button>
+                    </div>
                 </div>
             `;
         });
         listEl.innerHTML = html;
+
+        // Unified copy handler for both top banner and list items
+        modal.querySelectorAll('.gh-copy-btn').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                const url = btn.dataset.url;
+                try {
+                    await navigator.clipboard.writeText(url);
+                } catch(err) {
+                    const input = btn.previousElementSibling;
+                    if (input) {
+                        input.select();
+                        document.execCommand('copy');
+                    }
+                }
+                const origContent = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                setTimeout(() => { btn.innerHTML = origContent; }, 1500);
+            };
+        });
     } catch(err) {
         listEl.innerHTML = `<div style="color: var(--accent-red); padding: 10px;">Failed to load history: ${err.message}</div>`;
     }
