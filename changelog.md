@@ -1,6 +1,6 @@
 --- version 0.0.1.30 ---
 
-•719d83r-49d86d3 - rollback fixed
+•671366c - rollback fixed
 
 •719d83r-1bf7f0d - Added banner
 
