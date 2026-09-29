@@ -382,8 +382,12 @@ async function checkForUpdates(isManual = false) {
 
     const data = await readStatus();
     if (data && data.update_available) {
-        showUpdateModal(data);
-        showTopBanner();
+        const isAutoUpdateEnabled = await checkAutoUpdateEnabled();
+        if (isAutoUpdateEnabled) {
+            showTopBanner();
+        } else {
+            showUpdateModal(data);
+        }
     } else if (isManual) {
         const statusMsg = document.getElementById('status-message');
         if (statusMsg) {
