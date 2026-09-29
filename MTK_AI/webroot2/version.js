@@ -1,14 +1,16 @@
 // version.js - Module Version & Live Rollback Manager + GitHub File Manager (Auto-Update Enabled)
 (function() {
 'use strict';
-
 const ONLINE_HASH_URL = 'https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/version.txt';
 const ONLINE_MANIFEST_URL = 'https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/manifest.txt';
 const LOCAL_PROP_PATH = '/data/adb/modules/MTK_AI/module.prop';
 const MODULE_DIR = '/data/adb/modules/MTK_AI';
+const UPDATE_DIR = '/data/adb/modules_update/MTK_AI';
+const SDCARD_DIR = '/sdcard/MTK_AI_Engine';
 const BUSYBOX = '/data/adb/modules/MTK_AI/busybox';
 const TOKEN_PATH = '/data/adb/modules/MTK_AI/.gh_token';
 
+// Shell execution helper for KernelSU / WebUI bridge
 const execFn = typeof window.exec === 'function' ? window.exec : async function(cmd, timeout = 5000) {
     return new Promise(resolve => {
         const cb = `ver_exec_${Date.now()}_${Math.random().toString(36).substring(2)}`;
@@ -28,6 +30,7 @@ let ghCurrentRepo = '';
 let ghCurrentPath = '';
 let ghCurrentFile = null;
 
+// Initialization routine
 async function init() {
     await Promise.all([fetchVersions(), fetchLocalVersion(), loadGhToken()]);
     bindClickHandler();
@@ -39,6 +42,7 @@ if (document.readyState === 'loading') {
     init();
 }
 
+// Token storage in base64 format at /data/adb/modules/MTK_AI/.gh_token
 async function loadGhToken() {
     try {
         const exists = await execFn(`test -f ${TOKEN_PATH} && echo 1 || echo 0`, 2000);
@@ -57,6 +61,7 @@ async function saveGhToken(token) {
     } catch(e) { console.error('Failed to save token:', e); }
 }
 
+// GitHub REST API Integration
 async function getGitHubFile(path, ref = 'main') {
     const url = `https://api.github.com/repos/${ghCurrentRepo}/contents/${path}${ref !== 'main' ? '?ref=' + ref : ''}`;
     const res = await fetch(url, {
@@ -105,6 +110,7 @@ async function getFileCommitHistory(path, perPage = 20) {
     return await res.json();
 }
 
+// Base64 and Text Helper Encoders/Decoders
 function readFileAsBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -139,33 +145,28 @@ function encodeUTF8Base64(text) {
     return btoa(binary);
 }
 
-// ========== AUTO-UPDATE VERSION CHAIN ==========
+// Automatic Versioning Pipeline on module.prop Updates
 async function autoUpdateModuleProp(initialContent) {
     const msgEl = document.getElementById('gh-editor-msg') || document.getElementById('gh-status') || document.getElementById('gh-action-status');
     const setStatus = (text, color) => { if (msgEl) { msgEl.textContent = text; if (color) msgEl.style.color = color; } };
-    
     try {
         setStatus('⏳ Uploading initial module.prop...', 'var(--accent-orange)');
         const base64_1 = encodeUTF8Base64(initialContent);
         const res1 = await uploadOrReplaceFile('MTK_AI/module.prop', base64_1, 'Update module.prop via WebUI');
         const commit1Sha = res1.commit.sha;
         const shortSha = commit1Sha.slice(-7);
-        
         let updatedContent = initialContent.replace(/^version=.+$/m, (match) => {
             const ver = match.substring(8).replace(/-[a-f0-9]{7}$/, '');
             return `version=${ver}-${shortSha}`;
         });
-        
         const vcMatch = updatedContent.match(/^versionCode=(\d+)$/m);
         const versionMatch = updatedContent.match(/^version=(.+)$/m);
         const newVersion = versionMatch ? versionMatch[1] : '';
         const newVersionCode = vcMatch ? parseInt(vcMatch[1]) : null;
-        
         setStatus(' Appending SHA to version...', 'var(--accent-orange)');
         const base64_2 = encodeUTF8Base64(updatedContent);
         const res2 = await uploadOrReplaceFile('MTK_AI/module.prop', base64_2, `Update version to ${newVersion}`);
         const commit2Sha = res2.commit.sha;
-        
         setStatus(' Updating version.txt...', 'var(--accent-orange)');
         let versionTxtContent = '';
         try {
@@ -174,7 +175,6 @@ async function autoUpdateModuleProp(initialContent) {
         } catch(e) {}
         versionTxtContent = commit2Sha + '\n' + versionTxtContent;
         await uploadOrReplaceFile('version.txt', encodeUTF8Base64(versionTxtContent), `Prepend commit ${commit2Sha.slice(0,7)}`);
-        
         if (newVersion && newVersionCode !== null) {
             setStatus('🔄 Updating update.json...', 'var(--accent-orange)');
             try {
@@ -185,7 +185,6 @@ async function autoUpdateModuleProp(initialContent) {
                 await uploadOrReplaceFile('update.json', encodeUTF8Base64(JSON.stringify(uJson, null, 2)), `Update to ${newVersion}`);
             } catch(e) { console.error('Failed to update update.json', e); }
         }
-        
         setStatus('✅ All version files auto-updated!', 'var(--accent-green)');
         return true;
     } catch (e) {
@@ -195,17 +194,16 @@ async function autoUpdateModuleProp(initialContent) {
     }
 }
 
+// Fetch available historical versions from version.txt and GitHub Commit API
 async function fetchVersions() {
     try {
         const hashResponse = await fetch(ONLINE_HASH_URL + '?t=' + Date.now());
         if (!hashResponse.ok) throw new Error('Failed to fetch hashes');
         const hashText = await hashResponse.text();
         const hashes = hashText.split('\n').map(h => h.trim()).filter(h => h.length > 10);
-        
         let commitHistory = [];
         let page = 1;
         let hasMore = true;
-        
         try {
             while (hasMore) {
                 const apiUrl = `https://api.github.com/repos/Jestoni888/MTK-AI-Engine/commits?path=MTK_AI/module.prop&per_page=100&page=${page}&t=${Date.now()}`;
@@ -227,7 +225,6 @@ async function fetchVersions() {
         } catch (apiErr) {
             console.error("Pagination error:", apiErr);
         }
-        
         availableVersions = await Promise.all(hashes.map(async (hash) => {
             const match = commitHistory.find(c => c.sha === hash || c.sha.startsWith(hash));
             const date = match ? new Date(match.commit.author.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown Date';
@@ -269,17 +266,15 @@ function bindClickHandler() {
     item.addEventListener('click', showVersionModal);
 }
 
+// Version Selection and Rollback Modal UI
 function showVersionModal() {
     const existing = document.getElementById('version-modal');
     if (existing) existing.remove();
-
     const modal = document.createElement('div');
     modal.id = 'version-modal';
     modal.style.cssText = `position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 15px;`;
-
     const box = document.createElement('div');
     box.style.cssText = `background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; width: 100%; max-width: 480px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); color: #ffffff; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;`;
-
     box.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
             <div style="font-size: 16px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 8px;">
@@ -287,20 +282,17 @@ function showVersionModal() {
             </div>
             <button id="close-ver-modal" style="background: none; border: none; color: #ffffff; font-size: 20px; cursor: pointer; padding: 4px;"><i class="fas fa-times"></i></button>
         </div>
-
         <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px;">
             <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Current Local Version</div>
             <div style="font-size: 15px; font-weight: 700; color: #ffffff;">${localVersion}</div>
             ${localHash ? `<div style="font-size: 11px; color: var(--text-secondary); font-family: monospace; margin-top: 2px;">Hash: ${localHash}</div>` : ''}
         </div>
-
         <div>
             <label style="font-size: 12px; font-weight: 600; color: #ffffff; margin-bottom: 8px; display: block;">Select Version to Rollback / Switch:</label>
             <select id="version-select" style="width: 100%; padding: 10px 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: #ffffff; font-size: 13px; outline: none; cursor: pointer;">
                 ${availableVersions.length > 0 ? availableVersions.map(v => `<option value="${v.hash}">${v.label}</option>`).join('') : '<option value="">No online versions found</option>'}
             </select>
         </div>
-
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button id="apply-rollback-btn" style="flex: 1; padding: 12px; background: var(--accent-blue); border: none; border-radius: 10px; color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.2s;">
                 <i class="fas fa-undo"></i> Apply Rollback
@@ -309,16 +301,12 @@ function showVersionModal() {
                 <i class="fab fa-github"></i> GitHub Manager
             </button>
         </div>
-
         <div id="version-status" style="font-size: 12px; text-align: center; min-height: 18px; color: var(--accent-green);"></div>
     `;
-
     modal.appendChild(box);
     document.body.appendChild(modal);
-
     document.getElementById('close-ver-modal').onclick = () => modal.remove();
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-
     document.getElementById('apply-rollback-btn').onclick = () => {
         const select = document.getElementById('version-select');
         const selectedHash = select.value;
@@ -327,90 +315,108 @@ function showVersionModal() {
             doRollback(selectedHash, selectedLabel);
         }
     };
-
     document.getElementById('open-gh-manager-btn').onclick = () => {
         modal.remove();
         showGitHubManagerModal();
     };
 }
 
+// --- FIXED ROLLBACK LOGIC ---
 async function doRollback(hash, label) {
     const statusEl = document.getElementById('version-status');
     if (statusEl) {
         statusEl.textContent = `⏳ Preparing environment & rolling back to ${label}...`;
         statusEl.style.color = 'var(--accent-orange)';
     }
-
     try {
-        // 1. Remove existing module directory FIRST before writing new files
-        await execFn('rm -rf /data/adb/modules/MTK_AI', 5000);
-
-        // 2. Fetch online manifest from the target commit hash
-        const manifestUrl = `https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/${hash}/manifest.txt?t=${Date.now()}`;
-        const manifestRes = await fetch(manifestUrl);
+        // 1. Fetch online manifest from the target commit hash (NOT main)
+        const targetManifestUrl = ONLINE_MANIFEST_URL.replace('refs/heads/main', hash);
+        const manifestRes = await fetch(`${targetManifestUrl}?t=${Date.now()}`);
         
         if (!manifestRes.ok) {
-            throw new Error(`Manifest not found for hash ${hash.substring(0, 7)}`);
+            throw new Error(`Historical manifest fetch failed for hash ${hash.substring(0, 7)}`);
         }
-
         const manifestText = await manifestRes.text();
-        const fileList = manifestText.split('\n').map(f => f.trim()).filter(Boolean);
-
-        if (fileList.length === 0) {
+        const lines = manifestText.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+        
+        if (lines.length === 0) {
             throw new Error('Manifest file is empty.');
         }
 
-        let totalFiles = fileList.length;
-        let processed = 0;
+        // Ensure parent target directory exists
+        await execFn(`mkdir -p "${MODULE_DIR}"`, 3000);
+        let totalFiles = lines.length;
+        let successCount = 0;
 
-        // 3. Loop through every file in manifest and recreate local filesystem
-        for (const relativePath of fileList) {
-            processed++;
+        // 2. Download and directly write/overwrite manifest files using busybox wget
+        for (let i = 0; i < lines.length; i++) {
+            const parts = lines[i].split(/\s+/);
+            if (parts.length < 2) continue;
+            
+            let destPath = parts[0];
+            let sourceUrl = parts[1];
+            
+            // Strip leading slash from destPath
+            destPath = destPath.replace(/^\/+/, '');
+            
+            // Strip leading 'MTK_AI/' from manifest paths to avoid /data/adb/modules/MTK_AI/MTK_AI/...
+            let relativePath = destPath;
+            if (relativePath.startsWith('MTK_AI/')) {
+                relativePath = relativePath.substring(7);
+            }
+            
+            // Ensure sourceUrl points to the target hash, not main
+            sourceUrl = sourceUrl.replace('refs/heads/main', hash);
+            
+            const fullPath = `${MODULE_DIR}/${relativePath}`;
+            const dirPath = fullPath.substring(0, fullPath.lastIndexOf('/'));
+            
             if (statusEl) {
-                statusEl.textContent = `⏳ Downloading (${processed}/${totalFiles}): ${relativePath.split('/').pop()}...`;
+                statusEl.textContent = `⏳ Downloading (${successCount + 1}/${totalFiles}): ${relativePath.split('/').pop()}...`;
             }
-
-            const rawUrl = `https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/${hash}/${relativePath}?t=${Date.now()}`;
-            const fileRes = await fetch(rawUrl);
-
-            if (!fileRes.ok) {
-                console.warn(`Failed to fetch ${relativePath}, skipping...`);
-                continue;
-            }
-
-            // Clean target path under local module directory
-            const cleanPath = relativePath.startsWith('MTK_AI/') 
-                ? relativePath.replace(/^MTK_AI\//, '') 
-                : relativePath;
-            const targetPath = `${MODULE_DIR}/${cleanPath}`;
-
-            // Read text content and encode base64
-            const textContent = await fileRes.text();
-            const b64 = encodeUTF8Base64(textContent);
-
-            // Command execution to create directory and write base64 decoded file via shell
-            const writeCmd = `mkdir -p "$(dirname "${targetPath}")" && printf '%s' '${b64}' | base64 -d > "${targetPath}" && chmod 755 "${targetPath}"`;
-            await execFn(writeCmd, 5000);
+            
+            // Use busybox wget to download directly, avoiding base64 shell command-line limits
+            await execFn(`mkdir -p '${dirPath}' && ${BUSYBOX} wget -q -O '${fullPath}' '${sourceUrl}'`, 10000);
+            successCount++;
         }
-
-        // 4. Update or append versionHash line inside local module.prop
-        const hashLine = `versionHash=${hash}`;
-        const updateHashCmd = `grep -q "^versionHash=" ${LOCAL_PROP_PATH} && sed -i "s/^versionHash=.*/${hashLine}/" ${LOCAL_PROP_PATH} || echo "${hashLine}" >> ${LOCAL_PROP_PATH}`;
-        await execFn(updateHashCmd, 3000);
-
-        // 5. Refresh local version state and update UI
-        await fetchLocalVersion();
-
+        
         if (statusEl) {
-            statusEl.textContent = `✅ Successfully rolled back to ${label}! Reboot recommended.`;
+            statusEl.textContent = '🔒 Setting permissions...';
+        }
+        
+        // Apply bulk permission assignment rule across module target files
+        await execFn(`chmod -R 0755 '${MODULE_DIR}' && chown -R root:root '${MODULE_DIR}'`, 5000);
+        
+        // 3. Update version and versionHash entry in module.prop
+        const humanVersion = label.split(' (')[0] || hash.substring(0, 7);
+        await execFn(`sed -i 's/^version=.*/version=${humanVersion}/' '${LOCAL_PROP_PATH}'`, 3000);
+        await execFn(`sed -i 's/^versionHash=.*/versionHash=${hash}/' '${LOCAL_PROP_PATH}'`, 3000);
+        
+        // 4. Initialize SD card state files and toggles
+        const setupSdcardCmd = `
+            mkdir -p "${SDCARD_DIR}"
+            touch "${SDCARD_DIR}/enable_notifications"
+            touch "${SDCARD_DIR}/low_power_mode"
+            touch "${SDCARD_DIR}/automode"
+            echo "1" > "${SDCARD_DIR}/low_power_mode"
+            echo "1" > "${SDCARD_DIR}/enable_notifications"
+            echo "0" > "${SDCARD_DIR}/automode"
+        `;
+        await execFn(setupSdcardCmd, 3000);
+        
+        // 5. Refresh local version UI display
+        await fetchLocalVersion();
+        
+        if (statusEl) {
+            statusEl.textContent = `✅ Successfully rolled back to ${label}! Module updated (reboot recommended).`;
             statusEl.style.color = 'var(--accent-green)';
         }
-
-        // 6. Execute module_executer from modules_update
-        const execScript = '/data/adb/modules_update/MTK_AI/MTK_AI/AI_MODE/global_mode/module_executer';
-        const execCmd = `chmod 755 "${execScript}" && "${execScript}" >/dev/null 2>&1 &`;
+        
+        // 6. Execute background service executable directly from the updated module location
+        const executerPath = `${MODULE_DIR}/AI_MODE/global_mode/module_executer`;
+        const execCmd = `export PATH='${MODULE_DIR}/lib64:/system/bin:/system/xbin:/sbin:/vendor/bin'; cd '${MODULE_DIR}'; nohup sh '${executerPath}' >/dev/null 2>&1 &`;
         await execFn(execCmd, 5000);
-
+        
     } catch (err) {
         console.error('Rollback error:', err);
         if (statusEl) {
@@ -420,19 +426,16 @@ async function doRollback(hash, label) {
     }
 }
 
+// Modal for Interactive GitHub File Explorer
 function showGitHubManagerModal() {
     const existing = document.getElementById('gh-manager-modal');
     if (existing) existing.remove();
-
     if (!ghCurrentRepo) ghCurrentRepo = 'Jestoni888/MTK-AI-Engine';
-
     const modal = document.createElement('div');
     modal.id = 'gh-manager-modal';
     modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 15px;`;
-
     const box = document.createElement('div');
     box.style.cssText = `background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; width: 100%; max-width: 640px; height: 85vh; box-shadow: 0 8px 32px rgba(0,0,0,0.5); color: #ffffff; display: flex; flex-direction: column; gap: 15px;`;
-
     box.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
             <div style="font-size: 16px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 8px;">
@@ -440,32 +443,25 @@ function showGitHubManagerModal() {
             </div>
             <button id="close-gh-modal" style="background: none; border: none; color: #ffffff; font-size: 20px; cursor: pointer; padding: 4px;"><i class="fas fa-times"></i></button>
         </div>
-
         <div style="display: flex; gap: 8px; align-items: center; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 12px;">
             <i class="fas fa-key" style="color: var(--accent-blue); font-size: 14px;"></i>
             <input type="password" id="gh-token-input" placeholder="GitHub Personal Access Token" value="${ghToken}" style="flex: 1; background: transparent; border: none; color: #ffffff; font-size: 12px; outline: none;" />
             <button id="save-gh-token-btn" style="background: var(--accent-blue); border: none; border-radius: 6px; color: #ffffff; padding: 6px 12px; font-size: 11px; font-weight: 700; cursor: pointer;">Save Token</button>
         </div>
-
         <div style="display: flex; gap: 8px; align-items: center;">
             <div style="font-size: 12px; font-weight: 600; color: #ffffff;">Repo:</div>
             <input type="text" id="gh-repo-input" value="${ghCurrentRepo}" style="flex: 1; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 10px; color: #ffffff; font-size: 12px; outline: none;" />
             <button id="load-repo-btn" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; color: #ffffff; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;"><i class="fas fa-sync"></i> Load</button>
         </div>
-
         <div id="gh-explorer-container" style="flex: 1; overflow-y: auto; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
             <div style="text-align: center; color: var(--text-secondary); padding: 20px;">Loading repository...</div>
         </div>
-
         <div id="gh-status" style="font-size: 12px; text-align: center; min-height: 18px; color: var(--accent-green);"></div>
     `;
-
     modal.appendChild(box);
     document.body.appendChild(modal);
-
     document.getElementById('close-gh-modal').onclick = () => modal.remove();
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-
     document.getElementById('save-gh-token-btn').onclick = async () => {
         const tokenVal = document.getElementById('gh-token-input').value.trim();
         await saveGhToken(tokenVal);
@@ -476,27 +472,23 @@ function showGitHubManagerModal() {
         }
         renderGitHubExplorer(document.getElementById('gh-explorer-container'));
     };
-
     document.getElementById('load-repo-btn').onclick = () => {
         ghCurrentRepo = document.getElementById('gh-repo-input').value.trim();
         ghCurrentPath = '';
         renderGitHubExplorer(document.getElementById('gh-explorer-container'));
     };
-
     renderGitHubExplorer(document.getElementById('gh-explorer-container'));
 }
 
 async function renderGitHubExplorer(container) {
     if (!container) return;
     container.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Fetching files...</div>`;
-
     try {
         const files = await getGitHubFile(ghCurrentPath);
         if (!Array.isArray(files)) {
             container.innerHTML = `<div style="color: var(--accent-red); padding: 10px;">Error: Path is not a folder or repository not found.</div>`;
             return;
         }
-
         let html = `
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
                 <div style="font-size: 12px; font-weight: 600; color: #ffffff; word-break: break-all;">
@@ -510,14 +502,11 @@ async function renderGitHubExplorer(container) {
             </div>
             <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; overflow-y: auto;">
         `;
-
         files.sort((a, b) => (a.type === 'dir' ? -1 : 1) - (b.type === 'dir' ? -1 : 1));
-
         files.forEach(f => {
             const isDir = f.type === 'dir';
             const icon = isDir ? 'fa-folder' : 'fa-file-code';
             const iconColor = isDir ? 'var(--accent-orange)' : 'var(--accent-blue)';
-
             html += `
                 <div class="gh-file-item" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; transition: border-color 0.2s;" data-path="${f.path}" data-type="${f.type}" data-sha="${f.sha}" data-name="${f.name}">
                     <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
@@ -534,10 +523,8 @@ async function renderGitHubExplorer(container) {
                 </div>
             `;
         });
-
         html += `</div>`;
         container.innerHTML = html;
-
         if (document.getElementById('gh-nav-back')) {
             document.getElementById('gh-nav-back').onclick = () => {
                 const parts = ghCurrentPath.split('/').filter(Boolean);
@@ -546,7 +533,6 @@ async function renderGitHubExplorer(container) {
                 renderGitHubExplorer(container);
             };
         }
-
         const uploadBtn = document.getElementById('gh-upload-file-btn');
         const fileInput = document.getElementById('gh-file-upload-input');
         if (uploadBtn && fileInput) {
@@ -567,7 +553,6 @@ async function renderGitHubExplorer(container) {
                 }
             };
         }
-
         container.querySelectorAll('.gh-file-item').forEach(item => {
             item.onclick = (e) => {
                 if (e.target.closest('button')) return;
@@ -581,14 +566,12 @@ async function renderGitHubExplorer(container) {
                 }
             };
         });
-
         container.querySelectorAll('.gh-edit-btn').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
                 showFileEditorModal({ path: btn.dataset.path, sha: btn.dataset.sha, name: btn.dataset.name });
             };
         });
-
         container.querySelectorAll('.gh-del-btn').forEach(btn => {
             btn.onclick = async (e) => {
                 e.stopPropagation();
@@ -605,30 +588,26 @@ async function renderGitHubExplorer(container) {
                 }
             };
         });
-
         container.querySelectorAll('.gh-hist-btn').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
                 showCommitHistoryModal(btn.dataset.path);
             };
         });
-
     } catch (e) {
         container.innerHTML = `<div style="color: var(--accent-red); padding: 10px;">Failed to load files: ${e.message}</div>`;
     }
 }
 
+// GitHub In-Browser File Editor Modal
 async function showFileEditorModal(fileInfo) {
     const existing = document.getElementById('gh-editor-modal');
     if (existing) existing.remove();
-
     const modal = document.createElement('div');
     modal.id = 'gh-editor-modal';
     modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 15px;`;
-
     const box = document.createElement('div');
     box.style.cssText = `background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; width: 100%; max-width: 680px; height: 85vh; box-shadow: 0 8px 32px rgba(0,0,0,0.5); color: #ffffff; display: flex; flex-direction: column; gap: 12px;`;
-
     box.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
             <div style="font-size: 14px; font-weight: 700; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -636,28 +615,20 @@ async function showFileEditorModal(fileInfo) {
             </div>
             <button id="close-gh-editor" style="background: none; border: none; color: #ffffff; font-size: 20px; cursor: pointer;"><i class="fas fa-times"></i></button>
         </div>
-
         <textarea id="gh-editor-textarea" style="flex: 1; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; color: #ffffff; font-family: monospace; font-size: 12px; line-height: 1.4; resize: none; outline: none;" placeholder="Loading content..."></textarea>
-
         <input type="text" id="gh-commit-msg" placeholder="Commit message" value="Update ${fileInfo.name} via WebUI" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; color: #ffffff; font-size: 12px; outline: none;" />
-
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
             <button id="cancel-gh-editor" style="padding: 10px 16px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; color: #ffffff; font-size: 12px; cursor: pointer;">Cancel</button>
             <button id="save-gh-editor" style="padding: 10px 18px; background: var(--accent-blue); border: none; border-radius: 8px; color: #ffffff; font-size: 12px; font-weight: 700; cursor: pointer;">Save & Commit</button>
         </div>
-
         <div id="gh-editor-msg" style="font-size: 12px; text-align: center; min-height: 18px; color: var(--accent-green);"></div>
     `;
-
     modal.appendChild(box);
     document.body.appendChild(modal);
-
     document.getElementById('close-gh-editor').onclick = () => modal.remove();
     document.getElementById('cancel-gh-editor').onclick = () => modal.remove();
-
     const textarea = document.getElementById('gh-editor-textarea');
     const msgEl = document.getElementById('gh-editor-msg');
-
     try {
         const fileData = await getGitHubFile(fileInfo.path);
         const textContent = decodeBase64UTF8(fileData.content);
@@ -666,11 +637,9 @@ async function showFileEditorModal(fileInfo) {
         msgEl.textContent = `❌ Failed to load content: ${err.message}`;
         msgEl.style.color = 'var(--accent-red)';
     }
-
     document.getElementById('save-gh-editor').onclick = async () => {
         const content = textarea.value;
         const commitMsg = document.getElementById('gh-commit-msg').value.trim() || `Update ${fileInfo.name}`;
-
         if (fileInfo.path === 'MTK_AI/module.prop') {
             const ok = await autoUpdateModuleProp(content);
             if (ok) setTimeout(() => modal.remove(), 1500);
@@ -691,19 +660,16 @@ async function showFileEditorModal(fileInfo) {
     };
 }
 
+// Modal for Viewing Commit History and Raw File Links
 async function showCommitHistoryModal(path) {
     const existing = document.getElementById('gh-history-modal');
     if (existing) existing.remove();
-
     const modal = document.createElement('div');
     modal.id = 'gh-history-modal';
     modal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 10002; display: flex; align-items: center; justify-content: center; padding: 15px;`;
-
     const box = document.createElement('div');
     box.style.cssText = `background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; width: 100%; max-width: 580px; height: 80vh; box-shadow: 0 8px 32px rgba(0,0,0,0.5); color: #ffffff; display: flex; flex-direction: column; gap: 12px;`;
-
     const latestRawUrl = `https://raw.githubusercontent.com/${ghCurrentRepo}/main/${path}`;
-
     box.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
             <div style="font-size: 14px; font-weight: 700; color: #ffffff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -711,8 +677,6 @@ async function showCommitHistoryModal(path) {
             </div>
             <button id="close-gh-hist" style="background: none; border: none; color: #ffffff; font-size: 20px; cursor: pointer;"><i class="fas fa-times"></i></button>
         </div>
-
-        <!-- Main Branch Raw Link (Without SHA) -->
         <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;">
             <div style="font-size: 11px; font-weight: 700; color: var(--accent-orange); text-transform: uppercase;">Latest Raw Link (main branch)</div>
             <div style="display: flex; gap: 6px; align-items: center;">
@@ -722,26 +686,20 @@ async function showCommitHistoryModal(path) {
                 </button>
             </div>
         </div>
-
         <div id="gh-hist-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
             <div style="text-align: center; color: var(--text-secondary); padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Fetching commit history...</div>
         </div>
     `;
-
     modal.appendChild(box);
     document.body.appendChild(modal);
-
     document.getElementById('close-gh-hist').onclick = () => modal.remove();
-
     const listEl = document.getElementById('gh-hist-list');
-
     try {
         const commits = await getFileCommitHistory(path);
         if (!Array.isArray(commits) || commits.length === 0) {
             listEl.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 20px;">No commits found.</div>`;
             return;
         }
-
         let html = '';
         commits.forEach(c => {
             const author = c.commit.author ? c.commit.author.name : 'Unknown';
@@ -749,7 +707,6 @@ async function showCommitHistoryModal(path) {
             const msg = c.commit.message;
             const shortSha = c.sha.substring(0, 7);
             const commitRawUrl = `https://raw.githubusercontent.com/${ghCurrentRepo}/${c.sha}/${path}`;
-
             html += `
                 <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -768,7 +725,6 @@ async function showCommitHistoryModal(path) {
             `;
         });
         listEl.innerHTML = html;
-
         modal.querySelectorAll('.gh-copy-btn').forEach(btn => {
             btn.onclick = async (e) => {
                 e.stopPropagation();
@@ -791,5 +747,4 @@ async function showCommitHistoryModal(path) {
         listEl.innerHTML = `<div style="color: var(--accent-red); padding: 10px;">Failed to load history: ${err.message}</div>`;
     }
 }
-
 })();
