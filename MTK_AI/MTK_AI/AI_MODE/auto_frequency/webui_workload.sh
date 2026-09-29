@@ -45,8 +45,12 @@ case "$1" in
         su -c "cmd package bg-dexopt-job" >/dev/null 2>&1
         rm -f "$list_file" "$filter_file"
         notify_status "✅ Success: All app compilations completed."
+        su -c "pkill -9 -f 'cmd package bg-dexopt-job'" >/dev/null 2>&1
+        su -c "pkill -9 -f 'cmd package compile'" >/dev/null 2>&1
+        su -c "killall -9 dex2oat dex2oat32 dex2oat64" >/dev/null 2>&1
         ;;
     stop_compile)
+        su -c "pkill -9 -f 'cmd package bg-dexopt-job'" >/dev/null 2>&1
         su -c "pkill -9 -f 'cmd package compile'" >/dev/null 2>&1
         su -c "killall -9 dex2oat dex2oat32 dex2oat64" >/dev/null 2>&1
         rm -f /sdcard/MTK_AI_Engine/compile_apps.txt
