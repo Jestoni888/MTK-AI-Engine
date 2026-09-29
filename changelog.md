@@ -1,6 +1,6 @@
 --- version 0.0.1.30 ---
 
-•219ea1d - New UI style professional design
+•219ea1d - New Theme UI style professional design
 
 --- version 0.0.1.29 ---
 
