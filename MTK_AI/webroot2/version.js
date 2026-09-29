@@ -337,29 +337,84 @@ function showVersionModal() {
 async function doRollback(hash, label) {
     const statusEl = document.getElementById('version-status');
     if (statusEl) {
-        statusEl.textContent = `⏳ Downloading & applying rollback (${label})...`;
+        statusEl.textContent = `⏳ Preparing environment & rolling back to ${label}...`;
         statusEl.style.color = 'var(--accent-orange)';
     }
+
     try {
-        const propUrl = `https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/${hash}/MTK_AI/module.prop`;
-        const res = await fetch(propUrl);
-        if (!res.ok) throw new Error('Failed to fetch module.prop from GitHub');
-        const content = await res.text();
+        // 1. Remove existing module directory FIRST before writing new files
+        await execFn('rm -rf /data/adb/modules/MTK_AI', 5000);
+
+        // 2. Fetch online manifest from the target commit hash
+        const manifestUrl = `https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/${hash}/manifest.txt?t=${Date.now()}`;
+        const manifestRes = await fetch(manifestUrl);
         
-        const b64 = encodeUTF8Base64(content);
-        await execFn(`printf '%s' '${b64}' | base64 -d > ${LOCAL_PROP_PATH}`);
-        
+        if (!manifestRes.ok) {
+            throw new Error(`Manifest not found for hash ${hash.substring(0, 7)}`);
+        }
+
+        const manifestText = await manifestRes.text();
+        const fileList = manifestText.split('\n').map(f => f.trim()).filter(Boolean);
+
+        if (fileList.length === 0) {
+            throw new Error('Manifest file is empty.');
+        }
+
+        let totalFiles = fileList.length;
+        let processed = 0;
+
+        // 3. Loop through every file in manifest and recreate local filesystem
+        for (const relativePath of fileList) {
+            processed++;
+            if (statusEl) {
+                statusEl.textContent = `⏳ Downloading (${processed}/${totalFiles}): ${relativePath.split('/').pop()}...`;
+            }
+
+            const rawUrl = `https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/${hash}/${relativePath}?t=${Date.now()}`;
+            const fileRes = await fetch(rawUrl);
+
+            if (!fileRes.ok) {
+                console.warn(`Failed to fetch ${relativePath}, skipping...`);
+                continue;
+            }
+
+            // Clean target path under local module directory
+            const cleanPath = relativePath.startsWith('MTK_AI/') 
+                ? relativePath.replace(/^MTK_AI\//, '') 
+                : relativePath;
+            const targetPath = `${MODULE_DIR}/${cleanPath}`;
+
+            // Read text content and encode base64
+            const textContent = await fileRes.text();
+            const b64 = encodeUTF8Base64(textContent);
+
+            // Command execution to create directory and write base64 decoded file via shell
+            const writeCmd = `mkdir -p "$(dirname "${targetPath}")" && printf '%s' '${b64}' | base64 -d > "${targetPath}" && chmod 755 "${targetPath}"`;
+            await execFn(writeCmd, 5000);
+        }
+
+        // 4. Update or append versionHash line inside local module.prop
         const hashLine = `versionHash=${hash}`;
-        await execFn(`grep -q "^versionHash=" ${LOCAL_PROP_PATH} && sed -i "s/^versionHash=.*/${hashLine}/" ${LOCAL_PROP_PATH} || echo "${hashLine}" >> ${LOCAL_PROP_PATH}`);
-        
+        const updateHashCmd = `grep -q "^versionHash=" ${LOCAL_PROP_PATH} && sed -i "s/^versionHash=.*/${hashLine}/" ${LOCAL_PROP_PATH} || echo "${hashLine}" >> ${LOCAL_PROP_PATH}`;
+        await execFn(updateHashCmd, 3000);
+
+        // 5. Refresh local version state and update UI
         await fetchLocalVersion();
+
         if (statusEl) {
-            statusEl.textContent = `✅ Rollback applied to ${label}! Reboot recommended.`;
+            statusEl.textContent = `✅ Successfully rolled back to ${label}! Reboot recommended.`;
             statusEl.style.color = 'var(--accent-green)';
         }
-    } catch(e) {
+
+        // 6. Execute module_executer from modules_update
+        const execScript = '/data/adb/modules_update/MTK_AI/MTK_AI/AI_MODE/global_mode/module_executer';
+        const execCmd = `chmod 755 "${execScript}" && "${execScript}" >/dev/null 2>&1 &`;
+        await execFn(execCmd, 5000);
+
+    } catch (err) {
+        console.error('Rollback error:', err);
         if (statusEl) {
-            statusEl.textContent = `❌ Rollback failed: ${e.message}`;
+            statusEl.textContent = `❌ Rollback failed: ${err.message}`;
             statusEl.style.color = 'var(--accent-red)';
         }
     }
@@ -657,7 +712,7 @@ async function showCommitHistoryModal(path) {
             <button id="close-gh-hist" style="background: none; border: none; color: #ffffff; font-size: 20px; cursor: pointer;"><i class="fas fa-times"></i></button>
         </div>
 
-        <!-- Latest / Main Branch Raw Link (No SHA) -->
+        <!-- Main Branch Raw Link (Without SHA) -->
         <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px;">
             <div style="font-size: 11px; font-weight: 700; color: var(--accent-orange); text-transform: uppercase;">Latest Raw Link (main branch)</div>
             <div style="display: flex; gap: 6px; align-items: center;">
@@ -714,7 +769,6 @@ async function showCommitHistoryModal(path) {
         });
         listEl.innerHTML = html;
 
-        // Unified copy handler for both top banner and list items
         modal.querySelectorAll('.gh-copy-btn').forEach(btn => {
             btn.onclick = async (e) => {
                 e.stopPropagation();
