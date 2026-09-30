@@ -1,26 +1,26 @@
 --- version 0.0.1.30 ---
 
-•fd805ca - Add letter, character, & symbol support in file anayzer on tweak finder toggle
+•Add letter, character, & symbol support in file anayzer on tweak finder toggle & slider
 
-•671366c - rollback fixed
+•rollback fixed
 
-•719d83r-1bf7f0d - Added banner
+•Added banner
 
-•219ea1d - New Theme UI style professional design
+•New Theme UI style professional design
 
 --- version 0.0.1.29 ---
 
-•719d833 - Added CPU governor tunables script generator to be triggered on daemons
+•Added CPU governor tunables script generator to be triggered on daemons
 
-•768f7c9 - Added CPU governor tunables (Cpu governor in Webui)
+•Added CPU governor tunables (Cpu governor in Webui)
 
 --- version 0.0.1.28 ---
 
-•a2fcfce - Ram hibernator removes save config button, it now automatically setup whatever you do
+•Ram hibernator removes save config button, it now automatically setup whatever you do
 
-•e253738 - Added block all apps in netblock (tools tab)
+•Added block all apps in netblock (tools tab)
 
-•09ba658 - Added admins access source code (Admin only)
+•Added admins access source code (Admin only)
 
 --- version 0.0.1.27 ---
 
