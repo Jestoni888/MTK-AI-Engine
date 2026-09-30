@@ -631,19 +631,43 @@
         on: activeVal,
         off: nonBracketVal || 'disabled'
     };
+// 在 analyzeFile 函数内，找到 type = 'slider' 的分支
 } else {
-                const extractedNum = extractNumberFromText(val);
-                if (extractedNum !== null) {
-                    type = 'slider';
-                    const num = extractedNum;
-                    const scanned = await scanPathForOptions(path);
-                    if (path.includes('opp_index') || path.includes('oppidx')) {
-                        opts = { min: 0, max: 32, step: 1, unit: '', current: num, availableValues: scanned.values.length > 0 ? scanned.values : null };
-                    } else {
-                        opts = { min: scanned.min || detectMin(path, num), max: scanned.max || detectMax(path, num), step: detectStep(path), unit: detectUnit(path), current: num, availableValues: scanned.values.length > 0 ? scanned.values : null };
+    const extractedNum = extractNumberFromText(val);
+    if (extractedNum !== null) {
+        type = 'slider';
+        const num = extractedNum;
+        const scanned = await scanPathForOptions(path);
+        
+        // === 新增：扫描同目录下的 available/list/table/opp 文件 ===
+        let discreteValues = null;
+        const dir = path.substring(0, path.lastIndexOf('/'));
+        try {
+            const files = await execFn(`${CFG.BB} ls "${dir}" 2>/dev/null`);
+            const fileList = files.split('\n').filter(f => f.trim());
+            for (const file of fileList) {
+                const lower = file.toLowerCase();
+                // 匹配包含 available, list, table, opp 的文件名
+                if (lower.includes('available') || lower.includes('list') || lower.includes('table') || lower.includes('opp')) {
+                    const content = await execFn(`${CFG.BB} cat "${dir}/${file}" 2>/dev/null`);
+                    // 按空格或换行分割，过滤空值
+                    const vals = content.trim().split(/[\s\n]+/).filter(v => v);
+                    if (vals.length > 1) {
+                        discreteValues = vals;
+                        break;
                     }
                 }
             }
+        } catch (e) {}
+        // ========================================================
+
+        if (path.includes('opp_index') || path.includes('oppidx')) {
+            opts = { min: 0, max: 32, step: 1, unit: '', current: num, discreteValues, availableValues: scanned.values.length > 0 ? scanned.values : null };
+        } else {
+            opts = { min: scanned.min || detectMin(path, num), max: scanned.max || detectMax(path, num), step: detectStep(path), unit: detectUnit(path), current: num, discreteValues, availableValues: scanned.values.length > 0 ? scanned.values : null };
+        }
+    }
+}
             analyzing = { path, type, options: opts, content: val };
             showCreator();
             status.textContent = '✅ Ready to create control';
@@ -662,40 +686,60 @@
 
     // ========== CONTROL CREATOR ==========
     function showCreator() {
-        if (!analyzing) return;
-        const { path, type, options } = analyzing;
-        const cpuMatch = path.match(/cpu(\d+)|policy(\d+)/i);
-        const cpuIdx = cpuMatch ? (cpuMatch[1] || cpuMatch[2]) : 'x';
-        const safeId = `c_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}_${cpuIdx}`;
-        const modal = document.createElement('div');
-        modal.className = 'tf-modal-overlay';
-        modal.innerHTML = `            <div class="tf-modal-card">
-                <div class="tf-modal-title">${editingId ? '✏️ Edit Control' : '➕ Create Control'}</div>
-                <div style="font-size:11px;color:var(--text-dim);margin-bottom:14px;word-break:break-all">
-                    <strong>File:</strong> ${path.split('/').pop()}<br>
-                    <strong>Path:</strong> ${path}
+    if (!analyzing) return;
+    const { path, type, options } = analyzing;
+    const cpuMatch = path.match(/cpu(\d+)|policy(\d+)/i);
+    const cpuIdx = cpuMatch ? (cpuMatch[1] || cpuMatch[2]) : 'x';
+    const safeId = `c_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}_${cpuIdx}`;
+
+    // Check if discrete values exist
+    const hasDiscrete = options.discreteValues && options.discreteValues.length > 1;
+
+    const modal = document.createElement('div');
+    modal.className = 'tf-modal-overlay';
+    modal.innerHTML = `
+        <div class="tf-modal-card">
+            <div class="tf-modal-title">${editingId ? '✏️ Edit Control' : '➕ Create Control'}</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:14px;word-break:break-all">
+                <strong>File:</strong> ${path.split('/').pop()}<br>
+                <strong>Path:</strong> ${path}
+            </div>
+
+            <div class="tf-modal-field">
+                <label>Control Type</label>
+                <select id="tf-cc-type">
+                    <option value="toggle" ${type === 'toggle' ? 'selected' : ''}>🔘 Toggle</option>
+                    <option value="slider" ${type === 'slider' ? 'selected' : ''}> Slider</option>
+                    <option value="governor" ${type === 'governor' ? 'selected' : ''}>🎛️ Governor</option>
+                    <option value="ppm_policy" ${type === 'ppm_policy' ? 'selected' : ''}>🔧 PPM Policies</option>
+                    <option value="permission" ${type === 'permission' ? 'selected' : ''}> File Permissions</option>
+                    <option value="text">📝 Text</option>
+                </select>
+            </div>
+
+            ${analyzing.content && !/^\d+$/.test(analyzing.content.trim()) ? `<div style="font-size:10px;color:var(--orange);margin-top:4px">ℹ️ Extracted: "${analyzing.content.trim().slice(0, 50)}${analyzing.content.length > 50 ? '...' : ''}"</div>` : ''}
+
+            <!-- TOGGLE OPTIONS -->
+            <div id="tf-cc-toggle-opt" style="display:${type === 'toggle' ? 'block' : 'none'}" class="tf-modal-field">
+                <label>OFF / ON values</label>
+                <div class="tf-modal-row">
+                    <input id="tf-cc-off" value="${options.off || '0'}" placeholder="OFF">
+                    <input id="tf-cc-on" value="${options.on || '1'}" placeholder="ON">
                 </div>
-                <div class="tf-modal-field">
-                    <label>Control Type</label>
-                    <select id="tf-cc-type">
-                        <option value="toggle" ${type === 'toggle' ? 'selected' : ''}>🔘 Toggle</option>
-                        <option value="slider" ${type === 'slider' ? 'selected' : ''}>📊 Slider</option>
-                        <option value="governor" ${type === 'governor' ? 'selected' : ''}>🎛️ Governor</option>
-                        <option value="ppm_policy" ${type === 'ppm_policy' ? 'selected' : ''}>🔧 PPM Policies</option>
-                        <option value="permission" ${type === 'permission' ? 'selected' : ''}>🔒 File Permissions</option>
-                        <option value="text">📝 Text</option>
+                ${options.availableValues ? `<div style="margin-top:8px;font-size:10px;color:var(--text-dim)">Available: ${options.availableValues.join(', ')}</div>` : ''}
+            </div>
+
+            <!-- SLIDER OPTIONS -->
+            <div id="tf-cc-slider-opt" style="display:${type === 'slider' ? 'block' : 'none'}" class="tf-modal-field">
+                ${hasDiscrete ? `
+                    <label>Available Values (Selection)</label>
+                    <select id="tf-cc-discrete-select" class="tf-gov-select">
+                        ${options.discreteValues.map(v => `<option value="${v}" ${String(v) === String(options.current) ? 'selected' : ''}>${v}</option>`).join('')}
                     </select>
-                </div>
-                ${analyzing.content && !/^\d+$/.test(analyzing.content.trim()) ? `<div style="font-size:10px;color:var(--orange);margin-top:4px">ℹ️ Extracted: "${analyzing.content.trim().slice(0, 50)}${analyzing.content.length > 50 ? '...' : ''}"</div>` : ''}
-                <div id="tf-cc-toggle-opt" style="display:${type === 'toggle' ? 'block' : 'none'}" class="tf-modal-field">
-                    <label>OFF / ON values</label>
-                    <div class="tf-modal-row">
-                        <input id="tf-cc-off" value="${options.off || '0'}" placeholder="OFF">
-                        <input id="tf-cc-on" value="${options.on || '1'}" placeholder="ON">
+                    <div style="font-size:10px;color:var(--text-dim);margin-top:4px">
+                        Current: <strong style="color:var(--green)">${options.current}</strong>
                     </div>
-                    ${options.availableValues ? `<div style="margin-top:8px;font-size:10px;color:var(--text-dim)">Available: ${options.availableValues.join(', ')}</div>` : ''}
-                </div>
-                <div id="tf-cc-slider-opt" style="display:${type === 'slider' ? 'block' : 'none'}" class="tf-modal-field">
+                ` : `
                     <label>Range & Step</label>
                     <div class="tf-modal-row">
                         <input id="tf-cc-min" type="number" value="${options.min || 0}" placeholder="Min">
@@ -703,81 +747,101 @@
                         <input id="tf-cc-step" type="number" value="${options.step || 1}" placeholder="Step">
                         <input id="tf-cc-unit" value="${options.unit || ''}" placeholder="Unit">
                     </div>
-                </div>
-                <div id="tf-cc-governor-opt" style="display:${type === 'governor' ? 'block' : 'none'}" class="tf-modal-field">
-                    <label>Available Governors</label>
-                    <select id="tf-cc-governor-select" class="tf-gov-select">
-                        ${options.governors?.map(g => `<option value="${g}" ${g === options.current ? 'selected' : ''}>${g}</option>`).join('') || ''}                    </select>
-                    <div style="font-size:10px;color:var(--text-dim);margin-top:4px">
-                        Current: <strong style="color:var(--green)">${options.current || 'unknown'}</strong>
-                    </div>
-                </div>
-                <div id="tf-cc-ppm-opt" style="display:${type === 'ppm_policy' ? 'block' : 'none'}" class="tf-modal-field">
-                    <label>PPM Policies to Control</label>
-                    <div style="max-height:200px;overflow-y:auto;margin-top:8px">
-                        ${options.policies?.map(p => `
-                            <label style="display:flex;align-items:center;gap:8px;padding:6px;background:rgba(255,255,255,0.03);margin-bottom:4px;border-radius:6px;font-size:11px">
-                                <input type="checkbox" class="tf-ppm-policy-check" value="${p.index}" ${p.enabled ? 'checked' : ''}>
-                                <span style="color:${p.enabled ? 'var(--green)' : 'var(--text-dim)'}">[${p.index}] ${p.name}</span>
-                                <span style="margin-left:auto;font-size:10px">${p.enabled ? 'ON' : 'OFF'}</span>
-                            </label>
-                        `).join('') || '<div style="color:var(--text-dim);font-size:11px">No policies detected</div>'}
-                    </div>
-                    <div style="font-size:10px;color:var(--text-dim);margin-top:6px">ℹ️ Each policy will get its own toggle switch</div>
-                </div>
-                <div id="tf-cc-permission-opt" style="display:${type === 'permission' ? 'block' : 'none'}" class="tf-modal-field">
-                    <label>Permission Mode (Octal)</label>
-                    <select id="tf-cc-permission-mode" class="tf-gov-select">
-                        <option value="644" ${options.permission === '644' ? 'selected' : ''}>644 - rw-r--r-- (Normal file)</option>
-                        <option value="755" ${options.permission === '755' ? 'selected' : ''}>755 - rwxr-xr-x (Executable)</option>
-                        <option value="600" ${options.permission === '600' ? 'selected' : ''}>600 - rw------- (Root only)</option>
-                        <option value="640" ${options.permission === '640' ? 'selected' : ''}>640 - rw-r----- (Root + group)</option>
-                        <option value="660" ${options.permission === '660' ? 'selected' : ''}>660 - rw-rw---- (Root + group write)</option>
-                        <option value="664" ${options.permission === '664' ? 'selected' : ''}>664 - rw-rw-r-- (Group writable)</option>
-                        <option value="777" ${options.permission === '777' ? 'selected' : ''}>777 - rwxrwxrwx (Full access ⚠️)</option>
-                        <option value="000" ${options.permission === '000' ? 'selected' : ''}>000 - --------- (No access/Locked)</option>
-                        <option value="custom" ${options.permission === 'custom' ? 'selected' : ''}>Custom...</option>
-                    </select>
-                    <input id="tf-cc-permission-custom" type="text" placeholder="Enter custom permission (e.g., 750)" 
-                           style="display:${options.permission === 'custom' ? 'block' : 'none'};margin-top:8px;width:100%;padding:10px;background:#2c2c2e;color:white;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace">
-                    <div style="font-size:10px;color:var(--text-dim);margin-top:6px">ℹ️ Supports * wildcard for multiple files</div>
-                </div>
-                <div class="tf-modal-field">
-                    <label>Display Label</label>
-                    <input id="tf-cc-label" value="${options.label || path.split('/').pop().replace(/[_-]/g, ' ')}">
-                </div>
-                <div class="tf-modal-field">
-                    <label>File Path <span style="color:var(--orange);font-size:10px">(editable)</span></label>
-                    <input id="tf-cc-path" value="${options.path || path}" style="font-family:monospace;font-size:11px">
-                    <div style="font-size:9px;color:var(--text-dim);margin-top:2px">💡 supports wildcard path "*"</div>
-                </div>
-                <label class="tf-modal-check">
-                    <input type="checkbox" id="tf-cc-persist" ${options.persist ? 'checked' : ''}>
-                    <span>Save to SD card (persists after reboot)</span>
-                </label>
-                <div class="tf-modal-actions">
-                    ${editingId ? `<button class="delete" onclick="TweakFinder.deleteControl('${options.id}')">🗑️ Delete</button>` : ''}                    <button class="cancel" onclick="TweakFinder.closeCreator()">Cancel</button>
-                    <button class="create" onclick="${editingId ? `TweakFinder.updateControl('${options.id}')` : `TweakFinder.createControl('${safeId}')`}">${editingId ? 'Save Changes' : 'Create'}</button>
+                `}
+            </div>
+
+            <!-- GOVERNOR OPTIONS -->
+            <div id="tf-cc-governor-opt" style="display:${type === 'governor' ? 'block' : 'none'}" class="tf-modal-field">
+                <label>Available Governors</label>
+                <select id="tf-cc-governor-select" class="tf-gov-select">
+                    ${options.governors?.map(g => `<option value="${g}" ${g === options.current ? 'selected' : ''}>${g}</option>`).join('') || ''}
+                </select>
+                <div style="font-size:10px;color:var(--text-dim);margin-top:4px">
+                    Current: <strong style="color:var(--green)">${options.current || 'unknown'}</strong>
                 </div>
             </div>
-        `;
-        document.body.appendChild(modal);
-        document.getElementById('tf-cc-type').onchange = function () {
-            document.getElementById('tf-cc-toggle-opt').style.display = this.value === 'toggle' ? 'block' : 'none';
-            document.getElementById('tf-cc-slider-opt').style.display = this.value === 'slider' ? 'block' : 'none';
-            document.getElementById('tf-cc-governor-opt').style.display = this.value === 'governor' ? 'block' : 'none';
-            document.getElementById('tf-cc-ppm-opt').style.display = this.value === 'ppm_policy' ? 'block' : 'none';
-            document.getElementById('tf-cc-permission-opt').style.display = this.value === 'permission' ? 'block' : 'none';
-        };
-        const permModeSelect = document.getElementById('tf-cc-permission-mode');
-        const permCustomInput = document.getElementById('tf-cc-permission-custom');
-        if (permModeSelect && permCustomInput) {
-            permModeSelect.onchange = function () {
-                permCustomInput.style.display = this.value === 'custom' ? 'block' : 'none';
-            };
-        }
-    }
 
+            <!-- PPM OPTIONS -->
+            <div id="tf-cc-ppm-opt" style="display:${type === 'ppm_policy' ? 'block' : 'none'}" class="tf-modal-field">
+                <label>PPM Policies to Control</label>
+                <div style="max-height:200px;overflow-y:auto;margin-top:8px">
+                    ${options.policies?.map(p => `
+                        <label style="display:flex;align-items:center;gap:8px;padding:6px;background:rgba(255,255,255,0.03);margin-bottom:4px;border-radius:6px;font-size:11px">
+                            <input type="checkbox" class="tf-ppm-policy-check" value="${p.index}" ${p.enabled ? 'checked' : ''}>
+                            <span style="color:${p.enabled ? 'var(--green)' : 'var(--text-dim)'}">[${p.index}] ${p.name}</span>
+                            <span style="margin-left:auto;font-size:10px">${p.enabled ? 'ON' : 'OFF'}</span>
+                        </label>
+                    `).join('') || '<div style="color:var(--text-dim);font-size:11px">No policies detected</div>'}
+                </div>
+                <div style="font-size:10px;color:var(--text-dim);margin-top:6px">ℹ️ Each policy will get its own toggle switch</div>
+            </div>
+
+            <!-- PERMISSION OPTIONS -->
+            <div id="tf-cc-permission-opt" style="display:${type === 'permission' ? 'block' : 'none'}" class="tf-modal-field">
+                <label>Permission Mode (Octal)</label>
+                <select id="tf-cc-permission-mode" class="tf-gov-select">
+                    <option value="644" ${options.permission === '644' ? 'selected' : ''}>644 - rw-r--r-- (Normal file)</option>
+                    <option value="755" ${options.permission === '755' ? 'selected' : ''}>755 - rwxr-xr-x (Executable)</option>
+                    <option value="600" ${options.permission === '600' ? 'selected' : ''}>600 - rw------- (Root only)</option>
+                    <option value="640" ${options.permission === '640' ? 'selected' : ''}>640 - rw-r----- (Root + group)</option>
+                    <option value="660" ${options.permission === '660' ? 'selected' : ''}>660 - rw-rw---- (Root + group write)</option>
+                    <option value="664" ${options.permission === '664' ? 'selected' : ''}>664 - rw-rw-r-- (Group writable)</option>
+                    <option value="777" ${options.permission === '777' ? 'selected' : ''}>777 - rwxrwxrwx (Full access ⚠️)</option>
+                    <option value="000" ${options.permission === '000' ? 'selected' : ''}>000 - --------- (No access/Locked)</option>
+                    <option value="custom" ${options.permission === 'custom' ? 'selected' : ''}>Custom...</option>
+                </select>
+                <input id="tf-cc-permission-custom" type="text" placeholder="Enter custom permission (e.g., 750)"
+                    style="display:${options.permission === 'custom' ? 'block' : 'none'};margin-top:8px;width:100%;padding:10px;background:#2c2c2e;color:white;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace">
+                <div style="font-size:10px;color:var(--text-dim);margin-top:6px">ℹ️ Supports * wildcard for multiple files</div>
+            </div>
+
+            <!-- DISPLAY LABEL -->
+            <div class="tf-modal-field">
+                <label>Display Label</label>
+                <input id="tf-cc-label" value="${options.label || path.split('/').pop().replace(/[_-]/g, ' ')}">
+            </div>
+
+            <!-- FILE PATH -->
+            <div class="tf-modal-field">
+                <label>File Path <span style="color:var(--orange);font-size:10px">(editable)</span></label>
+                <input id="tf-cc-path" value="${options.path || path}" style="font-family:monospace;font-size:11px">
+                <div style="font-size:9px;color:var(--text-dim);margin-top:2px">💡 supports wildcard path "*"</div>
+            </div>
+
+            <!-- PERSIST CHECKBOX -->
+            <label class="tf-modal-check">
+                <input type="checkbox" id="tf-cc-persist" ${options.persist ? 'checked' : ''}>
+                <span>Save to SD card (persists after reboot)</span>
+            </label>
+
+            <!-- ACTIONS -->
+            <div class="tf-modal-actions">
+                ${editingId ? `<button class="delete" onclick="TweakFinder.deleteControl('${options.id}')">🗑️ Delete</button>` : ''}
+                <button class="cancel" onclick="TweakFinder.closeCreator()">Cancel</button>
+                <button class="create" onclick="${editingId ? `TweakFinder.updateControl('${options.id}')` : `TweakFinder.createControl('${safeId}')`}">${editingId ? 'Save Changes' : 'Create'}</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Type change handler
+    document.getElementById('tf-cc-type').onchange = function () {
+        document.getElementById('tf-cc-toggle-opt').style.display = this.value === 'toggle' ? 'block' : 'none';
+        document.getElementById('tf-cc-slider-opt').style.display = this.value === 'slider' ? 'block' : 'none';
+        document.getElementById('tf-cc-governor-opt').style.display = this.value === 'governor' ? 'block' : 'none';
+        document.getElementById('tf-cc-ppm-opt').style.display = this.value === 'ppm_policy' ? 'block' : 'none';
+        document.getElementById('tf-cc-permission-opt').style.display = this.value === 'permission' ? 'block' : 'none';
+    };
+
+    // Permission custom input handler
+    const permModeSelect = document.getElementById('tf-cc-permission-mode');
+    const permCustomInput = document.getElementById('tf-cc-permission-custom');
+    if (permModeSelect && permCustomInput) {
+        permModeSelect.onchange = function () {
+            permCustomInput.style.display = this.value === 'custom' ? 'block' : 'none';
+        };
+    }
+}
     function closeCreator() {
         const m = document.querySelector('.tf-modal-overlay');
         if (m) m.remove();
@@ -797,13 +861,22 @@
             cfg.off = document.getElementById('tf-cc-off').value;
             cfg.on = document.getElementById('tf-cc-on').value;
             cfg.current = cfg.off;
-        } else if (type === 'slider') {
-            cfg.min = parseInt(document.getElementById('tf-cc-min').value) || 0;
-            cfg.max = parseInt(document.getElementById('tf-cc-max').value) || 100;
-            cfg.step = parseInt(document.getElementById('tf-cc-step').value) || 1;
-            cfg.unit = document.getElementById('tf-cc-unit').value || '';
-            cfg.current = parseFloat(analyzing.options.current) || cfg.min;
-        } else if (type === 'governor') {
+        // 在 createControl 函数中
+} else if (type === 'slider') {
+    cfg.min = parseInt(document.getElementById('tf-cc-min').value) || 0;
+    cfg.max = parseInt(document.getElementById('tf-cc-max').value) || 100;
+    cfg.step = parseInt(document.getElementById('tf-cc-step').value) || 1;
+    cfg.unit = document.getElementById('tf-cc-unit').value || '';
+    cfg.discreteValues = analyzing.options.discreteValues || null; // 新增：保存离散值列表
+    
+    // 新增：如果有离散值，从下拉框获取当前值
+    if (cfg.discreteValues) {
+        const selectEl = document.getElementById('tf-cc-discrete-select');
+        cfg.current = selectEl ? selectEl.value : (parseFloat(analyzing.options.current) || cfg.min);
+    } else {
+        cfg.current = parseFloat(analyzing.options.current) || cfg.min;
+    }
+} else if (type === 'governor') {
             cfg.governors = analyzing.options.governors;
             cfg.current = document.getElementById('tf-cc-governor-select').value;        } else if (type === 'ppm_policy') {
             const checks = document.querySelectorAll('.tf-ppm-policy-check');
@@ -866,9 +939,22 @@
             delete cfg.min; delete cfg.max; delete cfg.step; delete cfg.unit; delete cfg.governors; delete cfg.policies; delete cfg.permission;
         } else if (newType === 'slider') {
             cfg.type = 'slider';
-            cfg.min = parseInt(document.getElementById('tf-cc-min').value) || 0; cfg.max = parseInt(document.getElementById('tf-cc-max').value) || 100;
-            cfg.step = parseInt(document.getElementById('tf-cc-step').value) || 1; cfg.unit = document.getElementById('tf-cc-unit').value || '';
-            const num = parseFloat(cfg.current) || cfg.min; cfg.current = Math.max(cfg.min, Math.min(cfg.max, num));
+            
+            // Check if discrete values (available_frequencies, etc.) exist
+            if (analyzing.options.discreteValues && analyzing.options.discreteValues.length > 0) {
+                cfg.discreteValues = analyzing.options.discreteValues;
+                const selectEl = document.getElementById('tf-cc-discrete-select');
+                cfg.current = selectEl ? selectEl.value : (parseFloat(cfg.current) || cfg.min);
+            } else {
+                cfg.min = parseInt(document.getElementById('tf-cc-min').value) || 0; 
+                cfg.max = parseInt(document.getElementById('tf-cc-max').value) || 100;
+                cfg.step = parseInt(document.getElementById('tf-cc-step').value) || 1; 
+                cfg.unit = document.getElementById('tf-cc-unit').value || '';
+                const num = parseFloat(cfg.current) || cfg.min; 
+                cfg.current = Math.max(cfg.min, Math.min(cfg.max, num));
+                delete cfg.discreteValues; // Remove discrete values if changed back to normal slider
+            }
+            
             delete cfg.off; delete cfg.on; delete cfg.governors; delete cfg.policies; delete cfg.permission;
         } else if (newType === 'governor') {
             cfg.type = 'governor'; cfg.governors = await getAvailableGovernors(cfg.path); cfg.current = document.getElementById('tf-cc-governor-select').value;
@@ -966,17 +1052,31 @@
                 <span id="tf-ts-${cfg.id}" style="font-size:11px;color:${cfg.current === cfg.on ? 'var(--green)' : 'var(--text-dim)'}">${cfg.current === cfg.on ? '✅ ON' : '❌ OFF'}</span>
                 <label class="tf-ios-switch"><input type="checkbox" id="tf-ct-${cfg.id}" ${cfg.current === cfg.on ? 'checked' : ''} onchange="TweakFinder.applyToggle('${cfg.id}',this.checked)"><span class="tf-slider"></span></label>
             </div>`;
-        } else if (isSlider) {
-            html += `<div style="margin:6px 0">
-                <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-                    <span id="tf-sv-${cfg.id}" style="font-family:monospace;color:var(--blue);font-weight:bold;font-size:12px">${cfg.current}${cfg.unit || ''}</span>
-                    <span id="tf-pct-${cfg.id}" style="font-size:9px;color:var(--orange)"></span>
-                    <span style="font-size:9px;color:var(--text-dim)">${cfg.min}${cfg.unit || ''}–${cfg.max}${cfg.unit || ''}</span>
-                </div>
-                <input type="range" id="tf-cs-${cfg.id}" min="${cfg.min}" max="${cfg.max}" step="${cfg.step}" value="${cfg.current}" oninput="TweakFinder.updateSlider('${cfg.id}',this.value)" onchange="TweakFinder.applySlider('${cfg.id}',this.value)" class="tf-slider-control">
-                <div class="tf-slider-hints"><span>${cfg.min}</span><span>${cfg.max}</span></div>
-            </div>`;
-        } else if (isGov) {
+        // 在 renderControl 函数中，替换原有的 isSlider 分支
+} else if (isSlider) {
+    if (cfg.discreteValues && cfg.discreteValues.length > 0) {
+        // 渲染为下拉选择框
+        html += `<div style="margin-top:8px">
+            <select id="tf-cs-${cfg.id}" class="tf-gov-select" onchange="TweakFinder.applySlider('${cfg.id}',this.value)">
+                ${cfg.discreteValues.map(v => `<option value="${v}" ${String(v) === String(cfg.current) ? 'selected' : ''}>${v}</option>`).join('')}
+            </select>
+            <div style="font-size:10px;color:var(--text-dim);margin-top:4px">
+                Current: <span id="tf-sv-${cfg.id}" style="color:var(--blue);font-weight:bold">${cfg.current}${cfg.unit || ''}</span>
+            </div>
+        </div>`;
+    } else {
+        // 原有的滑块渲染
+        html += `<div style="margin:6px 0">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                <span id="tf-sv-${cfg.id}" style="font-family:monospace;color:var(--blue);font-weight:bold;font-size:12px">${cfg.current}${cfg.unit || ''}</span>
+                <span id="tf-pct-${cfg.id}" style="font-size:9px;color:var(--orange)"></span>
+                <span style="font-size:9px;color:var(--text-dim)">${cfg.min}${cfg.unit || ''}–${cfg.max}${cfg.unit || ''}</span>
+            </div>
+            <input type="range" id="tf-cs-${cfg.id}" min="${cfg.min}" max="${cfg.max}" step="${cfg.step}" value="${cfg.current}" oninput="TweakFinder.updateSlider('${cfg.id}',this.value)" onchange="TweakFinder.applySlider('${cfg.id}',this.value)" class="tf-slider-control">
+            <div class="tf-slider-hints"><span>${cfg.min}</span><span>${cfg.max}</span></div>
+        </div>`;
+    }
+} else if (isGov) {
             html += `<div style="margin-top:8px"><select id="tf-gov-select-${cfg.id}" class="tf-gov-select" onchange="TweakFinder.applyGovernor('${cfg.id}',this.value)">${cfg.governors?.map(g => `<option value="${g}" ${g === cfg.current ? 'selected' : ''}>${g}</option>`).join('') || ''}</select></div>`;
         } else if (isPPM) {
             html += `<div class="tf-ppm-grid" id="tf-ppm-grid-${cfg.id}">`;
@@ -1394,16 +1494,20 @@ async function applyToggle(id, on) {
                     }
                     cfg.current = actual; break;
                 }
-                case 'slider':
-                    const num = parseFloat(actual) || cfg.min;
-                    const clamped = Math.max(cfg.min, Math.min(cfg.max, num));
-                    const sliderEl = document.getElementById(`tf-cs-${cfg.id}`);
-                    const valueEl = document.getElementById(`tf-sv-${cfg.id}`);
-                    const pctEl = document.getElementById(`tf-pct-${cfg.id}`);
-                    if (sliderEl) sliderEl.value = clamped;
-                    if (valueEl) valueEl.textContent = `${clamped}${cfg.unit || ''}`;
-                    if (pctEl) { const pct = await calculatePercentage({ ...cfg, current: clamped }); pctEl.textContent = pct ? `(${pct})` : ''; }
-                    cfg.current = clamped; break;
+                // 在 refreshControlState 函数中
+case 'slider':
+    const actualNum = isNaN(parseFloat(actual)) ? actual : parseFloat(actual);
+    const clamped = (cfg.discreteValues && cfg.discreteValues.includes(actual)) ? actual : (isNaN(parseFloat(actual)) ? cfg.min : Math.max(cfg.min, Math.min(cfg.max, parseFloat(actual))));
+    
+    const sliderEl = document.getElementById(`tf-cs-${cfg.id}`);
+    const valueEl = document.getElementById(`tf-sv-${cfg.id}`);
+    const pctEl = document.getElementById(`tf-pct-${cfg.id}`);
+    
+    if (sliderEl) sliderEl.value = actual; // 对于 select 和 range 都适用
+    if (valueEl) valueEl.textContent = `${actual}${cfg.unit || ''}`;
+    if (pctEl && !cfg.discreteValues) { const pct = await calculatePercentage({ ...cfg, current: clamped }); pctEl.textContent = pct ? `(${pct})` : ''; }
+    
+    cfg.current = actual; break;
                 case 'governor':
                     const govEl = document.getElementById(`tf-gov-select-${cfg.id}`);
                     if (govEl && cfg.governors?.includes(actual)) { govEl.value = actual; govEl.style.color = 'var(--green)'; setTimeout(() => govEl.style.color = '', 1000); }
