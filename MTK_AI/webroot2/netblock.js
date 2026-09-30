@@ -324,7 +324,7 @@ function showNetBlockModal() {
     
     box.innerHTML = `
         <h3 style="color:#fff;margin:0 0 5px;font-size:20px;text-align:center;">🌐 App NetBlock Manager</h3>
-        <p style="color:#fff;font-size:12px;text-align:center;margin-bottom:20px;">Block internet (Wi-Fi & Data) per app via root iptables</p>
+        <p style="color:#fff;font-size:12px;text-align:center;margin-bottom:20px;">Block internet (Wi-Fi & Data) per app via root iptables 💡 Auto remove to blacklist if you open the app</p>
         <div style="display:flex;gap:8px;margin-bottom:15px;">
             <input type="text" id="netblock-search" placeholder="🔍 Search apps..." style="flex:1;padding:10px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;color:#fff;font-size:12px;">
             <button id="netblock-refresh-btn" style="padding:10px 16px;background:var(--bg-secondary);color:#fff;border:1px solid var(--border-color);border-radius:8px;font-size:12px;cursor:pointer;">🔄</button>
