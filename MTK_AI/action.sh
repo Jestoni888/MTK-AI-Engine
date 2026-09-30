@@ -90,14 +90,6 @@ find /sys -type f -name "*min*" 2>/dev/null | while read -r min_f; do
         target_val=$(tr ' ' '\n' < "$list_f" 2>/dev/null | grep -E '^[0-9]+$' | sort -n | tail -1)
     fi
 
-    # Fallback: If no list file exists or parsing yielded nothing, check existing max/high files
-    if [ -z "$target_val" ]; then
-        max_f=$(find "$dir" -maxdepth 1 -type f -name "*max*" 2>/dev/null | head -1)
-        high_f=$(find "$dir" -maxdepth 1 -type f -name "*high*" 2>/dev/null | head -1)
-        [ -n "$max_f" ] && target_val=$(cat "$max_f" 2>/dev/null)
-        [ -z "$target_val" ] && [ -n "$high_f" ] && target_val=$(cat "$high_f" 2>/dev/null)
-    fi
-
     # Skip directory if no valid target value could be resolved
     [ -z "$target_val" ] && continue
 
