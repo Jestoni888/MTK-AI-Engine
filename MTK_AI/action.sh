@@ -72,33 +72,71 @@ generate_max_script() {
 local target_dir="/data/adb/service.d"
 local target_file="${target_dir}/max.sh"
 mkdir -p "$target_dir"
-# Using 'EOF' in quotes prevents variable expansion inside the script
+
 cat << 'EOF' > "$target_file"
 #!/system/bin/sh
-# Find *min* files to use as the directory anchor
+
+# Search for min files as the base anchor
 find /sys -type f -name "*min*" 2>/dev/null | while read -r min_f; do
-max_f=$(find "$(dirname "$min_f")" -maxdepth 1 -name "*max*" -type f 2>/dev/null | head -1)
-if [ -n "$max_f" ] && val=$(cat "$max_f" 2>/dev/null); then
-dir=$(dirname "$min_f")
-echo "Path: $dir | Target: $val"
-# 1. Temporarily make writable (attempt)
-chmod 644 "$min_f" 2>/dev/null
-chmod 644 "$max_f" 2>/dev/null
-# 2. Write to min first (raising the floor), then max
-echo "$val" > "$min_f" 2>/dev/null
-echo "$val" > "$max_f" 2>/dev/null
-# 3. Lock them as read-only after applying
-chmod 444 "$min_f" 2>/dev/null
-chmod 444 "$max_f" 2>/dev/null
-# 4. Verify if the values were really applied
-r_max=$(cat "$max_f" 2>/dev/null)
-r_min=$(cat "$min_f" 2>/dev/null)
-[ "$r_max" = "$val" ] && echo "  [OK] max applied" || echo "  [FAIL] max (read: $r_max)"
-[ "$r_min" = "$val" ] && echo "  [OK] min applied" || echo "  [FAIL] min (read: $r_min)"
-echo "---"
-fi
+    dir=$(dirname "$min_f")
+
+    # 1. Search for a list/table file in the same directory
+    list_f=$(find "$dir" -maxdepth 1 -type f \( -name "*available*" -o -name "*list*" -o -name "*opp*" -o -name "*table*" \) 2>/dev/null | head -1)
+
+    target_val=""
+
+    # 2. Extract the highest numerical value from the list file if present
+    if [ -n "$list_f" ]; then
+        target_val=$(tr ' ' '\n' < "$list_f" 2>/dev/null | grep -E '^[0-9]+$' | sort -n | tail -1)
+    fi
+
+    # Fallback: If no list file exists or parsing yielded nothing, check existing max/high files
+    if [ -z "$target_val" ]; then
+        max_f=$(find "$dir" -maxdepth 1 -type f -name "*max*" 2>/dev/null | head -1)
+        high_f=$(find "$dir" -maxdepth 1 -type f -name "*high*" 2>/dev/null | head -1)
+        [ -n "$max_f" ] && target_val=$(cat "$max_f" 2>/dev/null)
+        [ -z "$target_val" ] && [ -n "$high_f" ] && target_val=$(cat "$high_f" 2>/dev/null)
+    fi
+
+    # Skip directory if no valid target value could be resolved
+    [ -z "$target_val" ] && continue
+
+    # Locate all target controls in this path
+    max_f=$(find "$dir" -maxdepth 1 -type f -name "*max*" 2>/dev/null | head -1)
+    high_f=$(find "$dir" -maxdepth 1 -type f -name "*high*" 2>/dev/null | head -1)
+    low_f=$(find "$dir" -maxdepth 1 -type f -name "*low*" 2>/dev/null | head -1)
+
+    echo "Path: $dir | Highest Target: $target_val"
+
+    # 3. Temporarily make files writable
+    for f in "$min_f" "$max_f" "$high_f" "$low_f"; do
+        [ -n "$f" ] && chmod 644 "$f" 2>/dev/null
+    done
+
+    # 4. Apply target value (lower bounds first, then upper bounds)
+    [ -n "$min_f" ] && echo "$target_val" > "$min_f" 2>/dev/null
+    [ -n "$low_f" ] && echo "$target_val" > "$low_f" 2>/dev/null
+    [ -n "$max_f" ] && echo "$target_val" > "$max_f" 2>/dev/null
+    [ -n "$high_f" ] && echo "$target_val" > "$high_f" 2>/dev/null
+
+    # 5. Lock files as read-only
+    for f in "$min_f" "$max_f" "$high_f" "$low_f"; do
+        [ -n "$f" ] && chmod 444 "$f" 2>/dev/null
+    done
+
+    # 6. Verify applied values
+    for entry in "min:$min_f" "low:$low_f" "max:$max_f" "high:$high_f"; do
+        name="${entry%%:*}"
+        file="${entry#*:}"
+        if [ -n "$file" ]; then
+            res=$(cat "$file" 2>/dev/null)
+            [ "$res" = "$target_val" ] && echo "  [OK] $name applied" || echo "  [FAIL] $name (read: $res)"
+        fi
+    done
+    echo "---"
 done
 EOF
+
 chmod 755 "$target_file"
 echo ">> Script successfully generated at:"
 echo "   ${target_file}"
