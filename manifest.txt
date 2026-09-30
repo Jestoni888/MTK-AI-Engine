@@ -94,3 +94,4 @@ webroot/hibernator.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine
 webroot/wifi.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/wifi.js
 webroot/netblock.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/netblock.js
 webroot/version.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/version.js
+webroot/activitylauncher.js https://raw.githubusercontent.com/Jestoni888/MTK-AI-Engine/refs/heads/main/MTK_AI/webroot2/activitylauncher.js
