@@ -372,7 +372,7 @@ async function doRollback(hash, label) {
             const dirPath = fullPath.substring(0, fullPath.lastIndexOf('/'));
             
             if (statusEl) {
-                statusEl.textContent = `⏳ Downloading (${successCount + 1}/${totalFiles}): ${relativePath.split('/').pop()}...`;
+                statusEl.textContent = `⚠️Dont close UI ⏳ Downloading (${successCount + 1}/${totalFiles}): ${relativePath.split('/').pop()}...`;
             }
             
             // Use busybox wget to download directly, avoiding base64 shell command-line limits
