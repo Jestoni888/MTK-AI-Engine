@@ -1,3 +1,7 @@
+--- version 0.0.1.31 ---
+
+•Add Activity launcher in tools tab
+
 --- version 0.0.1.30 ---
 
 •Add letter, character, & symbol support in file anayzer on tweak finder toggle & slider
