@@ -617,12 +617,21 @@
                 const governors = await getAvailableGovernors(path);
                 const current = await getCurrentGovernor(path);
                 opts = { governors, current, path };
-            } else if (/^(0|1|false|true|disabled|enabled)$/i.test(val)) {
-                type = 'toggle';
-                opts = val.toLowerCase() === '0' || val.toLowerCase() === 'false' || val.toLowerCase() === 'disabled'
-                    ? { off: val, on: val === '0' ? '1' : val === 'false' ? 'true' : 'enabled' }
-                    : { on: val, off: val === '1' ? '0' : val === 'true' ? 'false' : 'disabled' };
-            } else {
+            } else if (/\[.*?\]/i.test(val) || /^(0|1|false|true|disabled|enabled)$/i.test(val)) {
+    type = 'toggle';
+    
+    // Extract bracketed choice or use raw text as active value
+    const match = val.match(/\[(.*?)\]/);
+    const activeVal = match ? match[1] : val;
+    
+    // Extract remaining option outside brackets if present
+    const nonBracketVal = val.replace(/\[.*?\]/, '').trim();
+
+    opts = {
+        on: activeVal,
+        off: nonBracketVal || 'disabled'
+    };
+} else {
                 const extractedNum = extractNumberFromText(val);
                 if (extractedNum !== null) {
                     type = 'slider';
@@ -1368,11 +1377,13 @@ async function applyToggle(id, on) {
             if (!actualValue) return;
             const actual = actualValue.trim();
             switch (cfg.type) {                case 'toggle': {
-                    const actualNorm = actual.toLowerCase();
-                    const onNorm = (cfg.on || '').toString().trim().toLowerCase();
-                    const offNorm = (cfg.off || '').toString().trim().toLowerCase();
-                    const isOn = (actualNorm === onNorm);
-                    const isOff = (actualNorm === offNorm);
+    // Strip brackets when comparing active values
+    const cleanActual = actual.replace(/[\[\]]/g, '').trim().toLowerCase();
+    const onNorm = (cfg.on || '').replace(/[\[\]]/g, '').trim().toLowerCase();
+    const offNorm = (cfg.off || '').replace(/[\[\]]/g, '').trim().toLowerCase();
+    
+    const isOn = cleanActual.includes(onNorm);
+    const isOff = cleanActual.includes(offNorm);
                     const toggleEl = document.getElementById(`tf-ct-${cfg.id}`);
                     const statusEl = document.getElementById(`tf-ts-${cfg.id}`);
                     if (toggleEl) toggleEl.checked = isOn;
