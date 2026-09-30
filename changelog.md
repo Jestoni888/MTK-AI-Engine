@@ -1,5 +1,7 @@
 --- version 0.0.1.31 ---
 
+•Add partition image flasher in tools tab maintenance section next to backup partition (⚠️High risks only for experts)
+
 •Add Activity launcher in tools tab
 
 --- version 0.0.1.30 ---
