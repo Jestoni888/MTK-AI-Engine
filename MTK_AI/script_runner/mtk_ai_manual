@@ -100,5 +100,3 @@ devfreq() {
     fi
 }
 devfreq
-M=/data/adb/modules/MTK_AI/MTK_AI/AI_MODE
-[ -f /dev/.mtk_ai_active_game ] && $M/gaming_mode/app_optimizer || $M/normal_mode/normal_prop
