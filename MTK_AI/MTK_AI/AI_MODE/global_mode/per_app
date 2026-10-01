@@ -161,15 +161,18 @@ apply_devfreq() {
         [ -r "$f" ] || continue
 
         # Apply Governor (only if writable)
-        [ -n "$TARGET_GOV" ] && [ -w "$d/governor" ] && echo "$TARGET_GOV" > "$d/governor" 2>/dev/null
+        [ -n "$TARGET_GOV" ] && [ -w "$d/governor" ] && chmod 777 "$d/governor" 2>/dev/null && echo "$TARGET_GOV" > "$d/governor" 2>/dev/null
 
         # Apply Min/Max Frequency (with set_freq fallback for kernels that use it)
         if [ -n "$TARGET_MIN_FREQ" ] && [ -n "$TARGET_MAX_FREQ" ]; then
             if [ -w "$d/min_freq" ] && [ -w "$d/max_freq" ]; then
+                chmod 777 "$d/max_freq" 2>/dev/null
+                chmod 777 "$d/min_freq" 2>/dev/null
                 echo "$TARGET_MAX_FREQ" > "$d/max_freq" 2>/dev/null
                 echo "$TARGET_MIN_FREQ" > "$d/min_freq" 2>/dev/null
             elif [ -w "$d/set_freq" ]; then
                 # If only set_freq exists, apply the max frequency target to it
+                chmod 777 "$d/set_freq" 2>/dev/null
                 echo "$TARGET_MAX_FREQ" > "$d/set_freq" 2>/dev/null
             fi
         fi
