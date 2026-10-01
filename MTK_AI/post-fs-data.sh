@@ -75,12 +75,15 @@ find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( -iname "available_freq
     for t in $max_targets; do
         if [ -f "$dir/$t" ]; then
             cur=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
-            if [ -n "$cur" ]; then
-                # Generate restore command with strict chmod sequence
-                echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
-                found_max=1
-                break
-            fi
+            case "$cur" in
+                *[!0-9]*|"") ;; # Skip if empty or contains non-numeric characters
+                *)
+                    # Generate restore command with strict chmod sequence
+                    echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
+                    found_max=1
+                    break
+                    ;;
+            esac
         fi
     done
     
@@ -88,11 +91,14 @@ find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( -iname "available_freq
     for t in $min_targets; do
         if [ -f "$dir/$t" ]; then
             cur=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
-            if [ -n "$cur" ]; then
-                echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
-                found_min=1
-                break
-            fi
+            case "$cur" in
+                *[!0-9]*|"") ;; # Skip if empty or contains non-numeric characters
+                *)
+                    echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
+                    found_min=1
+                    break
+                    ;;
+            esac
         fi
     done
     
@@ -101,10 +107,13 @@ find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( -iname "available_freq
         for t in $set_targets; do
             if [ -f "$dir/$t" ]; then
                 cur=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
-                if [ -n "$cur" ]; then
-                    echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
-                    break
-                fi
+                case "$cur" in
+                    *[!0-9]*|"") ;; # Skip if empty or contains non-numeric characters
+                    *)
+                        echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
+                        break
+                        ;;
+                esac
             fi
         done
     fi
