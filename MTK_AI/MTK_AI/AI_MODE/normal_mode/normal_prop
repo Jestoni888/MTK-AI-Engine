@@ -142,27 +142,6 @@ write() {
     echo "$1" >"$2" 2>/dev/null || true
 }
 
-cpufreq_ppm_max_perf() {
-    cluster=-1
-    for path in /sys/devices/system/cpu/cpufreq/policy*; do
-        [ -d "$path" ] || continue
-        cluster=$((cluster + 1))
-        cpu_maxfreq=$(cat "$path/cpuinfo_max_freq" 2>/dev/null)
-        [ -n "$cpu_maxfreq" ] && write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_max_cpu_freq
-        [ -n "$cpu_maxfreq" ] && write "$cluster $cpu_maxfreq" /proc/ppm/policy/hard_userlimit_min_cpu_freq
-    done
-}
-
-cpufreq_max_perf() {
-    for path in /sys/devices/system/cpu/*/cpufreq; do
-        [ -d "$path" ] || continue
-        cpu_maxfreq=$(cat "$path/cpuinfo_max_freq" 2>/dev/null)
-        [ -n "$cpu_maxfreq" ] && apply "$cpu_maxfreq" "$path/scaling_max_freq"
-        [ -n "$cpu_maxfreq" ] && apply "$cpu_maxfreq" "$path/scaling_min_freq"
-    done
-    chmod -f 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq 2>/dev/null || true
-}
-
 # --- Common System Tweaks ---
 apply 0 /proc/sys/kernel/panic
 apply 0 /proc/sys/kernel/panic_on_oops
@@ -201,8 +180,6 @@ apply 0 /sys/module/opchain/parameters/chain_on
 apply 0 /sys/module/cpufreq_bouncing/parameters/enable
 apply 0 /proc/task_info/task_sched_info/task_sched_info_enable
 apply 0 /proc/oplus_scheduler/sched_assist/sched_assist_enabled
-apply "libunity.so, libil2cpp.so, libmain.so, libUE4.so, libgodot_android.so, libgdx.so, libgdx-box2d.so, libminecraftpe.so, libLive2DCubismCore.so, libyuzu-android.so, libryujinx.so, libcitra-android.so, libhdr_pro_engine.so, libandroidx.graphics.path.so, libeffect.so" /proc/sys/kernel/sched_lib_name
-apply 255 /proc/sys/kernel/sched_lib_mask_force
 
 find /sys/class/thermal -maxdepth 1 -name "thermal_zone*" -exec sh -c 'for d; do echo step_wise > $d/policy 2>/dev/null; done' _ {} + 2>/dev/null || true
 
@@ -237,13 +214,6 @@ if [ -d "$tp_path" ]; then
 fi
 
 apply 80 /proc/sys/vm/vfs_cache_pressure
-
-# Force CPU to highest possible frequency (Frequency locking, not governor)
-if [ -d /proc/ppm ]; then
-    cpufreq_ppm_max_perf
-else
-    cpufreq_max_perf
-fi
 
 echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
 wait 2>/dev/null || true
