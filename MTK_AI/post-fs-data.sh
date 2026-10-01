@@ -62,6 +62,13 @@ echo '#!/system/bin/sh' > "$DVFS_OUT"
 echo "" >> "$DVFS_OUT"
 echo "# --- Universal DVFS Frequency Backup ---" >> "$DVFS_OUT"
 
+# Helper function to generate commands that check before writing
+append_restore_cmd() {
+    local target="$1"
+    local val="$2"
+    echo "[ \"\$(cat '$target' 2>/dev/null | tr -d '[:space:]')\" != '$val' ] && { chmod 644 '$target' 2>/dev/null; echo '$val' > '$target' 2>/dev/null; chmod 444 '$target' 2>/dev/null; }" >> "$DVFS_OUT"
+}
+
 # Universal find: Excludes PIDs and CPU paths, checks all list file formats
 find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( -iname "available_frequencies" -o -iname "*_freq_table" -o -iname "*_opp_dump" -o -iname "*_opp_table" \) -print 2>/dev/null | grep -vE '/(cpufreq|policy[0-9]+|ppm)/' | while read -r f; do
     dir=$(dirname "$f")
@@ -76,10 +83,9 @@ find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( -iname "available_freq
         if [ -f "$dir/$t" ]; then
             cur=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
             case "$cur" in
-                *[!0-9]*|"") ;; # Skip if empty or contains non-numeric characters
+                *[!0-9]*|"") ;; # Skip non-numeric or empty values
                 *)
-                    # Generate restore command with strict chmod sequence
-                    echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
+                    append_restore_cmd "$dir/$t" "$cur"
                     found_max=1
                     break
                     ;;
@@ -92,9 +98,9 @@ find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( -iname "available_freq
         if [ -f "$dir/$t" ]; then
             cur=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
             case "$cur" in
-                *[!0-9]*|"") ;; # Skip if empty or contains non-numeric characters
+                *[!0-9]*|"") ;; # Skip non-numeric or empty values
                 *)
-                    echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
+                    append_restore_cmd "$dir/$t" "$cur"
                     found_min=1
                     break
                     ;;
@@ -108,9 +114,9 @@ find /sys /proc -path "/proc/[0-9]*" -prune -o -type f \( -iname "available_freq
             if [ -f "$dir/$t" ]; then
                 cur=$(cat "$dir/$t" 2>/dev/null | tr -d '[:space:]')
                 case "$cur" in
-                    *[!0-9]*|"") ;; # Skip if empty or contains non-numeric characters
+                    *[!0-9]*|"") ;; # Skip non-numeric or empty values
                     *)
-                        echo "chmod 644 '$dir/$t' 2>/dev/null; echo '$cur' > '$dir/$t' 2>/dev/null; chmod 444 '$dir/$t' 2>/dev/null" >> "$DVFS_OUT"
+                        append_restore_cmd "$dir/$t" "$cur"
                         break
                         ;;
                 esac
