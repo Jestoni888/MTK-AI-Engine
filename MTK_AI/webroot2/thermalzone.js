@@ -1,4 +1,4 @@
-// thermalzone.js - Enhanced Thermal Zone & MTK Proc Thermal Manager
+// thermalzone.js - Advanced Thermal Zone & MTK Proc Thermal Manager
 (function() {
     'use strict';
 
@@ -7,7 +7,32 @@
     let detectedZones = [];
     let detectedProcNodes = [];
 
-    // Safe exec wrapper - standard execution helper
+    // Exact kernel handler label and polling interval mappings matching test.sh
+    const MTK_NODE_CONFIG = {
+        'tzcpu':     { label: 'mtktscpu-sysrst', interval: 200 },
+        'tzpmic':    { label: 'mtktspmic-sysrst', interval: 1000 },
+        'tzbattery': { label: 'mtktsbattery-sysrst', interval: 1000 },
+        'tzpa':      { label: 'mtk-cl-kshutdown00', interval: 2000 },
+        'tzcharger': { label: 'mtktscharger-sysrst', interval: 2000 },
+        'tzwmt':     { label: 'mtktswmt-sysrst', interval: 1000 },
+        'tzbts':     { label: 'mtktsAP-sysrst', interval: 1000 },
+        'tzbtsnrpa': { label: 'mtk-cl-kshutdown01', interval: 1000 },
+        'tzbtspa':   { label: 'mtk-cl-kshutdown02', interval: 1000 },
+        'tzdctm':    { label: 'mtktsdctm-sysrst', interval: 1000 }
+    };
+
+    function getProcNodeSpec(nodeName) {
+        const key = nodeName.toLowerCase();
+        if (MTK_NODE_CONFIG[key]) {
+            return MTK_NODE_CONFIG[key];
+        }
+        if (key.startsWith('tzimgs')) {
+            return { label: `${key}-sysrst`, interval: 1000 };
+        }
+        return { label: `${nodeName}-sysrst`, interval: 1000 };
+    }
+
+    // Safe root exec wrapper
     const execFn = window.exec || async function(cmd, timeout = 5000) {
         return new Promise(resolve => {
             const cb = `thermal_exec_${Date.now()}_${Math.random().toString(36).substring(2)}`;
@@ -50,7 +75,7 @@
     }
 
     /* ==========================================================================
-       MODAL 1: SYSFS THERMAL ZONES (MODE, POLICY, TRIP POINTS)
+       MODAL 1: SYSFS THERMAL ZONES (/sys/class/thermal)
        ========================================================================== */
     function showThermalModal() {
         const existing = document.getElementById('thermal-modal');
@@ -75,7 +100,7 @@
 
         box.innerHTML = `
             <h3 style="color: #ffffff; margin: 0 0 5px; font-size: 20px; text-align: center;">🔥 Thermal Zone Manager</h3>
-            <p style="color: #ffffff; opacity: 0.8; font-size: 12px; text-align: center; margin-bottom: 15px;">Configure mode, policies, and trip point thresholds</p>
+            <p style="color: #ffffff; opacity: 0.8; font-size: 12px; text-align: center; margin-bottom: 15px;">Configure modes, policies, and individual trip point temperatures</p>
 
             <!-- Global Policy & Global Trip Adjuster -->
             <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
@@ -89,21 +114,22 @@
                     <button id="apply-policy-all-btn" style="padding: 8px 12px; background: var(--accent-orange); color: #fff; border: none; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer;">Apply Policy to All</button>
                 </div>
 
-                <!-- Global Trip Point Slider -->
+                <!-- Global Trip 0 Slider -->
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                     <div style="display: flex; justify-content: space-between; font-size: 11px; color: #fff;">
-                        <span>Global Trip Point Target:</span>
+                        <span>Apply Target Temp to Trip_0 / All Trips:</span>
                         <span id="global-trip-val" style="font-weight: 700; color: var(--accent-orange);">95°C</span>
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <input type="range" id="global-trip-slider" min="50" max="200" value="95" style="flex: 1; accent-color: var(--accent-orange);">
-                        <button id="apply-trip-all-btn" style="padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border-color); color: #fff; border-radius: 8px; font-size: 11px; cursor: pointer;">Apply to All</button>
+                        <input type="range" id="global-trip-slider" min="30" max="200" value="95" style="flex: 1; accent-color: var(--accent-orange);">
+                        <button id="apply-trip-0-btn" style="padding: 6px 10px; background: var(--accent-orange); color: #fff; border: none; border-radius: 8px; font-size: 10px; font-weight: 600; cursor: pointer;">Trip 0 Only</button>
+                        <button id="apply-trip-all-btn" style="padding: 6px 10px; background: var(--bg-card); border: 1px solid var(--border-color); color: #fff; border-radius: 8px; font-size: 10px; cursor: pointer;">All Trips</button>
                     </div>
                 </div>
             </div>
 
             <div id="thermal-scan-status" style="text-align: center; font-size: 12px; color: #ffffff; margin-bottom: 10px; padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
-                <span style="color: var(--accent-orange);">🔍 Scanning thermal zones...</span>
+                <span style="color: var(--accent-orange);">🔍 Scanning sysfs thermal zones...</span>
             </div>
 
             <!-- Scrollable List of Thermal Zones -->
@@ -129,40 +155,35 @@
 
         modal.onclick = e => { if (e.target === modal) modal.remove(); };
 
-        // Global Slider display update
         const globalSlider = document.getElementById('global-trip-slider');
         const globalVal = document.getElementById('global-trip-val');
         if (globalSlider && globalVal) {
             globalSlider.oninput = () => globalVal.textContent = `${globalSlider.value}°C`;
         }
 
-        // Open 2nd Modal for Proc Driver Detection
-        document.getElementById('open-proc-modal-btn').onclick = () => {
-            showProcThermalModal();
-        };
-
-        // Scan zones after modal renders
+        document.getElementById('open-proc-modal-btn').onclick = () => showProcThermalModal();
         scanZones();
 
-        // Bind Apply Policy to All
         document.getElementById('apply-policy-all-btn').onclick = async () => {
             const selectedPolicy = document.getElementById('global-policy-select').value;
             if (!selectedPolicy) return;
             await applyPolicyToAll(selectedPolicy);
         };
 
-        // Bind Apply Trip to All
-        document.getElementById('apply-trip-all-btn').onclick = async () => {
+        document.getElementById('apply-trip-0-btn').onclick = async () => {
             const targetTemp = parseInt(globalSlider.value);
-            await applyTripTempToAll(targetTemp);
+            await applyTripTempToAll(targetTemp, true);
         };
 
-        // Toggle all mode button
+        document.getElementById('apply-trip-all-btn').onclick = async () => {
+            const targetTemp = parseInt(globalSlider.value);
+            await applyTripTempToAll(targetTemp, false);
+        };
+
         document.getElementById('thermal-toggle-btn').onclick = async () => {
             await toggleAllThermals();
         };
 
-        // Close button
         document.getElementById('thermal-cancel-btn').onclick = () => modal.remove();
     }
 
@@ -210,11 +231,10 @@
 
                 availablePolicies.forEach(p => allAvailablePolicies.add(p));
 
-                // Parse trip points
                 const tripFiles = (tripsRaw || '').trim().split('\n').filter(f => f.trim());
                 const tripPoints = [];
                 for (const tripFile of tripFiles) {
-                    const tripName = tripFile.split('/').pop();
+                    const tripName = tripFile.split('/').pop().replace('_temp', '');
                     const tripValRaw = await execFn(`cat ${tripFile} 2>/dev/null`);
                     const tripVal = parseInt(tripValRaw) || 0;
                     tripPoints.push({ file: tripFile, name: tripName, temp: Math.round(tripVal / 1000) });
@@ -248,12 +268,14 @@
                     </div>` : ''}
 
                     ${tripPoints.length ? `
-                    <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px; background: var(--bg-card); padding: 8px; border-radius: 8px;">
-                        <span style="font-size: 10px; color: var(--accent-orange); font-weight: 600;">Trip Point Adjustment:</span>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px; background: var(--bg-card); padding: 8px; border-radius: 8px;">
+                        <span style="font-size: 10px; color: var(--accent-orange); font-weight: 600;">Trip Point Temperature Sliders:</span>
                         ${tripPoints.map(tp => `
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <span style="font-size: 10px; color: #ccc; min-width: 70px;">${tp.name.replace('_temp','')}:</span>
-                                <input type="range" class="trip-slider" data-file="${tp.file}" min="40" max="200" value="${tp.temp}" style="flex: 1; accent-color: var(--accent-orange);">
+                                <span style="font-size: 10px; color: ${tp.name.includes('trip_point_0') ? 'var(--accent-orange)' : '#ccc'}; min-width: 80px; font-weight: ${tp.name.includes('trip_point_0') ? '700' : '400'};">
+                                    ${tp.name}:
+                                </span>
+                                <input type="range" class="trip-slider" data-file="${tp.file}" min="30" max="200" value="${tp.temp}" style="flex: 1; accent-color: var(--accent-orange);">
                                 <span class="trip-val" style="font-size: 10px; color: #fff; min-width: 35px; text-align: right;">${tp.temp}°C</span>
                             </div>
                         `).join('')}
@@ -262,12 +284,10 @@
                 listEl.appendChild(zoneEl);
             }
 
-            // Populate Global Policy Options
             if (globalPolicySelect) {
                 globalPolicySelect.innerHTML = Array.from(allAvailablePolicies).map(p => `<option value="${p}">${p}</option>`).join('');
             }
 
-            // Bind Individual Mode Toggle Buttons
             listEl.querySelectorAll('.thermal-zone-toggle').forEach(btn => {
                 btn.onclick = async (e) => {
                     const id = e.currentTarget.dataset.id;
@@ -281,7 +301,6 @@
                 };
             });
 
-            // Bind Individual Policy Change Selectors
             listEl.querySelectorAll('.zone-policy-select').forEach(sel => {
                 sel.onchange = async (e) => {
                     const path = e.target.dataset.path;
@@ -290,7 +309,6 @@
                 };
             });
 
-            // Bind Individual Trip Sliders
             listEl.querySelectorAll('.trip-slider').forEach(slider => {
                 slider.oninput = (e) => {
                     const valSpan = e.target.parentElement.querySelector('.trip-val');
@@ -322,17 +340,19 @@
         setTimeout(() => showThermalModal(), 1000);
     }
 
-    async function applyTripTempToAll(targetTemp) {
+    async function applyTripTempToAll(targetTemp, onlyTripZero = false) {
         const statusEl = document.getElementById('thermal-scan-status');
         statusEl.style.display = 'block';
-        statusEl.innerHTML = `<span style="color: var(--accent-orange);">🔄 Setting all trip points to ${targetTemp}°C...</span>`;
+        statusEl.innerHTML = `<span style="color: var(--accent-orange);">🔄 Setting ${onlyTripZero ? 'trip_0' : 'all'} trip points to ${targetTemp}°C...</span>`;
         const milliDeg = targetTemp * 1000;
         for (const zone of detectedZones) {
             for (const tp of zone.tripPoints) {
-                await execFn(`su -c "chmod 666 ${tp.file} && echo ${milliDeg} > ${tp.file}"`);
+                if (!onlyTripZero || tp.name.includes('trip_point_0')) {
+                    await execFn(`su -c "chmod 666 ${tp.file} && echo ${milliDeg} > ${tp.file}"`);
+                }
             }
         }
-        statusEl.innerHTML = `<span style="color: var(--accent-green);">✅ All trip points set to ${targetTemp}°C</span>`;
+        statusEl.innerHTML = `<span style="color: var(--accent-green);">✅ Target ${targetTemp}°C set on ${onlyTripZero ? 'trip_0' : 'all'} trip points</span>`;
         setTimeout(() => showThermalModal(), 1000);
     }
 
@@ -396,31 +416,33 @@
 
         box.innerHTML = `
             <h3 style="color: #ffffff; margin: 0 0 5px; font-size: 18px; text-align: center;">⚡ MediaTek Thermal Detector</h3>
-            <p style="color: #ffffff; opacity: 0.8; font-size: 11px; text-align: center; margin-bottom: 15px;">Detecting legacy MediaTek /proc/driver/thermal nodes</p>
+            <p style="color: #ffffff; opacity: 0.8; font-size: 11px; text-align: center; margin-bottom: 15px;">Detecting and tuning legacy MediaTek /proc/driver/thermal nodes</p>
 
             <div id="proc-scan-status" style="text-align: center; font-size: 12px; color: #ffffff; margin-bottom: 10px; padding: 8px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
                 <span style="color: var(--accent-orange);">🔍 Scanning /proc/driver/thermal...</span>
             </div>
 
-            <!-- List of detected Proc Nodes -->
+            <!-- Global Master Slider for all MTK proc thermals -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #fff;">
+                    <span style="font-weight: 600; color: var(--accent-orange);">Master Override Limit (All MTK Nodes):</span>
+                    <span id="proc-temp-val" style="font-weight: 700; color: var(--accent-orange); font-size: 12px;">125°C</span>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="range" id="proc-temp-slider" min="50" max="200" value="125" step="1" style="flex: 1; accent-color: var(--accent-orange); cursor: pointer;">
+                    <button id="override-proc-btn" style="padding: 6px 12px; background: var(--accent-orange); color: #fff; border: none; border-radius: 8px; font-size: 10px; font-weight: 700; cursor: pointer;">
+                        Apply to All
+                    </button>
+                </div>
+            </div>
+
+            <!-- List of detected Proc Nodes with Individual Sliders -->
             <div id="proc-node-list" style="display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; padding-right: 4px; margin-bottom: 12px;">
                 <!-- Proc entries injected here -->
             </div>
 
-            <!-- Interactive Temperature Limit Control Slider -->
-            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #fff;">
-                    <span>MTK Driver Limit Target:</span>
-                    <span id="proc-temp-val" style="font-weight: 700; color: var(--accent-orange); font-size: 13px;">100°C</span>
-                </div>
-                <input type="range" id="proc-temp-slider" min="50" max="200" value="100" step="1" style="width: 100%; accent-color: var(--accent-orange); cursor: pointer;">
-            </div>
-
-            <div style="display: flex; gap: 8px;">
-                <button id="override-proc-btn" style="flex: 1; padding: 12px; background: var(--accent-orange); color: #fff; border: none; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer;">
-                    🔥 Apply Custom Limit
-                </button>
-                <button id="close-proc-btn" style="padding: 12px 16px; background: var(--bg-secondary); color: #fff; border: 1px solid var(--border-color); border-radius: 10px; font-size: 12px; cursor: pointer;">Close</button>
+            <div style="display: flex; justify-flex-end;">
+                <button id="close-proc-btn" style="width: 100%; padding: 12px; background: var(--bg-secondary); color: #fff; border: 1px solid var(--border-color); border-radius: 10px; font-size: 12px; cursor: pointer;">Close</button>
             </div>
         `;
 
@@ -429,7 +451,6 @@
 
         modal.onclick = e => { if (e.target === modal) modal.remove(); };
 
-        // Bind Slider live value readout
         const procSlider = box.querySelector('#proc-temp-slider');
         const procValSpan = box.querySelector('#proc-temp-val');
         if (procSlider && procValSpan) {
@@ -440,7 +461,7 @@
 
         document.getElementById('close-proc-btn').onclick = () => modal.remove();
         document.getElementById('override-proc-btn').onclick = async () => {
-            const targetDeg = parseInt(procSlider.value) || 100;
+            const targetDeg = parseInt(procSlider.value) || 125;
             await overrideProcThermals(targetDeg);
         };
 
@@ -468,39 +489,100 @@
             for (const node of nodes) {
                 const nodePath = `/proc/driver/thermal/${node}`;
                 const content = await execFn(`cat ${nodePath} 2>/dev/null | head -n 3`);
-                
-                detectedProcNodes.push({ name: node, path: nodePath, content });
+                const isTunable = node.startsWith('tz');
+
+                detectedProcNodes.push({ name: node, path: nodePath, content, isTunable });
 
                 const card = document.createElement('div');
-                card.style.cssText = 'background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px; font-size: 11px;';
+                card.style.cssText = 'background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px; font-size: 11px; display: flex; flex-direction: column; gap: 6px;';
+                
                 card.innerHTML = `
-                    <div style="color: var(--accent-orange); font-weight: 600;">/proc/driver/thermal/${node}</div>
-                    <pre style="margin: 4px 0 0; font-size: 9px; color: #ccc; white-space: pre-wrap; font-family: monospace;">${content || '[No readable data]'}</pre>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--accent-orange); font-weight: 600;">/proc/driver/thermal/${node}</span>
+                        ${isTunable ? `<span style="color: var(--accent-green); font-size: 9px; border: 1px solid var(--accent-green); padding: 1px 4px; border-radius: 4px;">Tunable Zone</span>` : ''}
+                    </div>
+                    <pre style="margin: 0; font-size: 9px; color: #ccc; white-space: pre-wrap; font-family: monospace; background: var(--bg-card); padding: 6px; border-radius: 6px; max-height: 50px; overflow: hidden;">${content || '[No readable data]'}</pre>
+                    
+                    ${isTunable ? `
+                    <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 2px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 10px; color: #aaa;">Individual Limit Temp:</span>
+                            <span class="proc-node-val" style="font-size: 10px; font-weight: 700; color: var(--accent-orange);">125°C</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="range" class="proc-node-slider" data-node="${node}" min="50" max="200" value="125" style="flex: 1; accent-color: var(--accent-orange);">
+                            <button class="apply-node-btn" data-node="${node}" style="padding: 4px 10px; background: var(--bg-card); border: 1px solid var(--border-color); color: #fff; border-radius: 6px; font-size: 10px; cursor: pointer;">Apply</button>
+                        </div>
+                    </div>
+                    ` : ''}
                 `;
                 listEl.appendChild(card);
             }
+
+            listEl.querySelectorAll('.proc-node-slider').forEach(slider => {
+                slider.oninput = (e) => {
+                    const valSpan = e.target.parentElement.parentElement.querySelector('.proc-node-val');
+                    if (valSpan) valSpan.textContent = `${e.target.value}°C`;
+                };
+            });
+
+            listEl.querySelectorAll('.apply-node-btn').forEach(btn => {
+                btn.onclick = async (e) => {
+                    const nodeName = e.target.dataset.node;
+                    const slider = e.target.parentElement.querySelector('.proc-node-slider');
+                    const targetDeg = parseInt(slider.value) || 125;
+                    await writeSingleProcNode(nodeName, targetDeg);
+                };
+            });
 
         } catch (e) {
             statusEl.innerHTML = `<span style="color: var(--accent-red);">❌ Proc scan error: ${e.message}</span>`;
         }
     }
 
-    async function overrideProcThermals(targetDeg = 100) {
+    async function writeSingleProcNode(nodeName, targetDeg) {
         const statusEl = document.getElementById('proc-scan-status');
         if (statusEl) {
-            statusEl.innerHTML = `<span style="color: var(--accent-orange);">🔥 Applying ${targetDeg}°C limit to MTK drivers...</span>`;
+            statusEl.innerHTML = `<span style="color: var(--accent-orange);">🔄 Setting ${nodeName} to ${targetDeg}°C...</span>`;
         }
-
-        const targetNodes = ['tzcpu', 'tzpmic', 'tzbattery', 'tzpa', 'tzcharger', 'tzwmt', 'tzbts', 'tzbtsnrpa', 'tzbtspa', 'tzdctm'];
-        const noCooler = "0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler";
+        
         const milliDeg = targetDeg * 1000;
+        const p = `/proc/driver/thermal/${nodeName}`;
+        const spec = getProcNodeSpec(nodeName);
+        const noCooler = "0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler";
 
-        for (const node of targetNodes) {
-            const p = `/proc/driver/thermal/${node}`;
-            await execFn(`su -c "chmod 644 ${p} && echo '1 ${milliDeg} 0 ${node}-sysrst ${noCooler} 1000' > ${p} && chmod 444 ${p}"`);
+        await execFn(`su -c "chmod 644 ${p} && echo '1 ${milliDeg} 0 ${spec.label} ${noCooler} ${spec.interval}' > ${p} && chmod 444 ${p}"`);
+
+        if (statusEl) {
+            statusEl.innerHTML = `<span style="color: var(--accent-green);">✅ Updated ${nodeName} (${spec.label}) to ${targetDeg}°C</span>`;
+        }
+        setTimeout(() => scanProcNodes(), 1000);
+    }
+
+    async function overrideProcThermals(targetDeg = 125) {
+        const statusEl = document.getElementById('proc-scan-status');
+        if (statusEl) {
+            statusEl.innerHTML = `<span style="color: var(--accent-orange);">🔥 Applying ${targetDeg}°C limit across all MTK nodes...</span>`;
         }
 
-        // Also disable SSPM throttling if present
+        const milliDeg = targetDeg * 1000;
+        const noCooler = "0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler";
+
+        const primaryNodes = ['tzcpu', 'tzpmic', 'tzbattery', 'tzpa', 'tzcharger', 'tzwmt', 'tzbts', 'tzbtsnrpa', 'tzbtspa', 'tzdctm'];
+        
+        for (const node of primaryNodes) {
+            const p = `/proc/driver/thermal/${node}`;
+            const spec = getProcNodeSpec(node);
+            await execFn(`su -c "chmod 644 ${p} 2>/dev/null && echo '1 ${milliDeg} 0 ${spec.label} ${noCooler} ${spec.interval}' > ${p} 2>/dev/null && chmod 444 ${p} 2>/dev/null"`);
+        }
+
+        for (let i = 0; i <= 12; i++) {
+            const p = `/proc/driver/thermal/tzimgs${i}`;
+            await execFn(`su -c "chmod 644 ${p} 2>/dev/null && echo '1 ${milliDeg} 0 tzimgs${i}-sysrst ${noCooler} 1000' > ${p} 2>/dev/null && chmod 444 ${p} 2>/dev/null"`);
+        }
+
+        // Disable global polling and SSPM thermal throttling as in test.sh
+        await execFn('su -c "echo \\"switch 0\\" > /proc/driver/thermal/tztsAll_enable 2>/dev/null"');
         await execFn('su -c "echo 1 > /proc/driver/thermal/sspm_thermal_throttle 2>/dev/null"');
 
         if (statusEl) {
