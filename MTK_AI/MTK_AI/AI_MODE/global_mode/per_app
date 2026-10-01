@@ -423,11 +423,13 @@ run_cmd() {
 
 find_touchscreen() {
     for dev in /dev/input/event*; do
-        if getevent -p "$dev" 2>/dev/null | grep -q "0035"; then
+        [ -c "$dev" ] || continue
+        if getevent -p "$dev" 2>/dev/null | grep -qE '0035|ABS_MT_POSITION_X'; then
             echo "$dev"
             return 0
         fi
     done
+    return 1
 }
 
 TIMEOUT=5
