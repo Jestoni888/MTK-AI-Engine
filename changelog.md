@@ -1,5 +1,7 @@
 --- version 0.0.1.31 ---
 
+--APP VERSION RELEASED (no module needed)--
+
 •Added MTK thermal legacy with trip point adjustments & power policy for temperature limits (Thermalzone in Webui)
 
 •Add partition image flasher in tools tab maintenance section next to backup partition (⚠️High risks only for experts)
