@@ -1,6 +1,6 @@
---- version 0.0.1.31 ---
-
 --APP VERSION RELEASED (no module needed)--
+
+--- version 0.0.1.31 ---
 
 •Added MTK thermal legacy with trip point adjustments & power policy for temperature limits (Thermalzone in Webui)
 
