@@ -1,4 +1,9 @@
+
+
 --APP VERSION RELEASED (no module needed)--
+
+•App version gamespace now uses 3 detection method which is USAGE STATS, ACCESIBILITY & DUMPSYS 
+(STABLE VERSION)
 
 --- version 0.0.1.31 ---
 
