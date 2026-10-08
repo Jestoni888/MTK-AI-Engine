@@ -3,6 +3,7 @@
 --APP VERSION RELEASED (no module needed)--
 
 •NEW NATIVE APP (No WebView) pure app release (FREE from a time being within this month) pm me your serial number 
+⚠️Need to grant the APP in USAGE ACCESS in the settings
 
 •App version gamespace now uses 3 detection method which is USAGE STATS, ACCESIBILITY & DUMPSYS 
 (STABLE VERSION)
