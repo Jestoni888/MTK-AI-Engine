@@ -10,3 +10,8 @@
 ## v1.0.2 (code 3)
 - Added Refresh rate selection in gamespace
 - Added current GPU frequency overlay
+
+## v1.0.3 (code 4)
+- Added more hooks in spoofing via LSposed
+- Added ram cleaner in gamespace with interval
+- Daemon optimization 
