@@ -14,4 +14,6 @@
 ## v1.0.3 (code 4)
 - Added more hooks in spoofing via LSposed
 - Added ram cleaner in gamespace with interval
+
+## v1.0.4 (code 5)
 - Daemon optimization 
