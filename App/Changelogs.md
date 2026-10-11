@@ -16,4 +16,5 @@
 - Added ram cleaner in gamespace with interval
 
 ## v1.0.4 (code 5)
-- Daemon optimization 
+- Daemon optimization
+- Added force-Vulkan per-app via LSPOSED (Scope game app first in lsposed)
