@@ -1,5 +1,8 @@
 # MTK AI Native Changelogs
 
+## v1.0.5 (code 6)
+- In Gamespace features > Added Aim assist for shooting games that can magnify farthest target without using scope
+
 ## v1.0.4 (code 5)
 - Daemon optimization
 - Added force-Vulkan per-app via LSPOSED (Scope game app first in lsposed)
