@@ -1,5 +1,10 @@
 # MTK AI Native Changelogs
 
+## v1.0.6 (code 7)
+- Added Gamespace opening intro with sounds
+- Added app statistics in per-app if they are monitored by metrics monitoring Ex: FPS, CPU, GPU, etc
+- Tweaks finder updated with more functions 
+
 ## v1.0.5 (code 6)
 - In Gamespace features > Added Aim assist for shooting games that can magnify farthest target without using scope
 
