@@ -1,5 +1,9 @@
 # MTK AI Native Changelogs
 
+## v1.0.7 (code 8)
+- New graph line monitoring in homepage & gamespace monitoring
+- CPU control all cores frequency adjustment in advance tab
+
 ## v1.0.6 (code 7)
 - Added Gamespace opening intro with sounds
 - Added app statistics in per-app if they are monitored by metrics monitoring Ex: FPS, CPU, GPU, etc
