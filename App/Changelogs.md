@@ -1,5 +1,12 @@
 # MTK AI Native Changelogs
 
+## v1.0.8 (code 9)
+- Fixing fps on modern monitoring
+-  Added convenience in settings
+   flashlight & display miscellaneous
+- Gamespace floating button into smallest size uses swipe to trigger
+- Brightness & volume adjustment in gamespace
+
 ## v1.0.7 (code 8)
 - New graph line monitoring in homepage & gamespace monitoring
 - CPU control all cores frequency adjustment in advance tab
