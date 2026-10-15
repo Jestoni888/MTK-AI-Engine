@@ -1,5 +1,9 @@
 # MTK AI Native Changelogs
 
+## v1.0.9 (code 10)
+- Fixing fps monitoring in realtime (Choose realtime monitoring in homepage)
+- Added Touch sampling rate monitoring graph in gamespace w/ history of highest & history of lowest (limit record of 60mins equivalent of 1hr)
+
 ## v1.0.8 (code 9)
 - Fixing fps on modern monitoring
 -  Added convenience in settings
