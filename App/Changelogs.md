@@ -2,6 +2,7 @@
 
 ## v1.1.0 (code 11)
 - Optimize Activity launcher in tools tab function to directly add shortcut to home launcher
+-  More smoothness experience 
 
 ## v1.0.9 (code 10)
 - Fixing fps monitoring in realtime (Choose realtime monitoring in homepage)
