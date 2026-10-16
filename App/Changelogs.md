@@ -1,5 +1,8 @@
 # MTK AI Native Changelogs
 
+## v1.1.0 (code 11)
+- Optimize Activity launcher in tools tab function to directly add shortcut to home launcher
+
 ## v1.0.9 (code 10)
 - Fixing fps monitoring in realtime (Choose realtime monitoring in homepage)
 - Added Touch sampling rate monitoring graph in gamespace w/ history of highest & history of lowest (limit record of 60mins equivalent of 1hr)
