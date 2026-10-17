@@ -1,8 +1,12 @@
 # MTK AI Native Changelogs
 
+## v1.1.4 (code 14)
+- Added FAS (Frame aware scheduling) in gamespace
+-  Added game mode interventions (Downscale factor, angle, loading boost)
+
 ## v1.1.1 (code 12)
 - Added Smart pixels to save display power
--  Gamespace monitoring (graph/metric) now only activates if they are floated
+-  Gamespace monitoring (graph/metric) now only activates if they are floated## v1.1.1 (code 12)
 -  Added wm size slider in gamespace
 
 ## v1.1.0 (code 11)
