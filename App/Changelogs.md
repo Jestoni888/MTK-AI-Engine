@@ -1,5 +1,10 @@
 # MTK AI Native Changelogs
 
+## v1.1.1 (code 12)
+- Added Smart pixels to save display power
+-  Gamespace monitoring (graph/metric) now only activates if they are floated
+-  Added wm size slider in gamespace
+
 ## v1.1.0 (code 11)
 - Optimize Activity launcher in tools tab function to directly add shortcut to home launcher
 -  More smoothness experience 
