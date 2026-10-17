@@ -2,7 +2,8 @@
 
 ## v1.1.6 (code 16)
 - Added auto force stop app in recent task swipe
--  Auto freeze user apps directly upon toggling in settings tab (Add protected apps in tools tab app freeze) 
+-  Auto freeze user apps directly upon toggling in settings tab (Add protected apps in tools tab app freeze)
+-  Pixelify (Smart Pixels patched to best filter for saving more battery) 
 
 ## v1.1.5 (code 15)
 - Added freezing automation (auto unfreeze when opening the freeze app & also freezes back on exit) unless if you want notifications from that app then protect it on app freeze tools tab, automation freeze setup found in tab settings
