@@ -1,5 +1,8 @@
 # MTK AI Native Changelogs
 
+## v1.1.5 (code 15)
+- Added freezing automation (auto unfreeze when opening the freeze app & also freezes back on exit) unless if you want notifications from that app then protect it on app freeze tools tab, automation freeze setup found in tab settings
+
 ## v1.1.4 (code 14)
 - Added FAS (Frame aware scheduling) in gamespace
 -  Added game mode interventions (Downscale factor, angle, loading boost)
