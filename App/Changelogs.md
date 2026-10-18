@@ -1,5 +1,8 @@
 # MTK AI Native Changelogs
 
+## v1.1.7 (code 17)
+- Fix heating issues
+
 ## v1.1.6 (code 16)
 - Added auto force stop app in recent task swipe
 -  Auto freeze user apps directly upon toggling in settings tab (Add protected apps in tools tab app freeze)
