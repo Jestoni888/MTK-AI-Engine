@@ -1,5 +1,8 @@
 # MTK AI Native Changelogs
 
+## v1.1.8 (code 18)
+- Screen on frequency fix
+
 ## v1.1.7 (code 17)
 - Fix heating issues
 
