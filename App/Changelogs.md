@@ -1,6 +1,9 @@
 # MTK AI Native Changelogs
 
 ## v1.1.8 (code 18)
+- Added direct notifications control for (Reboot, Overlays, Refresh rate, Scheduled, Gamespace, Freezer ) each functions has their own controls inside. 
+
+## v1.1.8 (code 18)
 - Screen on frequency fix
 
 ## v1.1.7 (code 17)
