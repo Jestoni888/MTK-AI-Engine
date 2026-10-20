@@ -1,5 +1,8 @@
 # MTK AI Native Changelogs
 
+## v1.2.1 (code 21)
+- Fixing Accessibility issues
+
 ## v1.2.0 (code 20)
 - Added more performance & optimizations
 
