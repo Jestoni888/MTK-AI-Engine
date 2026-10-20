@@ -1,5 +1,8 @@
 # MTK AI Native Changelogs
 
+## v1.2.0 (code 20)
+- Added more performance & optimizations
+
 ## v1.1.9 (code 19)
 - Added direct notifications control for (Reboot, Overlays, Refresh rate, Scheduler, Gamespace, Freezer ) each functions has their own controls inside. 
 
