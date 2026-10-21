@@ -1,5 +1,9 @@
 # MTK AI Native Changelogs
 
+## v1.2.2 (code 22)
+- Adding proximity service for automation features
+- New layout of quick notifications
+
 ## v1.2.1 (code 21)
 - Fixing Accessibility issues
 
