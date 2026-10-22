@@ -5,6 +5,7 @@
 - Metrics overlay FPS, TEMP, CPU FREQUENCY now shows their more info upon clicking floating
 - Gamespace stabilization (More smoothie)
 - Scroll back from old package version fixed
+- Reboot from quick actions via notifications fixed
 
 ## v1.2.2 (code 22)
 - Adding proximity service for automation features
