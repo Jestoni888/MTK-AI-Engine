@@ -1,5 +1,10 @@
 # MTK AI Native Changelogs
 
+## v1.2.3 (code 23)
+- Fixing search apps inside the native app much faster
+- Metrics overlay FPS, TEMP, CPU FREQUENCY now shows their more info upon clicking floating
+- Gamespace stabilization (More smoothie) 
+
 ## v1.2.2 (code 22)
 - Adding proximity service for automation features
 - New layout of quick notifications
