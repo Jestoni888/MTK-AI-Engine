@@ -3,7 +3,8 @@
 ## v1.2.3 (code 23)
 - Fixing search apps inside the native app much faster
 - Metrics overlay FPS, TEMP, CPU FREQUENCY now shows their more info upon clicking floating
-- Gamespace stabilization (More smoothie) 
+- Gamespace stabilization (More smoothie)
+- Scroll back from old package version fixed
 
 ## v1.2.2 (code 22)
 - Adding proximity service for automation features
