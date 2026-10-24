@@ -1,5 +1,10 @@
 # MTK AI Native Changelogs
 
+## v1.2.4 (code 24)
+- Fixed metrics overlay monitoring not properly updating status
+- Added screen off double tap in left status bar corner
+-  Added auto disable thermalzone in performance & performance_lite scheduler
+
 ## v1.2.3 (code 23)
 - Fixing search apps inside the native app much faster
 - Metrics overlay FPS, TEMP, CPU FREQUENCY now shows their more info upon clicking floating
