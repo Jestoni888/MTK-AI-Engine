@@ -4,6 +4,7 @@
 - Fixed metrics overlay monitoring not properly updating status
 - Added screen off double tap in left status bar corner
 -  Added auto disable thermalzone in performance & performance_lite scheduler
+-  Upgraded to Java 8 compiler
 
 ## v1.2.3 (code 23)
 - Fixing search apps inside the native app much faster
