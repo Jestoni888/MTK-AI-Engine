@@ -1,5 +1,9 @@
 # MTK AI Native Changelogs
 
+## v1.2.5 (code 25)
+- Added kernel settings in gamespace
+- Gamespace UI redesign to advanced setup
+
 ## v1.2.4 (code 24)
 - Fixed metrics overlay monitoring not properly updating status
 - Added screen off double tap in left status bar corner
