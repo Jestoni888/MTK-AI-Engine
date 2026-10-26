@@ -2,6 +2,7 @@
 
 ## v1.2.7 (code 27)
 - Wide cleanup of user apps upon launching gamespace for maximum stability
+- Quick action scheduler preference setup now follow on users choices upon exiting gamespace (forced to balance scheduler before) 
 
 ## v1.2.6 (code 26)
 - Added touch boost in gamespace tools (Only work for the game that already scoped via lsposed) 
