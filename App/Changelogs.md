@@ -1,5 +1,8 @@
 # MTK AI Native Changelogs
 
+## v1.2.6 (code 26)
+- Added touch boost (Only work for the game that already scoped via lsposed) 
+
 ## v1.2.5 (code 25)
 - Added kernel settings in gamespace
 - Gamespace UI redesign to advanced setup
