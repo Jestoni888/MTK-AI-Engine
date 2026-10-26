@@ -1,5 +1,8 @@
 # MTK AI Native Changelogs
 
+## v1.2.7 (code 27)
+- Wide cleanup of user apps upon launching gamespace for maximum stability
+
 ## v1.2.6 (code 26)
 - Added touch boost in gamespace tools (Only work for the game that already scoped via lsposed) 
 
