@@ -2,7 +2,7 @@
 
 ## v1.2.9 (code 29)
 - Show all system apps in app lists
-- Fix gamespace disappearing upon floating apps while gaming & re-apply modes
+- Fix gamespace disappearing upon floating apps while gaming & re-apply modes (Using launcher as gamespace exit) 
 
 ## v1.2.8 (code 28)
 - We're now switching to universal app that can support to all chipsets ( Extreme Manager)
