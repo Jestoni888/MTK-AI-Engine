@@ -1,5 +1,9 @@
 # MTK AI Native Changelogs
 
+## v1.2.9 (code 29)
+- Show all system apps in app lists
+- Fix gamespace disappearing upon upon floating apps while gaming & re-apply modes
+
 ## v1.2.8 (code 28)
 - We're now switching to universal app that can support to all chipsets ( Extreme Manager)
 - Adding disable apps in tools tab a.k.a bloatware remover
