@@ -1,5 +1,11 @@
 # MTK AI Native Changelogs
 
+## v1.2.8 (code 28)
+- We're now switching to universal app that can support to all chipsets ( Extreme Manager)
+- Adding disable apps in tools tab a.k.a bloatware remover
+- Adding themes on gamespace (Rainbow effects)
+- Adding new button in gamespace tools (Disable all user apps) momentarily freezing on gamespace but wort it after disabling all user apps for Maximum performance
+
 ## v1.2.7 (code 27)
 - Wide cleanup of user apps upon launching gamespace for maximum stability
 - Quick action scheduler preference setup now follow on users choices upon exiting gamespace (forced to balance scheduler before) 
