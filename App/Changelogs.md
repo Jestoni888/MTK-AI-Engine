@@ -1,5 +1,9 @@
 # MTK AI Native Changelogs
 
+## v1.3.0(code 30)
+- Added screen recorder in gamespace & quick action notifications that can support up to 144fps depends if supported
+- Livestreaming still needs api key in your streaming links because this app is not yet verified in Facebook api & YouTube api, pending as of now
+
 ## v1.2.9 (code 29)
 - Show all system apps in app lists
 - Fix gamespace disappearing upon floating apps while gaming & re-apply modes (Using launcher as gamespace exit) 
