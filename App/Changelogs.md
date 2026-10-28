@@ -2,6 +2,7 @@
 
 ## v1.3.0(code 30)
 - Added screen recorder in gamespace & quick action notifications that can support up to 144fps depends if supported
+- Screen recorder uses ultrawide 9D Audio stereo type 
 - Livestreaming still needs api key in your streaming links because this app is not yet verified in Facebook api & YouTube api, pending as of now
 
 ## v1.2.9 (code 29)
