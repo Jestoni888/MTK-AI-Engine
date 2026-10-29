@@ -1,5 +1,8 @@
 # MTK AI Native Changelogs
 
+## v1.3.1(code 31)
+- Overlay floating Hud in Quick action & gamespace now separated setup
+
 ## v1.3.0(code 30)
 - Added screen recorder in gamespace & quick action notifications that can support up to 144fps depends if supported
 - Screen recorder uses ultrawide 9D Audio stereo type 
