@@ -1,5 +1,8 @@
 # MTK AI Native Changelogs
 
+## v1.3.2(code 32)
+- Adding CPU & BATTERY temp wide sysfs spoof (lsposed) & direct controls on gamespace temp spoof via tools tab
+
 ## v1.3.1(code 31)
 - Overlay floating Hud in Quick action & gamespace now separated setup
 
