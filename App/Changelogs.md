@@ -1,5 +1,8 @@
 # EXTREME MANAGER Native Changelogs
 
+## v1.3.3(code 33)
+- Added floating bubble apps in quick notifications & gamespace
+
 ## v1.3.2(code 32)
 - Adding CPU, APU, NPU, HEXAGON & BATTERY temp wide sysfs spoof (lsposed) ⚠adjust once to avoid kernel panic when adjusting multiple times) 
 
