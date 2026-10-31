@@ -1,5 +1,8 @@
 # EXTREME MANAGER Native Changelogs
 
+## v1.3.4(code 34)
+- Adding AI voice command recognition under Notifications>Quick actions>Tools>Voice command (you can also automatically use voice command outside the app or even in screen-off if your phone supports proximity sensors) 
+
 ## v1.3.3(code 33)
 - Added floating bubble apps in quick notifications & gamespace
 - Added auto clicker with manual & free mode
