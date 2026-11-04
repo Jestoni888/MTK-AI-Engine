@@ -1,5 +1,9 @@
 # EXTREME MANAGER Native Changelogs
 
+## v1.3.5(code 35)
+- Added secondary floating apps options which is Virtual display freeform
+- Voice command added more commands turn off/on cpu cores, switching cpu governors, changing frequency by just using voice command
+  
 ## v1.3.4(code 34)
 - Adding AI voice command recognition under Notifications>Quick actions>Tools>Voice command (you can also automatically use voice command outside the app or even in screen-off if your phone supports proximity sensors) 
 
