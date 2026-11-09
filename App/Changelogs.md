@@ -1,5 +1,10 @@
 # EXTREME MANAGER Native Changelogs
 
+## v1.3.7(code 37)
+- Directly add metrics overlay in pop-up including switching refresh rate
+- Added app launcher
+-  Added permission pop-up with direct button to grant all permission (rooted) 
+
 ## v1.3.5(code 35)
 - Added secondary floating apps options which is Virtual display freeform
 - Voice command added more commands turn off/on cpu cores, switching cpu governors, changing frequency by just using voice command
