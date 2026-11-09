@@ -3,7 +3,8 @@
 ## v1.3.7(code 37)
 - Directly add metrics overlay in pop-up including switching refresh rate
 - Added app launcher
--  Added permission pop-up with direct button to grant all permission (rooted) 
+-  Added permission pop-up with direct button to grant all permission (rooted)
+-  Build using JDK 21, NDK r29 & cmake 3.30.3 for more compatibility of high/low end devices
 
 ## v1.3.5(code 35)
 - Added secondary floating apps options which is Virtual display freeform
