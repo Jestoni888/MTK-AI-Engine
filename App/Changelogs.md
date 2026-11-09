@@ -1,5 +1,9 @@
 # EXTREME MANAGER Native Changelogs
 
+## v1.3.8(code 38)
+- Added CPU frequency adjustment in floating monitor without opening the main app
+- Added storage speed tester in advance tab of the app
+
 ## v1.3.7(code 37)
 - Directly add metrics overlay in pop-up including switching refresh rate
 - Added app launcher
