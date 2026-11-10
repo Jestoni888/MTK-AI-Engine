@@ -1,5 +1,8 @@
 # EXTREME MANAGER Native Changelogs
 
+## v1.3.9(code 39)
+- Fixing accessibility issues (Must clean apps data first to remove garbage errors or better uninstall then reinstall this latest release) 
+
 ## v1.3.8(code 38)
 - Added CPU/GPU frequency adjustment in floating monitor without opening the main app
 - Added storage speed tester in advance tab of the app
