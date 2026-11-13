@@ -1,5 +1,10 @@
 # EXTREME MANAGER Native Changelogs
 
+## v1.4.0(code 40)
+- Added zram floating monitor & direct adjustment of zram size
+- Added cpu stress test in advance tab
+- Added IO tweaks more tweaking options
+
 ## v1.3.9(code 39)
 - Fixing accessibility issues (Must clean apps data first to remove garbage errors or better uninstall then reinstall this latest release) 
 
