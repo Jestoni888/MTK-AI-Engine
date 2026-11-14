@@ -1,5 +1,10 @@
 # EXTREME MANAGER Native Changelogs
 
+## v1.4.2(code 42)
+App size reach more than 25mb limit for cloud storage
+so we directly upload it here
+https://github.com/Jestoni888/MTK-AI-Engine/releases/download/Code42/Extreme-Manager.1.4.2.apk
+
 ## v1.4.1(code 41)
 - Added internet speed floating overlay monitoring including on selecting private Dns
 - Added proximity detection on overlay monitoring
