@@ -1,5 +1,9 @@
 # EXTREME MANAGER Native Changelogs
 
+## v1.4.1(code 41)
+- Added internet speed floating monitoring including on selecting private Dns
+- Added proximity detection on monitoring
+
 ## v1.4.0(code 40)
 - Added zram floating monitor & direct adjustment of zram size
 - Added cpu stress test in advance tab
