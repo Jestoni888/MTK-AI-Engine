@@ -1,9 +1,9 @@
 # EXTREME MANAGER Native Changelogs
 
 ## v1.4.1(code 41)
-- Added internet speed floating monitoring including on selecting private Dns
-- Added proximity detection on monitoring
-- Auto remove monitoring when holding touch on it
+- Added internet speed floating overlay monitoring including on selecting private Dns
+- Added proximity detection on overlay monitoring
+- Auto remove overlay monitoring when holding touch on it
 
 ## v1.4.0(code 40)
 - Added zram floating monitor & direct adjustment of zram size
