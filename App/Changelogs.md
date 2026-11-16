@@ -1,6 +1,13 @@
 # EXTREME MANAGER Native Changelogs
 
-## v1.4.2(code 42)
+
+Extreme Manager 1.4.3
+
+- Added Livestream on YouTube (Subscriber must be 50+ for eligible streamers)
+- To start Livestream login first in tools tab / Livestream then in notification panel Quick action screen recorder you can find the Live here for Youtube
+
+Extreme Manager 1.4.2
+
 App size reach more than 25mb limit for cloud storage
 so we directly upload it here
 https://github.com/Jestoni888/MTK-AI-Engine/releases/download/Code42/Extreme-Manager.1.4.2.apk
