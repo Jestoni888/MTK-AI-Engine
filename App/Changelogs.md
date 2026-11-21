@@ -1,5 +1,14 @@
 # EXTREME MANAGER Native Changelogs
 
+Extreme Manager 1.4.5
+
+- Fixed livestream 1080p60 in youtube
+- Fixed powersaving issues
+- Added new island features in tools tab, integrated & forked from this repository https://github.com/agupta07505/SmartIsland
+
+Extreme Manager 1.4.4
+
+- Some issues in Youtube Livestream fixed
 
 Extreme Manager 1.4.3
 
