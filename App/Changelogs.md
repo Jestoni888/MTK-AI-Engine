@@ -1,5 +1,9 @@
 # EXTREME MANAGER Native Changelogs
 
+Extreme Manager 1.4.6
+
+- Floating apps freeform optimization
+
 Extreme Manager 1.4.5
 
 - Fixed livestream 1080p60 in youtube
