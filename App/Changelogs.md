@@ -3,6 +3,8 @@
 Extreme Manager 1.4.6
 
 - Floating apps freeform optimization
+- Resume contents on freeform floating apps after hiding
+- Keyboard popup fixed on some supported floating apps
 
 Extreme Manager 1.4.5
 
