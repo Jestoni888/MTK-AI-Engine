@@ -2,7 +2,7 @@
 
 Extreme Manager 1.4.7
 
-- Added dynamic bar scheduler profiler, CPU, GPU & refresh rate
+- Added dynamic bar scheduler profiler, CPU, GPU & refresh rate (Long press the dynamic island bar to show this utilities)
 
 Extreme Manager 1.4.6
 
