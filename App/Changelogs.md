@@ -1,5 +1,9 @@
 # EXTREME MANAGER Native Changelogs
 
+Extreme Manager 1.4.7
+
+- Added dynamic bar scheduler profiler, CPU, GPU & refresh rate
+
 Extreme Manager 1.4.6
 
 - Floating apps freeform optimization
