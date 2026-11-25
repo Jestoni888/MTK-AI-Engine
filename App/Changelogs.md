@@ -1,5 +1,11 @@
 # EXTREME MANAGER Native Changelogs
 
+Extreme Manager 1.4.8
+
+- Changing Quick actions layout & added card in Dynamic island
+- Monitoring new layout Ui for FPS, TEMP, CPU, GPU , etc . & easier setup 
+-  Undervolt new setup in tools tab 
+
 Extreme Manager 1.4.7
 
 - Added dynamic bar scheduler profiler, CPU, GPU & refresh rate (Long press the dynamic island bar to show this utilities)
