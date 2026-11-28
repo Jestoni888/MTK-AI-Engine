@@ -1,5 +1,11 @@
 # EXTREME MANAGER Native Changelogs
 
+Extreme Manager 1.4.9
+
+- Changing all overlay UI to dark frost (Everything)
+- New sidebar style with direct system controls
+- Mature style floating app style that comforts mostly on watching video
+
 Extreme Manager 1.4.8
 
 - Changing Quick actions layout & added card in Dynamic island
